@@ -9,9 +9,7 @@
     "./ts": "./src/store.ts"
   },
   "scripts": {
-    "dev": "bun run ./src/index.ts",
-    "dev-wsl": "bun run ./src/index.ts --wsl",
-    "build-ts": "tsc src/store.ts src/hash.ts --target esnext --outDir dist",
+    "build-ts": "tsc",
     "bundle-iife": "rollup dist/store.js --file dist/tinystore.iife.js --format iife --name tinystore",
     "bundle-esm": "rollup dist/store.js --file dist/tinystore.esm.js --format esm --name tinystore",
     "minify-iife": "terser dist/tinystore.iife.js --compress --output dist/tinystore.iife.min.js",
