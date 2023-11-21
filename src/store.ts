@@ -56,9 +56,13 @@ export class Store<T> {
         this.hashFunc = callback;
     }
 
-    //Add downstream stores
+    //Downstream stores
     addDownstreamStore(store: Store<any>) {
         this.#downstreamStores?.push(store);
+    }
+
+    removeDownstreamStore(store: Store<any>) {
+        this.#downstreamStores = this.#downstreamStores?.filter(s => s !== store);
     }
 
     //Update based on upstream stores (initialized by derived stores and on initial load)
@@ -114,6 +118,10 @@ export class Store<T> {
         //Iterate over registered derived stores and update them
         if(this.#downstreamStores && this.#downstreamStores.length > 0) {
             for(let store of this.#downstreamStores) {
+                if(!store) {
+                    this.removeDownstreamStore(store);
+                    continue;
+                }
                 store.calculateStateFromUpstream();
             }
         }
