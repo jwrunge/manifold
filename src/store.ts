@@ -61,10 +61,6 @@ export class Store<T> {
         this.#downstreamStores?.push(store);
     }
 
-    removeDownstreamStore(store: Store<any>) {
-        this.#downstreamStores = this.#downstreamStores?.filter(s => s !== store);
-    }
-
     //Update based on upstream stores (initialized by derived stores and on initial load)
     async calculateStateFromUpstream() {
         //Run initialization function if it exists
@@ -117,11 +113,11 @@ export class Store<T> {
     #updateDependents() {
         //Iterate over registered derived stores and update them
         if(this.#downstreamStores && this.#downstreamStores.length > 0) {
+            //Remove any undefined stores
+            this.#downstreamStores = this.#downstreamStores.filter(store => store !== undefined);
+
+            //Update downstream stores
             for(let store of this.#downstreamStores) {
-                if(!store) {
-                    this.removeDownstreamStore(store);
-                    continue;
-                }
                 store.calculateStateFromUpstream();
             }
         }
