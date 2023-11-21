@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Webpage</title>
+</head>
+<body>
+  <!-- Content -->
+  <input data-sub="store1:value">
+  <input data-sub="store1:value">
+
+  <!-- Store script -->
+  <script src="dist/copper.dev.iife.js"></script>
+  <script>
+    var store1 = new Copper.Store("My text");
+    Copper.registerSubs();
+    setTimeout(()=> {
+      store1.update("Another update")
+    }, 2000)
+    setTimeout(()=> {
+      store1.update("We're at 4k")
+    }, 4000)
+    setTimeout(()=> {
+      store1.update("Last one")
+    }, 6000)
+  </script>
+</body>
+</html>

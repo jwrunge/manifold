@@ -1,14 +1,11 @@
-import { hashAny } from "./hash";
-
-export let storeGlobalConfig = {
-    hashFunc: hashAny
-}
+import { copperConfig } from "./config";
 
 export class Store<T> {
     //State
     value: T | undefined = undefined;
     initializer?: (upstreamValues?: Array<any>) => T;
     #subscriptions: Array<(value: T) => void> = [];
+    #domSubscriptions: Map<Element, (value: T, el: Element) => void> = new Map();
 
     //Derivation
     #downstreamStores?: Array<Store<any>> = [];
@@ -17,7 +14,7 @@ export class Store<T> {
     //Change tracking
     #changeHash?: number | string = undefined;
     #onChange?: (value: T) => void;
-    hashFunc: (value: T | undefined) => string | number = storeGlobalConfig.hashFunc;
+    hashFunc: (value: T | undefined) => string | number = copperConfig.hashFunc;
 
     constructor(defaultValue?: T) {
         if(defaultValue !== undefined) this.value = defaultValue;
@@ -56,9 +53,19 @@ export class Store<T> {
         this.hashFunc = callback;
     }
 
-    //Downstream stores
+    //Dependents
     addDownstreamStore(store: Store<any>) {
         this.#downstreamStores?.push(store);
+    }
+
+    addSubscription(sub: (value: T) => void) {
+        this.#subscriptions.push(sub);
+        sub(this.value as T);
+    }
+
+    addDomSubscription(el: Element, sub: (value: T) => void) {
+        this.#domSubscriptions.set(el, sub);
+        sub(this.value as T);
     }
 
     //Update based on upstream stores (initialized by derived stores and on initial load)
@@ -123,8 +130,27 @@ export class Store<T> {
         }
 
         //Iterate over registered subscriptions and update them
-        for(let sub of this.#subscriptions) {
-            sub(this.value as T);
+        if(this.#subscriptions && this.#subscriptions.length > 0) {
+            //Remove any undefined subscriptions
+            this.#subscriptions = this.#subscriptions.filter(sub => sub !== undefined);
+
+            //Update subscribers
+            for(let sub of this.#subscriptions) {
+                sub(this.value as T);
+            }
+        }
+
+        //Iterate over DOM subscribers and update them
+        if(this.#domSubscriptions && this.#domSubscriptions.size > 0) {
+            //Remove any undefined subscriptions
+            this.#domSubscriptions.forEach((_, el) => {
+                if(!el) this.#domSubscriptions.delete(el);
+            });
+
+            //Update subscribers
+            this.#domSubscriptions.forEach((sub, el) => {
+                sub(this.value as T, el);
+            });
         }
     }
 }

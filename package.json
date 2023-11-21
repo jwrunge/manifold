@@ -1,26 +1,29 @@
 {
-  "name": "@jwrunge/tinystore",
+  "name": "@jwrunge/reflex",
   "version": "1.0.0",
-  "main": "dist/tinystore.min.js",
+  "main": "dist/copper.iife.js",
+  "type": "module",
   "exports": {
     ".": "./dist",
-    "./js": "./dist/tinystore.esm.min.js",
-    "./js/iife": "./dist/tinystore.iife.min.js",
-    "./ts": "./src/store.ts"
+    "./js": "./dist/copper.esm.js",
+    "./js/iife": "./dist/copper.iife.js",
+    "./ts": "./src/index.ts"
   },
   "scripts": {
-    "build-ts": "tsc",
-    "bundle-iife": "rollup dist/store.js --file dist/tinystore.iife.js --format iife --name tinystore",
-    "bundle-esm": "rollup dist/store.js --file dist/tinystore.esm.js --format esm --name tinystore",
-    "minify-iife": "terser dist/tinystore.iife.js --compress --output dist/tinystore.iife.min.js",
-    "minify-esm": "terser dist/tinystore.esm.js --compress --output dist/tinystore.esm.min.js",
-    "build": "run-s build-ts bundle-iife bundle-esm minify-iife minify-esm"
+    "build": "rollup -c"
   },
   "devDependencies": {
+    "@rollup/plugin-typescript": "^11.1.5",
     "bun-types": "latest",
+    "i": "^0.3.7",
+    "npm": "^10.2.4",
     "npm-run-all": "^4.1.5",
     "rollup": "^4.5.0",
     "terser": "^5.24.0",
+    "tslib": "^2.6.2",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@rollup/plugin-terser": "^0.4.4"
   }
 }
