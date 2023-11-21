@@ -1,19 +1,27 @@
 {
   "name": "@jwrunge/tinystore",
   "version": "1.0.0",
-  "main": "src/tinystore.min.js",
-  "module": "src/tinystore.min.js",
-  "type": "module",
+  "main": "dist/tinystore.min.js",
+  "exports": {
+    ".": "./dist",
+    "./js": "./dist/tinystore.esm.min.js",
+    "./js/iife": "./dist/tinystore.iife.min.js",
+    "./ts": "./src/store.ts"
+  },
   "scripts": {
     "dev": "bun run ./src/index.ts",
     "dev-wsl": "bun run ./src/index.ts --wsl",
-    "build-ts": "tsc src/store.ts src/hash.ts --outfile dist/tinystore.js --target esnext --module amd",
-    "minify": "terser dist/tinystore.js --compress --output dist/tinystore.min.js",
-    "build": "run-s build-ts minify"
+    "build-ts": "tsc src/store.ts src/hash.ts --target esnext --outDir dist",
+    "bundle-iife": "rollup dist/store.js --file dist/tinystore.iife.js --format iife --name tinystore",
+    "bundle-esm": "rollup dist/store.js --file dist/tinystore.esm.js --format esm --name tinystore",
+    "minify-iife": "terser dist/tinystore.iife.js --compress --output dist/tinystore.iife.min.js",
+    "minify-esm": "terser dist/tinystore.esm.js --compress --output dist/tinystore.esm.min.js",
+    "build": "run-s build-ts bundle-iife bundle-esm minify-iife minify-esm"
   },
   "devDependencies": {
     "bun-types": "latest",
     "npm-run-all": "^4.1.5",
+    "rollup": "^4.5.0",
     "terser": "^5.24.0",
     "typescript": "^5.0.0"
   }
