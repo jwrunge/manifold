@@ -13,6 +13,8 @@
   <input type="checkbox" cp-bind="store1:checked sync:change">
   <input type="checkbox" cp-eval="store1:checked isChecked">
 
+  <div class="trans" cp-eval="store1 specialStyling"></div>
+
   <!-- Store script -->
   <script src="dist/copper.dev.iife.js"></script>
   <script>
@@ -28,10 +30,42 @@
       store1.update("Last one")
     }, 6000)
 
+    function specialStyling(val, el) {
+      if(val === "My text") {
+        el.innerHTML = "My text";
+        el.style = "background: blue; height: 5rem; width: 90vw; width: 12rem;";
+      }
+      if(val === "Another update") {
+        el.style = "background: green; height: 15rem; border-radius: 10px; width: 10rem;"
+      };
+      if(val === "We're at 4k") {
+        el.innerHTML = "We're at 4k!!!";
+        el.style = "background: yellow; height: 8rem; border-radius: 10px; width: 20rem;"
+      };
+      if(val === "Last one") {
+        el.innerHTML = "All done!"
+        el.style = "background: red; height: 10rem; border-radius: 10px; width: 15rem; font-size: 2rem;"
+      };
+    }
+
     function isChecked(val) {
       if(val === "We're at 4k") return true;
       else return false;
     }
   </script>
+
+  <style>
+    .trans {
+      margin: 1rem auto;
+      position: relative;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1rem;
+      color: white;
+      transition: height 1s ease-in-out, width 1s ease-in-out, background-color 1s ease-in-out, font-size 1s ease;
+    }
+  </style>
 </body>
 </html>

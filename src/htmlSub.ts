@@ -8,18 +8,18 @@ export function registerSubs(parent?: Element) {
     handleEvals(parent);
 }
 
-function breakOutSettings(element: HTMLElement, attribute: string): {storeName: string, bindTo: string, remaining: string} | null {
+function breakOutSettings(element: HTMLElement, attribute: string, allowNullBinding = false): {storeName: string, bindTo: string, remaining: string} | null {
     const subSettings = element?.getAttribute(attribute)?.trim()?.split(" ");
     if(!subSettings) return null;
 
     //Break out settings
     const nameAndBinding = subSettings[0].split(":");
     const storeName = nameAndBinding[0].trim();
-    const bindTo = nameAndBinding[1].trim();
+    const bindTo = nameAndBinding[1]?.trim();
     const remaining = subSettings[1]?.trim();
     
     //Abort if no storeName or bindTo
-    if(!storeName || !bindTo) return null;
+    if(!storeName || (!allowNullBinding && !bindTo)) return null;
     return {storeName, bindTo, remaining};
 }
 
@@ -29,7 +29,10 @@ function handleDataBinding(parent: Element) {
 
     subBlocks.forEach((b)=> {
         let settings = breakOutSettings(b as HTMLElement, copperConfig.bindAttr);
-        if(!settings) return;
+        if(!settings) {
+            console.warn("Copper: Data binding must have a store name and bindTo attribute. Bind aborted.", b);
+            return;
+        }
         let {storeName, bindTo, remaining} = settings;
         let propogateOn = remaining?.replace("sync:", "")?.trim()?.split("|") || [];
 
@@ -66,12 +69,13 @@ function handleEvals(parent: Element) {
     const subBlocks = parent.querySelectorAll(`[${copperConfig.evalAttr}]`);
 
     subBlocks.forEach((b)=> {
-        let settings = breakOutSettings(b as HTMLElement, copperConfig.evalAttr);
-        if(!settings) return;
+        let settings = breakOutSettings(b as HTMLElement, copperConfig.evalAttr, true);
+        if(!settings) {
+            console.warn("Copper: Eval binding must have a store name and can optionally have a bindTo attribute. Bind aborted.", b);
+            return;
+        }
         let {storeName, bindTo, remaining} = settings;
         const execFunc = window[remaining as any];
-
-        console.log("eval", execFunc)
 
         if(!execFunc || typeof execFunc !== "function") return;
 
@@ -81,13 +85,15 @@ function handleEvals(parent: Element) {
         store.addDomSubscription(
             b,
             (val)=> {
-                console.log("Running func", val)
-                const newVal = (execFunc as Function)(val);
-                console.log("Got", newVal)
-                //@ts-ignore - Update DOM value
-                b.setAttribute(bindTo, newVal);
-                //@ts-ignore
-                b[bindTo] = newVal;
+                const newVal = (execFunc as Function)(val, b);
+
+                //Optionally update binding (may not be provided for eval)
+                if(bindTo) {
+                    //@ts-ignore - Update DOM value
+                    b.setAttribute(bindTo, newVal);
+                    //@ts-ignore
+                    b[bindTo] = newVal;
+                }
             }
         );
     });
