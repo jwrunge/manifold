@@ -2,7 +2,8 @@ import { hashAny } from "./hash";
 
 export let copperConfig = {
     hashFunc: hashAny,
-    subAttr: "cp-bind",
+    bindAttr: "cp-bind",
+    evalAttr: "cp-eval",
 }
 
 export function updateConfig(config: Partial<typeof copperConfig>) {
