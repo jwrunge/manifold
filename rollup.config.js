@@ -10,11 +10,12 @@ export default {
             format: 'iife',
             name: "Copper",
         },
+        //Dev build with sourcemaps
         {
             file: 'dist/copper.dev.iife.js',
             format: 'iife',
             name: "Copper",
-            sourcemap: "inline",
+            sourcemap: true,
         },
         {
             file: 'dist/copper.esm.js',

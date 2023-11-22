@@ -7,8 +7,11 @@
 </head>
 <body>
   <!-- Content -->
-  <input data-sub="store1:value">
-  <input data-sub="store1:value">
+  <input cp-bind="store1:value sync:keyup|change">
+  <input cp-bind="store1:value sync:keydown">
+  <input cp-bind="store1:value">
+  <input type="checkbox" cp-bind="store1:checked sync:change">
+  <input type="checkbox" cp-eval="store1:checked sync:change">
 
   <!-- Store script -->
   <script src="dist/copper.dev.iife.js"></script>

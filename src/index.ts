@@ -1,11 +1,11 @@
-import { copperConfig } from "./config";
+import { updateConfig } from "./config";
 import { Store } from "./store";
 import { registerSubs } from "./htmlSub";
 
 const Copper = {
     Store,
     registerSubs,
-    config: copperConfig,
+    config: updateConfig,
 }
 
 export default Copper;
