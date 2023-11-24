@@ -13,6 +13,16 @@
   <input type="checkbox" cp-bind="store1:checked sync:change">
   <input type="checkbox" cp-eval="store1:checked isChecked">
 
+  <div cp-if="store1 showDiv">
+    Div is shown.
+  </div>
+
+  <div cp-each="store1 as letter">
+    <div>
+      Letter: {letter}
+    </div>
+  </div>
+
   <div class="trans" cp-eval="store1 specialStyling"></div>
 
   <!-- Store script -->
@@ -22,30 +32,38 @@
     Copper.registerSubs();
     setTimeout(()=> {
       store1.update("Another update")
-    }, 2000)
-    setTimeout(()=> {
-      store1.update("We're at 4k")
     }, 4000)
     setTimeout(()=> {
+      store1.update("We're at 4k")
+    }, 8000)
+    setTimeout(()=> {
       store1.update("Last one")
-    }, 6000)
+    }, 12000)
 
     function specialStyling(val, el) {
       if(val === "My text") {
         el.innerHTML = "My text";
         el.style = "background: blue; height: 5rem; width: 90vw; width: 12rem;";
       }
-      if(val === "Another update") {
+      else if(val === "Another update") {
         el.style = "background: green; height: 15rem; border-radius: 10px; width: 10rem;"
-      };
-      if(val === "We're at 4k") {
+      }
+      else if(val === "We're at 4k") {
         el.innerHTML = "We're at 4k!!!";
-        el.style = "background: yellow; height: 8rem; border-radius: 10px; width: 20rem;"
-      };
-      if(val === "Last one") {
+        el.style = "background: orange; height: 8rem; border-radius: 10px; width: 20rem;"
+      }
+      else if(val === "Last one") {
         el.innerHTML = "All done!"
         el.style = "background: red; height: 10rem; border-radius: 10px; width: 15rem; font-size: 2rem;"
-      };
+      }
+      else if(val === true) {
+        el.innerHTML = "Ooooh, good times!"
+        el.style = "background: green; height: 25rem; border-radius: 10px; width: 25rem; font-size: 2.5rem;"
+      }
+      else {
+        el.innerHTML = ""
+        el.style = "background: gray; height: 5rem; border-radius: 10px; width: 5rem; font-size: 2.5rem;"
+      }
     }
 
     function isChecked(val) {
@@ -64,6 +82,8 @@
       align-items: center;
       font-size: 1rem;
       color: white;
+      white-space: nowrap;
+      overflow: hidden;
       transition: height 1s ease-in-out, width 1s ease-in-out, background-color 1s ease-in-out, font-size 1s ease;
     }
   </style>
