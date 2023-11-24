@@ -17,9 +17,9 @@
     Div is shown.
   </div>
 
-  <div cp-each="store1 as letter">
+  <div cp-if="store1 hasLength" cp-each="store1 as letter, index">
     <div>
-      Letter: {letter}
+      Letter {index + 1}: {letter}
     </div>
   </div>
 
