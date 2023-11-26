@@ -17,7 +17,7 @@ export class Store<T> {
     hashFunc: (value: T | undefined) => string | number = copperConfig.hashFunc;
 
     constructor(defaultValue?: T) {
-        if(defaultValue !== undefined) this.value = defaultValue;
+        this.value = defaultValue;
     }
 
     //Initialize from upstream stores

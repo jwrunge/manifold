@@ -23,6 +23,45 @@ function breakOutSettings(element: HTMLElement, attribute: string, allowNullBind
     return {storeName, bindings, remaining};
 }
 
+function applyBindings(element: HTMLElement, bindTo: string | null, storeName: string, propagateOn?: string[], execFunc?: Function) {
+    let attr = false;
+    if(bindTo && bindTo.includes("attr-")) {
+        attr = true;
+        bindTo = bindTo.replace("attr-", "");
+    }
+
+    //@ts-ignore - Get store
+    const store: Store<any> = window[storeName] as Store<any>;
+
+    store.addDomSubscription(
+        element,
+        (val)=> {
+            if(execFunc) val = execFunc(val, element);
+
+            if(bindTo) {
+                //@ts-ignore - Update DOM value
+                if(!attr) element[bindTo] = val;
+                else element.setAttribute(bindTo, val);
+
+                //For each propogation event
+                for(let eventName of propagateOn || []) {
+                    const eventFunc = (e: Event)=> { 
+                        store.update(
+                            !attr ?
+                            //@ts-ignore
+                            e.currentTarget[bindTo] :
+                            (e.currentTarget as HTMLElement)?.getAttribute(bindTo as string)
+                        );
+                    }
+                    //Clear previous event listener (preventing reassingment) and bind new one
+                    element.removeEventListener(eventName, eventFunc);
+                    element.addEventListener(eventName, eventFunc)
+                }
+            }
+        }
+    );
+}
+
 //Handle data binding
 function handleDataBinding(parent: Element) {
     const subBlocks = parent.querySelectorAll(`[${copperConfig.bindAttr}], [data-${copperConfig.bindAttr}]`);
@@ -34,41 +73,11 @@ function handleDataBinding(parent: Element) {
             return;
         }
         let {storeName, bindings, remaining} = settings;
-        let propogateOn = remaining?.replace("sync:", "")?.trim()?.split("|") || [];
+        let propagateOn = remaining?.replace("sync:", "")?.trim()?.split("|") || [];
 
-        //@ts-ignore - Get store
-        const store: Store<any> = window[storeName] as Store<any>;
         //Add or overwrite DOM subscription method
         for(let bindTo of bindings) {
-            let attr = false;
-            if(bindTo.includes("attr-")) {
-                attr = true;
-                bindTo = bindTo.replace("attr-", "");
-            }
-
-            store.addDomSubscription(
-                b,
-                (val)=> {
-                    //@ts-ignore - Update DOM value
-                    if(!attr) b[bindTo] = val;
-                    else b.setAttribute(bindTo, val);
-
-                    //For each propogation event
-                    for(let eventName of propogateOn) {
-                        const eventFunc = (e: Event)=> { 
-                            store.update(
-                                !attr ?
-                                //@ts-ignore
-                                e.currentTarget[bindTo] :
-                                (e.currentTarget as HTMLElement)?.getAttribute(bindTo)
-                            );
-                        }
-                        //Clear previous event listener (preventing reassingment) and bind new one
-                        b.removeEventListener(eventName, eventFunc);
-                        b.addEventListener(eventName, eventFunc)
-                    }
-                }
-            );
+            applyBindings(b as HTMLElement, bindTo, storeName, propagateOn);
         }
     });
 }
@@ -85,32 +94,11 @@ function handleEvals(parent: Element) {
         }
         let {storeName, bindings, remaining} = settings;
         const execFunc = window[remaining as any];
-
         if(!execFunc || typeof execFunc !== "function") return;
 
-        //@ts-ignore - Get store
-        const store: Store<any> = window[storeName] as Store<any>;
         //Add or overwrite DOM subscription method
         for(let bindTo of bindings || [null]) {
-            let attr = false;
-            if(bindTo && bindTo.includes("attr-")) {
-                attr = true;
-                bindTo = bindTo.replace("attr-", "");
-            }
-
-            store.addDomSubscription(
-                b,
-                (val)=> {
-                    const newVal = (execFunc as Function)(val, b);
-
-                    //Optionally update binding (may not be provided for eval)
-                    if(bindTo) {
-                        //@ts-ignore - Update DOM value
-                        if(!attr) b[bindTo] = newVal;
-                        else b.setAttribute(bindTo, newVal);
-                    }
-                }
-            );
+            applyBindings(b as HTMLElement, bindTo, storeName, undefined, execFunc)
         }
     });
 }

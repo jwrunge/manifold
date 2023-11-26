@@ -41,7 +41,7 @@ export function hashAny(input: any): number {
           strToHash = JSON.stringify(input);
         }
         catch {
-          strToHash = Date.now().toString();
+          return Date.now();
         }
       }
       break;

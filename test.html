@@ -12,6 +12,11 @@
   <input cp-bind="store1:value">
   <input type="checkbox" cp-bind="store1:checked sync:change">
   <input type="checkbox" cp-eval="store1:checked isChecked">
+  <select cp-bind="store1:value sync:change">
+    <option value="" default>Test</option>
+    <option value="Another update">1</option>
+    <option value="We're at 4k">2</option>
+  </select>
 
   <div cp-if="store1 showDiv">
     Div is shown.
