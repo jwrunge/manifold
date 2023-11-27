@@ -1,4 +1,4 @@
-import { copperConfig } from "./config";
+import { copperConfig } from "../general/config";
 import { Store } from "./store";
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
