@@ -10,7 +10,6 @@
   * [Processing bound values](#processing-bound-values)
   * [Multiple bindings](#multiple-bindings)
   * [Binding to attributes](#binding-to-attributes)
-  * [You can bind to any property or attribute](#you-can-bind-to-any-property-or-attribute)
 
 ## Description
 
@@ -181,42 +180,3 @@ In the above example, we bind the value of `store` to the input's `value` attrib
 If you inspect the element in your console, whenever `store` updates, you will see the element's tag update with `value={some_value}`, but you won't see the actual input element's value update. That's because an HTML element's `value` *attribute* is different than the `value` *property*: the `value` attribute is the element's default value; the `value` property is its current value.
 
 Setting an element's `value` *attribute* is probably not very practical, but it serves to illustrate why Copper allows you control over what a store can bind to. In most cases you'll want to update an element's property rather than its attribue (that's why Copper defaults to altering properties and requires that you append `-attr` if you want to specifically override that behavior).
-
-### You can bind to any property or attribute
-
-You don't have to bind to the value property of an input element. You can bind to any property or attribute of any HTML element. Take the following markup, for example:
-
-```typescript
-new Copper.Store("Initial value", "checkboxStore");
-
-function isChecked(value: string) {
-    if(value === "checked") return true;
-    if(value === "unchecked") return false;
-    return undefined;   //If the option is "disabled," undefined will make no change
-}
-
-function onCheck(value: boolean) {
-    return value ? "checked" : "unchecked";
-}
-
-function isDisabled(value: string) {
-    if(value === "disabled") return true;
-    return false;
-}
-```
-
-```html
-<select cp-bind="checkboxStore:value sync:change">
-    <option default>checked</option>
-    <option>unchecked</option>
-    <option>disabled</option>
-</select>
-
-<input type="checkbox" cp-bind="checkboxStore:checked isChecked sync:change onCheck; checkboxStore:disabled isDisabled">
-```
-
-In the above code, we have:
-
-* bound the `checkboxStore` value to the `checked` property of the input element, processed with the `isChecked` function
-* set up syncing of the `checked` property back to `checkboxStore`, processed with the `onCheck` function
-* bound the `checkboxStore` value to the `disabled` property of the input element, processe with the `isDisabled` function

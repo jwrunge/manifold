@@ -20,6 +20,39 @@ You may be interested in Copper if:
 * You are writing an application that would benefit from reactivity, but don't want to be dependent on build systems, transpilers, and bundlers (are you on the [JSDoc bandwagon?](https://jsdoc.app/))
 * You want reactivity that doesn't violate the philosophy of progressive enhancement and falls gently back to plain ol' HTML in the absence of JavaScript
 
-## Documentation
+## Contents
 
-For full documentation, check out the [GitHub repo](https://github.com/jwrunge/Copper).
+### How to Copper
+
+Everything you need to get productive. If you just want to use Copper and don't need philisophical musings about the state of frontend development and the tension between best-practices and practical coding, this is the only section you need to bother with.
+
+#### Get going NOW
+
+* [Installation and Quick Start](/docs/quick_start.md) - Detailed below. Start here before you go anywhere else.
+* [Building a to do list from scratch](./) - The best place to start if you learn best by example. We'll build the traditional to-do list app, and compare it to an equivalent version in Svelte.
+
+#### Client-side reactivity module
+
+* [Copper stores](./) - Inspired by Svelte, stores are at the heart of Copper's client-side reactivity.
+* [String interpolation](./) - Inject store values into your markup text.
+* [Binding and syncing](/docs/bind_and_sync.md) - Bind store values to HTML element properties and attributes.
+* [Dynamic content (client)](./) - Manipulate the DOM client-side with conditional statements and loops without breaking progressive enhancement.
+
+#### Remote reactivity module
+
+* [Dynamic content (via HTTP)](./)
+
+#### Web components module
+
+* [Build and deploy](./)
+
+### Going deeper
+
+The aforementioned philisophical musings about the state of frontend development and the tension between best-practices and practical coding. Here, I'll get into *why* Copper has made the design choices it has, and how you can choose not to care about any of it and use it the way you want to.
+
+* [On frameworks, web trends, lock-in, and modularity](./)
+* [On var, hoisting, and scope](./)
+* [Web and hybrid-native app patterns: should the front-end process data? Should templating occur on the front-end?](./)
+* [Copper and HTMX](./)
+* [Copper and your front-end framework](./)
+* [Customizing Copper](./)
