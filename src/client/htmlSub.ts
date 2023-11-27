@@ -5,7 +5,7 @@ import { Store } from "./store";
 export function registerSubs(parent?: Element) {
     if(!parent) parent = document.body;
     handleDataBinding(parent);
-    handleEvals(parent);
+    // handleEvals(parent);
 }
 
 function breakOutSettings(element: HTMLElement, attribute: string, allowNullBinding = false): {storeName: string, bindings: string[], remaining: string} | null {
@@ -16,7 +16,36 @@ function breakOutSettings(element: HTMLElement, attribute: string, allowNullBind
     const nameAndBinding = subSettings[0].split(":");
     const storeName = nameAndBinding[0].trim();
     const bindings = nameAndBinding[1]?.trim().split("|");
-    const remaining = subSettings[1]?.trim();
+
+    let ingressFunc: Function | null = null;
+    let propagations: string[] | null = null;
+    let egressFunc: Function | null = null;
+
+    //Check remaining settings - processing function or propagation events
+    if(subSettings[1]?.includes(":")) {
+
+    }
+    else {
+
+    }
+
+    //Check remaining settings - processing function or propagation events
+    if(subSettings[2]?.includes(":")) {
+
+    }
+    else {
+
+    }
+
+    //Check remaining settings - processing function or propagation events
+    if(subSettings[3]?.includes(":")) {
+
+    }
+    else {
+
+    }
+
+    const remaining = subSettings[1]?.split(":");
     
     //Abort if no storeName or bindTo
     if(!storeName || (!allowNullBinding && !bindings)) return null;
@@ -86,22 +115,22 @@ function handleDataBinding(parent: Element) {
 }
 
 // Handle function evals
-function handleEvals(parent: Element) {
-    const subBlocks = parent.querySelectorAll(`[${copperConfig.evalAttr}], [data-${copperConfig.evalAttr}]`);
+// function handleEvals(parent: Element) {
+//     const subBlocks = parent.querySelectorAll(`[${copperConfig.evalAttr}], [data-${copperConfig.evalAttr}]`);
 
-    subBlocks.forEach((b)=> {
-        let settings = breakOutSettings(b as HTMLElement, copperConfig.evalAttr, true);
-        if(!settings) {
-            console.warn("Copper: Eval binding must have a store name and can optionally have a bindTo attribute. Bind aborted.", b);
-            return;
-        }
-        let {storeName, bindings, remaining} = settings;
-        const execFunc = window[remaining as any];
-        if(!execFunc || typeof execFunc !== "function") return;
+//     subBlocks.forEach((b)=> {
+//         let settings = breakOutSettings(b as HTMLElement, copperConfig.evalAttr, true);
+//         if(!settings) {
+//             console.warn("Copper: Eval binding must have a store name and can optionally have a bindTo attribute. Bind aborted.", b);
+//             return;
+//         }
+//         let {storeName, bindings, remaining} = settings;
+//         const execFunc = window[remaining as any];
+//         if(!execFunc || typeof execFunc !== "function") return;
 
-        //Add or overwrite DOM subscription method
-        for(let bindTo of bindings || [null]) {
-            applyBindings(b as HTMLElement, bindTo, storeName, undefined, execFunc)
-        }
-    });
-}
+//         //Add or overwrite DOM subscription method
+//         for(let bindTo of bindings || [null]) {
+//             applyBindings(b as HTMLElement, bindTo, storeName, undefined, execFunc)
+//         }
+//     });
+// }
