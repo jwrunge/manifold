@@ -10,6 +10,7 @@ Everything you need to get productive. If you just want to use Copper and don't 
 
 * [Installation and Quick Start](#installation-and-quick-start) - below
 * [Copper stores](./)
+* [String interpolation](./)
 * [Binding and syncing](/docs/bind_and_sync.md)
 * [Dynamic content (client)](./)
 * [Dynamic content (via HTTP)](./)
