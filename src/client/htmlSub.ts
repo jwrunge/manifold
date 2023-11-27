@@ -30,8 +30,11 @@ function applyBindings(element: HTMLElement, bindTo: string | null, storeName: s
         bindTo = bindTo.replace("attr-", "");
     }
 
-    //@ts-ignore - Get store
-    const store: Store<any> = window[storeName] as Store<any>;
+    let store: Store<any> = Store.getStore(storeName);
+    if(!store) {
+        //@ts-ignore - Get store
+        store = window[storeName] as Store<any>;
+    }
 
     store.addDomSubscription(
         element,

@@ -6,8 +6,12 @@
   "typings": "dist/copper.d.ts",
   "exports": {
     ".": "./dist",
-    "./js": "./dist/copper.esm.js",
-    "./js/iife": "./dist/copper.iife.js",
+    "./js": "./dist/unified/copper.esm.js",
+    "./js/iife": "./dist/unified/copper.iife.js",
+    "./js/client": "./dist/client/copper.esm.js",
+    "./js/client/iife": "./dist/client/copper.iife.js",
+    "./js/http": "./dist/http/copper.esm.js",
+    "./js/http/iife": "./dist/http/copper.iife.js",
     "./ts": "./src/index.ts"
   },
   "scripts": {

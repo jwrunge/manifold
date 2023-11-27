@@ -1,7 +1,10 @@
 import { copperConfig } from "../general/config";
 
+var storeMap: Map<string, Store<any>> = new Map();
+
 export class Store<T> {
     //State
+    name?: string;
     value: T | undefined = undefined;
     initializer?: (upstreamValues?: Array<any>) => T;
     #subscriptions: Array<(value: T) => void> = [];
@@ -16,9 +19,32 @@ export class Store<T> {
     #onChange?: (value: T) => void;
     hashFunc: (value: T | undefined) => string | number = copperConfig.hashFunc;
 
-    constructor(defaultValue?: T) {
+    constructor(defaultValue?: T, name?: string) {
         this.value = defaultValue;
+        if(name) {
+            this.name = name;
+            storeMap.set(name, this);
+        }
     }
+
+    /*
+     * STATIC METHODS
+     */
+    static getStore(name: string) {
+        const store = storeMap.get(name);
+        if(!store) throw new Error(`Store ${name} not found`);
+        return store;
+    }
+
+    static deleteStore(name: string) {
+        const store = storeMap.get(name);
+        if(!store) throw new Error(`Store ${name} not found`);
+        storeMap.delete(name);
+    }
+
+    /*
+     * INSTANCE METHODS
+     */
 
     //Initialize from upstream stores
     async init(initialValue?: T | ((upstreamStores: Array<Store<any>>) => T), derivesFrom?: Array<Store<any>>, onChange?: (value: T) => void) {

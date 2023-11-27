@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Webpage</title>
+  <title>Reactivity Test</title>
 </head>
 <body>
   <!-- Content -->
@@ -12,15 +12,37 @@
   <input cp-bind="store1:value">
   <input type="checkbox" cp-bind="store1:checked sync:change">
   <input type="checkbox" cp-eval="store1:checked isChecked">
+
+  <!-- Select (with dynamic options) -->
   <select cp-bind="store1:value sync:change">
-    <option value="" default>Test</option>
-    <option value="Another update">1</option>
-    <option value="We're at 4k">2</option>
+    <!-- Dynamic frontend replace -->
+    <template id="select-ops" cp-each="store1 as letter, index">
+      <!-- Dynamic options -->
+      <cp-dynamic>
+        <option value="${letter}">${index}: ${letter}</option>
+      </cp-dynamic>
+    </template>
+
+    <!-- Default / fallback options (replaced if dynamic options work) -->
+    <cp-default cp-template="select-ops">
+      <option value="" default>Test</option>
+      <option value="Another update">1</option>
+      <option value="We're at 4k">2</option>
+    </cp-default>
+
+    <!-- Always-present options -->
+    <option value="Last one">3</option>
   </select>
 
-  <div cp-if="store1 showDiv">
+  <cp-if check="store1 showDiv">
     Div is shown.
-  </div>
+  </cp-if>
+  <cp-else-if check="store1 showDiv">
+
+  </cp-else-if>
+  <cp-else>
+
+  </cp-else>
 
   <div cp-if="store1 hasLength" cp-each="store1 as letter, index">
     <div>
@@ -31,18 +53,18 @@
   <div class="trans" cp-eval="store1 specialStyling"></div>
 
   <!-- Store script -->
-  <script src="dist/copper.dev.iife.js"></script>
+  <script src="dist/unified/copper.dev.iife.js"></script>
   <script>
-    var store1 = new Copper.Store("My text");
+    new Copper.Store("My text", "store1");
     Copper.registerSubs();
     setTimeout(()=> {
-      store1.update("Another update")
+      Copper.update("Another update", "store1")
     }, 4000)
     setTimeout(()=> {
-      store1.update("We're at 4k")
+      Copper.update("We're at 4k", "store1")
     }, 8000)
     setTimeout(()=> {
-      store1.update("Last one")
+      Copper.update("Last one", "store1")
     }, 12000)
 
     function specialStyling(val, el) {
