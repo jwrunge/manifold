@@ -17,7 +17,8 @@
   "scripts": {
     "build": "rollup -c",
     "test.interactive": "sirv --port 5000 --dev true --single tests/interactive.iife/interactive.html",
-    "test.unit": "jest"
+    "test.unit": "jest",
+    "test": "test.unit"
   },
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4",
