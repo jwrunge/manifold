@@ -8,6 +8,8 @@
 <body>
   <h1>Interactivity test - IIFE</h1>
 
+  <div>This is an example of dynamic text! The current store value is: <cp-interp value="store1">Here is a default value.</cp-interp></div>
+
   <!-- Content -->
   <div class="sync-grid">
     <label>On keyup:</label> <input cp-bind="store1:value sync:keyup|change">
@@ -28,9 +30,9 @@
 
       <!-- Default / fallback options (replaced if dynamic options work) -->
       <cp-default cp-template="select-ops">
-        <option value="" default>Test</option>
-        <option value="Another update">1</option>
-        <option value="We're at 4k">2</option>
+        <option value="" default>Blank</option>
+        <option value="Another update">Show update text</option>
+        <option value="We're at 4k">Show 4k text</option>
       </cp-default>
 
       <!-- Always-present options -->
@@ -38,15 +40,11 @@
     </select>
 
     <label>Dyn div</label>
-    <div cp-condition>
-      <cp-default cp-if="store1 showDiv">
-        Div is shown.
-      </cp-default>
-      <template cp-else-if="store1 showDiv">
-      </template>
-      <template cp-else>
-      </template>
-    </div>
+    <cp-default cp-if="store1 showDiv">
+      Div is shown.
+    </cp-default>
+    <template cp-else-if="store1 showDiv"></template>
+    <template cp-else></template>
   </div>
 
   <div class="trans" cp-bind="store1 specialStyling"></div>
@@ -102,12 +100,31 @@
   </script>
 
   <style>
+    html {
+      background: lightgray;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       overflow-y: scroll;
+      font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 40rem;
+      margin: 0 auto;
+      padding: 0 1rem;
+      background: white;
+      box-sizing: border-box;
+      height: 100%;
     }
 
     h1 {
       text-align: center;
+      color: gray;
+      margin-top: 0;
+      padding-top: 4rem;
+      text-decoration: underline;
+      font-family:Georgia, 'Times New Roman', Times, serif;
     }
 
     .sync-grid {
@@ -119,7 +136,11 @@
       padding: 2rem;
       border: 1px solid lightgray;
       border-radius: 5px;
-      max-width: 40rem;
+    }
+
+    input, select {
+      min-width: 0;
+      max-width: 100%;
     }
 
     label {
