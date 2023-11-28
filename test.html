@@ -11,7 +11,7 @@
   <input cp-bind="store1:value sync:keydown">
   <input cp-bind="store1:value">
   <input type="checkbox" cp-bind="store1:checked sync:change">
-  <input type="checkbox" cp-eval="store1:checked isChecked">
+  <input type="checkbox" cp-bind="store1:checked isChecked">
 
   <!-- Select (with dynamic options) -->
   <select cp-bind="store1:value sync:change">
@@ -50,12 +50,14 @@
     </div>
   </div>
 
-  <div class="trans" cp-eval="store1 specialStyling"></div>
+  <div class="trans" cp-bind="store1 specialStyling"></div>
 
   <!-- Store script -->
   <script src="dist/unified/copper.dev.iife.js"></script>
   <script>
-    new Copper.Store("My text", "store1");
+    new Copper.Store("My text", "store1").init({
+      onChange: (val)=> console.log("CHANGED", val)
+    });
     Copper.registerSubs();
     setTimeout(()=> {
       Copper.update("Another update", "store1")

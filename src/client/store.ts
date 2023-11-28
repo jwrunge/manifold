@@ -47,23 +47,28 @@ export class Store<T> {
      */
 
     //Initialize from upstream stores
-    async init(initialValue?: T | ((upstreamStores: Array<Store<any>>) => T), derivesFrom?: Array<Store<any>>, onChange?: (value: T) => void) {
-        this.#upstreamStores = derivesFrom;
+    async init(ops?: {
+        initialValue?: T | ((upstreamStores: Array<Store<any>>) => T), 
+        derivesFrom?: Array<Store<any>>, 
+        onChange?: (value: T) => void
+    }) {
+        this.#upstreamStores = ops?.derivesFrom;
         for(let store of this.#upstreamStores || []) {
             store.addDownstreamStore(this);
         }
 
-        if(typeof initialValue === "function") {
-            this.initializer = initialValue as (upstreamValues?: Array<any>) => T;
+        if(typeof ops?.initialValue === "function") {
+            this.initializer = ops?.initialValue as (upstreamValues?: Array<any>) => T;
             await this.calculateStateFromUpstream();
         }
         else {
-            this.value = initialValue;
+            this.value = ops?.initialValue;
             this.#handleChange();
         }
 
-        if(onChange) {
-            this.setOnChangeFunc(onChange);
+        console.log("Initting", ops?.onChange)
+        if(ops?.onChange) {
+            this.setOnChangeFunc(ops?.onChange);
             this.#onChange?.(this.value as T);
         }
 

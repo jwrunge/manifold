@@ -5,93 +5,6 @@ import { Store } from "./store";
 export function registerSubs(parent?: Element) {
     if(!parent) parent = document.body;
     handleDataBinding(parent);
-    // handleEvals(parent);
-}
-
-function breakOutSettings(element: HTMLElement, attribute: string, allowNullBinding = false): {storeName: string, bindings: string[], remaining: string} | null {
-    const subSettings = element?.getAttribute(attribute)?.trim()?.split(" ");
-    if(!subSettings) return null;
-
-    //Break out settings
-    const nameAndBinding = subSettings[0].split(":");
-    const storeName = nameAndBinding[0].trim();
-    const bindings = nameAndBinding[1]?.trim().split("|");
-
-    let ingressFunc: Function | null = null;
-    let propagations: string[] | null = null;
-    let egressFunc: Function | null = null;
-
-    //Check remaining settings - processing function or propagation events
-    if(subSettings[1]?.includes(":")) {
-
-    }
-    else {
-
-    }
-
-    //Check remaining settings - processing function or propagation events
-    if(subSettings[2]?.includes(":")) {
-
-    }
-    else {
-
-    }
-
-    //Check remaining settings - processing function or propagation events
-    if(subSettings[3]?.includes(":")) {
-
-    }
-    else {
-
-    }
-
-    const remaining = subSettings[1]?.split(":");
-    
-    //Abort if no storeName or bindTo
-    if(!storeName || (!allowNullBinding && !bindings)) return null;
-    return {storeName, bindings, remaining};
-}
-
-function applyBindings(element: HTMLElement, bindTo: string | null, storeName: string, propagateOn?: string[], execFunc?: Function) {
-    let attr = false;
-    if(bindTo && bindTo.includes("attr-")) {
-        attr = true;
-        bindTo = bindTo.replace("attr-", "");
-    }
-
-    let store: Store<any> = Store.getStore(storeName);
-    if(!store) {
-        //@ts-ignore - Get store
-        store = window[storeName] as Store<any>;
-    }
-
-    store.addDomSubscription(
-        element,
-        (val)=> {
-            if(execFunc) val = execFunc(val, element);
-
-            if(bindTo) {
-                //@ts-ignore - Update DOM value
-                if(!attr) element[bindTo] = val;
-                else element.setAttribute(bindTo, val);
-
-                //For each propogation event
-                for(let eventName of propagateOn || []) {
-                    const eventFunc = (e: Event)=> { 
-                        store.update(
-                            !attr ?
-                            //@ts-ignore
-                            e.currentTarget[bindTo] :
-                            (e.currentTarget as HTMLElement)?.getAttribute(bindTo as string)
-                        );
-                    }
-                    //Clear previous event listener (preventing reassingment) and bind new one
-                    element.removeEventListener(eventName, eventFunc);
-                    element.addEventListener(eventName, eventFunc)
-                }
-            }
-        }
-    );
 }
 
 //Handle data binding
@@ -99,38 +12,109 @@ function handleDataBinding(parent: Element) {
     const subBlocks = parent.querySelectorAll(`[${copperConfig.bindAttr}], [data-${copperConfig.bindAttr}]`);
 
     subBlocks.forEach((b)=> {
-        let settings = breakOutSettings(b as HTMLElement, copperConfig.bindAttr);
-        if(!settings) {
-            console.warn("Copper: Data binding must have a store name and bindTo attribute. Bind aborted.", b);
-            return;
-        }
-        let {storeName, bindings, remaining} = settings;
-        let propagateOn = remaining?.replace("sync:", "")?.trim()?.split("|") || [];
+        const subSettings = b?.getAttribute(copperConfig.bindAttr)?.trim()?.split(";"); //Get all settings packs
+        if(!subSettings || subSettings.length === 0) return;
 
-        //Add or overwrite DOM subscription method
-        for(let bindTo of bindings) {
-            applyBindings(b as HTMLElement, bindTo, storeName, propagateOn);
+        //Loop over settings packs
+        for(let subSetting of subSettings) {
+            const { storeName, bindings, ingressFunc, propagations, egressFunc } = breakOutSettings(subSetting);
+
+            //Add or overwrite DOM subscription method
+            for(let bindTo of bindings || [null]) {
+                applyBindings(b as HTMLElement, bindTo, storeName, propagations || [], ingressFunc, egressFunc);
+            }
         }
     });
 }
 
-// Handle function evals
-// function handleEvals(parent: Element) {
-//     const subBlocks = parent.querySelectorAll(`[${copperConfig.evalAttr}], [data-${copperConfig.evalAttr}]`);
+function breakOutSettings(settings: string): {
+    storeName: string | null, 
+    bindings: string[] | null, 
+    ingressFunc: Function | null,
+    propagations: string[] | null,
+    egressFunc: Function | null
+} {
+    //Break out settings
+    let storeName: string | null = null;
+    let bindings: string[] | null = null;
+    let ingressFunc: Function | null = null;
+    let propagations: string[] | null = null;
+    let egressFunc: Function | null = null;
 
-//     subBlocks.forEach((b)=> {
-//         let settings = breakOutSettings(b as HTMLElement, copperConfig.evalAttr, true);
-//         if(!settings) {
-//             console.warn("Copper: Eval binding must have a store name and can optionally have a bindTo attribute. Bind aborted.", b);
-//             return;
-//         }
-//         let {storeName, bindings, remaining} = settings;
-//         const execFunc = window[remaining as any];
-//         if(!execFunc || typeof execFunc !== "function") return;
+    //Loop through parts to assign settings
+    let s = settings.split(" ");
+    for(let i=0; i < s.length; i++) {
+        const setting = s[i];
+        const parts = setting.split(":");
 
-//         //Add or overwrite DOM subscription method
-//         for(let bindTo of bindings || [null]) {
-//             applyBindings(b as HTMLElement, bindTo, storeName, undefined, execFunc)
-//         }
-//     });
-// }
+        if(i === 0) {
+            storeName = parts[0];
+            bindings = parts[1]?.split("|");
+            continue;
+        }
+
+        //If parts > 1, it's either a storeName-bindings pair or a sync-propagations pair
+        if(parts.length > 1 && parts[0] === "sync") {
+            propagations = parts[1]?.split("|");
+            continue;
+        }
+
+        //Otherwise, it's a processing function
+        //@ts-ignore
+        if(!ingressFunc) ingressFunc = window[setting]
+        //@ts-ignore
+        else egressFunc = window[setting];
+    }
+    
+    //Abort if no storeName or bindTo
+    return {storeName, bindings, ingressFunc, propagations, egressFunc};
+}
+
+function applyBindings(element: HTMLElement, bindTo: string | null, storeName: string | null, propagations: string[], ingressFunc: Function | null, egressFunc: Function | null) {
+    let attr = false;
+    if(bindTo && bindTo.includes("attr-")) {
+        attr = true;
+        bindTo = bindTo.replace("attr-", "");
+    }
+
+    let store: Store<any>;
+    try {
+        store = Store.getStore(storeName || "");
+    }
+    catch(_) {
+        //@ts-ignore - Get store
+        store = window[storeName] as Store<any>;
+    }
+
+    if(store) {
+        //Add subscription - run whenever store updates
+        store.addDomSubscription(
+            element,
+            (val)=> {
+                if(ingressFunc) val = ingressFunc(val, element);    //If ingress function, run it
+
+                if(bindTo) {
+                    //@ts-ignore - Update DOM value
+                    if(!attr) element[bindTo] = val;
+                    else element.setAttribute(bindTo, val);
+                }
+            }
+        );
+    }
+
+    //Add event listeners to element for each propagation event
+    for(let eventName of propagations) {
+        const eventFunc = (e: Event)=> { 
+            //@ts-ignore - Get value
+            let value = !attr ? e.currentTarget[bindTo] : (e.currentTarget as HTMLElement)?.getAttribute(bindTo as string);
+
+            if(egressFunc) value = egressFunc(value, element);    //If egress function, run it
+            if(store) {
+                store.update(value);
+            }
+        }
+        //Clear previous event listener (preventing reassingment) and bind new one
+        element.removeEventListener(eventName, eventFunc);
+        element.addEventListener(eventName, eventFunc)
+    }
+}
