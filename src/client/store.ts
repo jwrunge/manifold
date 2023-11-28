@@ -66,7 +66,6 @@ export class Store<T> {
             this.#handleChange();
         }
 
-        console.log("Initting", ops?.onChange)
         if(ops?.onChange) {
             this.setOnChangeFunc(ops?.onChange);
             this.#onChange?.(this.value as T);

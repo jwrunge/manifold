@@ -1,14 +1,9 @@
 import { copperConfig } from "../general/config";
 import { Store } from "./store";
-
-//Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
-export function registerSubs(parent?: Element) {
-    if(!parent) parent = document.body;
-    handleDataBinding(parent);
-}
+import { storeFromName } from "./util";
 
 //Handle data binding
-function handleDataBinding(parent: Element) {
+export function handleDataBinding(parent: Element) {
     const subBlocks = parent.querySelectorAll(`[${copperConfig.bindAttr}], [data-${copperConfig.bindAttr}]`);
 
     subBlocks.forEach((b)=> {
@@ -77,14 +72,7 @@ function applyBindings(element: HTMLElement, bindTo: string | null, storeName: s
         bindTo = bindTo.replace("attr-", "");
     }
 
-    let store: Store<any>;
-    try {
-        store = Store.getStore(storeName || "");
-    }
-    catch(_) {
-        //@ts-ignore - Get store
-        store = window[storeName] as Store<any>;
-    }
+    const store = storeFromName(storeName);
 
     if(store) {
         const domSubscription = (val: any)=> {
@@ -103,7 +91,6 @@ function applyBindings(element: HTMLElement, bindTo: string | null, storeName: s
             domSubscription
         );
 
-        console.log("INITTING", store.value)
         domSubscription(store.value);   //Run subscription once to initialize
     }
 

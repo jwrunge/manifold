@@ -6,9 +6,10 @@
   <title>Reactivity Test</title>
 </head>
 <body>
-  <h1>Interactivity test - IIFE</h1>
+  <h1>Reactivity test - IIFE</h1>
 
-  <div>This is an example of dynamic text! The current store value is: <cp-interp value="store1">Here is a default value.</cp-interp></div>
+  <p>This is an example of dynamic text! The current store value is: <cp-interp value="store1">Here is a default value.</cp-interp></p>
+  <p>Here is text that can be HTML: <cp-interp value="store1" cp-html>Here is a default value.</cp-interp></p>
 
   <!-- Content -->
   <div class="sync-grid">
@@ -23,20 +24,18 @@
       <!-- Dynamic frontend replace -->
       <template id="select-ops" cp-each="store1 as letter, index">
         <!-- Dynamic options -->
-        <cp-dynamic>
-          <option value="${letter}">${index}: ${letter}</option>
-        </cp-dynamic>
+        <option value="${letter}">${index}: ${letter}</option>
       </template>
 
       <!-- Default / fallback options (replaced if dynamic options work) -->
       <cp-default cp-template="select-ops">
         <option value="" default>Blank</option>
-        <option value="Another update">Show update text</option>
+        <option value="<span class='colorful'>Another update</span>">Show update text</option>
         <option value="We're at 4k">Show 4k text</option>
       </cp-default>
 
       <!-- Always-present options -->
-      <option value="Last one">3</option>
+      <option value="Last one">Last one</option>
     </select>
 
     <label>Dyn div</label>
@@ -52,13 +51,10 @@
   <!-- Store script -->
   <script src="../dist/unified/copper.dev.iife.js"></script>
   <script>
-    new Copper.Store("My text", "store1").init({
-      onChange: (val)=> console.log("CHANGED", val)
-    });
-    console.log("INITIAL VALUE", Copper.get("store1").value);
+    new Copper.Store("My text", "store1");
     Copper.registerSubs();
     setTimeout(()=> {
-      Copper.update("Another update", "store1")
+      Copper.update("<span class='colorful'>Another update</span>", "store1")
     }, 4000)
     setTimeout(()=> {
       Copper.update("We're at 4k", "store1")
@@ -72,7 +68,7 @@
         el.innerHTML = "My text";
         el.style = "background: blue; height: 5rem; width: 90vw; width: 12rem;";
       }
-      else if(val === "Another update") {
+      else if(val === "<span class='colorful'>Another update</span>") {
         el.style = "background: green; height: 15rem; border-radius: 10px; width: 10rem;"
       }
       else if(val === "We're at 4k") {
@@ -162,6 +158,18 @@
       white-space: nowrap;
       overflow: hidden;
       transition: height 1s ease-in-out, width 1s ease-in-out, background-color 1s ease-in-out, font-size 1s ease;
+    }
+
+    .colorful {
+      background: purple;
+      color: white;
+    }
+
+    p {
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   </style>
 </body>
