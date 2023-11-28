@@ -1,6 +1,7 @@
 import { updateConfig } from "./general/config";
 import { Store } from "./client/store";
-import { registerSubs, get, remove, valueof, update } from "./client/util";
+import { get, remove, valueof, update } from "./client/util";
+import { registerSubs } from "./client/clientRoot";
 
 const Copper = {
     Store,
