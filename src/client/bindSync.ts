@@ -1,6 +1,5 @@
 import { copperConfig } from "../general/config";
-import { Store } from "./store";
-import { storeFromName } from "./util";
+import { ProcessFunction, registerDomSubscription, registerPropagationListeners, storeFromName } from "./util";
 
 //Handle data binding
 export function handleDataBinding(parent: Element) {
@@ -8,33 +7,33 @@ export function handleDataBinding(parent: Element) {
 
     subBlocks.forEach((b)=> {
         const subSettings = b?.getAttribute(copperConfig.bindAttr)?.trim()?.split(";"); //Get all settings packs
-        if(!subSettings || subSettings.length === 0) return;
 
         //Loop over settings packs
-        for(let subSetting of subSettings) {
+        for(let subSetting of subSettings || []) {
             const { storeName, bindings, ingressFunc, propagations, egressFunc } = breakOutSettings(subSetting);
 
             //Add or overwrite DOM subscription method
             for(let bindTo of bindings || [null]) {
-                applyBindings(b as HTMLElement, bindTo, storeName, propagations || [], ingressFunc, egressFunc);
+                let attr = bindTo?.includes("attr-") || false;
+                bindTo = bindTo?.replace("attr-", "") || null;
+
+                const store = storeFromName(storeName);
+                registerDomSubscription(b as HTMLElement, store, ingressFunc, bindTo, attr);
+                registerPropagationListeners(b as HTMLElement, store, propagations || [], egressFunc, bindTo, attr);
             }
         }
     });
 }
 
-function breakOutSettings(settings: string): {
-    storeName: string | null, 
-    bindings: string[] | null, 
-    ingressFunc: Function | null,
-    propagations: string[] | null,
-    egressFunc: Function | null
-} {
+function breakOutSettings(settings: string) {
     //Break out settings
-    let storeName: string | null = null;
-    let bindings: string[] | null = null;
-    let ingressFunc: Function | null = null;
-    let propagations: string[] | null = null;
-    let egressFunc: Function | null = null;
+    let output: {
+        storeName?: string | null,
+        bindings?: string[] | null,
+        ingressFunc?: ProcessFunction,
+        propagations?: string[] | null,
+        egressFunc?: ProcessFunction
+    } = {};
 
     //Loop through parts to assign settings
     let s = settings.split(" ");
@@ -43,71 +42,22 @@ function breakOutSettings(settings: string): {
         const parts = setting.split(":");
 
         if(i === 0) {
-            storeName = parts[0];
-            bindings = parts[1]?.split("|");
+            output.storeName = parts[0];
+            output.bindings = parts[1]?.split("|");
             continue;
         }
 
         //If parts > 1, it's either a storeName-bindings pair or a sync-propagations pair
         if(parts.length > 1 && parts[0] === "sync") {
-            propagations = parts[1]?.split("|");
+            output.propagations = parts[1]?.split("|");
             continue;
         }
 
         //Otherwise, it's a processing function
-        //@ts-ignore
-        if(!propagations) ingressFunc = window[setting]
-        //@ts-ignore
-        else egressFunc = window[setting];
+        if(!output.propagations) output.ingressFunc = window[setting as any] as unknown as ProcessFunction;
+        else output.egressFunc = window[setting as any] as unknown as ProcessFunction;
     }
     
     //Abort if no storeName or bindTo
-    return {storeName, bindings, ingressFunc, propagations, egressFunc};
-}
-
-function applyBindings(element: HTMLElement, bindTo: string | null, storeName: string | null, propagations: string[], ingressFunc: Function | null, egressFunc: Function | null) {
-    let attr = false;
-    if(bindTo && bindTo.includes("attr-")) {
-        attr = true;
-        bindTo = bindTo.replace("attr-", "");
-    }
-
-    const store = storeFromName(storeName);
-
-    if(store) {
-        const domSubscription = (val: any)=> {
-            if(ingressFunc) val = ingressFunc(val, element);    //If ingress function, run it
-
-            if(bindTo) {
-                //@ts-ignore - Update DOM value
-                if(!attr) element[bindTo] = val;
-                else element.setAttribute(bindTo, val);
-            }
-        }
-
-        //Add subscription - run whenever store updates
-        store.addDomSubscription(
-            element,
-            domSubscription
-        );
-
-        domSubscription(store.value);   //Run subscription once to initialize
-    }
-
-    //Add event listeners to element for each propagation event
-    for(let eventName of propagations) {
-        const eventFunc = (e: Event)=> { 
-            //@ts-ignore - Get value
-            let value = !attr ? e.currentTarget[bindTo] : (e.currentTarget as HTMLElement)?.getAttribute(bindTo as string);
-
-            if(egressFunc) value = egressFunc(value, element);    //If egress function, run it
-            if(store) {
-                store.update(value);
-            }
-        }
-        
-        //Clear previous event listener (preventing reassingment) and bind new one
-        element.removeEventListener(eventName, eventFunc);
-        element.addEventListener(eventName, eventFunc)
-    }
+    return output;
 }

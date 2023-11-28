@@ -20,8 +20,6 @@ pkg.version = pkg.version?.split?.('.')?.map((v, i) => {
     return v;
 }).join(".");
 
-console.log(pkg)
-
 //Save package.json
 try {
     fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 4), 'utf8');

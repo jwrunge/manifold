@@ -1,5 +1,5 @@
 import {copperConfig} from "../general/config";
-import {storeFromName} from "./util";
+import {ProcessFunction, registerDomSubscription, storeFromName} from "./util";
 
 //Handle data binding
 export function handleStringInterpolation(parent: Element) {
@@ -15,26 +15,12 @@ export function handleStringInterpolation(parent: Element) {
 
         if(!store) return;
 
-        const processFunc: ((val: any, el: HTMLElement)=> string) | null = 
+        const processFunc: ProcessFunction = 
             settings[1] ? 
-            window[settings[1] as any] as unknown as (val: any, el: HTMLElement)=> string : 
+            window[settings[1] as any] as unknown as ProcessFunction : 
             null;
 
-        const domSubscription = (val: any)=> {
-            if(processFunc) val = processFunc(val, b as HTMLElement);    //If ingress function, run it
-
-            const isHTML = (b as HTMLElement).getAttribute(copperConfig.htmlFlagAttr) !== null;
-            console.log("isHTML", isHTML, (b as HTMLElement).getAttribute(copperConfig.htmlFlagAttr));
-            if(isHTML) b.innerHTML = val;
-            else (b as HTMLElement).innerText = val;
-        }
-
-        //Add subscription - run whenever store updates
-        store.addDomSubscription(
-            b as HTMLElement,
-            domSubscription
-        );
-
-        domSubscription(store.value);   //Run subscription once to initialize
+        const isHTML = (b as HTMLElement).getAttribute(copperConfig.htmlFlagAttr) !== null;
+        registerDomSubscription(b as HTMLElement, store, processFunc, isHTML ? "innerHTML" : "innerText");
     });
 }

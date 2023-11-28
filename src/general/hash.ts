@@ -29,11 +29,9 @@ export function hashAny(input: any): number {
       break;
     case "object":
       if(input instanceof Map) {
-        console.log("MAP", input, JSON.stringify(Array.from(input.entries())))
         strToHash = JSON.stringify(Array.from(input.entries()));
       }
       else if(input instanceof Set) {
-        console.log("SET", input, JSON.stringify(Array.from(input)))
         strToHash = JSON.stringify(Array.from(input));
       }
       else {
