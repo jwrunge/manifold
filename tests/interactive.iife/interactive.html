@@ -54,13 +54,13 @@
     new Copper.Store("My text", "store1");
     Copper.registerSubs();
     setTimeout(()=> {
-      Copper.update("<span class='colorful'>Another update</span>", "store1")
+      Copper.update("store1", "<span class='colorful'>Another update</span>")
     }, 4000)
     setTimeout(()=> {
-      Copper.update("We're at 4k", "store1")
+      Copper.update("store1", "We're at 4k")
     }, 8000)
     setTimeout(()=> {
-      Copper.update("Last one", "store1")
+      Copper.update("store1", "Last one")
     }, 12000)
 
     function specialStyling(val, el) {

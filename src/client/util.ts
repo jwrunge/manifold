@@ -17,7 +17,7 @@ export function storeFromName(name?: string | null) {
 
     let store: Store<any>;
     try {
-        store = Store.getStore(name || "");
+        store = get(name || "");
     }
     catch(_) {
         //@ts-ignore - Get store
@@ -41,7 +41,7 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
         }
 
         //Add subscription - run whenever store updates
-        store.addDomSubscription(
+        store.addSubscription(
             element,
             domSubscription
         );
@@ -73,19 +73,19 @@ export function registerPropagationListeners(element: HTMLElement, store: Store<
  *  Utility functions to access stores without picking apart nested properties
  */
 export function get(name: string) {
-    return Store.getStore(name);
+    const store = Store.storeMap.get(name);
+    if(!store) throw new Error(`Store ${name} not found`);
+    return store;
 }
 
 export function remove(name: string) {
-    Store.deleteStore(name);
+    Store.storeMap.delete(name);
 }
 
 export function valueof(name: string) {
-    const store = Store.getStore(name);
-    return store.value;
+    return get(name)?.value;
 }
 
-export function update(value: any, name: string) {
-    const store = Store.getStore(name);
-    store.update(value);
+export function update(name: string, value: any) {
+    get(name)?.update(value);
 }
