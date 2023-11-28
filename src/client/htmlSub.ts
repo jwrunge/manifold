@@ -61,7 +61,7 @@ function breakOutSettings(settings: string): {
 
         //Otherwise, it's a processing function
         //@ts-ignore
-        if(!ingressFunc) ingressFunc = window[setting]
+        if(!propagations) ingressFunc = window[setting]
         //@ts-ignore
         else egressFunc = window[setting];
     }
@@ -87,19 +87,24 @@ function applyBindings(element: HTMLElement, bindTo: string | null, storeName: s
     }
 
     if(store) {
+        const domSubscription = (val: any)=> {
+            if(ingressFunc) val = ingressFunc(val, element);    //If ingress function, run it
+
+            if(bindTo) {
+                //@ts-ignore - Update DOM value
+                if(!attr) element[bindTo] = val;
+                else element.setAttribute(bindTo, val);
+            }
+        }
+
         //Add subscription - run whenever store updates
         store.addDomSubscription(
             element,
-            (val)=> {
-                if(ingressFunc) val = ingressFunc(val, element);    //If ingress function, run it
-
-                if(bindTo) {
-                    //@ts-ignore - Update DOM value
-                    if(!attr) element[bindTo] = val;
-                    else element.setAttribute(bindTo, val);
-                }
-            }
+            domSubscription
         );
+
+        console.log("INITTING", store.value)
+        domSubscription(store.value);   //Run subscription once to initialize
     }
 
     //Add event listeners to element for each propagation event
@@ -113,6 +118,7 @@ function applyBindings(element: HTMLElement, bindTo: string | null, storeName: s
                 store.update(value);
             }
         }
+        
         //Clear previous event listener (preventing reassingment) and bind new one
         element.removeEventListener(eventName, eventFunc);
         element.addEventListener(eventName, eventFunc)

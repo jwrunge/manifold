@@ -7,57 +7,55 @@
 </head>
 <body>
   <!-- Content -->
-  <input cp-bind="store1:value sync:keyup|change">
-  <input cp-bind="store1:value sync:keydown">
-  <input cp-bind="store1:value">
-  <input type="checkbox" cp-bind="store1:checked sync:change">
-  <input type="checkbox" cp-bind="store1:checked isChecked">
+  <div class="sync-grid">
+    <label>On keyup:</label> <input cp-bind="store1:value sync:keyup|change">
+    <label>Bind only:</label> <input cp-bind="store1:value">
+    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" cp-bind="store1:checked sync:change">
+    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" cp-bind="store1:checked isChecked">
 
-  <!-- Select (with dynamic options) -->
-  <select cp-bind="store1:value sync:change">
-    <!-- Dynamic frontend replace -->
-    <template id="select-ops" cp-each="store1 as letter, index">
-      <!-- Dynamic options -->
-      <cp-dynamic>
-        <option value="${letter}">${index}: ${letter}</option>
-      </cp-dynamic>
-    </template>
+    <!-- Select (with dynamic options) -->
+    <label>Dyn select</label>
+    <select cp-bind="store1:value sync:change">
+      <!-- Dynamic frontend replace -->
+      <template id="select-ops" cp-each="store1 as letter, index">
+        <!-- Dynamic options -->
+        <cp-dynamic>
+          <option value="${letter}">${index}: ${letter}</option>
+        </cp-dynamic>
+      </template>
 
-    <!-- Default / fallback options (replaced if dynamic options work) -->
-    <cp-default cp-template="select-ops">
-      <option value="" default>Test</option>
-      <option value="Another update">1</option>
-      <option value="We're at 4k">2</option>
-    </cp-default>
+      <!-- Default / fallback options (replaced if dynamic options work) -->
+      <cp-default cp-template="select-ops">
+        <option value="" default>Test</option>
+        <option value="Another update">1</option>
+        <option value="We're at 4k">2</option>
+      </cp-default>
 
-    <!-- Always-present options -->
-    <option value="Last one">3</option>
-  </select>
+      <!-- Always-present options -->
+      <option value="Last one">3</option>
+    </select>
 
-  <cp-if check="store1 showDiv">
-    Div is shown.
-  </cp-if>
-  <cp-else-if check="store1 showDiv">
-
-  </cp-else-if>
-  <cp-else>
-
-  </cp-else>
-
-  <div cp-if="store1 hasLength" cp-each="store1 as letter, index">
-    <div>
-      Letter {index + 1}: {letter}
+    <label>Dyn div</label>
+    <div cp-condition>
+      <cp-default cp-if="store1 showDiv">
+        Div is shown.
+      </cp-default>
+      <template cp-else-if="store1 showDiv">
+      </template>
+      <template cp-else>
+      </template>
     </div>
   </div>
 
   <div class="trans" cp-bind="store1 specialStyling"></div>
 
   <!-- Store script -->
-  <script src="dist/unified/copper.dev.iife.js"></script>
+  <script src="../dist/unified/copper.dev.iife.js"></script>
   <script>
     new Copper.Store("My text", "store1").init({
       onChange: (val)=> console.log("CHANGED", val)
     });
+    console.log("INITIAL VALUE", Copper.get("store1").value);
     Copper.registerSubs();
     setTimeout(()=> {
       Copper.update("Another update", "store1")
@@ -102,6 +100,26 @@
   </script>
 
   <style>
+    body {
+      overflow-y: scroll;
+    }
+
+    .sync-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: center;
+      grid-gap: 1rem;
+      margin: 1rem auto;
+      width: 90vw;
+    }
+
+    label {
+      font-weight: bold;
+      white-space: nowrap;
+      padding-left: .5rem;
+      border-left: 1px solid gray;
+    }
+
     .trans {
       margin: 1rem auto;
       position: relative;

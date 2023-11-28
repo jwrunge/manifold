@@ -61,7 +61,7 @@ export class Store<T> {
             this.initializer = ops?.initialValue as (upstreamValues?: Array<any>) => T;
             await this.calculateStateFromUpstream();
         }
-        else {
+        else if(ops?.initialValue) {
             this.value = ops?.initialValue;
             this.#handleChange();
         }
