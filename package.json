@@ -15,8 +15,9 @@
     "./ts": "./src/index.ts"
   },
   "scripts": {
-    "test.interactive": "sirv --port 5000 --dev true --single tests/interactive.html",
-    "build": "rollup -c"
+    "build": "rollup -c",
+    "test.interactive": "sirv --port 5000 --dev true --single tests/interactive.iife/interactive.html",
+    "test.unit": "jest"
   },
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4",

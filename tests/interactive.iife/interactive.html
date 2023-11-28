@@ -6,6 +6,8 @@
   <title>Reactivity Test</title>
 </head>
 <body>
+  <h1>Interactivity test - IIFE</h1>
+
   <!-- Content -->
   <div class="sync-grid">
     <label>On keyup:</label> <input cp-bind="store1:value sync:keyup|change">
@@ -104,13 +106,20 @@
       overflow-y: scroll;
     }
 
+    h1 {
+      text-align: center;
+    }
+
     .sync-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       align-items: center;
       grid-gap: 1rem;
-      margin: 1rem auto;
-      width: 90vw;
+      margin: 2rem auto;
+      padding: 2rem;
+      border: 1px solid lightgray;
+      border-radius: 5px;
+      max-width: 40rem;
     }
 
     label {
