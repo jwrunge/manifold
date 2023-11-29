@@ -9,9 +9,16 @@ export function handleConditionals(parent: Element) {
         //Check for else statements
         let elseIfBlocks: HTMLElement[] = [];
         let elseBlock: HTMLElement | null = null;
-        while(b.nextElementSibling) {
-            
-        }
+        let sibling: HTMLElement | null;
+
+        do {
+            sibling = b.nextElementSibling as HTMLElement | null;
+            if(sibling && sibling.hasAttribute(copperConfig.elseAttr)) {
+                elseBlock = sibling;
+            } else if(sibling && sibling.hasAttribute(copperConfig.elseIfAttr)) {
+                elseIfBlocks.push(sibling);
+            }
+        } while(sibling);
 
         const store = storeFromName(storeName);
         registerDomSubscription(b as HTMLElement, store, ingressFunc, isHTML ? "innerHTML" : "innerText");
