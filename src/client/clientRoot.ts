@@ -15,9 +15,7 @@ export function registerSubs(parent?: Element) {
         selectors.push(`[data-${cc.attr[attr]}]`);
     }
 
-    console.log(parent, selectors.join(","), parent?.querySelectorAll(selectors.join(",")))
     parent?.querySelectorAll(selectors.join(",")).forEach(el=> {
-        console.log(el)
         if(el.hasAttribute(cc.attr.bind) || el.hasAttribute(`data-${cc.attr.bind}`)) handleDataBinding(el as HTMLElement);
         if(el.hasAttribute(cc.attr.interpValue) || el.hasAttribute(`data-${cc.attr.interpValue}`)) handleStringInterpolation(el as HTMLElement);
     });
