@@ -2,8 +2,8 @@ import { copperConfig } from "../general/config";
 import { breakOutSettings, forSelected, registerDomSubscription, registerPropagationListeners, storeFromName } from "./clientRoot";
 
 //Handle data binding
-export function handleDataBinding(parent: Element) {
-    forSelected(parent as HTMLElement, copperConfig.bindAttr, true, ";", (el, setting)=> {
+export function handleDataBinding(el: Element) {
+    forSelected(el as HTMLElement, copperConfig.attr.bind, ";", (el, setting)=> {
         const { storeName, bindings, ingressFunc, propagations, egressFunc } = breakOutSettings(setting);
 
         //Add or overwrite DOM subscription method

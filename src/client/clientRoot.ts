@@ -1,3 +1,4 @@
+import { copperConfig as cc } from "../general/config";
 import { handleDataBinding } from "./bindSync";
 import { Store } from "./store";
 import { handleStringInterpolation } from "./stringInterp";
@@ -6,24 +7,30 @@ import { ProcessFunction, get as getStore } from "./util";
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: Element) {
     if(!parent) parent = document.body;
-    handleDataBinding(parent);
-    handleStringInterpolation(parent);
+    const selectors = [];
+    for(let attr in cc.attr) {
+        //@ts-ignore
+        selectors.push(`[${cc.attr[attr]}]`);
+        //@ts-ignore
+        selectors.push(`[data-${cc.attr[attr]}]`);
+    }
+
+    console.log(parent, selectors.join(","), parent?.querySelectorAll(selectors.join(",")))
+    parent?.querySelectorAll(selectors.join(",")).forEach(el=> {
+        console.log(el)
+        if(el.hasAttribute(cc.attr.bind) || el.hasAttribute(`data-${cc.attr.bind}`)) handleDataBinding(el as HTMLElement);
+        if(el.hasAttribute(cc.attr.interpValue) || el.hasAttribute(`data-${cc.attr.interpValue}`)) handleStringInterpolation(el as HTMLElement);
+    });
 }
 
 //Iterate over selectors
-export function forSelected(parent: HTMLElement, prop: string, propIsAttribute: boolean, splitChar: string | null, cb: (el: HTMLElement, setting: string | null)=> void) {
-    const selector = propIsAttribute ? `[${prop}], [data-${prop}]` : prop;
-    const subBlocks = parent.querySelectorAll(selector);
+export function forSelected(el: HTMLElement, prop: string, splitChar: string | null, cb: (el: HTMLElement, setting: string | null)=> void) {
+    const subSettingsStr = el?.getAttribute(prop);
+    const subSettings = splitChar ? subSettingsStr?.split(splitChar) : [subSettingsStr];
 
-    //Loop over elements
-    subBlocks.forEach(el=>{
-        const subSettingsStr = el?.getAttribute(prop);
-        const subSettings = splitChar ? subSettingsStr?.split(splitChar) : [subSettingsStr];
-
-        for(const setting of subSettings || []) {
-            cb(el as HTMLElement, setting);
-        }
-    });
+    for(const setting of subSettings || []) {
+        cb(el as HTMLElement, setting);
+    }
 }
 
 //Get data from settings string

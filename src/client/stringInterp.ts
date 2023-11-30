@@ -3,10 +3,10 @@ import {breakOutSettings, forSelected, registerDomSubscription, storeFromName} f
 
 //Handle data binding
 export function handleStringInterpolation(parent: Element) {
-    forSelected(parent as HTMLElement, copperConfig.interpValueAttr, true, null, (b, settingsString)=> {
+    forSelected(parent as HTMLElement, copperConfig.attr.interpValue, null, (b, settingsString)=> {
         const { storeName, ingressFunc } = breakOutSettings(settingsString);
         const store = storeFromName(storeName);
-        const isHTML = (b as HTMLElement).getAttribute(copperConfig.htmlFlagAttr) !== null;
+        const isHTML = (b as HTMLElement).getAttribute(copperConfig.attr.htmlFlag) !== null;
         registerDomSubscription(b as HTMLElement, store, ingressFunc, isHTML ? "innerHTML" : "innerText");
     });
 }
