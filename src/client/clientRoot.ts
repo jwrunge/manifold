@@ -7,17 +7,15 @@ import { ProcessFunction, get as getStore } from "./util";
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: Element) {
     if(!parent) parent = document.body;
-    const selectors = [];
-    for(let attr in cc.attr) {
+    const selectors = ["cp-interp"];
+    for(let attr of ["cp-bind"]) {
         //@ts-ignore
-        selectors.push(`[${cc.attr[attr]}]`);
-        //@ts-ignore
-        selectors.push(`[data-${cc.attr[attr]}]`);
+        selectors.push(`[${attr}]`);
     }
 
     parent?.querySelectorAll(selectors.join(",")).forEach(el=> {
-        if(el.hasAttribute(cc.attr.bind) || el.hasAttribute(`data-${cc.attr.bind}`)) handleDataBinding(el as HTMLElement);
-        if(el.hasAttribute(cc.attr.interpValue) || el.hasAttribute(`data-${cc.attr.interpValue}`)) handleStringInterpolation(el as HTMLElement);
+        if(el.tagName == "cp-interp") handleStringInterpolation(el as HTMLElement);
+        else if(el.hasAttribute("cp-bind") || el.hasAttribute(`data-cp-bind`)) handleDataBinding(el as HTMLElement);
     });
 }
 
