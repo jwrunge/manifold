@@ -2,7 +2,7 @@
 import typescript from '@rollup/plugin-typescript';
 import terser from '@rollup/plugin-terser';
 
-const variants = ["client", "http", "unified"];
+const variants = ["unified"];
 function assembleIo() {
     let cfg = [];
     for(let variant of variants) {

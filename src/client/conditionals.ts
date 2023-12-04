@@ -1,9 +1,9 @@
-import {copperConfig} from "../general/config";
+import {copperDefaults as cd} from "../general/config";
 import {breakOutSettings, forSelected, registerDomSubscription, storeFromName} from "./clientRoot";
 
 //Handle data binding
 export function handleConditionals(parent: Element) {
-    forSelected(parent as HTMLElement, copperConfig.ifAttr, true, null, (b, settingsString)=> {
+    forSelected(parent as HTMLElement, cd.attr.if, null, (b, settingsString)=> {
         const { storeName, ingressFunc } = breakOutSettings(settingsString);
 
         //Check for else statements
@@ -13,14 +13,14 @@ export function handleConditionals(parent: Element) {
 
         do {
             sibling = b.nextElementSibling as HTMLElement | null;
-            if(sibling && sibling.hasAttribute(copperConfig.elseAttr)) {
+            if(sibling && sibling.hasAttribute(cd.attr.else)) {
                 elseBlock = sibling;
-            } else if(sibling && sibling.hasAttribute(copperConfig.elseIfAttr)) {
+            } else if(sibling && sibling.hasAttribute(cd.attr.elseif)) {
                 elseIfBlocks.push(sibling);
             }
         } while(sibling);
 
         const store = storeFromName(storeName);
-        registerDomSubscription(b as HTMLElement, store, ingressFunc, isHTML ? "innerHTML" : "innerText");
+        // registerDomSubscription(b as HTMLElement, store, ingressFunc, isHTML ? "innerHTML" : "innerText");
     });
 }

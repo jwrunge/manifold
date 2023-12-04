@@ -1,4 +1,4 @@
-import { copperConfig } from "../general/config";
+import { copperConfig as cc } from "../general/config";
 import { ProcessFunction } from "./util";
 
 export class Store<T> {
@@ -15,7 +15,7 @@ export class Store<T> {
     //Change tracking
     #changeHash?: number | string = undefined;
     #onChange?: (value: T) => void;
-    #hashFunc: (value: T | undefined) => string | number = copperConfig.hashFunc;
+    #hashFunc: (value: T | undefined) => string | number = cc.hashFunc;
 
     //Static
     static storeMap: Map<string, Store<any>> = new Map();
@@ -100,11 +100,6 @@ export class Store<T> {
 
     //Determine if the store has been changed
     #hasChanged(val: T | undefined) {
-        if(this.#changeHash === undefined) {
-            this.#changeHash = this.#hashFunc(val);
-            return true;
-        }
-
         let newHash = this.#hashFunc(val);
         if(newHash !== this.#changeHash) {
             this.#changeHash = newHash;

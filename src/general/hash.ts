@@ -1,7 +1,5 @@
 export function hashStr(input: string): number {
   let hash = 0;
-  if (input.length === 0) return hash;
-
   const enc = new TextEncoder().encode(input);
   for(let char of enc) {
     hash = ((hash << 5) - hash) + char;
@@ -11,41 +9,31 @@ export function hashStr(input: string): number {
 }
 
 export function hashAny(input: any): number {
-  let strToHash:string;
-  if(input === undefined || input === null) return 0;
+  if(!input) return 0;
   switch(typeof input) {
     case "string":
-      strToHash = input;
-      break;
+      return hashStr(input);
     case "number":
       return input;
     case "bigint":
-      strToHash = input.toString();
-      break;
+      return hashStr(input.toString())
     case "boolean":
       return input ? 1 : 0;
     case "symbol":
-      strToHash = input.toString();
-      break;
+      return hashStr(input.toString());
     case "object":
+      let toHash: any;
       if(input instanceof Map) {
-        strToHash = JSON.stringify(Array.from(input.entries()));
+        toHash = input.entries();
       }
       else if(input instanceof Set) {
-        strToHash = JSON.stringify(Array.from(input));
+        toHash = Array.from(input);
       }
       else {
-        try {
-          strToHash = JSON.stringify(input);
-        }
-        catch {
           return Date.now();
-        }
       }
-      break;
-    default:
-      strToHash = JSON.stringify(input);
+      return hashAny(JSON.stringify(toHash));
   }
 
-  return hashStr(strToHash);
+  return hashStr(JSON.stringify(input));
 }

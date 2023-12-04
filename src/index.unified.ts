@@ -5,7 +5,7 @@ import { registerSubs } from "./client/clientRoot";
 
 const Copper = {
     Store,
-    registerSubs,
+    init: registerSubs,
     config: updateConfig,
     get,
     remove,
