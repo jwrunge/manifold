@@ -21,49 +21,24 @@ export class Store<T> {
     static storeMap: Map<string, Store<any>> = new Map();
 
     //Constructor
-    constructor(defaultValue?: T, name?: string) {
-        this.value = defaultValue;
-        if(name) {
-            this.name = name;
-            Store.storeMap.set(name, this);
+    constructor(ops: { value?: T, name?: string, upstream?: Array<Store<any>>, updater: (upstreamValues?: Array<any>) => T, onChange?: (value: T) => void }) {
+        this.#upstreamStores = ops?.upstream;
+        for(let store of this.#upstreamStores || []) store.addDownstreamStore(this);
+
+        if(ops?.name) {
+            this.name = ops?.name;
+            Store.storeMap.set(ops?.name, this);
         }
-        
+        this.value = ops?.value;
+        this.#onChange = ops?.onChange;
+        this.#initializer = ops?.updater;
+        this.calculateStateFromUpstream();
         return this;
     }
 
     /*
      * INSTANCE METHODS
      */
-
-    //Initialize from upstream stores
-    async init(ops?: {
-        initialValue?: T | ((upstreamStores: Array<Store<any>>) => T), 
-        derivesFrom?: Array<Store<any>>, 
-        onChange?: (value: T) => void
-    }) {
-        this.#upstreamStores = ops?.derivesFrom;
-        for(let store of this.#upstreamStores || []) {
-            store.addDownstreamStore(this);
-        }
-
-        if(typeof ops?.initialValue === "function") {
-            this.#initializer = ops?.initialValue as (upstreamValues?: Array<any>) => T;
-            await this.calculateStateFromUpstream();
-        }
-        else if(ops?.initialValue) {
-            this.value = ops?.initialValue;
-            this.#handleChange();
-        }
-
-        if(ops?.onChange) {
-            this.#onChange = ops?.onChange;
-            this.#onChange?.(this.value as T);
-        }
-
-        return this;
-    }
-
-    //Dependents
     addDownstreamStore(store: Store<any>) {
         this.#downstreamStores?.push(store);
     }
@@ -75,7 +50,6 @@ export class Store<T> {
 
     //Update based on upstream stores (initialized by derived stores and on initial load)
     async calculateStateFromUpstream() {
-        //Run initialization function if it exists
         if(typeof this.#initializer === "function") {
             let upstreamValues = this.#upstreamStores?.map(store => store.value);
             this.value = await this.#initializer(upstreamValues);
@@ -86,31 +60,16 @@ export class Store<T> {
     }
 
     //Manual update
-    async update(value: T | ((value: T, meta?: { upstreamStores?: Array<Store<any>>, downstreamStores?: Array<Store<any>> })=> T)) {
-        //Manually pass a value to update the store, or pass a function that calculates the value
-        if(typeof value === "function") {
-            this.value = await (value as Function)?.(this.value as T, { upstreamStores: this.#upstreamStores, downstreamStores: this.#downstreamStores });
-        }
-        else {
-            this.value = value;
-        }
-
+    async update(value: T) {
+        this.value = value;
         this.#handleChange();
     }
 
     //Determine if the store has been changed
-    #hasChanged(val: T | undefined) {
-        let newHash = this.#hashFunc(val);
+    #handleChange() {
+        let newHash = this.#hashFunc(this.value);
         if(newHash !== this.#changeHash) {
             this.#changeHash = newHash;
-            return true;
-        }
-
-        return false;
-    }
-
-    #handleChange() {
-        if(this.#hasChanged(this.value)) {
             this.#onChange?.(this.value as T);
             this.#updateDependents();
         }
@@ -118,21 +77,15 @@ export class Store<T> {
 
     //Sync changes to downstream stores
     #updateDependents() {
-        //Remove any undefined stores
-        this.#downstreamStores = (this.#downstreamStores || []).filter(store => store !== undefined);
+        this.#downstreamStores = (this.#downstreamStores || []).filter(store => store !== undefined);   //Remove any undefined stores
 
-        //Update downstream stores
         for(let store of this.#downstreamStores || []) {
             store.calculateStateFromUpstream();
         }
 
-        //Iterate over subscribers and update them
         this.#subscriptions.forEach((sub, ref) => {
-            if(!ref) {
-                this.#subscriptions.delete(ref);   //Remove undefined
-                return;
-            }
-            sub?.(this.value as T, typeof ref === "string" ? undefined : ref as HTMLElement);
+            if(!ref) this.#subscriptions.delete(ref);   //Remove undefined
+            else sub?.(this.value as T, typeof ref === "string" ? undefined : ref as HTMLElement);
         });
     }
 }

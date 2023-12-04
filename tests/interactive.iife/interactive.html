@@ -51,7 +51,7 @@
   <!-- Store script -->
   <script src="../dist/unified/copper.dev.iife.js"></script>
   <script defer>
-    new Copper.Store("My text", "store1");
+    new Copper.Store({ value: "My text", name: "store1" });
     Copper.init();
     setTimeout(()=> {
       Copper.update("store1", "<span class='colorful'>Another update</span>")

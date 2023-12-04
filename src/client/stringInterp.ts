@@ -1,16 +1,13 @@
-import {breakOutSettings, forSelected, registerDomSubscription, storeFromName} from "./clientRoot";
+import {breakOutSettings, registerDomSubscription, storeFromName} from "./clientRoot";
 import { copperDefaults as cd } from "../general/config";
 
-export function handleStringInterpolation(parent: Element) {
-    forSelected(parent as HTMLElement, cd.attr.value, null, (b, settingsString)=> {
-        const { storeName, ingressFunc } = breakOutSettings(settingsString);
-        const isHTML = (b as HTMLElement).getAttribute(cd.attr.html) !== null;
-        console.log(b, isHTML, cd.attr.html)
-        registerDomSubscription(
-            b as HTMLElement, 
-            storeFromName(storeName), 
-            ingressFunc, 
-            isHTML ? "innerHTML" : "innerText"
-        );
-    });
+export function handleStringInterpolation(el: HTMLElement) {
+    const settings = el?.getAttribute(cd.attr.value);
+    const { storeName, ingressFunc } = breakOutSettings(settings);
+    registerDomSubscription(
+        el as HTMLElement, 
+        storeFromName(storeName), 
+        ingressFunc, 
+        (el as HTMLElement).getAttribute(cd.attr.html) !== null ? "innerHTML" : "innerText"
+    );
 }

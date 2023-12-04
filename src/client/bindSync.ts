@@ -1,7 +1,8 @@
-import { breakOutSettings, forSelected, registerDomSubscription, registerPropagationListeners, storeFromName } from "./clientRoot";
+import { breakOutSettings, registerDomSubscription, registerPropagationListeners, storeFromName } from "./clientRoot";
+import { copperDefaults as cd } from "../general/config";
 
 export function handleDataBinding(el: Element) {
-    forSelected(el as HTMLElement, "cp-bind", ";", (el, setting)=> {
+    el?.getAttribute(cd.attr.bind)?.split(";").forEach(setting=> {
         const { storeName, bindings, ingressFunc, propagations, egressFunc } = breakOutSettings(setting);
 
         //Add or overwrite DOM subscription method
@@ -10,8 +11,8 @@ export function handleDataBinding(el: Element) {
             bindTo = bindTo?.replace("attr-", "") || null;
 
             const store = storeFromName(storeName);
-            registerDomSubscription(el, store, ingressFunc, bindTo, attr);
-            registerPropagationListeners(el, store, propagations || [], egressFunc, bindTo, attr);
+            registerDomSubscription(el as HTMLElement, store, ingressFunc, bindTo, attr);
+            registerPropagationListeners(el as HTMLElement, store, propagations || [], egressFunc, bindTo, attr);
         }
-    });
+    })
 }

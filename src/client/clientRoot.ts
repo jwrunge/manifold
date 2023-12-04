@@ -6,19 +6,10 @@ import { copperDefaults as cd } from "../general/config";
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: Element) {
-    if(!parent) parent = document.body;
-    const selectors = [cd.el.interpString];
-    for(let attr of [cd.attr.bind]) {
-        //@ts-ignore
-        selectors.push(`[${attr}]`);
-    }
+    const selectors = [cd.el.interpString, `[${cd.attr.bind}]`, `[data-${cd.attr.bind}]`];
 
-    console.log(selectors)
-
-    parent?.querySelectorAll(selectors.join(",")).forEach(el=> {
-        console.log(el, el.tagName)
+    (parent || document.body)?.querySelectorAll(selectors.join(",")).forEach(el=> {
         if(el.tagName == cd.el.interpString.toUpperCase()) {
-            console.log("interp", el, el.tagName, cd.el.interpString)
             handleStringInterpolation(el as HTMLElement);
         }
         else if(el.hasAttribute(cd.attr.bind) || el.hasAttribute(`data-${cd.attr.bind}`)) handleDataBinding(el as HTMLElement);
@@ -27,8 +18,7 @@ export function registerSubs(parent?: Element) {
 
 //Iterate over selectors
 export function forSelected(el: HTMLElement, prop: string, splitChar: string | null, cb: (el: HTMLElement, setting: string | null)=> void) {
-    const subSettingsStr = el?.getAttribute(prop);
-    const subSettings = splitChar ? subSettingsStr?.split(splitChar) : [subSettingsStr];
+    const subSettings = splitChar ? el?.getAttribute(prop)?.split(splitChar) : [el?.getAttribute(prop)];
 
     for(const setting of subSettings || []) {
         cb(el as HTMLElement, setting);
@@ -61,7 +51,7 @@ export function breakOutSettings(settings?: string | null) {
         }
 
         //If parts > 1, it's either a storeName-bindings pair or a sync-propagations pair
-        if(parts.length > 1 && parts[0] === "sync") {
+        if(parts?.[0] === "sync") {
             output.propagations = parts[1]?.split("|");
             continue;
         }
@@ -71,15 +61,12 @@ export function breakOutSettings(settings?: string | null) {
         else output.egressFunc = window[setting as any] as unknown as ProcessFunction;
     }
     
-    //Abort if no storeName or bindTo
     return output;
 }
 
 
 //Get store from name
 export function storeFromName(name?: string | null) {
-    if(!name) return null;
-
     let store: Store<any>;
     try {
         store = getStore(name || "");
@@ -96,7 +83,7 @@ export function storeFromName(name?: string | null) {
 export function registerDomSubscription(element: HTMLElement, store: Store<any> | null, processFunc?: ProcessFunction, bindTo?: string | null, attr = false) {
     if(store) {
         const domSubscription = (val: any)=> {
-            if(processFunc) val = processFunc(val, element);    //If ingress function, run it
+            val = processFunc?.(val, element) || val;    //If ingress function, run it
 
             if(bindTo) {
                 //@ts-ignore - Update DOM value
@@ -120,16 +107,14 @@ export function registerPropagationListeners(element: HTMLElement, store: Store<
     for(let eventName of propagations) {
         const eventFunc = (e: Event)=> { 
             //@ts-ignore - Get value
-            let value = !attr ? e.currentTarget[bindTo] : (e.currentTarget as HTMLElement)?.getAttribute(bindTo as string);
+            let value = attr ? (e.currentTarget as HTMLElement)?.getAttribute(bindTo as string) : e.currentTarget[bindTo];
 
-            if(processFunc) value = processFunc(value, element);    //If egress function, run it
-            if(store) {
-                store.update(value);
-            }
+            value = processFunc?.(value, element) || value;    //If egress function, run it
+            store?.update(value);
         }
         
         //Clear previous event listener (preventing reassingment) and bind new one
         element.removeEventListener(eventName, eventFunc);
-        element.addEventListener(eventName, eventFunc)
+        element.addEventListener(eventName, eventFunc);
     }
 }
