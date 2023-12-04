@@ -1,6 +1,5 @@
 import { breakOutSettings, forSelected, registerDomSubscription, registerPropagationListeners, storeFromName } from "./clientRoot";
 
-//Handle data binding
 export function handleDataBinding(el: Element) {
     forSelected(el as HTMLElement, "cp-bind", ";", (el, setting)=> {
         const { storeName, bindings, ingressFunc, propagations, egressFunc } = breakOutSettings(setting);

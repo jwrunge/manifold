@@ -1,21 +1,27 @@
-import { copperConfig as cc } from "../general/config";
 import { handleDataBinding } from "./bindSync";
 import { Store } from "./store";
 import { handleStringInterpolation } from "./stringInterp";
 import { ProcessFunction, get as getStore } from "./util";
+import { copperDefaults as cd } from "../general/config";
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: Element) {
     if(!parent) parent = document.body;
-    const selectors = ["cp-interp"];
-    for(let attr of ["cp-bind"]) {
+    const selectors = [cd.el.interpString];
+    for(let attr of [cd.attr.bind]) {
         //@ts-ignore
         selectors.push(`[${attr}]`);
     }
 
+    console.log(selectors)
+
     parent?.querySelectorAll(selectors.join(",")).forEach(el=> {
-        if(el.tagName == "cp-interp") handleStringInterpolation(el as HTMLElement);
-        else if(el.hasAttribute("cp-bind") || el.hasAttribute(`data-cp-bind`)) handleDataBinding(el as HTMLElement);
+        console.log(el, el.tagName)
+        if(el.tagName == cd.el.interpString.toUpperCase()) {
+            console.log("interp", el, el.tagName, cd.el.interpString)
+            handleStringInterpolation(el as HTMLElement);
+        }
+        else if(el.hasAttribute(cd.attr.bind) || el.hasAttribute(`data-${cd.attr.bind}`)) handleDataBinding(el as HTMLElement);
     });
 }
 
