@@ -26,9 +26,9 @@ export function handleConditionals(el: Element) {
         };
 
         //Set callback to be called on store updates
-        const cb = (show: boolean, el: HTMLElement)=> {
-            console.log("Value", show, el)
-            el.style.display = show !== false ? "" : "none";
+        const cb = ({val, el}: { val: boolean, el: HTMLElement })=> {
+            console.log("Value", val, el)
+            el.style.display = val ? "" : "none";
         };
 
         //Promote all <template> tags to visible elements
@@ -44,7 +44,7 @@ export function handleConditionals(el: Element) {
             el = newEl;
         }
 
-        registerDomSubscription(el as HTMLElement, storeFromName(storeName), storeName || "", ingressFunc, null);
+        registerDomSubscription(el as HTMLElement, storeFromName(storeName), storeName || "", ingressFunc, null, null, cb);
 
         el = el.nextElementSibling as HTMLElement;
     }

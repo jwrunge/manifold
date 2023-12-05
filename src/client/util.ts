@@ -69,11 +69,11 @@ export function storeFromName(name?: string | null) {
 }
 
 //Register DOM subscription
-export function registerDomSubscription(element: HTMLElement, store: Store<any> | null, storePath: string, processFunc?: ProcessFunction, bindTo?: string | null, bindType?: "attr" | "style" | null) {
+export function registerDomSubscription(element: HTMLElement, store: Store<any> | null, storePath: string, processFunc?: ProcessFunction, bindTo?: string | null, bindType?: "attr" | "style" | null, cb?: (data: {val: any, el: HTMLElement})=> void) {
     if(store) {
         const domSubscription = (val: any)=> {
             val = findNestedValue(val, storePath);
-            val = processFunc?.({val, el: element}) || val;    //If ingress function, run it
+            val = processFunc?.({val, el: element}) ?? val;         //If ingress function, run it
 
             if(!bindTo && bindType === "style") bindTo = "style";   //Allow bulk style setting
             if(bindTo) {
@@ -82,6 +82,9 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
                 //@ts-ignore
                 else element[bindTo] = val;
             }
+
+            console.log("Calling back", val)
+            cb?.({val, el: element});
         }
 
         //Add subscription - run whenever store updates

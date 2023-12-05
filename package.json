@@ -21,7 +21,8 @@
         "test": "run-s test.unit",
         "increment-patch": "node util/incrementPatchVersion.js",
         "publish.no-increment": "run-s build test && npm publish",
-        "publish": "run-s build test && increment-patch && npm publish"
+        "publish": "run-s build test && increment-patch && npm publish",
+        "test.gzip": "wsl gzip -c ./dist/unified/copper.esm.js > ./dist/unified/cu.gz"
     },
     "devDependencies": {
         "@rollup/plugin-terser": "^0.4.4",

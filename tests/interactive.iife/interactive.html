@@ -105,9 +105,8 @@
     }
 
     function showDiv({val}) {
-      console.log("Show div?")
-      if(val === "We're at 4k") return true;
-      else return false;
+      console.log("show div", val, val === "We're at 4k")
+      return val === "We're at 4k";
     }
   </script>
 
