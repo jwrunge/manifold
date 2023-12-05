@@ -2,7 +2,7 @@ import { hashAny } from "./hash";
 
 export let copperConfig = {
     el: {
-        interpString: "cu-str",
+        str: "cu-str",
     },
     attr: {
         bind: "cu-bind",

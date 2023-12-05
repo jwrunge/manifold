@@ -23,7 +23,7 @@ export class Store<T> {
     //Constructor
     constructor(ops: { value?: T, name?: string, upstream?: Array<Store<any>>, updater: (upstreamValues?: Array<any>) => T, onChange?: (value: T) => void }) {
         this.#upstreamStores = ops?.upstream;
-        for(let store of this.#upstreamStores || []) store.addDownstream(this);
+        for(let store of this.#upstreamStores || []) store.addDep(this);
 
         if(ops?.name) {
             this.name = ops?.name;
@@ -39,7 +39,7 @@ export class Store<T> {
     /*
      * INSTANCE METHODS
      */
-    addDownstream(store: Store<any>) {
+    addDep(store: Store<any>) {
         this.#downstreamStores?.push(store);
     }
 
