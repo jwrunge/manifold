@@ -15,7 +15,7 @@ export class Store<T> {
     //Change tracking
     #changeHash?: number | string = undefined;
     #onChange?: (value: T) => void;
-    #hashFunc: (value: T | undefined) => string | number = cc.hashFunc;
+    #hashFunc: (value: T | undefined) => string | number = cc.hash;
 
     //Static
     static storeMap: Map<string, Store<any>> = new Map();

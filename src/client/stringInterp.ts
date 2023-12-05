@@ -1,13 +1,13 @@
 import {breakOutSettings, registerDomSubscription, storeFromName} from "./clientRoot";
-import { copperDefaults as cd } from "../general/config";
+import { copperConfig as cc } from "../general/config";
 
 export function handleStringInterpolation(el: HTMLElement) {
-    const settings = el?.getAttribute(cd.attr.value);
+    const settings = el?.getAttribute(cc.attr.value);
     const { storeName, ingressFunc } = breakOutSettings(settings);
     registerDomSubscription(
         el as HTMLElement, 
         storeFromName(storeName), 
         ingressFunc, 
-        (el as HTMLElement).getAttribute(cd.attr.html) !== null ? "innerHTML" : "innerText"
+        (el as HTMLElement).getAttribute(cc.attr.html) !== null ? "innerHTML" : "innerText"
     );
 }

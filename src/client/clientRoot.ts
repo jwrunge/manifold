@@ -2,17 +2,17 @@ import { handleDataBinding } from "./bindSync";
 import { Store } from "./store";
 import { handleStringInterpolation } from "./stringInterp";
 import { ProcessFunction, get as getStore } from "./util";
-import { copperDefaults as cd } from "../general/config";
+import { copperConfig as cc } from "../general/config";
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: Element) {
-    const selectors = [cd.el.interpString, `[${cd.attr.bind}]`, `[data-${cd.attr.bind}]`];
+    const selectors = [cc.el.interpString, `[${cc.attr.bind}]`, `[data-${cc.attr.bind}]`];
 
     (parent || document.body)?.querySelectorAll(selectors.join(",")).forEach(el=> {
-        if(el.tagName == cd.el.interpString.toUpperCase()) {
+        if(el.tagName == cc.el.interpString.toUpperCase()) {
             handleStringInterpolation(el as HTMLElement);
         }
-        else if(el.hasAttribute(cd.attr.bind) || el.hasAttribute(`data-${cd.attr.bind}`)) handleDataBinding(el as HTMLElement);
+        else if(el.hasAttribute(cc.attr.bind) || el.hasAttribute(`data-${cc.attr.bind}`)) handleDataBinding(el as HTMLElement);
     });
 }
 

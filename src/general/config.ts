@@ -1,6 +1,6 @@
 import { hashAny } from "./hash";
 
-export const copperDefaults = {
+export let copperConfig = {
     el: {
         interpString: "cp-str",
     },
@@ -16,11 +16,8 @@ export const copperDefaults = {
         all: "cp-trans",
         in: "cp-in",
         out: "cp-out",
-    }
-};
-
-export let copperConfig = {
-    hashFunc: hashAny,
+    },
+    hash: hashAny,
 }
 
 export function updateConfig(config: Partial<typeof copperConfig>) {
