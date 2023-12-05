@@ -22,6 +22,7 @@ export function hashAny(input: any): number {
     case "symbol":
       return hashStr(input.toString());
     case "object":
+    default:
       let toHash: any;
       if(input instanceof Map) {
         toHash = input.entries();
@@ -34,6 +35,4 @@ export function hashAny(input: any): number {
       }
       return hashAny(JSON.stringify(toHash));
   }
-
-  return hashStr(JSON.stringify(input));
 }
