@@ -44,7 +44,7 @@ export function handleConditionals(el: Element) {
             el = newEl;
         }
 
-        registerDomSubscription(el as HTMLElement, storeFromName(storeName), storeName || "", ingressFunc, null, false, cb);
+        registerDomSubscription(el as HTMLElement, storeFromName(storeName), storeName || "", ingressFunc, null);
 
         el = el.nextElementSibling as HTMLElement;
     }

@@ -7,16 +7,27 @@ export function handleDataBinding(el: Element) {
 
         //Add or overwrite DOM subscription method
         for(let bindTo of bindings || [null]) {
-            let attr = bindTo?.includes("attr-") || false;
-            bindTo = bindTo?.replace("attr-", "") || null;
+            let bindType: "attr" | "style" | null = null;
+            if(bindTo?.includes("attr-")) {
+                bindType = "attr";
+                bindTo = bindTo.replace("attr-", "");
+            }
+            else if(bindTo?.includes("style-")) {
+                bindType = "style";
+                bindTo = bindTo.replace("style-", "");
+            }
 
             const store = storeFromName(storeName);
-            registerDomSubscription(el as HTMLElement, store, storeName || "", ingressFunc, bindTo, attr);
-            // registerPropagationListeners(el as HTMLElement, store, propagations || [], egressFunc, bindTo, attr);
+            registerDomSubscription(el as HTMLElement, store, storeName || "", ingressFunc, bindTo, bindType);
+            
             for(let eventName of propagations || []) {
                 const eventFunc = (e: Event)=> { 
-                    //@ts-ignore - Get value
-                    let value = attr ? (e.currentTarget as HTMLElement)?.getAttribute(bindTo as string) : e.currentTarget[bindTo];
+                    let value = bindType === "attr" ? 
+                        (e.currentTarget as HTMLElement)?.getAttribute(bindTo as string) : 
+                        bindType === "style" ?
+                        (e.currentTarget as HTMLElement)?.style.getPropertyValue(bindTo as string) :
+                        //@ts-ignore
+                        e.currentTarget[bindTo];
         
                     value = egressFunc?.({val: value, el: el as HTMLElement}) || value;    //If egress function, run it
                     store?.update(value);
