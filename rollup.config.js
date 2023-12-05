@@ -12,7 +12,7 @@ function assembleIo() {
                 {
                     file: `dist/${variant}/copper.iife.js`,
                     format: 'iife',
-                    name: "Copper",
+                    name: "Cu",
                 },
                 {
                     file: `dist/${variant}/copper.esm.js`,
@@ -22,7 +22,7 @@ function assembleIo() {
                 {
                     file: `dist/${variant}/copper.dev.iife.js`,
                     format: 'iife',
-                    name: "Copper",
+                    name: "Cu",
                     sourcemap: true,
                 },
                 {

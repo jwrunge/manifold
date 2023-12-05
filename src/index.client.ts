@@ -1,6 +1,6 @@
 import { updateConfig } from "./general/config";
 import { Store } from "./client/store";
-import { get, rm, val, update } from "./client/util";
+import { get, rm, val } from "./client/util";
 import { registerSubs } from "./client/clientRoot";
 
 const Cu = {
@@ -9,8 +9,7 @@ const Cu = {
     config: updateConfig,
     get,
     rm,
-    val,
-    update
+    val
 }
 
 export default Cu;

@@ -27,15 +27,13 @@ export function breakOutSettings(settings?: string | null) {
         egressFunc?: ProcessFunction
     } = {};
 
-    if(!settings) return output;
-
     //Loop through parts to assign settings
-    let s = settings.split(" ");
+    let s = settings?.split(" ") || [];
     for(let i=0; i < s.length; i++) {
         const setting = s[i];
         const parts = setting.split(":");
 
-        if(i === 0) {
+        if(!i) {
             output.storeName = parts[0];
             output.bindings = parts[1]?.split("|");
             continue;
@@ -58,11 +56,8 @@ export function breakOutSettings(settings?: string | null) {
 
 //Get store from name
 export function storeFromName(name?: string | null) {
-    let store: Store<any>;
-    try {
-        store = getStore(name || "");
-    }
-    catch(_) {
+    let store: Store<any> | undefined = getStore(name || "");
+    if(!store) {
         //@ts-ignore - Get store
         store = window[name] as Store<any>;
     }

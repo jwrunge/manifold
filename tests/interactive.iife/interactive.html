@@ -54,13 +54,13 @@
     new Cu.Store({ value: "My text", name: "store1" });
     Cu.init();
     setTimeout(()=> {
-      Cu.update("store1", "<span class='colorful'>Another update</span>")
+      Cu.val("store1", "<span class='colorful'>Another update</span>")
     }, 4000)
     setTimeout(()=> {
-      Cu.update("store1", "We're at 4k")
+      Cu.val("store1", "We're at 4k")
     }, 8000)
     setTimeout(()=> {
-      Cu.update("store1", "Last one")
+      Cu.val("store1", "Last one")
     }, 12000)
 
     function specialStyling(val, el) {
