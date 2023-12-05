@@ -1,6 +1,6 @@
 import { Store } from "./store";
 
-export type ProcessFunction = ((val: any, el?: HTMLElement)=> any) | null
+export type ProcessFunction = ((data: {val: any, el?: HTMLElement})=> any) | null
 
 /*
  *  Utility functions to access stores without picking apart nested properties
@@ -73,7 +73,7 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
     if(store) {
         const domSubscription = (val: any)=> {
             val = findNestedValue(val, storePath);
-            val = processFunc?.(val, element) || val;    //If ingress function, run it
+            val = processFunc?.({val, el: element}) || val;    //If ingress function, run it
 
             if(bindTo) {
                 //@ts-ignore - Update DOM value
@@ -90,6 +90,9 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
 
         domSubscription(store.value);   //Run subscription once to initialize
     }
+    else {
+        processFunc?.({val, el: element})
+    }
 }
 
 //Find nested values
@@ -101,7 +104,6 @@ function findNestedValue(obj: any, path: string) {
 
     for(let key of pathParts) {
         try {
-            console.log(structuredClone(value), key, Array.isArray(value), Array.isArray(value) ? parseInt(key) : key)
             if(value instanceof Map) value = value.get(key);
             else value = value[Array.isArray(value) || value instanceof Set ? parseInt(key) : key];
         }

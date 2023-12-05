@@ -1,12 +1,13 @@
 import { copperConfig as cc } from "../general/config";
-import { ProcessFunction } from "./util";
+
+type SubFunction = (value: any, ref?: string | HTMLElement)=> void
 
 export class Store<T> {
     //State
     name?: string;
     value: T | undefined = undefined;
     #updater?: (upstreamValues: Array<any>, curVal?: T) => T;
-    #subscriptions: Map<Element | string, ProcessFunction> = new Map();
+    #subscriptions: Map<Element | string, SubFunction> = new Map();
 
     //Derivation
     #downstreamStores?: Array<Store<any>> = [];
@@ -43,9 +44,9 @@ export class Store<T> {
         this.#downstreamStores?.push(store);
     }
 
-    addSub(ref: string | Element, sub: (value: T) => void) {
+    addSub(ref: string | Element, sub: (value: T)=> void) {
         this.#subscriptions.set(ref, sub);
-        sub(this.value as T);
+        sub?.(this.value as T);
     }
 
     //Update based on upstream stores (initialized by derived stores and on initial load)
@@ -89,7 +90,7 @@ export class Store<T> {
 
         this.#subscriptions.forEach((sub, ref) => {
             if(!ref) this.#subscriptions.delete(ref);   //Remove undefined
-            else sub?.(this.value as T, typeof ref === "string" ? undefined : ref as HTMLElement);
+            else sub?.(this.value as T, ref as HTMLElement);
         });
     }
 }

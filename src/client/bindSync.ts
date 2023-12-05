@@ -18,7 +18,7 @@ export function handleDataBinding(el: Element) {
                     //@ts-ignore - Get value
                     let value = attr ? (e.currentTarget as HTMLElement)?.getAttribute(bindTo as string) : e.currentTarget[bindTo];
         
-                    value = egressFunc?.(value, el as HTMLElement) || value;    //If egress function, run it
+                    value = egressFunc?.({val: value, el: el as HTMLElement}) || value;    //If egress function, run it
                     store?.update(value);
                 }
                 

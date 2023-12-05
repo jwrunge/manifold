@@ -73,7 +73,7 @@
       Cu.val("store1", "Last one")
     }, 12000)
 
-    function specialStyling(val, el) {
+    function specialStyling({val, el}) {
       if(val === "My text") {
         el.innerHTML = "My text";
         el.style = "background: blue; height: 5rem; width: 90vw; width: 12rem;";
@@ -99,7 +99,7 @@
       }
     }
 
-    function isChecked(val) {
+    function isChecked({val}) {
       if(val === "We're at 4k") return true;
       else return false;
     }
