@@ -1,4 +1,4 @@
-import { breakOutSettings, registerDomSubscription, storeFromName } from "./clientRoot";
+import { breakOutSettings, registerDomSubscription, storeFromName } from "./util";
 import { copperConfig as cc } from "../general/config";
 
 export function handleDataBinding(el: Element) {
@@ -11,7 +11,7 @@ export function handleDataBinding(el: Element) {
             bindTo = bindTo?.replace("attr-", "") || null;
 
             const store = storeFromName(storeName);
-            registerDomSubscription(el as HTMLElement, store, ingressFunc, bindTo, attr);
+            registerDomSubscription(el as HTMLElement, store, storeName || "", ingressFunc, bindTo, attr);
             // registerPropagationListeners(el as HTMLElement, store, propagations || [], egressFunc, bindTo, attr);
             for(let eventName of propagations || []) {
                 const eventFunc = (e: Event)=> { 

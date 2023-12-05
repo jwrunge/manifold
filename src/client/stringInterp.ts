@@ -1,4 +1,4 @@
-import {breakOutSettings, registerDomSubscription, storeFromName} from "./clientRoot";
+import {breakOutSettings, registerDomSubscription, storeFromName} from "./util";
 import { copperConfig as cc } from "../general/config";
 
 export function handleStringInterpolation(el: HTMLElement) {
@@ -7,6 +7,7 @@ export function handleStringInterpolation(el: HTMLElement) {
     registerDomSubscription(
         el as HTMLElement, 
         storeFromName(storeName), 
+        storeName || "",
         ingressFunc, 
         (el as HTMLElement).getAttribute(cc.attr.html) !== null ? "innerHTML" : "innerText"
     );

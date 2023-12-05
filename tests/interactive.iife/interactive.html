@@ -10,6 +10,7 @@
 
   <p>This is an example of dynamic text! The current store value is: <cu-str cu-value="store1">Here is a default value.</cu-str></p>
   <p>Here is text that can be HTML: <cu-str cu-value="store1" cu-html>Here is a default value.</cu-str></p>
+  <p>Store 2 nested: <cu-str cu-value="store2.values[1]">Here is a default value.</cu-str></p>
 
   <!-- Content -->
   <div class="sync-grid">
@@ -52,6 +53,15 @@
   <script src="../dist/unified/copper.dev.iife.js"></script>
   <script defer>
     new Cu.Store({ value: "My text", name: "store1" });
+    new Cu.Store({ 
+      value: { values: ["one", "two"]},
+      name: "store2",
+      upstream: [Cu.get("store1")],
+      updater: ([Store1], cur)=> {
+        cur.values[1] = Store1;
+        return cur;
+      }
+    });
     Cu.init();
     setTimeout(()=> {
       Cu.val("store1", "<span class='colorful'>Another update</span>")

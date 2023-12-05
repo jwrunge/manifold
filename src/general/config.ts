@@ -3,6 +3,7 @@ import { hashAny } from "./hash";
 export let copperConfig = {
     el: {
         str: "CU-STR",
+        def: "CU-DEFAULT",
     },
     attr: {
         bind: "cu-bind",
@@ -11,6 +12,7 @@ export let copperConfig = {
         if: "cu-if",
         else: "cu-else",
         elseif: "cu-else-if",
+        templ: "cu-template",
     },
     trans: {
         all: "cu-trans",

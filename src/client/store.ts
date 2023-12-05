@@ -5,7 +5,7 @@ export class Store<T> {
     //State
     name?: string;
     value: T | undefined = undefined;
-    #initializer?: (upstreamValues?: Array<any>) => T;
+    #updater?: (upstreamValues: Array<any>, curVal?: T) => T;
     #subscriptions: Map<Element | string, ProcessFunction> = new Map();
 
     //Derivation
@@ -31,8 +31,8 @@ export class Store<T> {
         }
         this.value = ops?.value;
         this.#onChange = ops?.onChange;
-        this.#initializer = ops?.updater;
-        this.refresh();
+        this.#updater = ops?.updater;
+        this.#refresh();
         return this;
     }
 
@@ -49,11 +49,15 @@ export class Store<T> {
     }
 
     //Update based on upstream stores (initialized by derived stores and on initial load)
-    async refresh() {
-        if(typeof this.#initializer === "function") {
-            let upstreamValues = this.#upstreamStores?.map(store => store.value);
-            this.value = await this.#initializer(upstreamValues);
+    async #refresh() {
+        let upstreamValues = this.#upstreamStores?.map(store => store.value);
+        if(!upstreamValues?.length) return;
+        try {
+            this.value = await this.#updater?.(upstreamValues || [], this?.value) || undefined;
             this.#onChange?.(this.value as T);
+        }
+        catch(e) {
+            console.error("No value returned from updater().", e);
         }
 
         this.#handleChange();
@@ -80,7 +84,7 @@ export class Store<T> {
         this.#downstreamStores = (this.#downstreamStores || []).filter(store => store !== undefined);   //Remove any undefined stores
 
         for(let store of this.#downstreamStores || []) {
-            store.refresh();
+            store.#refresh();
         }
 
         this.#subscriptions.forEach((sub, ref) => {
