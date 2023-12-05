@@ -13,9 +13,9 @@
 
 ## Description
 
-Via the `cp-bind` attribute, Copper stores can be bound to any attribute or property of an HTML element, and optionally processed by globally-defined functions. Alterations to the HTML element can also by synced back to the variable, creating a two-way binding.
+Via the `cu-bind` attribute, Copper stores can be bound to any attribute or property of an HTML element, and optionally processed by globally-defined functions. Alterations to the HTML element can also by synced back to the variable, creating a two-way binding.
 
-The `cp-bind` syntax is as follows:
+The `cu-bind` syntax is as follows:
 
 ```html
 {store_name}[:properties] [input_processing_function] [sync:events [output_processing_function]]
@@ -28,44 +28,44 @@ Below is a kind of "cheat sheet" reference to how to bind and sync stores with H
 Bind the value of `store` to an element's `value` property (one-way binding):
 
 ```html
-<input cp-bind="store:value">
+<input cu-bind="store:value">
 ```
 
 Bind the value of `store` to the `checked` property and sync changes to `checked` back to `store` on `change` (two-way binding):
 
 ```html
-<input type="checkbox" cp-bind="store:checked sync:change">
+<input type="checkbox" cu-bind="store:checked sync:change">
 ```
 
 Bind the value of `store` to the `disabled` property, processed with the `isDisabled` function; sync changes to `disabled` back to `store`, processing the value with the `onDisabled` function:
 
 ```html
-<input cp-bind="store:disabled isDisabled sync:change onDisabled">
+<input cu-bind="store:disabled isDisabled sync:change onDisabled">
 ```
 
 Bind the value of `store` to both the `disabled` and `value` properties, and sync on `change` and `keyup`. The effect of this is to disable the input once you've typed "true":
 
 ```html
-<input cp-bind="store:disabled|value sync:change|keyup">
+<input cu-bind="store:disabled|value sync:change|keyup">
 ```
 
 When `store` updates, run the `evaluate` function (which receives a reference to the element for direct manipulation):
 
 ```html
-<div class="special-div" cp-bind="store evaluate">
+<div class="special-div" cu-bind="store evaluate">
 ```
 
 Apply granular bindings by separating with a semicolon:
 
 ```html
-<input cp-bind="store evaluate; store:value sync:change processChange">
+<input cu-bind="store evaluate; store:value sync:change processChange">
 ```
 
 ## Detailed Overview
 
 ### One-way binding
 
-The result of a Copper store can be synced to an HTML element's attribute using the `cp-bind` attribute. For example:
+The result of a Copper store can be synced to an HTML element's attribute using the `cu-bind` attribute. For example:
 
 ```javascript
 new Copper.Store("Initial value", "store1");
@@ -80,17 +80,17 @@ setTimeout(()=> {
 ```
 
 ```html
-<input type="text" cp-bind="store1:value">
+<input type="text" cu-bind="store1:value">
 ```
 
-The above example should be fairly self-explanatory: we initialize a Copper store called "store1," and three seconds later update its value. In the markup, we bind the value of `store1` to the `value` property of the input element using the `cp-bind` attribute. When `store1` updates, the input element will update. After 5 seconds, the console will log the current value of `store1`, which in this case will always be "Updated after 3s."
+The above example should be fairly self-explanatory: we initialize a Copper store called "store1," and three seconds later update its value. In the markup, we bind the value of `store1` to the `value` property of the input element using the `cu-bind` attribute. When `store1` updates, the input element will update. After 5 seconds, the console will log the current value of `store1`, which in this case will always be "Updated after 3s."
 
 ### Two-way binding
 
-What the above example does *not* do is sync updates to the input element's value back to the store. To do this, we can extend the `cp-bind` attribute value like so:
+What the above example does *not* do is sync updates to the input element's value back to the store. To do this, we can extend the `cu-bind` attribute value like so:
 
 ```html
-<input type="text" cp-bind="store1:value sync:change">
+<input type="text" cu-bind="store1:value sync:change">
 ```
 
 The above modification will update the value of `store1` whenever the value of the input changes. If the user changes the text of the input element to "Sync works!" after the three-second timeout (which updates the store, and therefore the input element) but before the five-second timeout (which logs the value of the store), then the console log output will read "Sync works!"
@@ -100,7 +100,7 @@ The above modification will update the value of `store1` whenever the value of t
 Bound values can optionally be processed both on assignment to the HTML element (on ingress) and on sync (egress). Specifying a processing function after the bind definition will change the bound value before it is applied to the HTML element (without affecting the store value). Specifying a processing function after the sync definition will change the syncing value before the change is applied to the store without affecting the HTML element's value.
 
 ```html
-<input type="number" cp-bind="store:value asNumber sync:change asText">
+<input type="number" cu-bind="store:value asNumber sync:change asText">
 ```
 
 ```typescript
@@ -128,7 +128,7 @@ Whenever the `change` event fires on our number input element, the value will be
 **You can bind to multiple properties or attributes** by separating the properties or attributes with a pipe (`|`):
 
 ```html
-<input cp-bind="store:value|disabled sync:change">
+<input cu-bind="store:value|disabled sync:change">
 ```
 
 The result of the above code is that `store`'s value will be updated whenever the input is changed. If that value happens to be "true," `store`'s `disabled` property will also be set to true, making it uneditable.
@@ -136,7 +136,7 @@ The result of the above code is that `store`'s value will be updated whenever th
 **You can sync changes based on multiple events** by separating the events with a pipe (`|`):
 
 ```html
-<input cp-bind="store:value sync:change|keyup">
+<input cu-bind="store:value sync:change|keyup">
 ```
 
 The result of the above code is that `store`'s value will be updated whenever the input is changed, or whenever a `keyup` event is fired.
@@ -144,7 +144,7 @@ The result of the above code is that `store`'s value will be updated whenever th
 **You can granularly define binding and syncing behavior** by separating bind statements with a semicolon (`;`):
 
 ```html
-<div cp-bind="store:innerText formatValue; store colorize"></div>
+<div cu-bind="store:innerText formatValue; store colorize"></div>
 ```
 
 ```typescript
@@ -172,7 +172,7 @@ In the above code, we process the binding of `store`'s value in two ways:
 You can bind to attributes instead of properties by appending `-attr` to the property name.
 
 ```html
-<input cp-bind="store:value-attr">
+<input cu-bind="store:value-attr">
 ```
 
 In the above example, we bind the value of `store` to the input's `value` attribute.

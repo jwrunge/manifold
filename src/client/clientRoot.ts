@@ -93,7 +93,7 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
         }
 
         //Add subscription - run whenever store updates
-        store.addSubscription(
+        store.addSub(
             element,
             domSubscription
         );

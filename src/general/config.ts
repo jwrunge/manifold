@@ -2,20 +2,20 @@ import { hashAny } from "./hash";
 
 export let copperConfig = {
     el: {
-        interpString: "cp-str",
+        interpString: "cu-str",
     },
     attr: {
-        bind: "cp-bind",
-        value: "cp-value",
-        html: "cp-html",
-        if: "cp-if",
-        else: "cp-else",
-        elseif: "cp-else-if",
+        bind: "cu-bind",
+        value: "cu-value",
+        html: "cu-html",
+        if: "cu-if",
+        else: "cu-else",
+        elseif: "cu-else-if",
     },
     trans: {
-        all: "cp-trans",
-        in: "cp-in",
-        out: "cp-out",
+        all: "cu-trans",
+        in: "cu-in",
+        out: "cu-out",
     },
     hash: hashAny,
 }

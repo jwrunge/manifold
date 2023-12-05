@@ -11,11 +11,11 @@ export function get(name: string) {
     return store;
 }
 
-export function remove(name: string) {
+export function rm(name: string) {
     Store.storeMap.delete(name);
 }
 
-export function valueof(name: string) {
+export function val(name: string) {
     return get(name)?.value;
 }
 

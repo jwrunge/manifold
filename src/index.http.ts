@@ -1,17 +1,17 @@
 import { updateConfig } from "./general/config";
 import { Store } from "./client/store";
-import { get, remove, valueof, update } from "./client/util";
+import { get, rm, val, update } from "./client/util";
 import { registerSubs } from "./client/clientRoot";
 
 
-const Copper = {
+const Cu = {
     Store,
     init: registerSubs,
     config: updateConfig,
     get,
-    remove,
-    valueof,
+    rm,
+    val,
     update
 }
 
-export default Copper;
+export default Cu;

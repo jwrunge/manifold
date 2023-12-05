@@ -23,7 +23,7 @@ export class Store<T> {
     //Constructor
     constructor(ops: { value?: T, name?: string, upstream?: Array<Store<any>>, updater: (upstreamValues?: Array<any>) => T, onChange?: (value: T) => void }) {
         this.#upstreamStores = ops?.upstream;
-        for(let store of this.#upstreamStores || []) store.addDownstreamStore(this);
+        for(let store of this.#upstreamStores || []) store.addDownstream(this);
 
         if(ops?.name) {
             this.name = ops?.name;
@@ -32,24 +32,24 @@ export class Store<T> {
         this.value = ops?.value;
         this.#onChange = ops?.onChange;
         this.#initializer = ops?.updater;
-        this.calculateStateFromUpstream();
+        this.refresh();
         return this;
     }
 
     /*
      * INSTANCE METHODS
      */
-    addDownstreamStore(store: Store<any>) {
+    addDownstream(store: Store<any>) {
         this.#downstreamStores?.push(store);
     }
 
-    addSubscription(ref: string | Element, sub: (value: T) => void) {
+    addSub(ref: string | Element, sub: (value: T) => void) {
         this.#subscriptions.set(ref, sub);
         sub(this.value as T);
     }
 
     //Update based on upstream stores (initialized by derived stores and on initial load)
-    async calculateStateFromUpstream() {
+    async refresh() {
         if(typeof this.#initializer === "function") {
             let upstreamValues = this.#upstreamStores?.map(store => store.value);
             this.value = await this.#initializer(upstreamValues);
@@ -80,7 +80,7 @@ export class Store<T> {
         this.#downstreamStores = (this.#downstreamStores || []).filter(store => store !== undefined);   //Remove any undefined stores
 
         for(let store of this.#downstreamStores || []) {
-            store.calculateStateFromUpstream();
+            store.refresh();
         }
 
         this.#subscriptions.forEach((sub, ref) => {

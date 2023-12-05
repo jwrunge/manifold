@@ -8,59 +8,59 @@
 <body>
   <h1>Reactivity test - IIFE</h1>
 
-  <p>This is an example of dynamic text! The current store value is: <cp-str cp-value="store1">Here is a default value.</cp-str></p>
-  <p>Here is text that can be HTML: <cp-str cp-value="store1" cp-html>Here is a default value.</cp-str></p>
+  <p>This is an example of dynamic text! The current store value is: <cu-str cu-value="store1">Here is a default value.</cu-str></p>
+  <p>Here is text that can be HTML: <cu-str cu-value="store1" cu-html>Here is a default value.</cu-str></p>
 
   <!-- Content -->
   <div class="sync-grid">
-    <label>On keyup:</label> <input cp-bind="store1:value sync:keyup|change">
-    <label>Bind only:</label> <input cp-bind="store1:value">
-    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" cp-bind="store1:checked sync:change">
-    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" cp-bind="store1:checked isChecked">
+    <label>On keyup:</label> <input cu-bind="store1:value sync:keyup|change">
+    <label>Bind only:</label> <input cu-bind="store1:value">
+    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" cu-bind="store1:checked sync:change">
+    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" cu-bind="store1:checked isChecked">
 
     <!-- Select (with dynamic options) -->
     <label>Dyn select</label>
-    <select cp-bind="store1:value sync:change">
+    <select cu-bind="store1:value sync:change">
       <!-- Dynamic frontend replace -->
-      <template id="select-ops" cp-each="store1 as letter, index">
+      <template id="select-ops" cu-each="store1 as letter, index">
         <!-- Dynamic options -->
         <option value="${letter}">${index}: ${letter}</option>
       </template>
 
       <!-- Default / fallback options (replaced if dynamic options work) -->
-      <cp-default cp-template="select-ops">
+      <cu-default cu-template="select-ops">
         <option value="" default>Blank</option>
         <option value="<span class='colorful'>Another update</span>">Show update text</option>
         <option value="We're at 4k">Show 4k text</option>
-      </cp-default>
+      </cu-default>
 
       <!-- Always-present options -->
       <option value="Last one">Last one</option>
     </select>
 
     <label>Dyn div</label>
-    <cp-default cp-if="store1 showDiv">
+    <cu-default cu-if="store1 showDiv">
       Div is shown.
-    </cp-default>
-    <template cp-else-if="store1 showDiv"></template>
-    <template cp-else></template>
+    </cu-default>
+    <template cu-else-if="store1 showDiv"></template>
+    <template cu-else></template>
   </div>
 
-  <div class="trans" cp-bind="store1 specialStyling"></div>
+  <div class="trans" cu-bind="store1 specialStyling"></div>
 
   <!-- Store script -->
   <script src="../dist/unified/copper.dev.iife.js"></script>
   <script defer>
-    new Copper.Store({ value: "My text", name: "store1" });
-    Copper.init();
+    new Cu.Store({ value: "My text", name: "store1" });
+    Cu.init();
     setTimeout(()=> {
-      Copper.update("store1", "<span class='colorful'>Another update</span>")
+      Cu.update("store1", "<span class='colorful'>Another update</span>")
     }, 4000)
     setTimeout(()=> {
-      Copper.update("store1", "We're at 4k")
+      Cu.update("store1", "We're at 4k")
     }, 8000)
     setTimeout(()=> {
-      Copper.update("store1", "Last one")
+      Cu.update("store1", "Last one")
     }, 12000)
 
     function specialStyling(val, el) {
