@@ -1,9 +1,51 @@
 import {copperConfig as cc} from "../general/config";
 import {breakOutSettings, registerDomSubscription, storeFromName} from "./util";
 
+function getConditionalElement(el: HTMLElement) {
+    for(let asType of [cc.attr.if, cc.attr.elseif]) {
+        const settings = el?.getAttribute(asType) || el?.getAttribute(`data-${asType}`);
+        if(settings) {
+            const { storeName, ingressFunc } = breakOutSettings(settings);
+            return { asType, storeName, ingressFunc };
+        }
+    }
+    if(el?.hasAttribute(cc.attr.else)) {
+        return { asType: cc.attr.else };
+    }
+}
+
 //Handle data binding
 export function handleConditionals(el: Element) {
-    const settings = el?.getAttribute(cc.attr.if);
-    const { storeName, ingressFunc } = breakOutSettings(settings);
-    
+    while(el) {
+        const { asType, storeName, ingressFunc } = getConditionalElement(el as HTMLElement) || {};
+
+        if(!asType) {
+            console.log("Failed type", asType, el)
+            el = el.nextElementSibling as HTMLElement;
+            continue
+        };
+
+        //Set callback to be called on store updates
+        const cb = (show: boolean, el: HTMLElement)=> {
+            console.log("Value", show, el)
+            el.style.display = show !== false ? "" : "none";
+        };
+
+        //Promote all <template> tags to visible elements
+        if(el.tagName === "TEMPLATE") {
+            const innerHTML = el.innerHTML;
+            const promoteAttr = el.getAttribute("cu-promote") || el.getAttribute("data-cu-promote") || "div";
+            let newEl = document.createElement(promoteAttr);
+            newEl.innerHTML = innerHTML;
+            for(const attr of el.attributes) {
+                newEl.setAttribute(attr.name, attr.value);
+            }
+            el.replaceWith(newEl);
+            el = newEl;
+        }
+
+        registerDomSubscription(el as HTMLElement, storeFromName(storeName), storeName || "", ingressFunc, null, false, cb);
+
+        el = el.nextElementSibling as HTMLElement;
+    }
 }

@@ -69,7 +69,7 @@ export function storeFromName(name?: string | null) {
 }
 
 //Register DOM subscription
-export function registerDomSubscription(element: HTMLElement, store: Store<any> | null, storePath: string, processFunc?: ProcessFunction, bindTo?: string | null, attr = false) {
+export function registerDomSubscription(element: HTMLElement, store: Store<any> | null, storePath: string, processFunc?: ProcessFunction, bindTo?: string | null, attr = false, cb?: Function) {
     if(store) {
         const domSubscription = (val: any)=> {
             val = findNestedValue(val, storePath);
@@ -80,6 +80,8 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
                 if(!attr) element[bindTo] = val;
                 else element.setAttribute(bindTo, val);
             }
+
+            cb?.(val, element)
         }
 
         //Add subscription - run whenever store updates
@@ -89,9 +91,6 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
         );
 
         domSubscription(store.value);   //Run subscription once to initialize
-    }
-    else {
-        processFunc?.({val, el: element})
     }
 }
 

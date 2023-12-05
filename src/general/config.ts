@@ -10,8 +10,8 @@ export let copperConfig = {
         value: "cu-value",
         html: "cu-html",
         if: "cu-if",
-        else: "cu-else",
         elseif: "cu-else-if",
+        else: "cu-else",
         templ: "cu-template",
     },
     trans: {

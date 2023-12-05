@@ -43,8 +43,8 @@
     <cu-default cu-if="store1 showDiv">
       Div is shown.
     </cu-default>
-    <template cu-else-if="store1 showDiv"></template>
-    <template cu-else></template>
+    <template cu-else-if="store1 showDiv">Else if</template>
+    <template cu-else>Else</template>
   </div>
 
   <div class="trans" cu-bind="store1 specialStyling"></div>
@@ -100,6 +100,11 @@
     }
 
     function isChecked({val}) {
+      if(val === "We're at 4k") return true;
+      else return false;
+    }
+
+    function showDiv({val}) {
       if(val === "We're at 4k") return true;
       else return false;
     }
