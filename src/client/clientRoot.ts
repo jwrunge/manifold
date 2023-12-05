@@ -16,15 +16,6 @@ export function registerSubs(parent?: Element) {
     });
 }
 
-//Iterate over selectors
-export function forSelected(el: HTMLElement, prop: string, splitChar: string | null, cb: (el: HTMLElement, setting: string | null)=> void) {
-    const subSettings = splitChar ? el?.getAttribute(prop)?.split(splitChar) : [el?.getAttribute(prop)];
-
-    for(const setting of subSettings || []) {
-        cb(el as HTMLElement, setting);
-    }
-}
-
 //Get data from settings string
 export function breakOutSettings(settings?: string | null) {
     //Break out settings
@@ -99,22 +90,5 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
         );
 
         domSubscription(store.value);   //Run subscription once to initialize
-    }
-}
-
-//Register event listeners from propagation list
-export function registerPropagationListeners(element: HTMLElement, store: Store<any> | null, propagations: string[], processFunc?: ProcessFunction, bindTo?: string | null, attr = false) {
-    for(let eventName of propagations) {
-        const eventFunc = (e: Event)=> { 
-            //@ts-ignore - Get value
-            let value = attr ? (e.currentTarget as HTMLElement)?.getAttribute(bindTo as string) : e.currentTarget[bindTo];
-
-            value = processFunc?.(value, element) || value;    //If egress function, run it
-            store?.update(value);
-        }
-        
-        //Clear previous event listener (preventing reassingment) and bind new one
-        element.removeEventListener(eventName, eventFunc);
-        element.addEventListener(eventName, eventFunc);
     }
 }
