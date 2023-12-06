@@ -1,6 +1,13 @@
 import { copperConfig as cc } from "../general/config";
 
-type SubFunction = (value: any, ref?: string | HTMLElement)=> void
+type SubFunction = (value: any, ref?: string | HTMLElement)=> void;
+
+interface StoreOptions<T> {
+    value?: T, name?: string, 
+    upstream?: Array<Store<any>>, 
+    updater: (upstreamValues?: Array<any>) => T, 
+    onChange?: (value: T) => void
+};
 
 export class Store<T> {
     //State
@@ -16,24 +23,13 @@ export class Store<T> {
     //Change tracking
     #changeHash?: number | string = undefined;
     #onChange?: (value: T) => void;
-    #hashFunc: (value: T | undefined) => string | number = cc.hash;
 
     //Static
     static storeMap: Map<string, Store<any>> = new Map();
 
     //Constructor
-    constructor(ops: { value?: T, name?: string, upstream?: Array<Store<any>>, updater: (upstreamValues?: Array<any>) => T, onChange?: (value: T) => void }) {
-        this.#upstreamStores = ops?.upstream;
-        for(let store of this.#upstreamStores || []) store.addDep(this);
-
-        if(ops?.name) {
-            this.name = ops?.name;
-            Store.storeMap.set(ops?.name, this);
-        }
-        this.value = ops?.value;
-        this.#onChange = ops?.onChange;
-        this.#updater = ops?.updater;
-        this.#refresh();
+    constructor(ops: StoreOptions<T>) {
+        this.modify(ops);
         return this;
     }
 
@@ -64,6 +60,21 @@ export class Store<T> {
         this.#handleChange();
     }
 
+    //Modify store
+    modify(ops: StoreOptions<T>) {
+        this.#upstreamStores = ops?.upstream;
+        for(let store of this.#upstreamStores || []) store.addDep(this);
+
+        if(ops?.name) {
+            this.name = ops?.name;
+            Store.storeMap.set(ops?.name, this);
+        }
+        this.value = ops?.value;
+        this.#onChange = ops?.onChange;
+        this.#updater = ops?.updater;
+        this.#refresh();
+    }
+
     //Manual update
     async update(value: T | ((curVal: T)=> T)) {
         if(typeof value === "function") {
@@ -75,7 +86,7 @@ export class Store<T> {
 
     //Determine if the store has been changed
     #handleChange() {
-        let newHash = this.#hashFunc(this.value);
+        let newHash = cc.hash(this.value);
         if(newHash !== this.#changeHash) {
             this.#changeHash = newHash;
             this.#onChange?.(this.value as T);

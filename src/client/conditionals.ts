@@ -19,16 +19,10 @@ export function handleConditionals(el: Element) {
     while(el) {
         const { asType, storeName, ingressFunc } = getConditionalElement(el as HTMLElement) || {};
 
-        //Else if and else probably don't need dom sub -- if should control
         if(!asType) {
             el = el.nextElementSibling as HTMLElement;
         }
         else {
-            //Set callback to be called on store updates
-            const cb = ({val, el}: { val: boolean, el: HTMLElement })=> {
-                el.style.display = val ? "" : "none";
-            };
-
             //Promote all <template> tags to visible elements
             if(el.tagName === "TEMPLATE") {
                 const innerHTML = el.innerHTML;
@@ -41,6 +35,11 @@ export function handleConditionals(el: Element) {
                 el.replaceWith(newEl);
                 el = newEl;
             }
+
+            //Set callback to be called on store updates
+            const cb = ({val, el}: { val: boolean, el: HTMLElement })=> {
+                el.style.display = val ? "" : "none";
+            };
 
             registerDomSubscription(el as HTMLElement, storeFromName(storeName), storeName || "", ingressFunc, null, null, cb);
 
