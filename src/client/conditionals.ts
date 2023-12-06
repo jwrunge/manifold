@@ -20,32 +20,30 @@ export function handleConditionals(el: Element) {
         const { asType, storeName, ingressFunc } = getConditionalElement(el as HTMLElement) || {};
 
         if(!asType) {
-            console.log("Failed type", asType, el)
             el = el.nextElementSibling as HTMLElement;
-            continue
-        };
-
-        //Set callback to be called on store updates
-        const cb = ({val, el}: { val: boolean, el: HTMLElement })=> {
-            console.log("Value", val, el)
-            el.style.display = val ? "" : "none";
-        };
-
-        //Promote all <template> tags to visible elements
-        if(el.tagName === "TEMPLATE") {
-            const innerHTML = el.innerHTML;
-            const promoteAttr = el.getAttribute("cu-promote") || el.getAttribute("data-cu-promote") || "div";
-            let newEl = document.createElement(promoteAttr);
-            newEl.innerHTML = innerHTML;
-            for(const attr of el.attributes) {
-                newEl.setAttribute(attr.name, attr.value);
-            }
-            el.replaceWith(newEl);
-            el = newEl;
         }
+        else {
+            //Set callback to be called on store updates
+            const cb = ({val, el}: { val: boolean, el: HTMLElement })=> {
+                el.style.display = val ? "" : "none";
+            };
 
-        registerDomSubscription(el as HTMLElement, storeFromName(storeName), storeName || "", ingressFunc, null, null, cb);
+            //Promote all <template> tags to visible elements
+            if(el.tagName === "TEMPLATE") {
+                const innerHTML = el.innerHTML;
+                const promoteAttr = el.getAttribute("cu-promote") || el.getAttribute("data-cu-promote") || "div";
+                let newEl = document.createElement(promoteAttr);
+                newEl.innerHTML = innerHTML;
+                for(const attr of el.attributes) {
+                    newEl.setAttribute(attr.name, attr.value);
+                }
+                el.replaceWith(newEl);
+                el = newEl;
+            }
 
-        el = el.nextElementSibling as HTMLElement;
+            registerDomSubscription(el as HTMLElement, storeFromName(storeName), storeName || "", ingressFunc, null, null, cb);
+
+            el = el.nextElementSibling as HTMLElement;
+        }
     }
 }

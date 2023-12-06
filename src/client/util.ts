@@ -69,7 +69,7 @@ export function storeFromName(name?: string | null) {
 }
 
 //Register DOM subscription
-export function registerDomSubscription(element: HTMLElement, store: Store<any> | null, storePath: string, processFunc?: ProcessFunction, bindTo?: string | null, bindType?: "attr" | "style" | null, cb?: (data: {val: any, el: HTMLElement})=> void) {
+export function registerDomSubscription(element: HTMLElement, store: Store<any> | null, storePath: string, processFunc?: ProcessFunction, bindTo?: string | null, bindType?: string | null, cb?: (data: {val: any, el: HTMLElement})=> void) {
     if(store) {
         const domSubscription = (val: any)=> {
             val = findNestedValue(val, storePath);
@@ -83,7 +83,7 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
                 else element[bindTo] = val;
             }
 
-            console.log("Calling back", val)
+            console.log("Calling back", store.name, element, val)
             cb?.({val, el: element});
         }
 
@@ -92,8 +92,6 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
             element,
             domSubscription
         );
-
-        domSubscription(store.value);   //Run subscription once to initialize
     }
 }
 

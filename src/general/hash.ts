@@ -8,22 +8,10 @@ export function hashStr(input: string): number {
   return hash;
 }
 
-export function hashAny(input: any): number {
+export function hashAny(input: any): any {
   if(!input) return 0;
-  switch(typeof input) {
-    case "string":
-      return hashStr(input);
-    case "number":
-      return input;
-    case "bigint":
-      return hashStr(input.toString())
-    case "boolean":
-      return input ? 1 : 0;
-    case "symbol":
-      return hashStr(input.toString());
-    case "object":
-    default:
-      let toHash: any;
+  if(typeof input === "object") {
+    let toHash: any;
       if(input instanceof Map) {
         toHash = input.entries();
       }
@@ -33,6 +21,6 @@ export function hashAny(input: any): number {
       else {
           return Date.now();
       }
-      return hashAny(JSON.stringify(toHash));
   }
+  return input;
 }

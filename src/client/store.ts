@@ -65,8 +65,11 @@ export class Store<T> {
     }
 
     //Manual update
-    async update(value: T) {
-        this.value = value;
+    async update(value: T | ((curVal: T)=> T)) {
+        if(typeof value === "function") {
+            this.value = (value as Function)?.(this.value);
+        }
+        else this.value = value;
         this.#handleChange();
     }
 

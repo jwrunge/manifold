@@ -21,7 +21,3 @@ export let copperConfig = {
     },
     hash: hashAny,
 }
-
-export function updateConfig(config: Partial<typeof copperConfig>) {
-    copperConfig = {...copperConfig, ...config};
-}

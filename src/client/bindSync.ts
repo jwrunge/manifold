@@ -7,14 +7,12 @@ export function handleDataBinding(el: Element) {
 
         //Add or overwrite DOM subscription method
         for(let bindTo of bindings || [null]) {
-            let bindType: "attr" | "style" | null = null;
-            if(bindTo?.includes("attr-")) {
-                bindType = "attr";
-                bindTo = bindTo.replace("attr-", "");
-            }
-            else if(bindTo?.includes("style-")) {
-                bindType = "style";
-                bindTo = bindTo.replace("style-", "");
+            let bindType = "";
+            for(let t of ["attr", "style"]) {
+                if(bindTo?.includes(`${t}-`)) {
+                    bindType = t;
+                    bindTo = bindTo.replace(`${t}-`, "");
+                }
             }
 
             const store = storeFromName(storeName);

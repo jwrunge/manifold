@@ -105,14 +105,13 @@
     }
 
     function showDiv({val}) {
-      console.log("show div", val, val === "We're at 4k")
       return val === "We're at 4k";
     }
   </script>
 
   <style>
     html {
-      background: lightgray;
+      background: rgb(22, 22, 22);
       height: 100vh;
       margin: 0;
       padding: 0;
@@ -124,14 +123,15 @@
       max-width: 40rem;
       margin: 0 auto;
       padding: 0 1rem;
-      background: white;
+      background: rgb(44, 44, 44);
       box-sizing: border-box;
       height: 100%;
+      color: lightgray;
     }
 
     h1 {
       text-align: center;
-      color: gray;
+      color: rgb(168, 168, 168);
       margin-top: 0;
       padding-top: 4rem;
       text-decoration: underline;
@@ -145,13 +145,15 @@
       grid-gap: 1rem;
       margin: 2rem auto;
       padding: 2rem;
-      border: 1px solid lightgray;
+      border: 1px solid gray;
       border-radius: 5px;
     }
 
     input, select {
       min-width: 0;
       max-width: 100%;
+      background: gray;
+      color: white;
     }
 
     label {
