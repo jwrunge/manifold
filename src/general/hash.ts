@@ -21,6 +21,8 @@ export function hashAny(input: any): any {
       else {
           return Date.now();
       }
+      return hashAny(JSON.stringify(toHash));
   }
-  return input;
+  else if(typeof input === "string") return hashStr(input);
+  return hashStr(input.toString());
 }
