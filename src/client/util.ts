@@ -83,7 +83,6 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
                 else element[bindTo] = val;
             }
 
-            console.log("Calling back", store.name, element, val)
             cb?.({val, el: element});
         }
 

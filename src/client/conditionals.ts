@@ -19,6 +19,7 @@ export function handleConditionals(el: Element) {
     while(el) {
         const { asType, storeName, ingressFunc } = getConditionalElement(el as HTMLElement) || {};
 
+        //Else if and else probably don't need dom sub -- if should control
         if(!asType) {
             el = el.nextElementSibling as HTMLElement;
         }
