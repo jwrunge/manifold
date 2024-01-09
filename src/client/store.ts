@@ -6,7 +6,8 @@ interface StoreOptions<T> {
     value?: T, name?: string, 
     upstream?: Array<Store<any>>, 
     updater: (upstreamValues?: Array<any>) => T, 
-    onChange?: (value: T) => void
+    onChange?: (value: T) => void,
+    global?: boolean
 };
 
 export class Store<T> {
@@ -15,6 +16,7 @@ export class Store<T> {
     value: T | undefined = undefined;
     #updater?: (upstreamValues: Array<any>, curVal?: T) => T;
     #subscriptions: Map<Element | string, SubFunction> = new Map();
+    global?: boolean = false;
 
     //Derivation
     #downstreamStores?: Array<Store<any>> = [];
@@ -26,6 +28,7 @@ export class Store<T> {
 
     //Static
     static storeMap: Map<string, Store<any>> = new Map();
+    static funcMap: Map<string, Function> = new Map();
 
     //Constructor
     constructor(ops: StoreOptions<T>) {
@@ -72,6 +75,7 @@ export class Store<T> {
         this.value = ops?.value;
         this.#onChange = ops?.onChange;
         this.#updater = ops?.updater;
+        this.global = ops?.global || false;
         this.#refresh();
     }
 
@@ -106,5 +110,15 @@ export class Store<T> {
             if(!ref) this.#subscriptions.delete(ref);   //Remove undefined
             else sub?.(this.value as T, ref as HTMLElement);
         });
+    }
+
+    static store<U>(name: string, ops?: StoreOptions<U>) {
+        if(ops) return new Store(ops);
+        else return Store.storeMap.get(name);
+    }
+
+    static func(name: string, func?: Function) {
+        if(func) Store.funcMap.set(name, func);
+        return Store.funcMap.get(name);
     }
 }

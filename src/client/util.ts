@@ -5,19 +5,6 @@ export type ProcessFunction = ((data: {val: any, el?: HTMLElement})=> any) | nul
 /*
  *  Utility functions to access stores without picking apart nested properties
  */
-export function get(name: string) {
-    return Store.storeMap.get(name);
-}
-
-export function rm(name: string) {
-    Store.storeMap.delete(name);
-}
-
-export function val(name: string, value?: any) {
-    if(!value) return get(name)?.value;
-    get(name)?.update(value);
-}
-
 //Get data from settings string
 export function breakOutSettings(settings?: string | null) {
     //Break out settings
