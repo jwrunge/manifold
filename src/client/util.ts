@@ -46,7 +46,7 @@ export function breakOutSettings(settings?: string | null) {
 //Get store from name
 export function storeFromName(name?: string | null) {
     name = name?.split(/[\.\[]/g)[0];   //Remove any pathing
-    let store: Store<any> | undefined = get(name || "");
+    let store: Store<any> | undefined = Store.store(name || "");
     if(!store) {
         //@ts-ignore - Get store
         store = window[name] as Store<any>;
