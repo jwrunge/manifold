@@ -2,9 +2,14 @@ import { breakOutSettings, registerDomSubscription, registerChangeListener } fro
 import { Store } from "./store";
 
 export function handleDataBindSync(el: HTMLElement, fn: string) {
-    el?.getAttribute(fn)?.split(";").forEach(setting=> {
+    console.log("HANDLE DATA BIND SYNC")
+    el?.dataset?.[fn]?.split(";").forEach(setting=> {
+        console.log("Settings", setting)
         const { source, props, processFunc, triggers } = breakOutSettings(setting);
+        console.log("FROM BREAKOUT", source, props, processFunc, triggers)
         const store = Store.box(source);
+
+        console.log(`Setting up ${fn}`, el, setting)
 
         //Add or overwrite DOM subscription method
         for(let bindTo of props || [null]) {

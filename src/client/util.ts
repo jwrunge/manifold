@@ -3,6 +3,7 @@ export type ProcessFunction = ((data: {val: any, el?: HTMLElement})=> any) | nul
 
 //Get data from settings string
 export function breakOutSettings(settings?: string | null, fn: string = "bind") {
+    console.log("BREAKING OUT SETTINGS", settings);
     let triggers, _binding, func;
     const [_p1, _p2, _p3] = settings?.split(" ") || [];
     if(fn == "sync" && !_p1.includes(":")) {
@@ -15,6 +16,8 @@ export function breakOutSettings(settings?: string | null, fn: string = "bind") 
         func = _p2;
     }
 
+    console.log(triggers, _binding, func)
+
     let _propsList, source;
     const [_q1, _q2] = _binding?.split("->") || [];
     if(fn == "sync") {
@@ -26,7 +29,7 @@ export function breakOutSettings(settings?: string | null, fn: string = "bind") 
         _propsList = _q2;
     }
 
-    const props = _propsList.split("|")
+    const props = _propsList?.split("|") || [];
     const processFunc = Store.func(func) as ProcessFunction;
 
     return { source, props, processFunc, triggers };

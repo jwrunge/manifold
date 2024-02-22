@@ -4,10 +4,9 @@ type SubFunction = (value: any, ref?: string | HTMLElement)=> void;
 
 interface StoreOptions<T> {
     value?: T, name?: string, 
-    upstream?: Array<Store<any>>, 
+    upstream?: Array<string>, 
     updater: (upstreamValues?: Array<any>) => T, 
     onChange?: (value: T) => void,
-    global?: boolean
 };
 
 export class Store<T> {
@@ -16,14 +15,10 @@ export class Store<T> {
     value: T | undefined = undefined;
     #updater?: (upstreamValues: Array<any>, curVal?: T) => T;
     #subscriptions: Map<Element | string, SubFunction> = new Map();
-    global?: boolean = false;
 
     //Derivation
-    #downstreamStores?: Array<Store<any>> = [];
-    #upstreamStores?: Array<Store<any>> = [];
-
-    //Change tracking
-    #changeHash?: number | string = undefined;
+    #downstreamStores?: Array<string> = [];
+    #upstreamStores?: Array<string> = [];
     #onChange?: (value: T) => void;
 
     //Static
@@ -34,13 +29,14 @@ export class Store<T> {
     //Constructor
     constructor(ops: StoreOptions<T>) {
         this.modify(ops);
+        console.log("Constructed", this)
         return this;
     }
 
     /*
      * INSTANCE METHODS
      */
-    addDep(store: Store<any>) {
+    addDep(store: string) {
         this.#downstreamStores?.push(store);
     }
 
@@ -50,8 +46,8 @@ export class Store<T> {
     }
 
     //Update based on upstream stores (initialized by derived stores and on initial load)
-    async #refresh() {
-        let upstreamValues = this.#upstreamStores?.map(store => store.value);
+    async _refresh() {
+        let upstreamValues = this.#upstreamStores?.map(store => Store.box(store)?.value);
         if(!upstreamValues?.length) return;
         try {
             this.value = await this.#updater?.(upstreamValues || [], this?.value) || undefined;
@@ -67,7 +63,8 @@ export class Store<T> {
     //Modify store
     modify(ops: StoreOptions<T>) {
         this.#upstreamStores = ops?.upstream;
-        for(let store of this.#upstreamStores || []) store.addDep(this);
+        console.log(this.#upstreamStores, "upstream")
+        for(let store of this.#upstreamStores || []) if(this.name) Store.box(store)?.addDep(this.name);
 
         if(ops?.name) {
             this.name = ops?.name;
@@ -76,8 +73,7 @@ export class Store<T> {
         this.value = ops?.value;
         this.#onChange = ops?.onChange;
         this.#updater = ops?.updater;
-        this.global = ops?.global || false;
-        this.#refresh();
+        this._refresh();
     }
 
     //Manual update
@@ -92,11 +88,11 @@ export class Store<T> {
     //Determine if the store has been changed
     #handleChange() {
         let newHash = cc.hash(this.value);
-        if(newHash !== this.#changeHash) {
-            this.#changeHash = newHash;
-            this.#onChange?.(this.value as T);
-            this.#updateDependents();
-        }
+        // if(newHash !== this.#changeHash) {
+        //     this.#changeHash = newHash;
+        //     this.#onChange?.(this.value as T);
+        //     this.#updateDependents();
+        // }
     }
 
     //Sync changes to downstream stores
@@ -104,7 +100,7 @@ export class Store<T> {
         this.#downstreamStores = (this.#downstreamStores || []).filter(store => store !== undefined);   //Remove any undefined stores
 
         for(let store of this.#downstreamStores || []) {
-            store.#refresh();
+            Store.box(store)?._refresh();
         }
 
         this.#subscriptions.forEach((sub, ref) => {
@@ -113,8 +109,9 @@ export class Store<T> {
         });
     }
 
-    static box<U>(name: string, ops?: StoreOptions<U>) {
-        if(ops) return new Store(ops);
+    static box<U>(name: string, ops?: StoreOptions<U>): Store<U> | undefined {
+        console.log(ops ? "Creating new store" : "Retrieving existing store")
+        if(ops) return new Store({...ops, name});
         else return Store._stores.get(name);
     }
 

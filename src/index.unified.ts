@@ -3,7 +3,10 @@ import { registerSubs } from "./client/register";
 
 const Cu = {
     Store,
-    init: registerSubs
+    init: registerSubs,
+    box: Store.box,
+    func: Store.func,
+    funcs: Store.funcs
 }
 
 export default Cu;

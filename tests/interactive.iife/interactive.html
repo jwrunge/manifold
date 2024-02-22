@@ -8,20 +8,20 @@
 <body>
   <h1>Reactivity test - IIFE</h1>
 
-  <p>This is an example of dynamic text! The current store value is: <span data-bind="store1:innerText">Here is a default value.</span></p>
-  <p>Here is text that can be HTML: <span data-bind="store1:innerHTML">Here is a default value.</span></p>
-  <p>Store 2 nested: <span data-bind="store2.values[1]:innerHTML">Here is a default value.</span></p>
+  <p>This is an example of dynamic text! The current store value is: <span data-bind="store1->innerText">Here is a default value.</span></p>
+  <p>Here is text that can be HTML: <span data-bind="store1->innerHTML">Here is a default value.</span></p>
+  <p>Store 2 nested: <span data-bind="store2.values[1]->innerHTML">Here is a default value.</span></p>
 
   <!-- Content -->
   <div class="sync-grid">
-    <label>On keyup:</label> <input data-bind="store1:value" data-sync="store1:value on:keyup|change">
-    <label>Bind only:</label> <input data-bind="store1:value">
-    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-bind="store1:checked" data-sync="store1:checked on:change">
-    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-bind="store1:checked isChecked">
+    <label>On keyup:</label> <input data-bind="store1->value" data-sync="on:keyup|change value->store1">
+    <label>Bind only:</label> <input data-bind="store1->value">
+    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-bind="store1->checked" data-sync="on:change checked->store1">
+    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-bind="store1->checked isChecked">
 
     <!-- Select (with dynamic options) -->
     <label>Dyn select</label>
-    <select data-bind="store1:value" data-sync="store1:value on:change">
+    <select data-bind="store1->value" data-sync="on:change value->store1">
       <!-- Dynamic frontend replace -->
       <template id="select-ops" cu-each="store1 as letter, index">
         <!-- Dynamic options -->
@@ -53,25 +53,25 @@
   <!-- Store script -->
   <script src="../dist/unified/copper.dev.iife.js"></script>
   <script defer>
-    new Cu.Store({ value: "My text", name: "store1" });
-    new Cu.Store({ 
+    const store1 = Cu.box("store1", { value: "My text" });
+    const store2 = Cu.box("store2", { 
       value: { values: ["one", "two"]},
-      name: "store2",
-      upstream: [Cu.get("store1")],
+      upstream: ["store1"],
       updater: ([Store1], cur)=> {
         cur.values[1] = Store1;
         return cur;
       }
     });
+    console.log("About to register subs")
     Cu.init();
     setTimeout(()=> {
-      Cu.val("store1", "<span class='colorful'>Another update</span>")
+      store1.update("<span class='colorful'>Another update</span>")
     }, 4000)
     setTimeout(()=> {
-      Cu.val("store1", "We're at 4k")
+      store1.update("We're at 4k")
     }, 8000)
     setTimeout(()=> {
-      Cu.val("store1", "Last one")
+      store1.update("Last one")
     }, 12000)
 
     function specialStyling({val, el}) {
