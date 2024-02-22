@@ -29,7 +29,6 @@ export class Store<T> {
     //Constructor
     constructor(ops: StoreOptions<T>) {
         this.modify(ops);
-        console.log("Constructed", this)
         return this;
     }
 
@@ -63,7 +62,6 @@ export class Store<T> {
     //Modify store
     modify(ops: StoreOptions<T>) {
         this.#upstreamStores = ops?.upstream;
-        console.log(this.#upstreamStores, "upstream")
         for(let store of this.#upstreamStores || []) if(this.name) Store.box(store)?.addDep(this.name);
 
         if(ops?.name) {
@@ -110,7 +108,6 @@ export class Store<T> {
     }
 
     static box<U>(name: string, ops?: StoreOptions<U>): Store<U> | undefined {
-        console.log(ops ? "Creating new store" : "Retrieving existing store")
         if(ops) return new Store({...ops, name});
         else return Store._stores.get(name);
     }
