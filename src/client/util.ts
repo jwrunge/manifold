@@ -58,24 +58,22 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
     }
 }
 
-export function registerChangeListener(el: HTMLElement, store: Store<any> | undefined, storePath: string, processFunc?: ProcessFunction, bindTo?: string | null, bindType?: string | null, triggers?: Array<string>) {
+export function registerChangeListener(el: HTMLElement, store: Store<any> | undefined, processFunc?: ProcessFunction, bindTo?: string | null, bindType?: string | null, triggers?: Array<string>) {
     //If sync, bind prop to event
     for(const eventName of triggers || []) {
-        const eventFunc = (e: Event)=> { 
-            let value = bindType === "attr" ? 
-                (e.currentTarget as HTMLElement)?.getAttribute(bindTo as string) : 
-                bindType === "style" ?
-                (e.currentTarget as HTMLElement)?.style.getPropertyValue(bindTo as string) :
-                //@ts-ignore
-                e.currentTarget[bindTo];
+        //Clear previous event listener (preventing reassingment) and bind new one
+        const oldEv = Store._evs?.get(el)
+        if(oldEv) el.removeEventListener(eventName, oldEv);
 
+        //Create new listener
+        const eventFunc = (e: Event)=> { 
+            let value = bindType === "style" ? el.style.getPropertyValue(bindTo as string) : el.getAttribute(bindTo as string);
             value = processFunc?.({val: value, el: el as HTMLElement}) || value;    //If egress function, run it
             store?.update(value);
         }
-        
-        //Clear previous event listener (preventing reassingment) and bind new one
-        (el as HTMLElement).removeEventListener(eventName, eventFunc);
-        (el as HTMLElement).addEventListener(eventName, eventFunc);
+
+        Store._evs.set(el, eventFunc);
+        el.addEventListener(eventName, eventFunc);
     }
 }
 

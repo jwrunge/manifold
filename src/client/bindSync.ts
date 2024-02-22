@@ -13,7 +13,7 @@ export function handleDataBindSync(el: HTMLElement, fn: string) {
 
             //If bind, bind store to prop
             if(fn === "bind") registerDomSubscription(el, store, source || "", processFunc, bindTo, bindType);
-            else registerChangeListener(el, store, source || "", processFunc, bindTo, bindType, triggers);
+            else registerChangeListener(el, store, processFunc, bindTo, bindType, triggers);
         }
     });
 }

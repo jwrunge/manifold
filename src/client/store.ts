@@ -27,8 +27,9 @@ export class Store<T> {
     #onChange?: (value: T) => void;
 
     //Static
-    static storeMap: Map<string, Store<any>> = new Map();
-    static funcMap: Map<string, Function> = new Map();
+    static _evs: Map<HTMLElement, (this: HTMLElement, ev: Event)=> void> = new Map();
+    static _stores: Map<string, Store<any>> = new Map();
+    static _funcs: Map<string, Function> = new Map();
 
     //Constructor
     constructor(ops: StoreOptions<T>) {
@@ -70,7 +71,7 @@ export class Store<T> {
 
         if(ops?.name) {
             this.name = ops?.name;
-            Store.storeMap.set(ops?.name, this);
+            Store._stores.set(ops?.name, this);
         }
         this.value = ops?.value;
         this.#onChange = ops?.onChange;
@@ -114,11 +115,15 @@ export class Store<T> {
 
     static box<U>(name: string, ops?: StoreOptions<U>) {
         if(ops) return new Store(ops);
-        else return Store.storeMap.get(name);
+        else return Store._stores.get(name);
     }
 
     static func(name: string, func?: Function) {
-        if(func) Store.funcMap.set(name, func);
-        return Store.funcMap.get(name);
+        if(func) Store._funcs.set(name, func);
+        return Store._funcs.get(name);
+    }
+
+    static funcs(funcs: {[key: string]: Function}) {
+        for(let key in funcs) Store._funcs.set(key, funcs[key]);
     }
 }
