@@ -112,7 +112,7 @@ export class Store<T> {
         });
     }
 
-    static store<U>(name: string, ops?: StoreOptions<U>) {
+    static box<U>(name: string, ops?: StoreOptions<U>) {
         if(ops) return new Store(ops);
         else return Store.storeMap.get(name);
     }

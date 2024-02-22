@@ -1,40 +1,19 @@
-import { breakOutSettings, registerDomSubscription, storeFromName } from "./util";
-import { copperConfig as cc } from "../general/config";
+import { breakOutSettings, registerDomSubscription, registerChangeListener } from "./util";
+import { Store } from "./store";
 
-export function handleDataBinding(el: Element) {
-    el?.getAttribute(cc.attr.bind)?.split(";").forEach(setting=> {
-        const { storeName, bindings, ingressFunc, propagations, egressFunc } = breakOutSettings(setting);
+export function handleDataBindSync(el: HTMLElement, fn: string) {
+    el?.getAttribute(fn)?.split(";").forEach(setting=> {
+        const { source, props, processFunc, triggers } = breakOutSettings(setting);
+        const store = Store.box(source);
 
         //Add or overwrite DOM subscription method
-        for(let bindTo of bindings || [null]) {
-            let bindType = "";
-            for(let t of ["attr", "style"]) {
-                if(bindTo?.includes(`${t}-`)) {
-                    bindType = t;
-                    bindTo = bindTo.replace(`${t}-`, "");
-                }
-            }
+        for(let bindTo of props || [null]) {
+            const bindType = bindTo.includes("style-") ? "style" : "attr";
+            bindTo = bindTo.replace(`${bindType}-`, "");
 
-            const store = storeFromName(storeName);
-            registerDomSubscription(el as HTMLElement, store, storeName || "", ingressFunc, bindTo, bindType);
-            
-            for(let eventName of propagations || []) {
-                const eventFunc = (e: Event)=> { 
-                    let value = bindType === "attr" ? 
-                        (e.currentTarget as HTMLElement)?.getAttribute(bindTo as string) : 
-                        bindType === "style" ?
-                        (e.currentTarget as HTMLElement)?.style.getPropertyValue(bindTo as string) :
-                        //@ts-ignore
-                        e.currentTarget[bindTo];
-        
-                    value = egressFunc?.({val: value, el: el as HTMLElement}) || value;    //If egress function, run it
-                    store?.update(value);
-                }
-                
-                //Clear previous event listener (preventing reassingment) and bind new one
-                (el as HTMLElement).removeEventListener(eventName, eventFunc);
-                (el as HTMLElement).addEventListener(eventName, eventFunc);
-            }
+            //If bind, bind store to prop
+            if(fn === "bind") registerDomSubscription(el, store, source || "", processFunc, bindTo, bindType);
+            else registerChangeListener(el, store, source || "", processFunc, bindTo, bindType, triggers);
         }
-    })
+    });
 }
