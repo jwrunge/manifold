@@ -5,8 +5,9 @@ export type ProcessFunction = ((data: {val: any, el?: HTMLElement})=> any) | nul
 export function breakOutSettings(settings?: string | null, fn: string = "bind") {
     let triggers, _binding, func;
     const [_p1, _p2, _p3] = settings?.split(" ") || [];
-    if(fn == "sync" && !_p1.includes(":")) {
-        triggers = _p1.split("|");
+    
+    if(fn == "sync" && _p1.includes(":")) {
+        triggers = _p1.replace("on:", "").split("|");
         _binding = _p2;
         func = _p3;
     }
@@ -33,21 +34,21 @@ export function breakOutSettings(settings?: string | null, fn: string = "bind") 
 }
 
 //Register DOM subscription
-export function registerDomSubscription(element: HTMLElement, store: Store<any> | undefined, storePath: string, processFunc?: ProcessFunction, bindTo?: string | null, bindType?: string | null, cb?: (data: {val: any, el: HTMLElement})=> void) {
+export function registerDomSubscription(element: HTMLElement, store: Store<any> | undefined, storePath: string, processFunc: ProcessFunction | undefined, bindTo: string, bindType?: string | null) {
     if(store) {
-        const domSubscription = (val: any)=> {
-            val = findNestedValue(val, storePath);
-            val = processFunc?.({val, el: element}) ?? val;         //If ingress function, run it
-
-            if(!bindTo && bindType === "style") bindTo = "style";   //Allow bulk style setting
+        const domSubscription = (val: any, cb?: (data: {val: any, el: HTMLElement})=> void)=> {
             if(bindTo) {
+                val = findNestedValue(val, storePath);
+                val = processFunc?.({val, el: element}) ?? val;         //If ingress function, run it
+
                 if(bindType === "attr") element.setAttribute(bindTo, val);
                 else if(bindType === "style") element.style[bindTo as any] = val;
                 //@ts-ignore
                 else element[bindTo] = val;
             }
-
-            cb?.({val, el: element});
+            else {
+                processFunc?.({val, el: element});
+            }
         }
 
         //Add subscription - run whenever store updates
@@ -58,30 +59,11 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
     }
 }
 
-export function registerChangeListener(el: HTMLElement, store: Store<any> | undefined, processFunc?: ProcessFunction, bindTo?: string | null, bindType?: string | null, triggers?: Array<string>) {
-    //If sync, bind prop to event
-    for(const eventName of triggers || []) {
-        //Clear previous event listener (preventing reassingment) and bind new one
-        const oldEv = Store._evs?.get(el)
-        if(oldEv) el.removeEventListener(eventName, oldEv);
-
-        //Create new listener
-        const eventFunc = (e: Event)=> { 
-            let value = bindType === "style" ? el.style.getPropertyValue(bindTo as string) : el.getAttribute(bindTo as string);
-            value = processFunc?.({val: value, el: el as HTMLElement}) || value;    //If egress function, run it
-            store?.update(value);
-        }
-
-        Store._evs.set(el, eventFunc);
-        el.addEventListener(eventName, eventFunc);
-    }
-}
-
 //Find nested values
 function findNestedValue(obj: any, path: string) {
     let value = obj;
 
-    const pathParts = path?.replace(/[\]?]/g, "").split(/[\.\[]/g).slice(1) || [];
+    const pathParts = path?.replace(/[\]\?]/g, "").split(/[\.\[]/g).slice(1) || [];
     if(!pathParts?.length) return value;
 
     for(let key of pathParts) {
@@ -93,4 +75,12 @@ function findNestedValue(obj: any, path: string) {
     }
 
     return value;
+}
+
+export function unNestedSourceName(source: string) {
+    const split = source.replace(/[\?\]]/g, "").split(/[\.\[]/);
+    return {
+        sourceName: split?.[0],
+        sourcePath: source.replace(split?.[0], "")
+    };
 }

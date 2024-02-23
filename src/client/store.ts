@@ -15,6 +15,7 @@ export class Store<T> {
     value: T | undefined = undefined;
     #updater?: (upstreamValues: Array<any>, curVal?: T) => T;
     #subscriptions: Map<Element | string, SubFunction> = new Map();
+    #changeHash?: string;
 
     //Derivation
     #downstreamStores?: Array<string> = [];
@@ -86,11 +87,11 @@ export class Store<T> {
     //Determine if the store has been changed
     #handleChange() {
         let newHash = cc.hash(this.value);
-        // if(newHash !== this.#changeHash) {
-        //     this.#changeHash = newHash;
-        //     this.#onChange?.(this.value as T);
-        //     this.#updateDependents();
-        // }
+        if(newHash !== this.#changeHash) {
+            this.#changeHash = newHash;
+            this.#onChange?.(this.value as T);
+            this.#updateDependents();
+        }
     }
 
     //Sync changes to downstream stores

@@ -1,19 +1,38 @@
-import { breakOutSettings, registerDomSubscription, registerChangeListener } from "./util";
+import { breakOutSettings, registerDomSubscription, unNestedSourceName } from "./util";
 import { Store } from "./store";
 
 export function handleDataBindSync(el: HTMLElement, fn: string) {
     el?.dataset?.[fn]?.split(";").forEach(setting=> {
-        const { source, props, processFunc, triggers } = breakOutSettings(setting);
-        const store = Store.box(source);
+        const { source, props, processFunc, triggers } = breakOutSettings(setting, fn);
+        const { sourceName, sourcePath } = unNestedSourceName(source);
+        const store = Store.box(sourceName);
 
         //Add or overwrite DOM subscription method
         for(let bindTo of props || [null]) {
-            const bindType = bindTo.includes("style-") ? "style" : "attr";
-            bindTo = bindTo.replace(`${bindType}-`, "");
+            const bindType = bindTo?.includes("style-") ? "style" : bindTo?.includes("attr-") ? "attr" : "";
+            if(bindType) bindTo = bindTo.replace(`${bindType}-`, "");
 
             //If bind, bind store to prop
-            if(fn === "bind") registerDomSubscription(el, store, source || "", processFunc, bindTo, bindType);
-            else registerChangeListener(el, store, processFunc, bindTo, bindType, triggers);
+            if(fn === "bind") registerDomSubscription(el, store, sourcePath || "", processFunc, bindTo, bindType);
+            else {
+                //If sync, bind prop to event
+                for(const eventName of triggers || []) {
+                    //Clear previous event listener (preventing reassingment) and bind new one
+                    const oldEv = Store._evs?.get(el)
+                    if(oldEv) el.removeEventListener(eventName, oldEv);
+
+                    //Create new listener
+                    const eventFunc = (e: Event)=> { 
+                        //@ts-ignore
+                        let value = bindType === "style" ? el.style.getPropertyValue(bindTo as string) : bindType === "attr" ? el.getAttribute(bindTo as string) : el[bindTo];
+                        value = processFunc?.({val: value, el: el as HTMLElement}) || value;    //If egress function, run it
+                        store?.update(value);
+                    }
+
+                    Store._evs.set(el, eventFunc);
+                    el.addEventListener(eventName, eventFunc);
+                }
+            }
         }
     });
 }
