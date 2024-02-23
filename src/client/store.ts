@@ -2,12 +2,17 @@ import { copperConfig as cc } from "../general/config";
 
 type SubFunction = (value: any, ref?: string | HTMLElement)=> void;
 
-interface StoreOptions<T> {
+type StoreOptions<T> = {
     value?: T, name?: string, 
     upstream?: Array<string>, 
     updater: (upstreamValues?: Array<any>) => T, 
     onChange?: (value: T) => void,
 };
+
+type EventBinding = {
+    el: HTMLElement,
+    target: string
+}
 
 export class Store<T> {
     //State
@@ -23,7 +28,7 @@ export class Store<T> {
     #onChange?: (value: T) => void;
 
     //Static
-    static _evs: Map<HTMLElement, (this: HTMLElement, ev: Event)=> void> = new Map();
+    static _evs: Map<EventBinding, (this: HTMLElement, ev: Event)=> void> = new Map();
     static _stores: Map<string, Store<any>> = new Map();
     static _funcs: Map<string, Function> = new Map();
 

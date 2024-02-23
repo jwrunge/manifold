@@ -38,7 +38,7 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
     if(store) {
         const domSubscription = (val: any)=> {
             if(bindTo) {
-                val = findNestedValue(val, storePath);
+                val = nestedValue(val, storePath);
                 val = Store.func(processFunc || "")?.({val, el: element}) ?? val;         //If ingress function, run it
 
                 if(bindType === "attr") element.setAttribute(bindTo, val);
@@ -63,21 +63,30 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
 }
 
 //Find nested values
-function findNestedValue(obj: any, path: string) {
-    let value = obj;
+export function nestedValue(obj: any, path: string, newval?: any) {
+    let ptr = obj;
 
     const pathParts = path?.replace(/[\]\?]/g, "").split(/[\.\[]/g).slice(1) || [];
-    if(!pathParts?.length) return value;
+    if(!pathParts?.length) return ptr;
 
-    for(let key of pathParts) {
-        try {
-            if(value instanceof Map) value = value.get(key);
-            else value = value[Array.isArray(value) || value instanceof Set ? parseInt(key) : key];
+    for(let i=0; i < pathParts.length; i++) {
+        const key = pathParts[i];
+        if(newval === undefined || i < pathParts.length - 1) {
+            try {
+                if(ptr instanceof Map) ptr = ptr.get(key);
+                else ptr = ptr[Array.isArray(ptr) || ptr instanceof Set ? parseInt(key) : key];
+            }
+            catch(_) { return undefined; }
         }
-        catch(_) { return undefined; }
+        else {
+            if(ptr instanceof Map) ptr.set(key, newval);
+            else ptr[key] = newval;
+        }
     }
 
-    return value;
+    console.log(obj, ptr);
+
+    return ptr;
 }
 
 export function unNestedSourceName(source: string) {

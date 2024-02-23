@@ -1,4 +1,4 @@
-import { breakOutSettings, registerDomSubscription, unNestedSourceName } from "./util";
+import { breakOutSettings, registerDomSubscription, unNestedSourceName, nestedValue } from "./util";
 import { Store } from "./store";
 
 export function handleDataBindSync(el: HTMLElement, fn: string) {
@@ -19,7 +19,7 @@ export function handleDataBindSync(el: HTMLElement, fn: string) {
                 //If sync, bind prop to event
                 for(const eventName of triggers || []) {
                     //Clear previous event listener (preventing reassingment) and bind new one
-                    const oldEv = Store._evs?.get(el)
+                    const oldEv = Store._evs?.get({el, target: sourcePath || ""})
                     if(oldEv) el.removeEventListener(eventName, oldEv);
 
                     //Create new listener
@@ -30,13 +30,14 @@ export function handleDataBindSync(el: HTMLElement, fn: string) {
                         
                         if(sourcePath) {
                             store?.update((curVal: any)=> {
-                                alert("Unsupported")
+                                nestedValue(curVal, sourcePath, value);
+                                return curVal;
                             })
                         }
                         else store?.update(value);
                     }
 
-                    Store._evs.set(el, eventFunc);
+                    Store._evs.set({el, target: sourcePath || ""}, eventFunc);
                     el.addEventListener(eventName, eventFunc);
                 }
             }
