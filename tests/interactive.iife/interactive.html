@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="tests/style.css"/>
   <title>Reactivity Test</title>
 </head>
 <body>
@@ -52,18 +53,19 @@
   <div class="trans" data-bind="specialStyling(store1)"></div>
 
   <!-- Store script -->
-  <script src="../dist/unified/copper.dev.iife.js"></script>
-  <script defer>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="../dist/copper.js"></script>
+  <script>
     const store1 = Cu.box("store1", { value: "My text" });
-    // const store2 = Cu.box("store2", { 
-    //   value: { values: ["one", "two"]},
-    //   upstream: ["store1"],
-    //   updater: ([Store1], cur)=> {
-    //     console.log("Store 2 updater", cur.values);
-    //     cur.values[1] = Store1;
-    //     return cur;
-    //   }
-    // });
+    const store2 = Cu.box("store2", { 
+      value: { values: ["one", "two"]},
+      upstream: ["store1"],
+      updater: ([Store1], cur)=> {
+        console.log("Store 2 updater", cur.values);
+        cur.values[1] = Store1;
+        return cur;
+      }
+    });
 
     setTimeout(()=> {
       store1.update("<span class='colorful'>Another update</span>")
@@ -76,22 +78,22 @@
     }, 12000)
 
     function specialStyling({val, el}) {
-      if(val === "My text") {
+      if(val == "My text") {
         el.innerHTML = "My text";
         el.style = "background: blue; height: 5rem; width: 90vw; width: 12rem;";
       }
-      else if(val === "<span class='colorful'>Another update</span>") {
+      else if(val == "<span class='colorful'>Another update</span>") {
         el.style = "background: green; height: 15rem; border-radius: 10px; width: 10rem;"
       }
-      else if(val === "We're at 4k") {
+      else if(val == "We're at 4k") {
         el.innerHTML = "We're at 4k!!!";
         el.style = "background: orange; height: 8rem; border-radius: 10px; width: 20rem;"
       }
-      else if(val === "Last one") {
+      else if(val == "Last one") {
         el.innerHTML = "All done!"
         el.style = "background: red; height: 10rem; border-radius: 10px; width: 15rem; font-size: 2rem;"
       }
-      else if(val === true) {
+      else if(val == true) {
         el.innerHTML = "Ooooh, good times!"
         el.style = "background: green; height: 25rem; border-radius: 10px; width: 25rem; font-size: 2.5rem;"
       }
@@ -102,96 +104,15 @@
     }
 
     function isChecked({val}) {
-      if(val === "We're at 4k") return true;
+      if(val == "We're at 4k") return true;
       else return false;
     }
 
     function showDiv({val}) {
-      return val === "We're at 4k";
+      return val == "We're at 4k";
     }
 
     Cu.assignFuncs({specialStyling, isChecked, showDiv});
   </script>
-
-  <style>
-    html {
-      background: rgb(22, 22, 22);
-      height: 100vh;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      overflow-y: scroll;
-      font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      max-width: 40rem;
-      margin: 0 auto;
-      padding: 0 1rem;
-      background: rgb(44, 44, 44);
-      box-sizing: border-box;
-      height: 100%;
-      color: lightgray;
-    }
-
-    h1 {
-      text-align: center;
-      color: rgb(168, 168, 168);
-      margin-top: 0;
-      padding-top: 4rem;
-      text-decoration: underline;
-      font-family:Georgia, 'Times New Roman', Times, serif;
-    }
-
-    .sync-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      align-items: center;
-      grid-gap: 1rem;
-      margin: 2rem auto;
-      padding: 2rem;
-      border: 1px solid gray;
-      border-radius: 5px;
-    }
-
-    input, select {
-      min-width: 0;
-      max-width: 100%;
-      background: gray;
-      color: white;
-    }
-
-    label {
-      font-weight: bold;
-      white-space: nowrap;
-      padding-left: .5rem;
-      border-left: 1px solid gray;
-    }
-
-    .trans {
-      margin: 1rem auto;
-      position: relative;
-      border-radius: 10px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 1rem;
-      color: white;
-      white-space: nowrap;
-      overflow: hidden;
-      transition: height 1s ease-in-out, width 1s ease-in-out, background-color 1s ease-in-out, font-size 1s ease;
-    }
-
-    .colorful {
-      background: purple;
-      color: white;
-    }
-
-    p {
-      white-space: nowrap;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  </style>
 </body>
 </html>

@@ -14,7 +14,7 @@ catch(err) {
 
 //Increment patch version
 pkg.version = pkg.version?.split?.('.')?.map((v, i) => {
-    if(i === 2) {
+    if(i == 2) {
         return parseInt(v) + 1;
     }
     return v;

@@ -10,5 +10,5 @@
     "outDir": "dist",
     "sourceMap": true,
   },
-  "files": ["src/index.unified.ts"]
+  "files": ["src/index.ts"]
 }

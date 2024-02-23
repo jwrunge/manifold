@@ -12,7 +12,7 @@ function hashStr(input) {
 function hashAny(input) {
   if(!input) return 0;
   if(!isNaN(input)) return input;
-  if(typeof input === "string") {
+  if(typeof input == "string") {
     console.log("Parsing string");
     return hashStr(input);
   }
@@ -56,7 +56,7 @@ function createLargeArray(size, type) {
   let t = performance.now();
   let arr = [];
   for(let i = 0; i < size; i++) {
-    let value = type === "string" ? randomString() : randomInt();
+    let value = type == "string" ? randomString() : randomInt();
     arr.push(value);
   }
   console.log(`Array of ${size} ${type}s created in ${performance.now() - t}ms`);
@@ -67,7 +67,7 @@ function createLargeMap(size, type) {
   let t = performance.now();
   let map = new Map();
   for(let i = 0; i < size; i++) {
-    let value = type === "string" ? randomString() : randomInt();
+    let value = type == "string" ? randomString() : randomInt();
     map.set(i, value);
   }
   console.log(`Map of ${size} ${type}s created in ${performance.now() - t}ms`);

@@ -153,7 +153,7 @@ function formatValue(val: string) {
 }
 
 function colorize(val: string, el: HTMLElement) {
-    if(val === "red") {
+    if(val == "red") {
         el.style.backgroundColor = "red";
     }
     else {

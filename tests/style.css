@@ -1,0 +1,78 @@
+html {
+  background: rgb(22, 22, 22);
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow-y: scroll;
+  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+  background: rgb(44, 44, 44);
+  box-sizing: border-box;
+  height: 100%;
+  color: lightgray;
+}
+
+h1 {
+  text-align: center;
+  color: rgb(168, 168, 168);
+  margin-top: 0;
+  padding-top: 4rem;
+  text-decoration: underline;
+  font-family:Georgia, 'Times New Roman', Times, serif;
+}
+
+.sync-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: center;
+  grid-gap: 1rem;
+  margin: 2rem auto;
+  padding: 2rem;
+  border: 1px solid gray;
+  border-radius: 5px;
+}
+
+input, select {
+  min-width: 0;
+  max-width: 100%;
+  background: gray;
+  color: white;
+}
+
+label {
+  font-weight: bold;
+  white-space: nowrap;
+  padding-left: .5rem;
+  border-left: 1px solid gray;
+}
+
+.trans {
+  margin: 1rem auto;
+  position: relative;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1rem;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: height 1s ease-in-out, width 1s ease-in-out, background-color 1s ease-in-out, font-size 1s ease;
+}
+
+.colorful {
+  background: purple;
+  color: white;
+}
+
+p {
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
