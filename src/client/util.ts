@@ -57,7 +57,6 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
         );
 
         //Initial run
-        console.log("Initial run", store, store.value)
         domSubscription(store.value);
     }
 }

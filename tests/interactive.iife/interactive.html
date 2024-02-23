@@ -74,7 +74,6 @@
     }, 12000)
 
     function specialStyling({val, el}) {
-      console.log("Special styling called!")
       if(val === "My text") {
         el.innerHTML = "My text";
         el.style = "background: blue; height: 5rem; width: 90vw; width: 12rem;";
@@ -101,7 +100,6 @@
     }
 
     function isChecked({val}) {
-      console.log("isChecked called!")
       if(val === "We're at 4k") return true;
       else return false;
     }

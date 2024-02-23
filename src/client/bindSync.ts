@@ -7,10 +7,6 @@ export function handleDataBindSync(el: HTMLElement, fn: string) {
         const { sourceName, sourcePath } = unNestedSourceName(source);
         const store = Store.box(sourceName);
 
-        if(el.classList.contains("trans")) {
-            console.log("TRANS", sourceName, store, processFunc, props, triggers, fn, el, setting)
-        }
-
         //Add or overwrite DOM subscription method
         for(let bindTo of props?.length ? props : [null]) {
             const bindType = bindTo?.includes("style-") ? "style" : bindTo?.includes("attr-") ? "attr" : "";
