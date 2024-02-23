@@ -1,28 +1,43 @@
 import { Store } from "./store";
 
+const BIND = 0;
+const SYNC = 1;
+
+let DOMObserver = new MutationObserver(()=> true);
+
+type SyncBindTriggerGroup = {
+    props: string[],
+    propTypes: string[],
+    processFunc: string,
+    triggers: string[],
+    sourceName: string,
+    sourcePath: (string | number)[]
+}
+let DOMEvents = new Map<string, SyncBindTriggerGroup[]>();
+
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: Element) {
     for(const el of (parent || document.body)?.querySelectorAll("[data-bind],[data-sync]")) {
         if(!el.id) el.id = `cu-${Math.random().toString(36)}`;
         for(const attr of Object.keys((el as HTMLElement).dataset)) {
-            if(attr == "bind") handleDataBindSync(el as HTMLElement, "bind");
-            else if(attr == "sync") handleDataBindSync(el as HTMLElement, "sync");
+            if(attr == "bind") handleDataBindSync(el as HTMLElement, BIND);
+            else if(attr == "sync") handleDataBindSync(el as HTMLElement, SYNC);
             // if(attr == "if") handleConditionals(el as HTMLElement);
         }
     };
 }
 
 //Get data from settings string
-export function breakOutSettings(settings?: string | null, fn: string = "bind") {
+export function breakOutSettings(settings?: string | null, fn = BIND) {
     let triggers, _binding, func, _propsList, source;
     const [_p1, _p2] = settings?.trim()?.split(" ") || [];
 
-    triggers = fn == "sync" ? _p1.replace("on:", "").split("|") : [];
-    _binding = fn == "sync" ? _p2 : _p1;
+    triggers = fn == SYNC ? _p1.replace("on:", "").split("|") : [];
+    _binding = fn == SYNC ? _p2 : _p1;
 
     const [_q1, _q2] = _binding?.split("->") || [];
-    _propsList = fn == "sync" ? _q1 : _q2;
-    source = fn == "sync" ? _q2 : _q1;
+    _propsList = fn == SYNC ? _q1 : _q2;
+    source = fn == SYNC ? _q2 : _q1;
 
     if(/.*?\(.*?\)/.test(source)) {
         const _split = source?.replace(")", "").split("(");
@@ -51,7 +66,10 @@ export function nestedValue(obj: any, path: (string | number)[], newval?: any) {
     return ptr;
 }
 
-function handleDataBindSync(el: HTMLElement, fn: string) {
+//Handle binding and syncing
+function handleDataBindSync(el: HTMLElement, fn = BIND) {
+    let syncBindTriggerGroups: SyncBindTriggerGroup[] = [];
+
     el?.dataset?.[fn]?.split(";").forEach(setting=> {
         const { source, props, processFunc, triggers } = breakOutSettings(setting, fn);
         let [ sourceName, ...sourcePath ] = source?.split(/[\.\[\]\?]{1,}/g);
@@ -59,52 +77,41 @@ function handleDataBindSync(el: HTMLElement, fn: string) {
         sourcePath = sourcePath.map(sp=> !isNaN(parseInt(sp)) ? parseInt(sp) : sp) as (string | number)[];
         const store = Store.box(sourceName);
 
-        //Add or overwrite DOM subscription method
+        //Handle binding
+        let bindProps: string[] = [], bindTypes: string[] = [];
         for(let bindTo of props) {
-            let bindType = "";
             const spl = bindTo?.split("-");
-            if(spl?.length == 2) {
-                bindType = spl[0];
-                bindTo = spl[1];
+            let bindType = "";
+
+            if(spl?.[1]) {
+                bindTo = spl[0];
+                bindType = spl[1];
             }
 
-            //If bind, bind store to prop
-            if(fn == "bind") registerDomSubscription(el, store, sourcePath, processFunc, bindTo, bindType);
+            if(fn == BIND) registerDomSubscription(el, store, sourcePath, processFunc, bindTo, bindType);
             else {
-                //If sync, bind prop to event
-                for(const eventName of triggers) {
-                    //Clear previous event listener (preventing reassingment) and bind new one
-                    const oldEv = Store._evs?.get({el: el.id, target: sourcePath.join(".")});
-                    if(oldEv) el.removeEventListener(eventName, oldEv);
-
-                    //Create new listener
-                    const eventFunc = (e: Event)=> { 
-                        //@ts-ignore
-                        let value = bindType == "style" ? el.style.getPropertyValue(bindTo as string) : bindType == "attr" ? el.getAttribute(bindTo as string) : el[bindTo];
-                        value = Store.func(processFunc || "")?.({val: value, el: el as HTMLElement}) || value;    //If function, run it
-                        
-                        if(sourcePath.length) {
-                            store?.update((curVal: any)=> {
-                                if(curVal == undefined) {
-                                    if(typeof sourcePath[0] == "number") curVal = new Array();
-                                    else curVal = new Object();
-                                }
-                                nestedValue(curVal, sourcePath, value);
-                                return curVal;
-                            })
-                        }
-                        else store?.update(value);
-                    }
-
-                    Store._evs.set({el: el.id, target: sourcePath.join(".")}, eventFunc);
-                    el.addEventListener(eventName, eventFunc);
-                }
+                bindProps.push(bindTo || "");
+                bindTypes.push(bindType);
             }
         }
+
+        if(fn == SYNC) {
+            syncBindTriggerGroups.push({ props: bindProps, propTypes: bindTypes, processFunc: processFunc || "", triggers, sourceName, sourcePath });
+        }
     });
+
+    //Handle syncing
+    if(fn == SYNC) {
+        DOMEvents.set(el.id, syncBindTriggerGroups);
+
+        //If sync, bind prop to event
+        
+
+        DOMObserver.observe(el, { attributeFilter: [], attributeOldValue: true });
+    }
 }
 
-//Register DOM subscription
+//Register subscription to store from DOM
 export function registerDomSubscription(element: HTMLElement, store: Store<any> | undefined, storePath: string[], processFunc: string | undefined, bindTo: string | null, bindType?: string | null) {
     const domSubscription = (val: any)=> {
         val = nestedValue(val, storePath);
@@ -126,4 +133,27 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
 
     //Initial run
     domSubscription(store?.value);
+}
+
+function registerDomEventSync(el: HTMLElement, triggers: string[], processFunc: string, sourceName: string, sourcePath: (string | number)[], bindTo: string, bindType: string) {
+    for(let _ of triggers) {
+        //@ts-ignore
+        let value = bindType == "style" ? el.style.getPropertyValue(bindTo as string) : bindType == "attr" ? el.getAttribute(bindTo as string) : el[bindTo];
+        value = Store.func(processFunc || "")?.({val: value, el: el as HTMLElement}) || value;    //If function, run it
+        
+        if(sourceName) {
+            const store = Store.box(sourceName);
+            if(sourcePath?.length) {
+                store?.update((curVal: any)=> {
+                    if(curVal == undefined) {
+                        if(typeof sourcePath[0] == "number") curVal = new Array();
+                        else curVal = new Object();
+                    }
+                    nestedValue(curVal, sourcePath, value);
+                    return curVal;
+                })
+            }
+            else store?.update(value);
+        }
+    }
 }
