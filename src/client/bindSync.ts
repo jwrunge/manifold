@@ -18,7 +18,7 @@ export function handleDataBindSync(el: HTMLElement, fn: string) {
                 //If sync, bind prop to event
                 for(const eventName of triggers || []) {
                     //Clear previous event listener (preventing reassingment) and bind new one
-                    const oldEv = Store._evs?.get({el, target: sourcePath || ""});
+                    const oldEv = Store._evs?.get({el: el.id, target: sourcePath || ""});
                     if(oldEv) el.removeEventListener(eventName, oldEv);
 
                     //Create new listener
@@ -42,13 +42,7 @@ export function handleDataBindSync(el: HTMLElement, fn: string) {
                         else store?.update(value);
                     }
 
-                    const observer = new MutationObserver((e)=> {
-                        alert("Mutation observed")
-                        console.log("MUT", e);
-                    });
-                    observer.observe(el, {attributes: true, childList: true, subtree: true});
-
-                    Store._evs.set({el, target: sourcePath || ""}, eventFunc);
+                    Store._evs.set({el: el.id, target: sourcePath || ""}, eventFunc);
                     el.addEventListener(eventName, eventFunc);
                 }
             }

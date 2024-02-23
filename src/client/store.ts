@@ -1,6 +1,6 @@
 import { copperConfig as cc } from "../general/config";
 
-type SubFunction = (value: any, ref?: string | HTMLElement)=> void;
+type SubFunction = (value: any, ref?: string)=> void;
 
 type StoreOptions<T> = {
     value?: T, name?: string, 
@@ -10,7 +10,7 @@ type StoreOptions<T> = {
 };
 
 type EventBinding = {
-    el: HTMLElement,
+    el: string,
     target: string
 }
 
@@ -19,7 +19,7 @@ export class Store<T> {
     name?: string;
     value: T | undefined = undefined;
     #updater?: (upstreamValues: Array<any>, curVal?: T) => T;
-    #subscriptions: Map<Element | string, SubFunction> = new Map();
+    #subscriptions: Map<string, SubFunction> = new Map();
     #changeHash?: string;
 
     //Derivation
@@ -45,7 +45,7 @@ export class Store<T> {
         this.#downstreamStores?.push(store);
     }
 
-    addSub(ref: string | Element, sub: (value: T)=> void) {
+    addSub(ref: string, sub: (value: T)=> void) {
         this.#subscriptions.set(ref, sub);
         sub?.(this.value as T);
     }
@@ -103,7 +103,7 @@ export class Store<T> {
         }
 
         this.#subscriptions.forEach((sub, ref) => {
-            sub?.(this.value as T, ref as HTMLElement);
+            sub?.(this.value as T, ref);
         });
     }
 
