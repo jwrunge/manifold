@@ -3,8 +3,9 @@ export type ProcessFunction = ((data: {val: any, el?: HTMLElement})=> any) | nul
 
 //Get data from settings string
 export function breakOutSettings(settings?: string | null, fn: string = "bind") {
+    if(fn === "sync") console.log("Settings", settings)
     let triggers, _binding, func;
-    const [_p1, _p2, _p3] = settings?.split(" ") || [];
+    const [_p1, _p2, _p3] = settings?.trim()?.split(" ") || [];
     
     if(fn == "sync" && _p1.includes(":")) {
         triggers = _p1.replace("on:", "").split("|");
@@ -80,9 +81,9 @@ function findNestedValue(obj: any, path: string) {
 }
 
 export function unNestedSourceName(source: string) {
-    const split = source.replace(/[\?\]]/g, "").split(/[\.\[]/);
+    const split = source?.replace(/[\?\]]/g, "").split(/[\.\[]/);
     return {
         sourceName: split?.[0],
-        sourcePath: source.replace(split?.[0], "")
+        sourcePath: source?.replace(split?.[0], "")
     };
 }
