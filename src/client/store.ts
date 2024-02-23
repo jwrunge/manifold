@@ -5,7 +5,7 @@ type SubFunction = (value: any, ref?: string | HTMLElement)=> void;
 type StoreOptions<T> = {
     value?: T, name?: string, 
     upstream?: Array<string>, 
-    updater: (upstreamValues?: Array<any>) => T, 
+    updater?: (upstreamValues?: Array<any>, curVal?: T) => T, 
     onChange?: (value: T) => void,
 };
 
@@ -54,13 +54,8 @@ export class Store<T> {
     async _refresh() {
         let upstreamValues = this.#upstreamStores?.map(store => Store.box(store)?.value);
         if(!upstreamValues?.length) return;
-        try {
-            this.value = await this.#updater?.(upstreamValues || [], this?.value) || undefined;
-            this.#onChange?.(this.value as T);
-        }
-        catch(e) {
-            console.error("No value returned from updater().", e);
-        }
+        this.value = await this.#updater?.(upstreamValues || [], this?.value) || undefined;
+        this.#onChange?.(this.value as T);
 
         this.#handleChange();
     }
@@ -76,8 +71,8 @@ export class Store<T> {
         }
         this.value = ops?.value;
         this.#onChange = ops?.onChange;
-        this.#updater = ops?.updater;
-        this._refresh();
+        this.#updater = ops?.updater || (([], cur)=> cur as T);
+        return this;
     }
 
     //Manual update
@@ -113,9 +108,15 @@ export class Store<T> {
         });
     }
 
-    static box<U>(name: string, ops?: StoreOptions<U>): Store<U> | undefined {
-        if(ops) return new Store({...ops, name});
-        else return Store._stores.get(name);
+    static box<U>(name: string, ops?: StoreOptions<U>): Store<U> {
+        if(ops) {
+            if(Store._stores.has(name)) return (Store._stores.get(name) as Store<U>).modify(ops);
+            return new Store({...ops, name});
+        }
+        else {
+            if(Store._stores.has(name)) return Store._stores.get(name) as Store<U>;
+            return new Store({name})
+        }
     }
 
     static func(name: string, func?: Function) {

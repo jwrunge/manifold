@@ -4,7 +4,6 @@ import { Store } from "./store";
 export function handleDataBindSync(el: HTMLElement, fn: string) {
     el?.dataset?.[fn]?.split(";").forEach(setting=> {
         const { source, props, processFunc, triggers } = breakOutSettings(setting, fn);
-        if(fn === "sync") console.log(el, source, props, processFunc, triggers)
         const { sourceName, sourcePath } = unNestedSourceName(source);
         const store = Store.box(sourceName);
 
@@ -30,6 +29,12 @@ export function handleDataBindSync(el: HTMLElement, fn: string) {
                         
                         if(sourcePath) {
                             store?.update((curVal: any)=> {
+                                if(!sourcePath) return curVal;
+
+                                if(curVal == undefined) {
+                                    if(sourcePath.startsWith("[")) curVal = new Array();
+                                    else curVal = new Object();
+                                }
                                 nestedValue(curVal, sourcePath, value);
                                 return curVal;
                             })

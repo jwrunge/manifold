@@ -18,7 +18,7 @@
     <label>On keyup:</label> <input data-bind="store1->value" data-sync="on:keyup|change value->store1">
     <label>Bind only:</label> <input data-bind="store1->value">
     <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-bind="store1->checked" data-sync="on:change checked->store1; on:change checked->store2.values[0]">
-    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-bind="store1->checked isChecked">
+    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-bind="isChecked(store1)->checked">
 
     <!-- Select (with dynamic options) -->
     <label>Dyn select</label>
@@ -42,28 +42,28 @@
     </select>
 
     <label>Dyn div</label>
-    <cu-default cu-if="store1 showDiv">
+    <cu-default cu-if="showDiv(store1)">
       Div is shown.
     </cu-default>
-    <template cu-else-if="store1 showDiv">Else if</template>
+    <template cu-else-if="showDiv(store1)">Else if</template>
     <template cu-else>Else</template>
   </div>
 
-  <div class="trans" data-bind="store1 specialStyling"></div>
+  <div class="trans" data-bind="specialStyling(store1)"></div>
 
   <!-- Store script -->
   <script src="../dist/unified/copper.dev.iife.js"></script>
   <script defer>
     const store1 = Cu.box("store1", { value: "My text" });
-    const store2 = Cu.box("store2", { 
-      value: { values: ["one", "two"]},
-      upstream: ["store1"],
-      updater: ([Store1], cur)=> {
-        console.log("Store 2 updater", cur.values);
-        cur.values[1] = Store1;
-        return cur;
-      }
-    });
+    // const store2 = Cu.box("store2", { 
+    //   value: { values: ["one", "two"]},
+    //   upstream: ["store1"],
+    //   updater: ([Store1], cur)=> {
+    //     console.log("Store 2 updater", cur.values);
+    //     cur.values[1] = Store1;
+    //     return cur;
+    //   }
+    // });
 
     setTimeout(()=> {
       store1.update("<span class='colorful'>Another update</span>")

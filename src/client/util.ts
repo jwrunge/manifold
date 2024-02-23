@@ -3,18 +3,15 @@ export type ProcessFunction = ((data: {val: any, el?: HTMLElement})=> any) | nul
 
 //Get data from settings string
 export function breakOutSettings(settings?: string | null, fn: string = "bind") {
-    if(fn === "sync") console.log("Settings", settings)
     let triggers, _binding, func;
-    const [_p1, _p2, _p3] = settings?.trim()?.split(" ") || [];
+    const [_p1, _p2] = settings?.trim()?.split(" ") || [];
     
     if(fn == "sync" && _p1.includes(":")) {
         triggers = _p1.replace("on:", "").split("|");
         _binding = _p2;
-        func = _p3;
     }
     else {
         _binding = _p1;
-        func = _p2;
     }
 
     let _propsList, source;
@@ -26,6 +23,12 @@ export function breakOutSettings(settings?: string | null, fn: string = "bind") 
     else {
         source = _q1;
         _propsList = _q2;
+    }
+
+    if(/.*?\(.*?\)/.test(source)) {
+        const _split = source?.replace(")", "").split("(");
+        source = _split?.[1];
+        func = _split?.[0];
     }
 
     const props = _propsList?.split("|") || [];
@@ -71,12 +74,17 @@ export function nestedValue(obj: any, path: string, newval?: any) {
 
     for(let i=0; i < pathParts.length; i++) {
         const key = pathParts[i];
+
+        //Dynamically construct object if it doesn't exist
+        if(ptr === undefined) {
+            if(!isNaN(parseInt(pathParts[i]))) ptr = [];
+            else ptr = {};
+        }
+
+        //Set or get value
         if(newval === undefined || i < pathParts.length - 1) {
-            try {
-                if(ptr instanceof Map) ptr = ptr.get(key);
-                else ptr = ptr[Array.isArray(ptr) || ptr instanceof Set ? parseInt(key) : key];
-            }
-            catch(_) { return undefined; }
+            if(ptr instanceof Map) ptr = ptr.get(key);
+            else ptr = ptr[Array.isArray(ptr) || ptr instanceof Set ? parseInt(key) : key];
         }
         else {
             if(ptr instanceof Map) ptr.set(key, newval);
@@ -84,7 +92,7 @@ export function nestedValue(obj: any, path: string, newval?: any) {
         }
     }
 
-    console.log(obj, ptr);
+    if(newval !== undefined) console.log(obj, ptr);
 
     return ptr;
 }
