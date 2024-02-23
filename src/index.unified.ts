@@ -3,10 +3,9 @@ import { registerSubs } from "./client/register";
 
 const Cu = {
     Store,
-    init: registerSubs,
     box: Store.box,
-    func: Store.func,
-    funcs: Store.funcs
+    assignFuncs: Store.assignFuncs
 }
 
+document.body.onload = ()=> registerSubs();
 export default Cu;

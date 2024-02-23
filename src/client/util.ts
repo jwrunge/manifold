@@ -92,8 +92,6 @@ export function nestedValue(obj: any, path: string, newval?: any) {
         }
     }
 
-    if(newval !== undefined) console.log(obj, ptr);
-
     return ptr;
 }
 

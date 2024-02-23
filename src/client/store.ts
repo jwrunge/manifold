@@ -103,8 +103,7 @@ export class Store<T> {
         }
 
         this.#subscriptions.forEach((sub, ref) => {
-            if(!ref) this.#subscriptions.delete(ref);   //Remove undefined
-            else sub?.(this.value as T, ref as HTMLElement);
+            sub?.(this.value as T, ref as HTMLElement);
         });
     }
 
@@ -119,12 +118,19 @@ export class Store<T> {
         }
     }
 
-    static func(name: string, func?: Function) {
-        if(func) Store._funcs.set(name, func);
+    static removeBox(name: string) {
+        Store._stores.delete(name);
+    }
+
+    static func(name: string) {
         return Store._funcs.get(name);
     }
 
-    static funcs(funcs: {[key: string]: Function}) {
+    static assignFuncs(funcs: {[key: string]: Function}) {
         for(let key in funcs) Store._funcs.set(key, funcs[key]);
+    }
+
+    static removeFunc(name: string) {
+        Store._funcs.delete(name);
     }
 }

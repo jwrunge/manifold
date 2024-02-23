@@ -1,5 +1,7 @@
 # Copper
 
+Reactive state, easy ad-hoc modules, and dynamic markup fragment loading from the server. Wicked small and 0% magic.
+
 Copper is a small, simple, drop-in reactivity library that enables you to propagate value changes to variables and DOM elements.
 
 At xx minified and g-zipped, Copper is xx smaller than [React](https://react.dev/) and xx smaller than [Vue.js](https://vuejs.org/). An equivalent app in [Svelte](https://svelte.dev/) is about x% bigger.
