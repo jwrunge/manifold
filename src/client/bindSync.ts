@@ -7,10 +7,14 @@ export function handleDataBindSync(el: HTMLElement, fn: string) {
         const { sourceName, sourcePath } = unNestedSourceName(source);
         const store = Store.box(sourceName);
 
+        if(el.classList.contains("trans")) {
+            console.log("TRANS", sourceName, store, processFunc, props, triggers, fn, el, setting)
+        }
+
         //Add or overwrite DOM subscription method
-        for(let bindTo of props || [null]) {
+        for(let bindTo of props?.length ? props : [null]) {
             const bindType = bindTo?.includes("style-") ? "style" : bindTo?.includes("attr-") ? "attr" : "";
-            if(bindType) bindTo = bindTo.replace(`${bindType}-`, "");
+            if(bindType) bindTo = bindTo?.replace(`${bindType}-`, "") || null;
 
             //If bind, bind store to prop
             if(fn === "bind") registerDomSubscription(el, store, sourcePath || "", processFunc, bindTo, bindType);
@@ -25,8 +29,14 @@ export function handleDataBindSync(el: HTMLElement, fn: string) {
                     const eventFunc = (e: Event)=> { 
                         //@ts-ignore
                         let value = bindType === "style" ? el.style.getPropertyValue(bindTo as string) : bindType === "attr" ? el.getAttribute(bindTo as string) : el[bindTo];
-                        value = processFunc?.({val: value, el: el as HTMLElement}) || value;    //If egress function, run it
-                        store?.update(value);
+                        value = Store.func(processFunc || "")?.({val: value, el: el as HTMLElement}) || value;    //If egress function, run it
+                        
+                        if(sourcePath) {
+                            store?.update((curVal: any)=> {
+                                alert("Unsupported")
+                            })
+                        }
+                        else store?.update(value);
                     }
 
                     Store._evs.set(el, eventFunc);

@@ -28,18 +28,17 @@ export function breakOutSettings(settings?: string | null, fn: string = "bind") 
     }
 
     const props = _propsList?.split("|") || [];
-    const processFunc = Store.func(func) as ProcessFunction;
 
-    return { source, props, processFunc, triggers };
+    return { source, props, processFunc: func, triggers };
 }
 
 //Register DOM subscription
-export function registerDomSubscription(element: HTMLElement, store: Store<any> | undefined, storePath: string, processFunc: ProcessFunction | undefined, bindTo: string, bindType?: string | null) {
+export function registerDomSubscription(element: HTMLElement, store: Store<any> | undefined, storePath: string, processFunc: string | undefined, bindTo: string | null, bindType?: string | null) {
     if(store) {
-        const domSubscription = (val: any, cb?: (data: {val: any, el: HTMLElement})=> void)=> {
+        const domSubscription = (val: any)=> {
             if(bindTo) {
                 val = findNestedValue(val, storePath);
-                val = processFunc?.({val, el: element}) ?? val;         //If ingress function, run it
+                val = Store.func(processFunc || "")?.({val, el: element}) ?? val;         //If ingress function, run it
 
                 if(bindType === "attr") element.setAttribute(bindTo, val);
                 else if(bindType === "style") element.style[bindTo as any] = val;
@@ -47,7 +46,7 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
                 else element[bindTo] = val;
             }
             else {
-                processFunc?.({val, el: element});
+                Store.func(processFunc || "")?.({val, el: element});
             }
         }
 
@@ -56,6 +55,10 @@ export function registerDomSubscription(element: HTMLElement, store: Store<any> 
             element,
             domSubscription
         );
+
+        //Initial run
+        console.log("Initial run", store, store.value)
+        domSubscription(store.value);
     }
 }
 
