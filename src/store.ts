@@ -21,6 +21,7 @@ export class Store<T> {
     #upstreamStores: Array<string> = [];
 
     //Static
+    static _elIdx = 0;
     static #hash = hashAny;
     static #stores: Map<string, Store<any>> = new Map();
     static #funcs: Map<string, Function> = new Map();
@@ -37,9 +38,9 @@ export class Store<T> {
         if(store) this.#downstreamStores?.push(store);
     }
 
-    addSub(ref: string, sub: (value: T)=> void) {
+    addSub(ref: string, sub: ()=> void) {
         this.#subscriptions.set(ref, sub);
-        sub?.(this.value as T);
+        sub?.();
     }
 
     //Modify store
