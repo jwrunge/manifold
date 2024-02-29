@@ -17,17 +17,22 @@ export function registerSubs(parent?: Element) {
 }
 
 //Get data from settings string
-function breakOutSettings(settings?: string | null, fn = BIND) {
-    let _parts = settings?.trim()?.replace("on:", "").split(/[ ()\->]{1,}/g) || [];
-    let triggers = fn == SYNC ? _parts.splice(0, 1)[0].split("|") || [] : [];
-    let processFunc = settings?.includes("(") ? _parts.splice(fn == SYNC ? 1 : 0, 1)[0] : "";
-    let source = _parts.splice(fn == SYNC ? 1 : 0, 1)[0].split(",") || [];
-    let props = _parts[0].split("|") || [];
+function breakOutSettings(elId: string, settings?: string | null, fn = BIND) {
+    let _func_avoid_space_split = settings?.split(/[\(\)]{1,}/g);
+    if(_func_avoid_space_split?.[1]) _func_avoid_space_split[1] = _func_avoid_space_split[1].replace(" ", "");  //Avoiding negative lookahead and lookbehind because Safari
+    let _parts = _func_avoid_space_split?.join(" ").replace("on:", "").split(/[ \->]{1,}/g).filter(p=> p ?? false) || [];
+    
+    //Extract settings
+    if(_parts.length > 4) throw(`Too many arguments in ${fn == BIND ? "bind" : "sync"} (#${elId}): ${settings}`);
+    let triggers = fn == SYNC ? _parts.splice(0, 1)[0]?.split(/[|,]/g) || [] : [];
+    let processFunc = settings?.includes("(") ? _parts.splice(0, 1)[0] : "";
+    let stores = _parts.splice(fn == SYNC ? 1 : 0, 1)[0]?.split(",") || [];
+    let props = _parts[0]?.split(",") || [];
 
     //Handle errors
-    if(!processFunc && source.length > 1) throw("Multiple sources require a process function.")
-
-    return { source, props, processFunc, triggers };
+    if(fn == SYNC && !settings?.includes("on:")) throw(`Sync requires at least one trigger (#${elId}).`)
+    if(!processFunc && ((fn == BIND && stores.length > 1) || (fn == SYNC && props.length > 1))) throw(`Multiple sources require a process function (#${elId} on ${fn == BIND ? "bind" : "sync"}): ${(fn == BIND ? stores : props).join(", ")}`);
+    return { stores, props, processFunc, triggers };
 }
 
 //Get or set nested store values
@@ -56,45 +61,55 @@ function getStorePath(source: string) {
 //Handle binding and syncing
 function handleDataBindSync(el: HTMLElement, fn = BIND) {
     el?.dataset?.[fn == BIND ? "bind" : "sync"]?.split(";").forEach(setting=> {
-        let { source, props, processFunc, triggers } = breakOutSettings(setting, fn);
+        let { stores, props, processFunc, triggers } = breakOutSettings(el.id, setting, fn);
+
+        let storeNames: string[] = [];
+        let storePaths: (string | number)[][] = [];
+
+        for(let s of stores || []) {
+            let { storeName, storePath } = getStorePath(s);
+            storeNames.push(storeName);
+            storePaths.push(storePath || []);
+        }
 
         //Handle binding
+        let propBindings: { prop: string, type: string }[] = [];
+        if(!props?.length) props = [ "" ];
         for(let p of props) {
             let spl = p.split("-");
             let bindTo = spl.at(-1) || "";
             let bindType = spl.at(-2) || "";
 
-            if(fn == BIND) registerDomSubscription(el, source, processFunc, bindTo, bindType);
-            else registerDomEventSync(el, source, triggers, processFunc, bindTo, bindType);
+            propBindings.push({ prop: bindTo, type: bindType });
+
+            if(fn == BIND) registerDomSubscription(el, storeNames, storePaths, processFunc, bindTo, bindType);
+            else registerDomEventSync(el, storeNames, storePaths, propBindings, triggers, processFunc, bindTo, bindType);
         }
     });
 }
 
-//Register subscription to store from DOM
-function registerDomSubscription(element: HTMLElement, source: string[], processFunc: string | undefined, bindTo: string | null, bindType?: string | null) {
+//Register subscription to store from DOM -- Function arguments are store values
+function registerDomSubscription(el: HTMLElement, stores: string[], storePaths: (string | number)[][], processFunc: string | undefined, bindTo: string | null, bindType?: string | null) {   
     let domSubscription = ()=> {
-        let vals: any[] = [];
-        for(let s of source) {
-            let { storeName, storePath } = getStorePath(s);
-            vals.push(nestedValue(Store.box(storeName)?.value, storePath));
-        }
-        let val: any = Store.func(processFunc || "")?.({val: vals.length === 1 ? vals[0] : val, el: element}) ?? vals[0];         //If ingress function, run it
+        if(processFunc && Store.func(processFunc) == undefined) throw(`Function ${processFunc} not registered.`);
+        let val: any = Store.func(processFunc || "")?.(...stores.map((s, i)=> nestedValue(Store.box(s)?.value, storePaths[i])), el) ?? nestedValue(Store.box(stores[0] || "")?.value, storePaths[0]);         //If ingress function, run it
 
         if(bindTo) {
             if(!bindType) {
                 //@ts-ignore
-                element[bindTo] = val;
+                el[bindTo] = val;
             }
-            else if(bindType == "attr") element.setAttribute(bindTo, val);
-            else element.style[bindTo as any] = val;
+            else if(bindType == "attr") el.setAttribute(bindTo, val);
+            else el.style[bindTo as any] = val;
         }
     }
 
     //Add subscription - run whenever store updates
-    store?.addSub(element.id, domSubscription);
+    for(let store of stores) Store.box(store)?.addSub(el.id, domSubscription);
 }
 
-function registerDomEventSync(el: HTMLElement, source: string[], triggers: string[], processFunc: string, bindTo: string, bindType: string) {
+//Register event to store from DOM -- Function arguments are prop values
+function registerDomEventSync(el: HTMLElement, stores: string[], storePaths: (string | number)[][], props: { prop: string, type: string }[], triggers: string[], processFunc: string, bindTo: string, bindType: string) {
     for(let trigger of triggers) {
         //Clear old event if it exists
         let m = evMap.get(el.id) || new Map();
@@ -102,14 +117,20 @@ function registerDomEventSync(el: HTMLElement, source: string[], triggers: strin
         if(oldEv) el.removeEventListener(trigger as keyof HTMLElementEventMap, oldEv);
 
         let ev = ()=> {
-            //@ts-ignore
-            let value = bindType == "style" ? el.style.getPropertyValue(bindTo as string) : bindType == "attr" ? el.getAttribute(bindTo as string) : el[bindTo];
-            value = Store.func(processFunc || "")?.({val: value, el: el as HTMLElement}) || value;
-            
-            if(sourcePath?.length) {
-                store?.update((curVal: any)=> nestedValue(curVal, sourcePath, value))
+            let values: any[] = [];
+            for(let p of props) {
+                //@ts-ignore
+                let val = p.type == "style" ? el.style.getPropertyValue(p.prop) : p.type == "attr" ? el.getAttribute(p.prop) : el[p.prop];
+                values.push(val);
             }
-            else store?.update(value);
+            
+            if(processFunc && Store.func(processFunc) == undefined) throw(`Function ${processFunc} not registered.`);
+            let value: any = Store.func(processFunc || "")?.(...values, el) || values[0];
+            
+            if(storePaths?.[0]?.length) {
+                Store.box(stores?.[0])?.update((curVal: any)=> nestedValue(curVal, storePaths?.[0], value))
+            }
+            else Store.box(stores?.[0])?.update((curVal: any)=> value);
         }
 
         //Store new event
