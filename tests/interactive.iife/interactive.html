@@ -18,7 +18,7 @@
   <div class="sync-grid">
     <label>On keyup:</label> <input data-bind="store1->value" data-sync="on:keyup|change value->store1">
     <label>Bind only:</label> <input data-bind="store1->value">
-    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-bind="store1->checked" data-sync="on:change syncChecked(checked)->store1">
+    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-bind="store1->checked" data-sync="on:change syncChecked(checked)">
     <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-bind="isChecked(store1)->checked">
 
     <!-- Select (with dynamic options) -->
@@ -115,7 +115,8 @@
       console.log("SYNCING CHECKED")
       console.log("STORE 1 VAL", store1);
       console.log("STORE 2 VAL", store2);
-      if(store1 === false) return "We're at 4k";
+      // if(store1 === false) return "We're at 4k";
+      // Cu.box("store1").update(store1 === false ? "We're at 4k" : store1);
     }
 
     Cu.assignFuncs({specialStyling, isChecked, showDiv, syncChecked});
