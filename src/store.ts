@@ -1,4 +1,18 @@
-import { hashAny } from "./hash";
+export function hashAny(input: any): any {
+    if(!input) return 0;
+    if(typeof input == "object") {
+        if(input instanceof Map) return hashAny(input.entries());
+        else if(input instanceof Set) return hashAny(Array.from(input));
+        return Date.now();
+    }
+
+    let hash = 0;
+    let enc = new TextEncoder().encode(typeof input == "string" ? input : input.toString());
+    for(let char of enc) {
+        hash = ((hash << 5) - hash) + char;
+    }
+    return hash;
+}
 
 type SubFunction = (value: any, ref?: string)=> void;
 
@@ -22,7 +36,6 @@ export class Store<T> {
 
     //Static
     static _elIdx = 0;
-    static #hash = hashAny;
     static #stores: Map<string, Store<any>> = new Map();
     static #funcs: Map<string, Function> = new Map();
 
@@ -59,10 +72,9 @@ export class Store<T> {
 
     //Manual update
     async update(value: T | ((curVal: T)=> T)) {
-        if(typeof value == "function") this.value = (value as Function)?.(this.value);
-        else this.value = value;
+        this.value = typeof value == "function" ? (value as Function)?.(this.value) : value;
         
-        let newHash = Store.#hash(this.value);
+        let newHash = hashAny(this.value);
         if(newHash !== this.#storedHash) {
             this.#storedHash = newHash;
             this.#updateDependents();
@@ -98,9 +110,7 @@ export class Store<T> {
         return Store.#funcs.get(name);
     }
 
-    static assignFuncs(funcs: {[key: string]: Function}) {
+    static assign(funcs: {[key: string]: Function}) {
         for(let key in funcs) Store.#funcs.set(key, funcs[key]);
     }
-
-    static changeHash = (hash: (value: any)=> string) => Store.#hash = hash;
 }
