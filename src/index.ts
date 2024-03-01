@@ -1,5 +1,5 @@
 import { Store } from "./store";
-import { registerSubs } from "./register";
+import { registerSubs } from "./domRegistrar";
 
 document.body.onload = ()=> registerSubs();
 
