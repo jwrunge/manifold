@@ -13,6 +13,7 @@
   <p>Here is text that can be HTML: <span data-bind="store1->innerHTML">Here is a default value.</span></p>
   <p>Store 2 nested: <span data-bind="store2.values[1]->innerHTML">Here is a default value.</span></p>
   <p>Checkbox set to checked? <span data-bind="store2.values[0]->innerText"></span></p>
+  <p>Store 4 value: <span data-bind="store4->innerText"></span></p>
 
   <!-- Content -->
   <div class="sync-grid">
@@ -57,14 +58,45 @@
   <script src="../dist/copper.js"></script>
   <script>
     const store1 = Cu.box("store1", { value: "My text" });
+    const store3 = Cu.box("store3", { value: "one" });
     const store2 = Cu.box("store2", { 
       value: { values: ["one", "two"]},
-      upstream: ["store1"],
-      updater: ([Store1], cur)=> {
+      upstream: ["store1", "store3"],
+      updater: ([Store1, Store3], cur)=> {
         cur.values[1] = Store1;
+        cur.values[0] = Store3;
         return cur;
       }
     });
+    const store4 = Cu.box("store4", {
+      value: 1,
+      upstream: ["store2"],
+      updater: ([Store2])=> {
+        let val;
+        switch(Store2.values[0]) {
+          case "one": val = 1; break;
+          case "two": val = 2; break;
+          case "three": val = 3; break;
+          case "four": val = 4; break;
+          case "five": val = 5; break;
+          default: val = 0;
+        }
+        return val;
+      }
+    });
+
+    setTimeout(()=> {
+      store3.update("two")
+    }, 1000)
+    setTimeout(()=> {
+      store3.update("three")
+    }, 3000)
+    setTimeout(()=> {
+      store3.update("four")
+    }, 9000)
+    setTimeout(()=> {
+      store3.update("five")
+    }, 15000)
 
     setTimeout(()=> {
       store1.update("<span class='colorful'>Another update</span>")
@@ -75,6 +107,13 @@
     setTimeout(()=> {
       store1.update("Last one")
     }, 12000)
+
+    setTimeout(()=> {
+      store1.update("FINAL");
+      store2.update({ values: ["final", "final"] });
+      store3.update("final");
+      store4.update(1000)
+    }, 16000)
 
     function specialStyling(val, el) {
       if(val == "My text") {
@@ -112,9 +151,9 @@
     }
 
     function syncChecked(store1, store2) {
-      console.log("SYNCING CHECKED")
-      console.log("STORE 1 VAL", store1);
-      console.log("STORE 2 VAL", store2);
+      // console.log("SYNCING CHECKED")
+      // console.log("STORE 1 VAL", store1);
+      // console.log("STORE 2 VAL", store2);
       // if(store1 === false) return "We're at 4k";
       // Cu.box("store1").update(store1 === false ? "We're at 4k" : store1);
     }

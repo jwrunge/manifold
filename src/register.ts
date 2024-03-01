@@ -1,11 +1,12 @@
 import { Store } from "./store";
 
 let evMap = new Map<string, Map<string, (this: HTMLElement, ev: Event)=> any>>();
+let elIdx = 0;
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: Element) {
     for(let el of (parent || document.body)?.querySelectorAll("[data-bind],[data-sync]")) {
-        if(!el.id) el.id = `cu-${Store._elIdx++}`;
+        if(!el.id) el.id = `cu-${elIdx++}`;
         for(let attr of Object.keys((el as HTMLElement).dataset)) {
             if(attr == "bind") handleDataBindSync(el as HTMLElement);
             else if(attr == "sync") handleDataBindSync(el as HTMLElement, true);
@@ -103,7 +104,7 @@ function registerDomEventSync(el: HTMLElement, storeData: {storeName: string, st
 
             const store = Store.box(storeData?.storeName);
             
-            (value && store)?.update((curVal: any)=> {
+            (value && store)?.update?.((curVal: any)=> {
                 return storeData?.storePath?.length ? nestedValue(curVal, storeData?.storePath, value) : value
             });
         }
