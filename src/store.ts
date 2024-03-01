@@ -122,11 +122,15 @@ export class Store<T> {
             let valueChanged = Array.from(store.value as ArrayLike<any>).length !== Array.from(newValue).length;
             store.value = newValue;
 
-            if(!valueChanged) valueChanged = hashAny(store.value) !== store.#storedHash;    //Double-check that the value has not changed via hash
+            let newHash = "";
+            if(!valueChanged) {
+                newHash = hashAny(store.value);
+                valueChanged = newHash !== store.#storedHash;    //Double-check that the value has not changed via hash
+            }
 
             //If the value HAS DEFINITELY CHANGED or is LIKELY TO HAVE CHANGED, update the stored hash and cascade
             if(valueChanged) {
-                store.#storedHash = hashAny(store.value);
+                store.#storedHash = newHash;
                 for(let S of store.#downstreamStores) downstream.push(S);
                 for(let [ref, sub] of store.#subscriptions) sub?.(store.value, ref);
             }
