@@ -104,9 +104,11 @@ function registerDomEventSync(el: HTMLElement, storeData: {storeName: string, st
 
             const store = Store.box(storeData?.storeName);
             
-            (value && store)?.update?.((curVal: any)=> {
-                return storeData?.storePath?.length ? nestedValue(curVal, storeData?.storePath, value) : value
-            });
+            if(value !== undefined) {
+                store?.update?.((curVal: any)=> {
+                    return storeData?.storePath?.length ? nestedValue(curVal, storeData?.storePath, value) : value
+                });
+            }
         }
 
         //Clear old event if it exists
