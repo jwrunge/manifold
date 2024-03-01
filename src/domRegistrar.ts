@@ -7,10 +7,8 @@ let elIdx = 0;
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: Element) {
     for(let el of (parent || document.body)?.querySelectorAll("[data-bind],[data-sync],[data-fetch]")) {
-        console.log(el)
         if(!el.id) el.id = `cu-${elIdx++}`;
         for(let attr in (el as HTMLElement).dataset) {
-            console.log(attr)
             if(attr != "fetch") handleDataBindSync(el as HTMLElement, attr as "sync" | "bind");
             else if(attr == "fetch") handleDataFetch(el as HTMLElement);
         }
@@ -129,8 +127,6 @@ function registerDomEventSync(el: HTMLElement, storeData: {n: string, p: (string
 function handleDataFetch(el: HTMLElement) {
     el?.dataset?.["fetch"]?.split(";").forEach(setting=> {
         let [ docTargets, httpSrc, method, triggers ] = breakOutSettings(el.id, "sync", setting, true);
-
-        console.log(docTargets, httpSrc, method, triggers)
 
         for(let target of docTargets || [""]) {
             for(let trigger of triggers) {
