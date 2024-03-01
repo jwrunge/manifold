@@ -5,11 +5,11 @@ let elIdx = 0;
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: Element) {
-    for(let el of (parent || document.body)?.querySelectorAll("[data-bind],[data-sync]")) {
+    for(let el of (parent || document.body)?.querySelectorAll("[data-bind],[data-sync],[data-fetch]")) {
         if(!el.id) el.id = `cu-${elIdx++}`;
         for(let attr in (el as HTMLElement).dataset) {
-            handleDataBindSync(el as HTMLElement, attr as "sync" | "bind");
-            // if(attr == "if") handleConditionals(el as HTMLElement);
+            if(attr != "fetch") handleDataBindSync(el as HTMLElement, attr as "sync" | "bind");
+            else if(attr == "fetch") handleDataFetch(el as HTMLElement);
         }
     };
 }
@@ -116,4 +116,8 @@ function registerDomEventSync(el: HTMLElement, storeData: {n: string, p: (string
         el.addEventListener(trigger, ev);
         ev();
     }
+}
+
+function handleDataFetch(el: HTMLElement) {
+    
 }

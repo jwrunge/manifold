@@ -2,148 +2,111 @@
 let pageScripts: HTMLScriptElement[] = [];
 
 //Fetch page and replace content
-function fetchAndReplace(href: string, cb?: ()=> void) {
-    fetch(href).then(res=> {
-        res.text().then(text=> {
-            //Parse response text
-            const resultTxt = text.match(/<body>([\s\S]*)<\/body>/i)?.[0]?.replace(/<\/?body>/ig, "");
-            const wrapper = document.createElement("div");
-            wrapper.innerHTML = resultTxt || "";
+export async function fetchHttp(method: string, href: string, type: "json" | "text", extract = "body", replace = "body", options: {[key: string]: any}, cb?: (val: any)=> void, err?: (err: any)=> void, scriptUse: true | false | "all" = true) {
+    let data = await fetch(href, {
+        ...options,
+        method,
+        body: typeof options.body == "string" ? options.body : JSON.stringify(options.body),
+    })
+    .catch(error=> err?.(error));
 
-            //Get content
-            const headerContent = getHtmlFromString(resultTxt || "", wrapper, "header");
-            const bodyContent = getHtmlFromString(resultTxt || "", wrapper, "body");
-            const footerContent = getHtmlFromString(resultTxt || "", wrapper, "footer");
+    //Return JSON in callback
+    if(type == "json") return cb?.(data?.json());
+    
+    //Handle text
+    let text = await data?.text() || "";
+    if(!(extract && replace)) return cb?.(text);
 
-            //Clear existing scripts
-            for(const script of pageScripts) {
-                script.remove();
-            }
+    //Extract and replace (assumed HTML)
+    let wrapper = document.createElement("div");
+    wrapper.innerHTML = text;
+    let replacement = wrapper.querySelector(extract)?.innerHTML || "";
+    let target = document.querySelector(replace);
 
-            //Get scripts
-            [["header", headerContent], ["body", bodyContent], ["footer", footerContent]].forEach(focus=> {
-                const scripts = getScriptsFromHtmlString(focus[1], focus[0] as keyof Config);
-                for(const script of scripts) {
-                    pageScripts.push(script);
-                    document.body.appendChild(script);
-                }
-            });
-            
-            //Update store
-            IncomingPart.update(ip=> {
-                //Header
-                ip[headerSelector] = {
-                    content: headerContent,
-                    hash: hash(headerContent)
-                };
-
-                //Body
-                ip[bodySelector] = {
-                    content: bodyContent,
-                    hash: hash(bodyContent)
-                };
-
-                //Footer
-                ip[footerSelector] = {
-                    content: footerContent,
-                    hash: hash(footerContent)
-                };
-
-                return ip;
-            });
-
-            //Run callback
-            if(cb) cb();
-        });
-    });
-}
-
-//Get HTML from RegEx or querySelector for specified part
-function getHtmlFromString(html: string, htmlWrapper: HTMLElement, category: keyof Config): string {
-    let content = "";
-
-    //RegEx
-    if(get(appConfig)?.[category]?.regex) {
-        let query = new RegExp(get(appConfig)?.[category]?.selector, "gm");
-        content = html?.match(query)?.[0] || "";
-    }
-    //querySelector
-    else {
-        let query = htmlWrapper?.querySelector(get(appConfig)?.[category]?.selector);
-        content = query?.innerHTML || "";
+    //Clear existing scripts (any previously dynamically loaded)
+    for(let script of pageScripts) {
+        script.remove();
     }
 
-    return content || "";
+    //Get scripts
+    if(scriptUse) {
+        let scripts = getScriptsFromHtmlString(scriptUse === "all" ? text : replacement);
+        for(let script of scripts) {
+            pageScripts.push(script);
+            document.body.appendChild(script);
+        }
+    }
+
+    //Run callback
+    if(cb) cb(replacement);
 }
 
 //Execute script tags if allowed
-function getScriptsFromHtmlString(html: string, category: keyof Config): HTMLScriptElement[] {
+function getScriptsFromHtmlString(html: string): HTMLScriptElement[] {
     let scripts: HTMLScriptElement[] = [];
 
-    if(get(appConfig)?.[category]?.allowScriptExecution) {
-        let scriptStrings = /<script[\s\S]*?>[\s\S]*?<\/script>/ig.exec(html);
-        
-        for(let scriptStr of scriptStrings || []) {
-            const script = document.createElement("script");
+    let scriptStrings = /<script[\s\S]*?>[\s\S]*?<\/script>/ig.exec(html);
+    
+    for(let scriptStr of scriptStrings || []) {
+        let script = document.createElement("script");
 
-            //Handle script src
-            const src = scriptStr.match(/src="([\s\S]*?)"/i)?.[1] || "";
-            if(src) {
-                script.src = src;
-            }
-            //Handle inline script
-            else {
-                const inline = document.createTextNode(scriptStr.replace(/<\/?script>/ig, ""));
-                script.appendChild(inline);
-            }
-
-            scripts.push(script)
+        //Handle script src
+        let src = scriptStr.match(/src="([\s\S]*?)"/i)?.[1] || "";
+        if(src) {
+            script.src = src;
         }
+        //Handle inline script
+        else {
+            let inline = document.createTextNode(scriptStr.replace(/<\/?script>/ig, ""));
+            script.appendChild(inline);
+        }
+
+        scripts.push(script)
     }
 
     return scripts;
 }
 
-//When a link is clicked, fetch the page and replace the content; update URL
-function onNavigate(e: Event, href: string) {
-    e.preventDefault();
-    fetchAndReplace(href, ()=> {
-        //Update URL
-        history.pushState({ href }, "", href);
-    });
-}
+// //When a link is clicked, fetch the page and replace the content; update URL
+// function onNavigate(e: Event, href: string) {
+//     e.preventDefault();
+//     fetchHttp(href, ()=> {
+//         //Update URL
+//         history.pushState({ href }, "", href);
+//     });
+// }
 
-//When the back button is pressed, fetch the page and replace the content; update URL
-export function handlePopState() {
-    window.addEventListener("popstate", (e)=> {
-        fetchAndReplace(e.state.href);
-    });
-}
+// //When the back button is pressed, fetch the page and replace the content; update URL
+// export function handlePopState() {
+//     window.addEventListener("popstate", (e)=> {
+//         fetchHttp(e.state.href);
+//     });
+// }
 
-//When the page is loaded, fetch the page and replace the content; update URL
-export function initializeRoute() {
-    const href = location.href;
-    fetchAndReplace(href, ()=> {
-        //Get initial url and fetch / render
-        history.replaceState({ href }, "", href);
-    });
-}
+// //When the page is loaded, fetch the page and replace the content; update URL
+// export function initializeRoute() {
+//     let href = location.href;
+//     fetchHttp(href, ()=> {
+//         //Get initial url and fetch / render
+//         history.replaceState({ href }, "", href);
+//     });
+// }
 
-//Intercept all links and route them through the SPA
-export function interceptLinks() {
-    //Get any navigation elements
-    const navLinks = document.querySelectorAll("a[href]") as NodeListOf<HTMLElement>;
+// //Intercept all links and route them through the SPA
+// export function interceptLinks() {
+//     //Get any navigation elements
+//     let navLinks = document.querySelectorAll("a[href]") as NodeListOf<HTMLElement>;
 
-    //Get each href and add listener
-    for(let link of navLinks) {
-        const href = link.getAttribute("href");
-        if(!href) continue;
+//     //Get each href and add listener
+//     for(let link of navLinks) {
+//         let href = link.getAttribute("href");
+//         if(!href) continue;
 
-        //Route if external, otherwise fetch and use SPA
-        if(!/https?:\/\//.test(href)) {
-            const newLink = link.cloneNode(true);
-            link.parentNode?.replaceChild(newLink, link);
-            newLink.addEventListener("click", (e) => onNavigate(e, href || "/"));
-        }
-    }
-}
+//         //Route if external, otherwise fetch and use SPA
+//         if(!/https?:\/\//.test(href)) {
+//             let newLink = link.cloneNode(true);
+//             link.parentNode?.replaceChild(newLink, link);
+//             newLink.addEventListener("click", (e) => onNavigate(e, href || "/"));
+//         }
+//     }
+// }
