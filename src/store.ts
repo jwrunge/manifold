@@ -1,17 +1,18 @@
 export function hashAny(input: any): any {
-    if(!input) return 0;
+    if (typeof input === 'number') return input;
     if(input === true) return 1;
-    if(typeof input == "number") return input;
 
-    if(typeof input == "object") {
+    if(typeof input === 'object') {
         if(input instanceof Map) return hashAny(input.entries());
-        else if(input instanceof Set) return hashAny(Array.from(input));
+        if(input instanceof Set) return hashAny(Array.from(input));
         return Date.now();
     }
 
     let hash = 0;
-    let enc = new TextEncoder().encode(typeof input == "string" ? input : input.toString());
-    for(let char of enc) hash = ((hash << 5) - hash) + char;
+    for(const char of new TextEncoder().encode(
+        typeof input === 'string' ? input : input.toString()
+    )) 
+        hash = ((hash << 5) - hash) + char;
     return hash;
 }
 

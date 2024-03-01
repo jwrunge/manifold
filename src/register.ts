@@ -52,9 +52,9 @@ function nestedValue(obj: any, path: (string | number)[], newval?: any) {
 
 //Handle store and store path from source
 function getStorePath(source: string) {
-    let [ storeName, ...sourcePathArr ] = source.split(/[\.\[\]\?]{1,}/g);
-    let storePath = sourcePathArr.map(sp=> !isNaN(parseInt(sp)) ? parseInt(sp) : sp).filter(sp=> sp) as (string | number)[];
-    return { storeName, storePath };
+    let [ n, ...sourcePathArr ] = source.split(/[\.\[\]\?]{1,}/g);
+    let p = sourcePathArr.map(sp=> !isNaN(parseInt(sp)) ? parseInt(sp) : sp).filter(sp=> sp) as (string | number)[];
+    return { n, p };
 }
 
 //Handle binding and syncing
@@ -75,10 +75,10 @@ function handleDataBindSync(el: HTMLElement, sync = false) {
 }
 
 //Register subscription to store from DOM -- Function arguments are store values
-function registerDomSubscription(el: HTMLElement, storeData: {storeName: string, storePath: (string | number)[]}[], processFunc: string | undefined, bindTo = "", bindType = "") {   
+function registerDomSubscription(el: HTMLElement, storeData: {n: string, p: (string | number)[]}[], processFunc: string | undefined, bindTo = "", bindType = "") {   
     let domSubscription = ()=> {
         if(processFunc && Store.func(processFunc) == undefined) throw(`Function ${processFunc} not registered.`);
-        let val: any = Store.func(processFunc || "")?.(...storeData.map(s=> nestedValue(Store.box(s.storeName)?.value, s.storePath)), el) ?? nestedValue(Store.box(storeData[0].storeName || "")?.value, storeData[0].storePath);         //If ingress function, run it
+        let val: any = Store.func(processFunc || "")?.(...storeData.map(s=> nestedValue(Store.box(s.n)?.value, s.p)), el) ?? nestedValue(Store.box(storeData[0].n || "")?.value, storeData[0].p);         //If ingress function, run it
 
         if(bindTo) {
             if(!bindType) (el as any)[bindTo] = val;
@@ -88,11 +88,11 @@ function registerDomSubscription(el: HTMLElement, storeData: {storeName: string,
     }
 
     //Add subscription - run whenever store updates
-    for(let store of storeData) Store.box(store.storeName)?.addSub(el.id, domSubscription);
+    for(let store of storeData) Store.box(store.n)?.addSub(el.id, domSubscription);
 }
 
 //Register event to store from DOM -- Function arguments are prop values
-function registerDomEventSync(el: HTMLElement, storeData: {storeName: string, storePath: (string | number)[]}, triggers: string[], processFunc: string, bindTo = "", bindType = "") {
+function registerDomEventSync(el: HTMLElement, storeData: {n: string, p: (string | number)[]}, triggers: string[], processFunc: string, bindTo = "", bindType = "") {
     for(let trigger of triggers) {
         let ev = ()=> {
             let value = bindType == "style" ? el.style.getPropertyValue(bindTo) : bindType == "attr" ? el.getAttribute(bindTo) : (el as any)[bindTo];
@@ -102,11 +102,11 @@ function registerDomEventSync(el: HTMLElement, storeData: {storeName: string, st
                 value = Store.func(processFunc)?.(value, el);
             }
 
-            const store = Store.box(storeData?.storeName);
+            const store = Store.box(storeData?.n);
             
             if(value !== undefined) {
                 store?.update?.((curVal: any)=> {
-                    return storeData?.storePath?.length ? nestedValue(curVal, storeData?.storePath, value) : value
+                    return storeData?.p?.length ? nestedValue(curVal, storeData?.p, value) : value
                 });
             }
         }
