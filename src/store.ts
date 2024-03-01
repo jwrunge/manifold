@@ -108,49 +108,27 @@ export class Store<T> {
             const store = Store.box(storeName);
 
             //Don't repeat work if an upstream store will cascade
-            for(let d of store.#downstreamStores) {
-                if(Store.#workOrder.has(d)) Store.#workOrder.delete(d);   //Delete downstream stores from work order
-            }
-            for(let u of store.#upstreamStores) {
-                if(Store.#workOrder.has(u)) Store.#workOrder.delete(storeName);          //Delete self if upstream store is already in work order
-                continue;
-            }
+            store.#downstreamStores.every(d=> Store.#workOrder.delete(d));   //Delete downstream stores from work order
+            store.#upstreamStores.every(u=> Store.#workOrder.has(u) ? Store.#workOrder.delete(storeName) : true);
         }
 
         //Apply changes to top-level workers, then cascade     
         let downstream: string[] = [];  
         for(let [storeName, value] of Store.#workOrder) {
-            const store = Store.box(storeName);
+            let store = Store.box(storeName);
             let newValue = await (typeof value == "function" ? (value as Function)?.(store.value) : value);
 
-            //Check complex object lengths (avoid lengthy hashes)
-            let valueChanged = false;
-            let newHash = "";
-            if(typeof store.value == "object") {
-                try {
-                    if(Array.from(store.value as ArrayLike<unknown>).length !== Array.from(newValue).length) valueChanged = true;
-                }
-                catch(_) {
-                    valueChanged = false;
-                }
-            }
-
+            //Check complex object lengths (avoid lengthy hashes) -- if the lengths indicate the value HAS NOT CHANGED, double-check via hash
+            let valueChanged = Array.from(store.value as ArrayLike<any>).length !== Array.from(newValue).length;
             store.value = newValue;
 
-            //Check hash for changes
-            if(!valueChanged) {
-                newHash = hashAny(store.value);
-                valueChanged = newHash !== store.#storedHash;
-            }
-        
-            if(valueChanged){
-                store.#storedHash = newHash;
-                
-                //Cascade changes
-                for(let S of store.#downstreamStores) downstream.push(S);    
-                for(let [ref, sub] of store.#subscriptions) {
-                    sub?.(store.value, ref);
-                }
+            if(!valueChanged) valueChanged = hashAny(store.value) !== store.#storedHash;    //Double-check that the value has not changed via hash
+
+            //If the value HAS DEFINITELY CHANGED or is LIKELY TO HAVE CHANGED, update the stored hash and cascade
+            if(valueChanged) {
+                store.#storedHash = hashAny(store.value);
+                for(let S of store.#downstreamStores) downstream.push(S);
+                for(let [ref, sub] of store.#subscriptions) sub?.(store.value, ref);
             }
         }
 
