@@ -1,3 +1,5 @@
+import { registerSubs } from "./domRegistrar";
+
 //Track page scripts
 let pageScripts: HTMLScriptElement[] = [];
 
@@ -35,6 +37,11 @@ export async function fetchHttp(method: string, href: string, type: "json" | "te
             pageScripts.push(script);
             document.body.appendChild(script);
         }
+    }
+
+    if(target) {
+        target.innerHTML = replacement;
+        registerSubs(target);
     }
 
     //Run callback

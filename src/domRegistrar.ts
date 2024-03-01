@@ -1,4 +1,5 @@
 import { Store } from "./store";
+import { fetchHttp } from "./http";
 
 let evMap = new Map<string, Map<string, (this: HTMLElement, ev: Event)=> any>>();
 let elIdx = 0;
@@ -6,8 +7,10 @@ let elIdx = 0;
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: Element) {
     for(let el of (parent || document.body)?.querySelectorAll("[data-bind],[data-sync],[data-fetch]")) {
+        console.log(el)
         if(!el.id) el.id = `cu-${elIdx++}`;
         for(let attr in (el as HTMLElement).dataset) {
+            console.log(attr)
             if(attr != "fetch") handleDataBindSync(el as HTMLElement, attr as "sync" | "bind");
             else if(attr == "fetch") handleDataFetch(el as HTMLElement);
         }
@@ -50,7 +53,7 @@ function nestedValue(obj: any, path: (string | number)[], newval?: any) {
 }
 
 //Handle store and store path from source
-function getStorePath(source: string) {
+function getNameAndPath(source: string) {
     let [ n, ...sourcePathArr ] = source.split(/[\.\[\]\?]{1,}/g);
     let p = sourcePathArr.map(sp=> !isNaN(parseInt(sp)) ? parseInt(sp) : sp).filter(sp=> sp) as (string | number)[];
     return { n, p };
@@ -61,7 +64,7 @@ function handleDataBindSync(el: HTMLElement, fn: "bind" | "sync") {
     let sync = fn == "sync";
     el?.dataset?.[fn]?.split(";").forEach(setting=> {
         let [ stores, props, processFunc, triggers ] = breakOutSettings(el.id, fn, setting, sync);
-        let storeData = stores.map(s=> getStorePath(s));
+        let storeData = stores.map(s=> getNameAndPath(s));
 
         //Handle binding
         if(!props?.length) props = [ "" ];
@@ -91,8 +94,20 @@ function registerDomSubscription(el: HTMLElement, storeData: {n: string, p: (str
     for(let store of storeData) Store.box(store.n)?.addSub(el.id, domSubscription);
 }
 
+//Generic DOM event bind
+function bindDomEvent(el: HTMLElement, trigger: string, ev: ()=> any) {
+    //Clear old event if it exists
+    let m = evMap.get(el.id) || new Map();
+    el.removeEventListener(trigger as keyof HTMLElementEventMap, m.get(trigger));
+
+    //Store new event
+    evMap.set(el.id, m.set(trigger, ev));
+    el.addEventListener(trigger, ev);
+    ev();
+}
+
 //Register event to store from DOM -- Function arguments are prop values
-function registerDomEventSync(el: HTMLElement, storeData: {n: string, p: (string | number)[]}, triggers: string[], processFunc: string, bindTo = "", bindType = "") {
+function registerDomEventSync(el: HTMLElement, storeData: {n: string, p: (string | number)[]}, triggers: string[], processFunc: string, bindTo = "", bindType = "", isFetch = false) {
     for(let trigger of triggers) {
         let ev = ()=> {
             let value = bindType == "style" ? el.style.getPropertyValue(bindTo) : bindType == "attr" ? el.getAttribute(bindTo) : (el as any)[bindTo];
@@ -107,17 +122,26 @@ function registerDomEventSync(el: HTMLElement, storeData: {n: string, p: (string
             }
         }
 
-        //Clear old event if it exists
-        let m = evMap.get(el.id) || new Map();
-        el.removeEventListener(trigger as keyof HTMLElementEventMap, m.get(trigger));
-
-        //Store new event
-        evMap.set(el.id, m.set(trigger, ev));
-        el.addEventListener(trigger, ev);
-        ev();
+        bindDomEvent(el, trigger, ev);
     }
 }
 
 function handleDataFetch(el: HTMLElement) {
-    
+    el?.dataset?.["fetch"]?.split(";").forEach(setting=> {
+        let [ docTargets, httpSrc, method, triggers ] = breakOutSettings(el.id, "sync", setting, true);
+
+        console.log(docTargets, httpSrc, method, triggers)
+
+        for(let target of docTargets || [""]) {
+            for(let trigger of triggers) {
+                let [src, extract] = httpSrc[0].split(":");
+                let ev = ()=> {                               
+                    fetchHttp(method, src, "text", extract || "body", target || "body", {}, undefined, undefined, true)
+                }
+
+                if(trigger == "mount") ev();
+                else bindDomEvent(el, trigger, ev);
+            }
+        }
+    });
 }

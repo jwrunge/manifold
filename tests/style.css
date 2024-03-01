@@ -76,3 +76,11 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+a {
+  color: rgb(119, 221, 255);
+}
+
+a:visited {
+  color: rgb(68, 208, 255);
+}
