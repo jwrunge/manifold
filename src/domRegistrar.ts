@@ -94,7 +94,7 @@ function registerDomSubscription(el: HTMLElement, storeData: {n: string, p: (str
 }
 
 //Generic DOM event bind
-function bindDomEvent(el: HTMLElement, trigger: string, ev: ()=> any) {
+function bindDomEvent(el: HTMLElement, trigger: string, ev: (e?: Event)=> any, runEv = true) {
     //Clear old event if it exists
     let m = evMap.get(el.id) || new Map();
     el.removeEventListener(trigger as keyof HTMLElementEventMap, m.get(trigger));
@@ -102,7 +102,7 @@ function bindDomEvent(el: HTMLElement, trigger: string, ev: ()=> any) {
     //Store new event
     evMap.set(el.id, m.set(trigger, ev));
     el.addEventListener(trigger, ev);
-    ev();
+    if(runEv) ev();
 }
 
 //Register event to store from DOM -- Function arguments are prop values
@@ -137,7 +137,8 @@ function handleDataFetch(el: HTMLElement) {
         for(let replace of docTargets || [""]) {
             for(let trigger of triggers) {
                 let [href, extract] = httpSrc[0].split(":");
-                let ev = ()=> {                               
+                let ev = (e?: Event)=> {  
+                    e?.preventDefault();                             
                     fetchHttp({
                         method, 
                         href,
@@ -149,7 +150,7 @@ function handleDataFetch(el: HTMLElement) {
                 }
 
                 if(trigger == "mount") ev();
-                else bindDomEvent(el, trigger, ev);
+                else bindDomEvent(el, trigger, ev, false);
             }
         }
     });

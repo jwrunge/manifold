@@ -1,5 +1,3 @@
-import { registerSubs } from "./domRegistrar";
-
 //Track page scripts
 let pageScripts: HTMLScriptElement[] = [];
 let pageStyles: HTMLStyleElement[] = [];
@@ -82,47 +80,3 @@ function getScriptsFromHtmlString(html: string) {
         return script;
     });
 }
-
-// //When a link is clicked, fetch the page and replace the content; update URL
-// function onNavigate(e: Event, href: string) {
-//     e.preventDefault();
-//     fetchHttp(href, ()=> {
-//         //Update URL
-//         history.pushState({ href }, "", href);
-//     });
-// }
-
-// //When the back button is pressed, fetch the page and replace the content; update URL
-// export function handlePopState() {
-//     window.addEventListener("popstate", (e)=> {
-//         fetchHttp(e.state.href);
-//     });
-// }
-
-// //When the page is loaded, fetch the page and replace the content; update URL
-// export function initializeRoute() {
-//     let href = location.href;
-//     fetchHttp(href, ()=> {
-//         //Get initial url and fetch / render
-//         history.replaceState({ href }, "", href);
-//     });
-// }
-
-// //Intercept all links and route them through the SPA
-// export function interceptLinks() {
-//     //Get any navigation elements
-//     let navLinks = document.querySelectorAll("a[href]") as NodeListOf<HTMLElement>;
-
-//     //Get each href and add listener
-//     for(let link of navLinks) {
-//         let href = link.getAttribute("href");
-//         if(!href) continue;
-
-//         //Route if external, otherwise fetch and use SPA
-//         if(!/https?:\/\//.test(href)) {
-//             let newLink = link.cloneNode(true);
-//             link.parentNode?.replaceChild(newLink, link);
-//             newLink.addEventListener("click", (e) => onNavigate(e, href || "/"));
-//         }
-//     }
-// }
