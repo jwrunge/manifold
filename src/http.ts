@@ -4,7 +4,7 @@ import { registerSubs } from "./domRegistrar";
 let pageScripts: HTMLScriptElement[] = [];
 let pageStyles: HTMLStyleElement[] = [];
 
-type FetchOptions = {
+export type FetchOptions = {
     method: string, 
     href: string, 
     type: "json" | "text", 
