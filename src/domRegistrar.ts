@@ -128,11 +128,15 @@ function handleDataFetch(el: HTMLElement) {
     el?.dataset?.["fetch"]?.split(";").forEach(setting=> {
         let [ docTargets, httpSrc, method, triggers ] = breakOutSettings(el.id, "sync", setting, true);
 
-        for(let target of docTargets || [""]) {
+        for(let replace of docTargets || [""]) {
             for(let trigger of triggers) {
-                let [src, extract] = httpSrc[0].split(":");
+                let [href, extract] = httpSrc[0].split(":");
                 let ev = ()=> {                               
-                    fetchHttp(method, src, "text", extract || "body", target || "body", {}, undefined, undefined, "all", "all")
+                    fetchHttp({
+                        method, href, type: "text", extract, replace, 
+                        options: {}, cb: undefined, err: undefined,
+                        scriptUse: "all", styleUse: "all"
+                    })
                 }
 
                 if(trigger == "mount") ev();

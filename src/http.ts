@@ -4,96 +4,86 @@ import { registerSubs } from "./domRegistrar";
 let pageScripts: HTMLScriptElement[] = [];
 let pageStyles: HTMLStyleElement[] = [];
 
+type FetchOptions = {
+    method: string, 
+    href: string, 
+    type: "json" | "text", 
+    extract: string, 
+    replace: string, 
+    options: {[key: string]: any}, 
+    cb?: (val: any)=> void, 
+    err?: (err: any)=> void, 
+    scriptUse: true | false | "all", 
+    styleUse: true | false | "all"
+}
+
 //Fetch page and replace content
-export async function fetchHttp(method: string, href: string, type: "json" | "text", extract = "body", replace = "body", options: {[key: string]: any}, cb?: (val: any)=> void, err?: (err: any)=> void, scriptUse: true | false | "all" = true, styleUse: true | false | "all" = true) {
-    let data = await fetch(href, {
-        ...options,
-        method,
-        body: typeof options.body == "string" ? options.body : JSON.stringify(options.body),
+export async function fetchHttp(ops: FetchOptions) {
+    let data = await fetch(ops.href, {
+        ...ops.options,
+        method: ops.method,
+        body: typeof ops.options.body == "string" ? ops.options.body : JSON.stringify(ops.options.body),
     })
-    .catch(error=> err?.(error));
+    .catch(error=> ops.err?.(error));
 
-    //Return JSON in callback
-    if(type == "json") return cb?.(data?.json());
-    
-    //Handle text
-    let text = await data?.text() || "";
-    if(!(extract && replace)) return cb?.(text);
+    //Return JSON or text in callback
+    let text = await data?.[ops.type]();
+    ops.cb?.(text);
 
-    //Extract and replace (assumed HTML)
-    let wrapper = document.createElement("div");
-    wrapper.innerHTML = text;
-    let replacement = wrapper.querySelector(extract)?.innerHTML || "";
-    let target = document.querySelector(replace);
+    if(ops.type == "text" && ops.replace) {
+        //Extract and replace (assumed HTML)
+        let wrapper = document.createElement("div");
+        wrapper.innerHTML = text;
+        let replacement = wrapper.querySelector(ops.extract)?.innerHTML || "";
+        let target = document.querySelector(ops.replace);
 
-    //Clear existing scripts and styles (any previously dynamically loaded)
-    for(let script of pageScripts) {
-        script.remove();
-    }
+        //Clear existing scripts and styles (any previously dynamically loaded)
+        for(let script of pageScripts) script.remove();
+        for(let style of pageStyles) style.remove();
 
-    for(let style of pageStyles) {
-        style.remove();
-    }
+        //Handle scripts
+        if(ops.scriptUse) {
+            let scripts = getScriptsFromHtmlString(ops.scriptUse === "all" ? text : replacement);
+            for(let script of scripts || []) {
+                pageScripts.push(script);
+                document.body.appendChild(script);
+            }
+        }
 
-    let styleRx = /<style[\s\S]*?>[\s\S]*?<\/style>/ig;
-    if(styleUse == false) {
-        replacement = replacement.replace(styleRx, "");
-    }
+        //Handle styles
+        let styleRx = /<style[\s\S]*?>[\s\S]*?<\/style>/ig;
+        if(!ops.styleUse) replacement = replacement.replace(styleRx, "");
+        else if(ops.styleUse == "all") {
+            let styles = styleRx.exec(text) || [];
+            for(let styleTxt of styles) {
+                let style = document.createElement("style");
+                style.textContent = styleTxt.replace(/<\/?style>/ig, "");
+                pageStyles.push(style);
+                document.head.appendChild(style);
+            }
+        }
 
-    //Get scripts
-    if(scriptUse) {
-        let scripts = getScriptsFromHtmlString(scriptUse === "all" ? text : replacement);
-        for(let script of scripts) {
-            pageScripts.push(script as HTMLScriptElement);
-            document.body.appendChild(script);
+        if(target) {
+            target.innerHTML = replacement;
+            registerSubs(target);
         }
     }
-
-    if(styleUse && styleUse == "all") {
-        let styles = styleRx.exec(text) || [];
-        console.log(styles)
-        for(let styleTxt of styles) {
-            let style = document.createElement("style");
-            style.textContent = styleTxt.replace(/<\/?style>/ig, "");
-            pageStyles.push(style);
-            document.head.appendChild(style);
-        }
-    }
-
-    if(target) {
-        target.innerHTML = replacement;
-        registerSubs(target);
-    }
-
-    //Run callback
-    if(cb) cb(replacement);
 }
 
 //Execute script tags if allowed
-function getScriptsFromHtmlString(html: string): HTMLScriptElement[] {
-    let scripts: HTMLScriptElement[] = [];
-
+function getScriptsFromHtmlString(html: string) {
     let rx = /<script[\s\S]*?>[\s\S]*?<\/script>/ig;
     let scriptStrings = rx.exec(html);
     
-    for(let scriptStr of scriptStrings || []) {
+    return scriptStrings?.map(scriptStr=> {
         let script = document.createElement("script");
 
-        //Handle script src
         let src = scriptStr.match(/src="([\s\S]*?)"/i)?.[1] || "";
-        if(src) {
-            script.src = src;
-        }
-        //Handle inline script
-        else {
-            let inline = document.createTextNode(scriptStr.replace(/<\/?script>/ig, ""));
-            script.appendChild(inline);
-        }
+        if(src) script.src = src;
+        else script.appendChild(document.createTextNode(scriptStr.replace(/<\/?script>/ig, "")));
 
-        scripts.push(script)
-    }
-
-    return scripts;
+        return script;
+    });
 }
 
 // //When a link is clicked, fetch the page and replace the content; update URL
