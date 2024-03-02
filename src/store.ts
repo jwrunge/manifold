@@ -41,7 +41,7 @@ export class Store<T> {
     static #stores: Map<string, Store<any>> = new Map();
     static #funcs: Map<string, Function> = new Map();
     static #workOrder: Map<string, UpdaterValue<any>> = new Map();
-    static #workCacheTimeout: NodeJS.Timeout;
+    static #workCacheTimeout: any;
 
     //Constructor
     constructor(ops: StoreOptions<T>) {

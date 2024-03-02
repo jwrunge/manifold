@@ -43,7 +43,7 @@ function nestedValue(obj: any, path: (string | number)[], newval?: any) {
         if(ptr == undefined) ptr = typeof key == "number" ? [] : {};
 
         //Set or get value
-        if(newval == undefined || path.at(-1) !== key) ptr = ptr?.[key] || ptr?.get(key);
+        if(newval == undefined || path.at(-1) !== key) ptr = ptr instanceof Map ? ptr?.get(key) : ptr?.[key];
         else ptr instanceof Map ? ptr.set(key, newval) : ptr[key] = newval;
     }
 
@@ -135,7 +135,8 @@ function handleDataFetch(el: HTMLElement) {
                     fetchHttp({
                         method, href, type: "text", extract, replace, 
                         options: {}, cb: undefined, err: undefined,
-                        scriptUse: "all", styleUse: "all"
+                        scriptUse: "all", styleUse: "all",
+                        done: (el: HTMLElement)=> registerSubs(el)
                     })
                 }
 

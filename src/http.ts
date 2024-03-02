@@ -14,7 +14,8 @@ type FetchOptions = {
     cb?: (val: any)=> void, 
     err?: (err: any)=> void, 
     scriptUse: true | false | "all", 
-    styleUse: true | false | "all"
+    styleUse: true | false | "all",
+    done: (el: HTMLElement)=> void
 }
 
 //Fetch page and replace content
@@ -40,22 +41,22 @@ export async function fetchHttp(ops: FetchOptions) {
         //Clear existing scripts and styles (any previously dynamically loaded)
         for(let script of pageScripts) script.remove();
         for(let style of pageStyles) style.remove();
+        pageScripts = pageStyles = [];
 
         //Handle scripts
         if(ops.scriptUse) {
-            let scripts = getScriptsFromHtmlString(ops.scriptUse === "all" ? text : replacement);
-            for(let script of scripts || []) {
+            let scripts = getScriptsFromHtmlString(ops.scriptUse == "all" ? text : replacement);
+            scripts?.every(script=> {
                 pageScripts.push(script);
                 document.body.appendChild(script);
-            }
+            })
         }
 
         //Handle styles
         let styleRx = /<style[\s\S]*?>[\s\S]*?<\/style>/ig;
         if(!ops.styleUse) replacement = replacement.replace(styleRx, "");
         else if(ops.styleUse == "all") {
-            let styles = styleRx.exec(text) || [];
-            for(let styleTxt of styles) {
+            for(let styleTxt of styleRx.exec(text) || []) {
                 let style = document.createElement("style");
                 style.textContent = styleTxt.replace(/<\/?style>/ig, "");
                 pageStyles.push(style);
@@ -65,22 +66,18 @@ export async function fetchHttp(ops: FetchOptions) {
 
         if(target) {
             target.innerHTML = replacement;
-            registerSubs(target);
+            ops.done(target as HTMLElement);
         }
     }
 }
 
 //Execute script tags if allowed
-function getScriptsFromHtmlString(html: string) {
-    let rx = /<script[\s\S]*?>[\s\S]*?<\/script>/ig;
-    let scriptStrings = rx.exec(html);
-    
-    return scriptStrings?.map(scriptStr=> {
+function getScriptsFromHtmlString(html: string) {   
+    return /<script[\s\S]*?>[\s\S]*?<\/script>/ig.exec(html)?.map(scriptStr=> {
         let script = document.createElement("script");
 
-        let src = scriptStr.match(/src="([\s\S]*?)"/i)?.[1] || "";
-        if(src) script.src = src;
-        else script.appendChild(document.createTextNode(scriptStr.replace(/<\/?script>/ig, "")));
+        script.src = scriptStr.match(/src="([\s\S]*?)"/i)?.[1] || "";
+        if(!script.src) script.appendChild(document.createTextNode(scriptStr.replace(/<\/?script>/ig, "")));
 
         return script;
     });

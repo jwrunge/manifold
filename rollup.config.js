@@ -9,10 +9,11 @@ export default {
             file: `dist/copper.js`,
             format: 'iife',
             name: "Cu",
+            sourcemap: true,
         }
     ],
     plugins: [
         typescript(), 
         terser()
-    ]
+    ],
 };
