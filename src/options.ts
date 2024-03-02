@@ -1,11 +1,14 @@
 import { FetchOptions } from "./http";
 
-type CuOptions = {
-    fetch?: Partial<Omit<FetchOptions, "method" | "href" | "done">>,
+export type CuOptions = {
+    fetch: Omit<FetchOptions, "method" | "href" | "done" | "extract" | "replace">,
 }
 
 export let cuOps: CuOptions = {
     fetch: {
-
+        type: "text",
+        options: {},
+        scriptUse: true,
+        styleUse: true,
     }
 }

@@ -1,5 +1,6 @@
 import { Store } from "./store";
 import { fetchHttp } from "./http";
+import { cuOps, type CuOptions } from "./options";
 
 let evMap = new Map<string, Map<string, (this: HTMLElement, ev: Event)=> any>>();
 let elIdx = 0;
@@ -128,15 +129,22 @@ function handleDataFetch(el: HTMLElement) {
     el?.dataset?.["fetch"]?.split(";").forEach(setting=> {
         let [ docTargets, httpSrc, method, triggers ] = breakOutSettings(el.id, "sync", setting, true);
 
+        let ops = {
+            ...cuOps?.fetch,
+            ...JSON.parse(el.dataset.fetchOps || "{}") as CuOptions
+        };
+
         for(let replace of docTargets || [""]) {
             for(let trigger of triggers) {
                 let [href, extract] = httpSrc[0].split(":");
                 let ev = ()=> {                               
                     fetchHttp({
-                        method, href, type: "text", extract, replace, 
-                        options: {}, cb: undefined, err: undefined,
-                        scriptUse: "all", styleUse: "all",
-                        done: (el: HTMLElement)=> registerSubs(el)
+                        method, 
+                        href,
+                        done: (el: HTMLElement)=> registerSubs(el),
+                        extract,
+                        replace,
+                        ...ops,
                     })
                 }
 
