@@ -2,9 +2,10 @@ import { registerSubs } from "./domRegistrar";
 
 //Track page scripts
 let pageScripts: HTMLScriptElement[] = [];
+let pageStyles: HTMLStyleElement[] = [];
 
 //Fetch page and replace content
-export async function fetchHttp(method: string, href: string, type: "json" | "text", extract = "body", replace = "body", options: {[key: string]: any}, cb?: (val: any)=> void, err?: (err: any)=> void, scriptUse: true | false | "all" = true) {
+export async function fetchHttp(method: string, href: string, type: "json" | "text", extract = "body", replace = "body", options: {[key: string]: any}, cb?: (val: any)=> void, err?: (err: any)=> void, scriptUse: true | false | "all" = true, styleUse: true | false | "all" = true) {
     let data = await fetch(href, {
         ...options,
         method,
@@ -25,17 +26,37 @@ export async function fetchHttp(method: string, href: string, type: "json" | "te
     let replacement = wrapper.querySelector(extract)?.innerHTML || "";
     let target = document.querySelector(replace);
 
-    //Clear existing scripts (any previously dynamically loaded)
+    //Clear existing scripts and styles (any previously dynamically loaded)
     for(let script of pageScripts) {
         script.remove();
+    }
+
+    for(let style of pageStyles) {
+        style.remove();
+    }
+
+    let styleRx = /<style[\s\S]*?>[\s\S]*?<\/style>/ig;
+    if(styleUse == false) {
+        replacement = replacement.replace(styleRx, "");
     }
 
     //Get scripts
     if(scriptUse) {
         let scripts = getScriptsFromHtmlString(scriptUse === "all" ? text : replacement);
         for(let script of scripts) {
-            pageScripts.push(script);
+            pageScripts.push(script as HTMLScriptElement);
             document.body.appendChild(script);
+        }
+    }
+
+    if(styleUse && styleUse == "all") {
+        let styles = styleRx.exec(text) || [];
+        console.log(styles)
+        for(let styleTxt of styles) {
+            let style = document.createElement("style");
+            style.textContent = styleTxt.replace(/<\/?style>/ig, "");
+            pageStyles.push(style);
+            document.head.appendChild(style);
         }
     }
 
@@ -52,7 +73,8 @@ export async function fetchHttp(method: string, href: string, type: "json" | "te
 function getScriptsFromHtmlString(html: string): HTMLScriptElement[] {
     let scripts: HTMLScriptElement[] = [];
 
-    let scriptStrings = /<script[\s\S]*?>[\s\S]*?<\/script>/ig.exec(html);
+    let rx = /<script[\s\S]*?>[\s\S]*?<\/script>/ig;
+    let scriptStrings = rx.exec(html);
     
     for(let scriptStr of scriptStrings || []) {
         let script = document.createElement("script");

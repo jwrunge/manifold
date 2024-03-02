@@ -132,7 +132,7 @@ function handleDataFetch(el: HTMLElement) {
             for(let trigger of triggers) {
                 let [src, extract] = httpSrc[0].split(":");
                 let ev = ()=> {                               
-                    fetchHttp(method, src, "text", extract || "body", target || "body", {}, undefined, undefined, true)
+                    fetchHttp(method, src, "text", extract || "body", target || "body", {}, undefined, undefined, "all", "all")
                 }
 
                 if(trigger == "mount") ev();
