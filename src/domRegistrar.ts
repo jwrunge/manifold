@@ -26,14 +26,13 @@ function breakOutSettings(elId: string, fn: string, settings?: string | null, sy
     let commaSepRx = /, {0,}/g;
     let triggers = sync ? _parts.splice(0, 1)[0]?.replace("on(", "")?.split(commaSepRx) || [] : [];
     let processFunc = _parts[0]?.includes("(") ? _parts[0]?.slice(0, _parts[0]?.indexOf("(")) : "";
-    _parts[0] = _parts[0]?.replace(RegExp(processFunc + "\\(|\\)"), "");
-    let stores = _parts.splice(sync ? 1 : 0, 1)[0]?.split(commaSepRx) || [];
-
-    let props = _parts[0]?.split(commaSepRx) || [];
+    _parts[0] = _parts[0]?.replace(processFunc, "");
+    let stores = _parts.splice(sync ? 1 : 0, 1)[0]?.replace(/\(|\)/g, "")?.split(commaSepRx) || [];
+    let props = _parts[0]?.replace(/\(|\)/g, "")?.split(commaSepRx) || [];
 
     //Handle errors
     if(sync && !triggers?.length) throw(`No trigger (#${elId} ${fn}).`)
-    if(!processFunc && ((!sync && stores.length > 1) || (sync && props.length > 1))) throw(`Multiple sources (#${elId} ${fn}): ${(sync ? props : stores).join(", ")}`);
+    if(!processFunc && ((!sync && stores.length > 1) || (fn == "bind" && props.length > 1))) throw(`Multiple sources (#${elId} ${fn}): ${(sync ? props : stores).join(", ")}`);
     return [ stores, props, processFunc, triggers ];
 }
 
