@@ -28,6 +28,7 @@ function breakOutSettings(elId: string, fn: string, settings?: string | null, sy
     let processFunc = _parts[0]?.includes("(") ? _parts[0]?.slice(0, _parts[0]?.indexOf("(")) : "";
     _parts[0] = _parts[0]?.replace(RegExp(processFunc + "\\(|\\)"), "");
     let stores = _parts.splice(sync ? 1 : 0, 1)[0]?.split(commaSepRx) || [];
+
     let props = _parts[0]?.split(commaSepRx) || [];
 
     //Handle errors
@@ -130,9 +131,7 @@ function handleDataFetch(el: HTMLElement, method: string) {
     el?.dataset?.[method]?.split(";").forEach(setting=> {
         let [ docTargets, httpSrc, func, triggers ] = breakOutSettings(el.id, method, setting, true);
 
-        let [href, extract] = httpSrc[0].split(":");
-        href = href.trim();
-        httpSrc[0] = extract;
+        let href = httpSrc.splice(0, 1)[0];
 
         let ops = {
             ...cuOps?.fetch,
@@ -144,6 +143,8 @@ function handleDataFetch(el: HTMLElement, method: string) {
             let extract = httpSrc[i].trim();
 
             for(let trigger of triggers) {
+                console.log("Binding event on " + trigger + " to bind " + replace + " to " + extract)
+
                 let ev = (e?: Event)=> {  
                     e?.preventDefault();                             
                     fetchHttp({

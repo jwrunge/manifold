@@ -51,8 +51,8 @@
     <template cu-else>Else</template>
   </div>
 
-  <div class="special-insert"></div>
-  <nav data-get="on(mount) test(tests/header.html:header,.special) -> nav,.special-insert"></nav>
+  <div class="special-insert">Default insert</div>
+  <nav data-get="on(mount) test(tests/header.html, header, .special) -> nav, .special-insert"></nav>
 
   <div class="trans" data-bind="specialStyling(store1)"></div>
 
