@@ -11,6 +11,9 @@ export type FetchOptions = {
     options: {[key: string]: any}, 
     cb?: (val: any)=> void, 
     err?: (err: any)=> void, 
+    allowCodes: string[],
+    onCode?: (code: string)=> void,
+    allowExternal: boolean | string[],
     scriptUse: true | false | "all", 
     styleUse: true | false | "all",
     done: (el: HTMLElement)=> void

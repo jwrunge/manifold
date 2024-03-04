@@ -132,9 +132,19 @@ function handleDataFetch(el: HTMLElement, method: string) {
 
         let href = httpSrc.splice(0, 1)[0];
 
+        let fetchOverrides: Partial<CuOptions> = {};
+
+        if(el.dataset.fetchOps) {
+            if(cuOps.fetchProfiles?.[el.dataset.fetchOps]) fetchOverrides = cuOps.fetchProfiles[el.dataset.fetchOps];
+            else {
+                try { fetchOverrides = JSON.parse(el.dataset.fetchOps) as Partial<CuOptions> }
+                catch(_) { fetchOverrides = {} }
+            }
+        }
+
         let ops = {
             ...cuOps?.fetch,
-            ...JSON.parse(el.dataset.fetchOps || "{}") as CuOptions
+            ...fetchOverrides
         };
 
         for(let i=0; i < (docTargets || [""]).length; i++) {
