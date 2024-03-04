@@ -17,14 +17,14 @@
 
   <!-- Content -->
   <div class="sync-grid">
-    <label>On keyup:</label> <input data-bind="store1->value" data-sync="on:keyup|change value->store1">
+    <label>On keyup:</label> <input data-bind="store1->value" data-sync="on(keyup, change) value -> store1">
     <label>Bind only:</label> <input data-bind="store1->value">
-    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-bind="store1->checked" data-sync="on:change syncChecked(checked)">
+    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-bind="store1->checked" data-sync="on(change) syncChecked(checked)">
     <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-bind="isChecked(store1)->checked">
 
     <!-- Select (with dynamic options) -->
     <label>Dyn select</label>
-    <select data-bind="store1->value" data-sync="on:change value->store1">
+    <select data-bind="store1->value" data-sync="on(change) value->store1">
       <!-- Dynamic frontend replace -->
       <template id="select-ops" cu-each="store1 as letter, index">
         <!-- Dynamic options -->
@@ -51,7 +51,8 @@
     <template cu-else>Else</template>
   </div>
 
-  <nav data-fetch="on:mount GET(tests/header.html:header)->nav"></nav>
+  <div class="special-insert"></div>
+  <nav data-get="on(mount) test(tests/header.html:header,.special) -> nav,.special-insert"></nav>
 
   <div class="trans" data-bind="specialStyling(store1)"></div>
 

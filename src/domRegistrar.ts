@@ -5,32 +5,33 @@ import { cuOps, type CuOptions } from "./options";
 let evMap = new Map<string, Map<string, (this: HTMLElement, ev: Event)=> any>>();
 let elIdx = 0;
 
+let validAttrs = "[data-bind],[data-sync],[data-get],[data-post],[data-put],[data-patch],[data-delete],[data-head],[data-options]";
+
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: Element) {
-    for(let el of (parent || document.body)?.querySelectorAll("[data-bind],[data-sync],[data-fetch]")) {
+    for(let el of (parent || document.body)?.querySelectorAll(validAttrs)) {
         if(!el.id) el.id = `cu-${elIdx++}`;
         for(let attr in (el as HTMLElement).dataset) {
-            if(attr != "fetch") handleDataBindSync(el as HTMLElement, attr as "sync" | "bind");
-            else if(attr == "fetch") handleDataFetch(el as HTMLElement);
+            if(["sync", "bind"].includes(attr)) handleDataBindSync(el as HTMLElement, attr as "sync" | "bind");
+            else handleDataFetch(el as HTMLElement, attr);
         }
     };
 }
 
 //Get data from settings string
-function breakOutSettings(elId: string, fn: "bind" | "sync", settings?: string | null, sync = false): [ string[], string[], string, string[] ]{
-    let _func_avoid_space_split = settings?.split(/[\(\)]{1,}/g);
-    if(_func_avoid_space_split?.[1]) _func_avoid_space_split[1] = _func_avoid_space_split[1].replace(" ", "");  //Avoiding negative lookahead and lookbehind because Safari
-    let _parts = _func_avoid_space_split?.join(" ").replace("on:", "").split(/[ \->]{1,}/g).filter(p=> p ?? false) || [];
-    
+function breakOutSettings(elId: string, fn: string, settings?: string | null, sync = false): [ string[], string[], string, string[] ]{
+    let _parts = settings?.split(/(?:(?:\)|->) ?){1,}/g) || [];    
+        
     //Extract settings
-    if(_parts.length > 4) throw(`Bad input (#${elId} ${fn}): ${settings}`);
-    let triggers = sync ? _parts.splice(0, 1)[0]?.split(/[|,]/g) || [] : [];
-    let processFunc = settings?.includes("(") ? _parts.splice(0, 1)[0] : "";
-    let stores = _parts.splice(sync ? 1 : 0, 1)[0]?.split(",") || [];
-    let props = _parts[0]?.split(",") || [];
+    let commaSepRx = /, {0,}/g;
+    let triggers = sync ? _parts.splice(0, 1)[0]?.replace("on(", "")?.split(commaSepRx) || [] : [];
+    let processFunc = _parts[0]?.includes("(") ? _parts[0]?.slice(0, _parts[0]?.indexOf("(")) : "";
+    _parts[0] = _parts[0]?.replace(RegExp(processFunc + "\\(|\\)"), "");
+    let stores = _parts.splice(sync ? 1 : 0, 1)[0]?.split(commaSepRx) || [];
+    let props = _parts[0]?.split(commaSepRx) || [];
 
     //Handle errors
-    if(sync && !settings?.includes("on:")) throw(`No trigger (#${elId} ${fn}).`)
+    if(sync && !triggers?.length) throw(`No trigger (#${elId} ${fn}).`)
     if(!processFunc && ((!sync && stores.length > 1) || (sync && props.length > 1))) throw(`Multiple sources (#${elId} ${fn}): ${(sync ? props : stores).join(", ")}`);
     return [ stores, props, processFunc, triggers ];
 }
@@ -125,26 +126,32 @@ function registerDomEventSync(el: HTMLElement, storeData: {n: string, p: (string
     }
 }
 
-function handleDataFetch(el: HTMLElement) {
-    el?.dataset?.["fetch"]?.split(";").forEach(setting=> {
-        let [ docTargets, httpSrc, method, triggers ] = breakOutSettings(el.id, "sync", setting, true);
+function handleDataFetch(el: HTMLElement, method: string) {
+    el?.dataset?.[method]?.split(";").forEach(setting=> {
+        let [ docTargets, httpSrc, func, triggers ] = breakOutSettings(el.id, method, setting, true);
+
+        let [href, extract] = httpSrc[0].split(":");
+        href = href.trim();
+        httpSrc[0] = extract;
 
         let ops = {
             ...cuOps?.fetch,
             ...JSON.parse(el.dataset.fetchOps || "{}") as CuOptions
         };
 
-        for(let replace of docTargets || [""]) {
+        for(let i=0; i < (docTargets || [""]).length; i++) {
+            let replace = docTargets[i].trim();
+            let extract = httpSrc[i].trim();
+
             for(let trigger of triggers) {
-                let [href, extract] = httpSrc[0].split(":");
                 let ev = (e?: Event)=> {  
                     e?.preventDefault();                             
                     fetchHttp({
                         method, 
                         href,
                         done: (el: HTMLElement)=> registerSubs(el),
-                        extract,
-                        replace,
+                        extract: extract,
+                        replace: replace,
                         ...ops,
                     })
                 }
