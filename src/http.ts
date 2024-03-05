@@ -57,7 +57,8 @@ export async function fetchHttp(ops: FetchOptions) {
         for(let style of pageStyles) style.remove();
 
         //Handle scripts
-        if(ops.scriptUse) {
+        if(!ops.scriptUse) replacement = replacement.replace(scriptRx, "");
+        else {
             scriptRx.exec(ops.scriptUse == "all" ? text : replacement)?.every(scriptStr=> {
                 let script = document.createElement("script");
                 script.src = scriptStr.match(/src="([\s\S]*?)"/i)?.[1] || "";
@@ -74,6 +75,7 @@ export async function fetchHttp(ops: FetchOptions) {
             for(let styleTxt of styleRx.exec(text) || []) {
                 let style = document.createElement("style");
                 style.textContent = styleTxt.replace(/<\/?style>/ig, "");
+                
                 pageStyles.push(style);
                 document.head.appendChild(style);
             }
