@@ -121,7 +121,7 @@ export class Store<T> {
             let newValue = await (typeof value == "function" ? (value as Function)?.(store.value) : value);
 
             //Check complex object lengths (avoid lengthy hashes) -- if the lengths indicate the value HAS NOT CHANGED, double-check via hash
-            let valueChanged = Array.from(store.value as ArrayLike<any>).length !== Array.from(newValue).length;
+            let valueChanged = Array.from((store.value || []) as ArrayLike<any>)?.length !== Array.from(newValue).length;
             store.value = newValue;
 
             let newHash = "";
