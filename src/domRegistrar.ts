@@ -32,7 +32,7 @@ export function registerSubs(parent?: HTMLElement) {
 
                 let processFunc: Function | undefined;
                 if(processFuncName) {
-                    processFunc = globalThis[processFuncName as keyof typeof globalThis] || Store.func(processFuncName)?.deref();
+                    processFunc = globalThis[processFuncName as keyof typeof globalThis] || Store.func(processFuncName);
                     if(!processFunc) throw(`"${processFunc}" not registered: ${err_detail}`);
                     if(((!sync && external.length > 1) || (sync && internal.length > 1))) throw(`Multiple sources: ${err_detail}`);
                 }

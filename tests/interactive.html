@@ -59,7 +59,7 @@
   <!-- Store script -->
   <script src="../dist/copper.js"></script>
   <script>
-    const store1 = Cu.store("store1", { value: "My text" });
+    let store1 = Cu.store("store1", { value: "My text" });
     const store3 = Cu.store("store3", { value: "one" });
     const store2 = Cu.store("store2", { 
       value: { values: ["one", "two"]},
@@ -87,35 +87,35 @@
       }
     });
 
-    setTimeout(()=> {
-      store3.update("two")
-    }, 1000)
-    setTimeout(()=> {
-      store3.update("three")
-    }, 3000)
-    setTimeout(()=> {
-      store3.update("four")
-    }, 9000)
-    setTimeout(()=> {
-      store3.update("five")
-    }, 15000)
+    // setTimeout(()=> {
+    //   store3.update("two")
+    // }, 1000)
+    // setTimeout(()=> {
+    //   store3.update("three")
+    // }, 3000)
+    // setTimeout(()=> {
+    //   store3.update("four")
+    // }, 9000)
+    // setTimeout(()=> {
+    //   store3.update("five")
+    // }, 15000)
 
-    setTimeout(()=> {
-      store1.update("<span class='colorful'>Another update</span>")
-    }, 4000)
-    setTimeout(()=> {
-      store1.update("We're at 4k")
-    }, 8000)
-    setTimeout(()=> {
-      store1.update("Last one")
-    }, 12000)
+    // setTimeout(()=> {
+    //   store1.update("<span class='colorful'>Another update</span>")
+    // }, 4000)
+    // setTimeout(()=> {
+    //   store1.update("We're at 4k")
+    // }, 8000)
+    // setTimeout(()=> {
+    //   store1.update("Last one")
+    // }, 12000)
 
-    setTimeout(()=> {
-      store1.update("FINAL");
-      store2.update({ values: ["final", "final"] });
-      store3.update("final");
-      store4.update(1000)
-    }, 16000)
+    // setTimeout(()=> {
+    //   store1.update("FINAL");
+    //   store2.update({ values: ["final", "final"] });
+    //   store3.update("final");
+    //   store4.update(1000)
+    // }, 16000)
 
     function specialStyling(val, el) {
       if(val == "My text") {
@@ -160,7 +160,22 @@
       // Cu.store("store1").update(store1 === false ? "We're at 4k" : store1);
     }
 
-    // Cu.assign({specialStyling, isChecked, showDiv, syncChecked});
+    // Test GC
+    // open chrome via run: chrome --js-flags='--expose_gc'
+    console.log("STORE 1", store1);
+    console.log("WEAKLY REF'D", Cu.store("store1"))
+
+    setTimeout(()=> {
+      store1 = undefined;
+      console.log("STORE 1", store1);
+      console.log("WEAKLY REF'D", Cu.store("store1"))
+      if(window.gc) window.gc();
+    }, 3000)
+
+    setTimeout(()=> {
+      console.log("STORE 1", store1);
+      console.log("WEAKLY REF'D", Cu.store("store1"))
+    }, 20000)
   </script>
 </body>
 </html>

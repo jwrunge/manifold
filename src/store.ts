@@ -38,8 +38,8 @@ export class Store<T> {
     #upstreamStores: Array<string> = [];
 
     //Static
-    static #stores: Map<string, WeakRef<Store<any>>> = new Map();
-    static #funcs: Map<string, WeakRef<Function>> = new Map();
+    static #stores: Map<string, Store<any>> = new Map();
+    static #funcs: Map<string, Function> = new Map();
     static #workOrder: Map<string, UpdaterValue<any>> = new Map();
     static #workCacheTimeout: any;
 
@@ -57,7 +57,7 @@ export class Store<T> {
     modify(ops: StoreOptions<T>) {
         if(ops?.name) {
             this.name = ops.name;
-            Store.#stores.set(ops.name, new WeakRef(this));
+            Store.#stores.set(ops.name, this);
         }
         this.#upstreamStores = ops?.upstream || [];
         for(let storeName of this.#upstreamStores || []) {
@@ -92,8 +92,8 @@ export class Store<T> {
      */
     static store<U>(name: string, ops?: StoreOptions<U>): Store<U> {
         const store = Store.#stores.get(name);
-        if(ops) return store?.deref()?.modify(ops) || new Store({...ops, name});
-        return store?.deref() || new Store({name})
+        if(ops) return store?.modify(ops) || new Store({...ops, name});
+        return store || new Store({name})
     }
 
     static func(name: string) {
@@ -101,7 +101,7 @@ export class Store<T> {
     }
 
     static assign(funcs: {[key: string]: Function}) {
-        for(let key in funcs) Store.#funcs.set(key, new WeakRef(funcs[key]));
+        for(let key in funcs) Store.#funcs.set(key, funcs[key]);
     }
 
     static async #applyChanges() {
