@@ -8,7 +8,7 @@ let elIdx = 0;
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: HTMLElement) {
     let modes = ["bind", "sync", "get", "post", "put", "patch", "delete", "head", "options", "trace", "connect"];
-    for(let el of (parent || document.body)?.querySelectorAll(`[${modes.join("],")}]`) as NodeListOf<HTMLElement>) {
+    for(let el of (parent || document.body)?.querySelectorAll(`[data-${modes.join("],[data-")}]`) as NodeListOf<HTMLElement>) {
         if(!el.id) el.id = `cu-${elIdx++}`;
 
         //Loop over all data attributes (modes)
@@ -20,17 +20,20 @@ export function registerSubs(parent?: HTMLElement) {
         
                 //Extract settings
                 let triggers = sync ? _parts.splice(0, 1)[0]?.replace("on(", "")?.split(commaSepRx) || [] : [];
-                let processFunc = _parts[0]?.includes("(") ? _parts[0]?.slice(0, _parts[0]?.indexOf("(")) : "";
-                _parts[0] = _parts[0]?.replace(processFunc, "");
+                let processFuncName = _parts[0]?.includes("(") ? _parts[0]?.slice(0, _parts[0]?.indexOf("(")) : "";
+                _parts[0] = _parts[0]?.replace(processFuncName, "");
                 let external = _parts.splice(mode == "sync" ? 1 : 0, 1)[0]?.replace(/\(|\)/g, "")?.split(commaSepRx) || [];
                 let internal = _parts[0]?.replace(/\(|\)/g, "")?.split(commaSepRx) || [];
 
                 let err_detail = `(#${el.id} on ${mode})`;
 
                 //Handle errors
-                if(sync && !triggers?.length) throw(`No trigger: ${err_detail}.`)   
-                if(processFunc) {
-                    if(Store.func(processFunc) == undefined) throw(`"${processFunc}" not registered: ${err_detail}`);
+                if(sync && !triggers?.length) throw(`No trigger: ${err_detail}.`)
+
+                let processFunc: Function | undefined;
+                if(processFuncName) {
+                    processFunc = globalThis[processFuncName as keyof typeof globalThis] || Store.func(processFuncName)?.deref();
+                    if(!processFunc) throw(`"${processFunc}" not registered: ${err_detail}`);
                     if(((!sync && external.length > 1) || (sync && internal.length > 1))) throw(`Multiple sources: ${err_detail}`);
                 }
 
@@ -68,7 +71,7 @@ export function registerSubs(parent?: HTMLElement) {
                     for(let trigger of triggers) {
                         if(mode == "bind") {
                             let domSubscription = ()=> {
-                                let val: any = Store.func(processFunc || "")?.deref()?.(...externalData.map(s=> nestedValue(Store.store(s.name)?.value, s.path)), el) ?? nestedValue(Store.store(externalData[0].name || "")?.value, externalData[0].path);         //If ingress function, run it
+                                let val: any = processFunc?.(...externalData.map(s=> nestedValue(Store.store(s.name)?.value, s.path)), el) ?? nestedValue(Store.store(externalData[0].name || "")?.value, externalData[0].path);         //If ingress function, run it
                         
                                 if(bindTo) {
                                     if(!bindType) (el as any)[bindTo] = val;
@@ -87,7 +90,7 @@ export function registerSubs(parent?: HTMLElement) {
                             let ev = ()=> {
                                 let value = bindType == "style" ? el.style.getPropertyValue(bindTo) : bindType == "attr" ? el.getAttribute(bindTo) : (el as any)[bindTo];
                                 
-                                if(processFunc) value = Store.func(processFunc)?.deref()?.(value, el);
+                                if(processFunc) value = processFunc?.(value, el);
                                 const store = Store.store(externalData[0]?.name);
                                 
                                 if(value !== undefined) {
