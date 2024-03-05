@@ -7,7 +7,8 @@ let elIdx = 0;
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: HTMLElement) {
-    for(let el of (parent || document.body)?.querySelectorAll("[data-bind],[data-sync],[data-get],[data-post],[data-put],[data-patch],[data-delete],[data-head],[data-options]") as NodeListOf<HTMLElement>) {
+    let modes = ["bind", "sync", "get", "post", "put", "patch", "delete", "head", "options", "trace", "connect"];
+    for(let el of (parent || document.body)?.querySelectorAll(`[${modes.join("],")}]`) as NodeListOf<HTMLElement>) {
         if(!el.id) el.id = `cu-${elIdx++}`;
 
         //Loop over all data attributes (modes)
@@ -67,7 +68,7 @@ export function registerSubs(parent?: HTMLElement) {
                     for(let trigger of triggers) {
                         if(mode == "bind") {
                             let domSubscription = ()=> {
-                                let val: any = Store.func(processFunc || "")?.(...externalData.map(s=> nestedValue(Store.box(s.name)?.value, s.path)), el) ?? nestedValue(Store.box(externalData[0].name || "")?.value, externalData[0].path);         //If ingress function, run it
+                                let val: any = Store.func(processFunc || "")?.(...externalData.map(s=> nestedValue(Store.store(s.name)?.value, s.path)), el) ?? nestedValue(Store.store(externalData[0].name || "")?.value, externalData[0].path);         //If ingress function, run it
                         
                                 if(bindTo) {
                                     if(!bindType) (el as any)[bindTo] = val;
@@ -77,7 +78,7 @@ export function registerSubs(parent?: HTMLElement) {
                             }
                         
                             //Add subscription - run whenever store updates
-                            for(let store of externalData) Store.box(store.name)?.addSub(el.id, domSubscription);
+                            for(let store of externalData) Store.store(store.name)?.addSub(el.id, domSubscription);
                         }
 
                         //Handle bind and sync
@@ -87,7 +88,7 @@ export function registerSubs(parent?: HTMLElement) {
                                 let value = bindType == "style" ? el.style.getPropertyValue(bindTo) : bindType == "attr" ? el.getAttribute(bindTo) : (el as any)[bindTo];
                                 
                                 if(processFunc) value = Store.func(processFunc)?.(value, el);
-                                const store = Store.box(externalData[0]?.name);
+                                const store = Store.store(externalData[0]?.name);
                                 
                                 if(value !== undefined) {
                                     store?.update?.((curVal: any)=> {
