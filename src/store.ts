@@ -38,8 +38,8 @@ export class Store<T> {
     #upstreamStores: Array<string> = [];
 
     //Static
-    static #stores: WeakSet<Store<any>> = new WeakSet();
-    static #funcs: WeakSet<Function> = new WeakSet();
+    static #stores: Map<string, WeakRef<Store<any>>> = new Map();
+    static #funcs: Map<string, WeakRef<Function>> = new Map();
     static #workOrder: Map<string, UpdaterValue<any>> = new Map();
     static #workCacheTimeout: any;
 
@@ -55,8 +55,10 @@ export class Store<T> {
 
     //Modify store
     modify(ops: StoreOptions<T>) {
-        Store.#stores.add(this);
-        if(ops?.name) this.name = ops.name;
+        if(ops?.name) {
+            this.name = ops.name;
+            Store.#stores.set(ops.name, new WeakRef(this));
+        }
         this.#upstreamStores = ops?.upstream || [];
         for(let storeName of this.#upstreamStores || []) {
             let store = Store.store(storeName);
@@ -88,29 +90,18 @@ export class Store<T> {
     /**
      * STORE STATIC METHODS
      */
-    static findStore(name: string): Store<any> | undefined {
-        Set.prototype.forEach.call(Store.#stores, (store: Store<any>)=> {
-            if(store.name == name) return store;
-        });
-        return undefined;
-    }
-
-    static func(name: string): Function | undefined {
-        Set.prototype.forEach.call(Store.#funcs, (func: Function)=> {
-            if(func.name == name) return func;
-        });
-        return undefined;
-    }
-
     static store<U>(name: string, ops?: StoreOptions<U>): Store<U> {
-        let store: Store<any> | undefined = undefined;
-        Set.prototype.forEach.call(Store.#stores, (S: Store<any>)=> { if(S.name == name) store = S; });
-        if(ops) return (store as Store<any> | undefined)?.modify(ops) || new Store({...ops, name});
-        return store || new Store({name})
+        const store = Store.#stores.get(name);
+        if(ops) return store?.deref()?.modify(ops) || new Store({...ops, name});
+        return store?.deref() || new Store({name})
     }
 
-    static funcs(funcs: {[key: string]: Function}) {
-        for(let key in funcs) Store.#funcs.add(funcs[key]);
+    static func(name: string) {
+        return Store.#funcs.get(name);
+    }
+
+    static assign(funcs: {[key: string]: Function}) {
+        for(let key in funcs) Store.#funcs.set(key, new WeakRef(funcs[key]));
     }
 
     static async #applyChanges() {

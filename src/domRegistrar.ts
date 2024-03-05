@@ -68,7 +68,7 @@ export function registerSubs(parent?: HTMLElement) {
                     for(let trigger of triggers) {
                         if(mode == "bind") {
                             let domSubscription = ()=> {
-                                let val: any = Store.func(processFunc || "")?.(...externalData.map(s=> nestedValue(Store.store(s.name)?.value, s.path)), el) ?? nestedValue(Store.store(externalData[0].name || "")?.value, externalData[0].path);         //If ingress function, run it
+                                let val: any = Store.func(processFunc || "")?.deref()?.(...externalData.map(s=> nestedValue(Store.store(s.name)?.value, s.path)), el) ?? nestedValue(Store.store(externalData[0].name || "")?.value, externalData[0].path);         //If ingress function, run it
                         
                                 if(bindTo) {
                                     if(!bindType) (el as any)[bindTo] = val;
@@ -87,7 +87,7 @@ export function registerSubs(parent?: HTMLElement) {
                             let ev = ()=> {
                                 let value = bindType == "style" ? el.style.getPropertyValue(bindTo) : bindType == "attr" ? el.getAttribute(bindTo) : (el as any)[bindTo];
                                 
-                                if(processFunc) value = Store.func(processFunc)?.(value, el);
+                                if(processFunc) value = Store.func(processFunc)?.deref()?.(value, el);
                                 const store = Store.store(externalData[0]?.name);
                                 
                                 if(value !== undefined) {
