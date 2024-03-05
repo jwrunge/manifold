@@ -45,11 +45,12 @@ export async function fetchHttp(ops: FetchOptions) {
     let text = await data?.[ops.type || "text"]();
     ops.cb?.(text);
 
-    if((ops?.type || "text") == "text" && (ops?.replace || true)) {
+    if((ops?.type || "text") == "text" && ops?.replace) {
         //Extract and replace (assumed HTML)
         let wrapper = document.createElement("div");
         wrapper.innerHTML = text;
         let replacement = wrapper.querySelector(ops.extract)?.innerHTML || "";
+        console.log("ABOUT TO QUERY", ops.replace, document, document.querySelector(ops.replace))
         let target = document.querySelector(ops.replace);
 
         //Clear existing scripts and styles (any previously dynamically loaded)
@@ -78,6 +79,7 @@ export async function fetchHttp(ops: FetchOptions) {
             }
         }
 
+        console.log("About to assign target", target)
         if(target) {
             target.innerHTML = replacement;
             ops.done?.(target as HTMLElement);

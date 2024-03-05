@@ -106,8 +106,8 @@ export function registerSubs(parent?: HTMLElement) {
                                     method: mode, 
                                     href,
                                     done: (el: HTMLElement)=> registerSubs(el),
-                                    extract: internal[i]?.trim(),
-                                    replace: external[i]?.trim(),
+                                    extract: external[i]?.trim(),
+                                    replace: internal[i]?.trim(),
                                     ...fetchOps,
                                 })
                             }
