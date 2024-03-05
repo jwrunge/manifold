@@ -3,11 +3,13 @@ import { FetchOptions } from "./options";
 //Track page scripts
 let pageScripts: HTMLScriptElement[] = [];
 let pageStyles: HTMLStyleElement[] = [];
+let parser = new DOMParser();
+
+let scriptRx = /<script[\s\S]*?>[\s\S]*?<\/script>/ig;
+let styleRx = /<style[\s\S]*?>[\s\S]*?<\/style>/ig;
 
 //Fetch page and replace content
 export async function fetchHttp(ops: FetchOptions) {
-    console.log("FETCHING", ops)
-
     //Make sure we're allowed to fetch
     if(!ops.allowExternal) {
         if(ops.href.startsWith("http")) return;
@@ -21,7 +23,6 @@ export async function fetchHttp(ops: FetchOptions) {
         body: ops.options?.body ? JSON.stringify(ops.options?.body || {}) : undefined,
     })
     .catch(error=> {
-        console.error(error);
         ops.err?.(error);
     });
 
@@ -47,28 +48,27 @@ export async function fetchHttp(ops: FetchOptions) {
 
     if((ops?.type || "text") == "text" && ops?.replace) {
         //Extract and replace (assumed HTML)
-        let wrapper = document.createElement("div");
-        wrapper.innerHTML = text;
-        let replacement = wrapper.querySelector(ops.extract)?.innerHTML || "";
-        console.log("ABOUT TO QUERY", ops.replace, document, document.querySelector(ops.replace))
+        let newHtml = parser.parseFromString(text, 'text/html').body;
+        let replacement = newHtml.querySelector(ops.extract)?.innerHTML || "";
         let target = document.querySelector(ops.replace);
 
         //Clear existing scripts and styles (any previously dynamically loaded)
-        for(let script of pageScripts) script.remove();
+        for(let el of [...pageScripts, ...pageStyles]) el.remove();
         for(let style of pageStyles) style.remove();
-        pageScripts = pageStyles = [];
 
         //Handle scripts
         if(ops.scriptUse) {
-            let scripts = getScriptsFromHtmlString(ops.scriptUse == "all" ? text : replacement);
-            scripts?.every(script=> {
+            scriptRx.exec(ops.scriptUse == "all" ? text : replacement)?.every(scriptStr=> {
+                let script = document.createElement("script");
+                script.src = scriptStr.match(/src="([\s\S]*?)"/i)?.[1] || "";
+                if(!script.src) script.appendChild(document.createTextNode(scriptStr.replace(/<\/?script>/ig, "")));
+                
                 pageScripts.push(script);
                 document.body.appendChild(script);
-            })
+            });
         }
 
         //Handle styles
-        let styleRx = /<style[\s\S]*?>[\s\S]*?<\/style>/ig;
         if(!ops.styleUse) replacement = replacement.replace(styleRx, "");
         else if(ops.styleUse == "all") {
             for(let styleTxt of styleRx.exec(text) || []) {
@@ -79,22 +79,9 @@ export async function fetchHttp(ops: FetchOptions) {
             }
         }
 
-        console.log("About to assign target", target)
         if(target) {
             target.innerHTML = replacement;
             ops.done?.(target as HTMLElement);
         }
     }
-}
-
-//Execute script tags if allowed
-function getScriptsFromHtmlString(html: string) {   
-    return /<script[\s\S]*?>[\s\S]*?<\/script>/ig.exec(html)?.map(scriptStr=> {
-        let script = document.createElement("script");
-
-        script.src = scriptStr.match(/src="([\s\S]*?)"/i)?.[1] || "";
-        if(!script.src) script.appendChild(document.createTextNode(scriptStr.replace(/<\/?script>/ig, "")));
-
-        return script;
-    });
 }
