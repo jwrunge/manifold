@@ -1,35 +1,48 @@
+import { FetchOptions } from "./options";
+
 //Track page scripts
 let pageScripts: HTMLScriptElement[] = [];
 let pageStyles: HTMLStyleElement[] = [];
 
-export type FetchOptions = {
-    method: string, 
-    href: string, 
-    type: "json" | "text", 
-    extract: string, 
-    replace: string, 
-    options: {[key: string]: any}, 
-    cb?: (val: any)=> void, 
-    err?: (err: any)=> void, 
-    allowCodes: string[],
-    onCode?: (code: string)=> void,
-    allowExternal: boolean | string[],
-    scriptUse: true | false | "all", 
-    styleUse: true | false | "all",
-    done: (el: HTMLElement)=> void
-}
-
 //Fetch page and replace content
 export async function fetchHttp(ops: FetchOptions) {
+    console.log("FETCHING", ops)
+
+    //Make sure we're allowed to fetch
+    if(!ops.allowExternal) {
+        if(ops.href.startsWith("http")) return;
+    }
+    else if(Array.isArray(ops.allowExternal) && !ops.allowExternal.some(allowed=> ops.href.startsWith(allowed))) return;
+
+    //Fetch data
     let data = await fetch(ops.href, {
         ...ops.options,
         method: ops.method,
-        body: typeof ops.options.body == "string" ? ops.options.body : JSON.stringify(ops.options.body),
+        body: ops.options?.body ? JSON.stringify(ops.options?.body || {}) : undefined,
     })
-    .catch(error=> ops.err?.(error));
+    .catch(error=> {
+        console.error(error);
+        ops.err?.(error);
+    });
+
+    let code = data?.status;
+
+    //Handle onCode callback
+    if(code && ops?.onCode?.(code) == false) return;
+
+    //Handle response code gate
+    if(ops.allowCodes?.length) {
+        for(let allow of ops?.allowCodes) {
+            let allowRx = new RegExp(allow.replace(/\./g, "\\d"));
+            if(code && !allowRx.test(code.toString())) {
+                console.warn(`Fetch ${ops.href} aborted due to disallowed status ${code}`);
+                return;
+            }
+        }
+    }
 
     //Return JSON or text in callback
-    let text = await data?.[ops.type]();
+    let text = await data?.[ops.type || "text"]();
     ops.cb?.(text);
 
     if(ops.type == "text" && ops.replace) {
@@ -67,7 +80,7 @@ export async function fetchHttp(ops: FetchOptions) {
 
         if(target) {
             target.innerHTML = replacement;
-            ops.done(target as HTMLElement);
+            ops.done?.(target as HTMLElement);
         }
     }
 }
