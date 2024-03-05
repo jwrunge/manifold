@@ -45,7 +45,7 @@ export async function fetchHttp(ops: FetchOptions) {
     let text = await data?.[ops.type || "text"]();
     ops.cb?.(text);
 
-    if(ops.type == "text" && ops.replace) {
+    if((ops?.type || "text") == "text" && (ops?.replace || true)) {
         //Extract and replace (assumed HTML)
         let wrapper = document.createElement("div");
         wrapper.innerHTML = text;
