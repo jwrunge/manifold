@@ -9,7 +9,7 @@ export type FetchOptions = {
     err?: (err: any)=> void, 
     allowCodes?: string[],
     onCode?: (code: number)=> boolean | void,
-    allowExternal?: boolean | string[],
+    allowExternal?: string[],
     allowScripts?: true | false, 
     allowStyles?: true | false | "all",
 }
@@ -25,10 +25,10 @@ let styleRx = /<style[\s\S]*?>[\s\S]*?<\/style>/ig;
 //Fetch page and replace content
 export async function fetchHttp(ops: FetchOptions, reqid: string, done: (el: HTMLElement)=> void) {
     //Make sure we're allowed to fetch
-    if(!ops.allowExternal) {
-        if(ops.href.startsWith("http")) return;
+    if(Array.isArray(ops.allowExternal) && !ops.allowExternal.some(allowed=> ops.href?.startsWith(allowed))) {
+        console.warn(`${ops.method} ${ops.href} not allowed`);
+        return;
     }
-    else if(Array.isArray(ops.allowExternal) && !ops.allowExternal.some(allowed=> ops.href.startsWith(allowed))) return;
 
     //Fetch data
     let data = await fetch(ops.href, {

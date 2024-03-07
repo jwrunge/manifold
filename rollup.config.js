@@ -2,18 +2,27 @@
 import typescript from '@rollup/plugin-typescript';
 import terser from '@rollup/plugin-terser';
 
-export default {
-    input: `src/index.ts`,
-    output: [
-        {
-            file: `dist/copper.js`,
-            format: 'iife',
-            name: "Cu",
-            sourcemap: true,
+function constructProfiles(prefixes, sourceMaps) {
+    return prefixes.map((prefix, i)=> { 
+        return {
+            input: `src/index.ts`,
+            output: [
+                {
+                    file: `dist/${prefix ? prefix + "." : ""}copper.js`,
+                    format: 'iife',
+                    name: "Cu",
+                    sourcemap: sourceMaps[i],
+                }
+            ],
+            plugins: [
+                typescript(), 
+                terser()
+            ],
         }
-    ],
-    plugins: [
-        typescript(), 
-        terser()
-    ],
-};
+    });
+}
+
+export default constructProfiles(
+    ["", "dev"], 
+    [false, true]
+);
