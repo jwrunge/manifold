@@ -5,6 +5,21 @@ import { cuOps, type CuOptions } from "./options";
 let commaSepRx = /, {0,}/g;
 let elIdx = 0;
 
+//On attribute changes
+let obs = new MutationObserver(mutations=> {
+    for(let mut of mutations) {
+        
+    }
+});
+
+function paramsInParens(str: string) {
+    if(str.includes("(")) {
+        let matches = str.match(/[^\(\)]{1,}/g);
+        str = matches?.[matches.length - 1] || "";
+    }
+    return str.split(commaSepRx);;
+}
+
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: HTMLElement) {
     let modes = ["bind", "sync", "get", "post", "put", "patch", "delete", "head", "options", "trace", "connect"];
@@ -13,28 +28,27 @@ export function registerSubs(parent?: HTMLElement) {
 
         //Loop over all data attributes (modes)
         for(let mode in el.dataset) {
+            let hasTriggers = mode != "bind";
+            let err_detail = `(#${el.id} on ${mode})`;
+
             el?.dataset?.[mode]?.split(";").every(setting=> {
                 //Break out settings
                 let _parts = setting?.split(/(?:(?:\)|->) ?){1,}/g) || []; 
-                let sync = mode != "bind";   
         
                 //Extract settings
-                let triggers = sync ? _parts.splice(0, 1)[0]?.replace("on(", "")?.split(commaSepRx) || [] : [];
-                let processFuncName = _parts[0]?.includes("(") ? _parts[0]?.slice(0, _parts[0]?.indexOf("(")) : "";
-                _parts[0] = _parts[0]?.replace(processFuncName, "");
-                let external = _parts.splice(mode == "sync" ? 1 : 0, 1)[0]?.replace(/\(|\)/g, "")?.split(commaSepRx) || [];
-                let internal = _parts[0]?.replace(/\(|\)/g, "")?.split(commaSepRx) || [];
-
-                let err_detail = `(#${el.id} on ${mode})`;
+                let triggers = hasTriggers ? paramsInParens(_parts.splice(0,1)[0]) as string[] : [];
+                let processFuncName = _parts[0]?.includes("(") ? _parts[0]?.match(/^[^\(]{1,}/)?.[0] || "" : "";
+                let external = paramsInParens(_parts.splice(mode == "sync" ? 1 : 0, 1)[0]) as string[];
+                let internal = paramsInParens(_parts[0]) as string[];
 
                 //Handle errors
-                if(sync && !triggers?.length) throw(`No trigger: ${err_detail}.`)
+                if(hasTriggers && !triggers?.length) throw(`No trigger: ${err_detail}.`)
 
                 let processFunc: Function | undefined;
                 if(processFuncName) {
                     processFunc = globalThis[processFuncName as keyof typeof globalThis] || Store.func(processFuncName);
-                    if(!processFunc) throw(`"${processFunc}" not registered: ${err_detail}`);
-                    if(((!sync && external.length > 1) || (sync && internal.length > 1))) throw(`Multiple sources: ${err_detail}`);
+                    if(!processFunc) throw(`"${processFuncName}" not registered: ${err_detail}`);
+                    if(((!hasTriggers && external.length > 1) || (hasTriggers && internal.length > 1))) throw(`Multiple sources: ${err_detail}`);
                 }
 
                 //Map external names and paths
@@ -69,6 +83,7 @@ export function registerSubs(parent?: HTMLElement) {
 
                     //Loop over triggers
                     for(let trigger of triggers) {
+                        //Handle bind
                         if(mode == "bind") {
                             let domSubscription = ()=> {
                                 let val: any = processFunc?.(...externalData.map(s=> nestedValue(Store.store(s.name)?.value, s.path)), el) ?? nestedValue(Store.store(externalData[0].name || "")?.value, externalData[0].path);         //If ingress function, run it
@@ -84,7 +99,7 @@ export function registerSubs(parent?: HTMLElement) {
                             for(let store of externalData) Store.store(store.name)?.addSub(el.id, domSubscription);
                         }
 
-                        //Handle bind and sync
+                        //Handle sync
                         else if(mode == "sync") {
                             if(externalData.length > 1) throw(`Only one store supported: ${err_detail}`)
                             let ev = ()=> {

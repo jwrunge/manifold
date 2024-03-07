@@ -14,12 +14,13 @@
   <p>Store 2 nested: <span data-bind="store2.values[1]->innerHTML">Here is a default value.</span></p>
   <p>Checkbox set to checked? <span data-bind="store2.values[0]->innerText"></span></p>
   <p>Store 4 value: <span data-bind="store4->innerText"></span></p>
+  <p>Checked store checked? <span data-bind="checkedStore-> innerText"></span></p>
 
   <!-- Content -->
   <div class="sync-grid">
     <label>On keyup:</label> <input data-bind="store1->value" data-sync="on(keyup, change) value -> store1">
     <label>Bind only:</label> <input data-bind="store1->value">
-    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-bind="store1->checked" data-sync="on(change) syncChecked(checked)">
+    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-bind="store1->checked" data-sync="on(change) checked->checkedStore">
     <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-bind="isChecked(store1)->checked">
 
     <!-- Select (with dynamic options) -->
