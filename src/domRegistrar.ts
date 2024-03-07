@@ -1,23 +1,25 @@
 import { Store } from "./store";
-import { fetchHttp } from "./http";
-import { cuOps, type CuOptions } from "./options";
+import { FetchOptions, fetchHttp } from "./http";
+
+interface CuOptions extends Omit<FetchOptions, "method" | "href" | "done" | "extract" | "replace"> {
+    fetchProfiles?: { [ key: string ]: Partial<FetchOptions> }
+}
 
 let commaSepRx = /, {0,}/g;
 let elIdx = 0;
 
-//On attribute changes
-let obs = new MutationObserver(mutations=> {
-    for(let mut of mutations) {
-        
-    }
-});
-
 function paramsInParens(str: string) {
-    if(str.includes("(")) {
+    if(str?.includes("(")) {
         let matches = str.match(/[^\(\)]{1,}/g);
         str = matches?.[matches.length - 1] || "";
     }
-    return str.split(commaSepRx);;
+    return str?.split(commaSepRx) || [];
+}
+
+let ops: CuOptions = {}
+
+export function options(newops: Partial<CuOptions>) {
+    ops = { ...ops, ...newops };
 }
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
@@ -28,7 +30,7 @@ export function registerSubs(parent?: HTMLElement) {
 
         //Loop over all data attributes (modes)
         for(let mode in el.dataset) {
-            let hasTriggers = mode != "bind";
+            let shouldHaveTriggers = mode != "bind";
             let err_detail = `(#${el.id} on ${mode})`;
 
             el?.dataset?.[mode]?.split(";").every(setting=> {
@@ -36,19 +38,19 @@ export function registerSubs(parent?: HTMLElement) {
                 let _parts = setting?.split(/(?:(?:\)|->) ?){1,}/g) || []; 
         
                 //Extract settings
-                let triggers = hasTriggers ? paramsInParens(_parts.splice(0,1)[0]) as string[] : [];
+                let triggers = shouldHaveTriggers ? paramsInParens(_parts.splice(0,1)[0]) as string[] : [];
                 let processFuncName = _parts[0]?.includes("(") ? _parts[0]?.match(/^[^\(]{1,}/)?.[0] || "" : "";
                 let external = paramsInParens(_parts.splice(mode == "sync" ? 1 : 0, 1)[0]) as string[];
                 let internal = paramsInParens(_parts[0]) as string[];
 
                 //Handle errors
-                if(hasTriggers && !triggers?.length) throw(`No trigger: ${err_detail}.`)
+                if(shouldHaveTriggers && !triggers?.length) throw(`No trigger: ${err_detail}.`)
 
                 let processFunc: Function | undefined;
                 if(processFuncName) {
                     processFunc = globalThis[processFuncName as keyof typeof globalThis] || Store.func(processFuncName);
                     if(!processFunc) throw(`"${processFuncName}" not registered: ${err_detail}`);
-                    if(((!hasTriggers && external.length > 1) || (hasTriggers && internal.length > 1))) throw(`Multiple sources: ${err_detail}`);
+                    if(((!shouldHaveTriggers && external.length > 1) || (shouldHaveTriggers && internal.length > 1))) throw(`Multiple sources: ${err_detail}`);
                 }
 
                 //Map external names and paths
@@ -64,35 +66,58 @@ export function registerSubs(parent?: HTMLElement) {
                 });
 
                 //Fetch-specific
-                let href: string, fetchOverrides: Partial<CuOptions>, fetchOps: Partial<CuOptions>;
+                let href: string, fetchOverrides: Partial<CuOptions>, fetchOps: Partial<CuOptions> = {};
 
                 if(!["bind", "sync"].includes(mode)) {
                     href = external.splice(0, 1)[0];
-                    fetchOverrides = cuOps.fetchProfiles?.[el.dataset["fetchops"] || ""] || JSON.parse(el.dataset["fetchops"] || "{}") || {};
+                    fetchOverrides = ops.fetchProfiles?.[el.dataset["fetchops"] || ""] || JSON.parse(el.dataset["fetchops"] || "{}") || {};
                     fetchOps = {
-                        ...cuOps?.fetch,
+                        ...ops,
                         ...fetchOverrides
                     }
                 }
 
-                //Loop over internal
-                if(!internal?.length) internal = [ "" ];
-                for(let i=0; i < internal.length; i++) {
-                    let [ bindTo, bindType ] = internal[i].split("-").map(s=> s.trim());
-                    if(!triggers?.length) triggers = [""]
+                //Loop over triggers
+                if(!triggers?.length) triggers = [""]
+                for(let trigger of triggers) {
+                    //No internal loops for fetch
+                    if(!["bind", "fetch"].includes(mode)) {
+                        let ev = (e?: Event)=> {  
+                            e?.preventDefault();                             
+                            fetchHttp(
+                                {
+                                    method: mode, 
+                                    href,
+                                    extract: external,
+                                    replace: internal,
+                                    allowStyles: true,
+                                    ...fetchOps,
+                                },
+                                el.id,
+                                (el: HTMLElement)=> registerSubs(el)
+                            )
+                        }
 
-                    //Loop over triggers
-                    for(let trigger of triggers) {
+                        if(trigger == "mount") {
+                            ev();
+                        }
+                        else el.addEventListener(trigger, ev);
+                    }
+
+                    //Loop over internal
+                    if(!internal?.length) internal = [ "" ];
+                    for(let i=0; i < internal.length; i++) {
                         //Handle bind
                         if(mode == "bind") {
                             let domSubscription = ()=> {
-                                let val: any = processFunc?.(...externalData.map(s=> nestedValue(Store.store(s.name)?.value, s.path)), el) ?? nestedValue(Store.store(externalData[0].name || "")?.value, externalData[0].path);         //If ingress function, run it
-                        
-                                if(bindTo) {
-                                    if(!bindType) (el as any)[bindTo] = val;
-                                    else if(bindType == "attr") el.setAttribute(bindTo, val);
-                                    else el.style[bindTo as any] = val;
-                                }
+                                (el as any)[internal[i]] = processFunc?.(
+                                    ...externalData.map(
+                                        s=> nestedValue(Store.store(s.name)?.value, s.path)
+                                    ), el
+                                ) ??
+                                nestedValue(
+                                    Store.store(externalData[0].name || "")?.value, externalData[0].path
+                                );
                             }
                         
                             //Add subscription - run whenever store updates
@@ -103,7 +128,7 @@ export function registerSubs(parent?: HTMLElement) {
                         else if(mode == "sync") {
                             if(externalData.length > 1) throw(`Only one store supported: ${err_detail}`)
                             let ev = ()=> {
-                                let value = bindType == "style" ? el.style.getPropertyValue(bindTo) : bindType == "attr" ? el.getAttribute(bindTo) : (el as any)[bindTo];
+                                let value = (el as any)[internal[i]];
                                 
                                 if(processFunc) value = processFunc?.(value, el);
                                 const store = Store.store(externalData[0]?.name);
@@ -116,26 +141,8 @@ export function registerSubs(parent?: HTMLElement) {
                             }
                             el.addEventListener(trigger, ev);
                         }
-
-                        //Handle fetch
-                        else {
-                            let ev = (e?: Event)=> {  
-                                e?.preventDefault();                             
-                                fetchHttp({
-                                    method: mode, 
-                                    href,
-                                    done: (el: HTMLElement)=> registerSubs(el),
-                                    extract: external[i]?.trim(),
-                                    replace: internal[i]?.trim(),
-                                    ...fetchOps,
-                                })
-                            }
-
-                            if(trigger == "mount") ev();
-                            else el.addEventListener(trigger, ev);
-                        }
-                    }   //End loop triggers
-                }   //End loop internal
+                    }   //End loop internal
+                }   //End loop triggers
             }); //End loop settings
         }   //End loop dataset modes
     };  //End loop elements

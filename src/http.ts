@@ -1,15 +1,29 @@
-import { FetchOptions } from "./options";
+export type FetchOptions = {
+    method: string, 
+    href: string, 
+    type?: "json" | "text", 
+    extract: string[], 
+    replace: string[], 
+    options?: {[key: string]: any}, 
+    cb?: (val: any)=> void, 
+    err?: (err: any)=> void, 
+    allowCodes?: string[],
+    onCode?: (code: number)=> boolean | void,
+    allowExternal?: boolean | string[],
+    allowScripts?: true | false, 
+    allowStyles?: true | false | "all",
+}
 
 //Track page scripts
-let pageScripts: HTMLScriptElement[] = [];
-let pageStyles: HTMLStyleElement[] = [];
+let pageScripts: Map<string, HTMLScriptElement[]> = new Map();
+let pageStyles: Map<string, HTMLStyleElement[]> = new Map();
 let parser = new DOMParser();
 
 let scriptRx = /<script[\s\S]*?>[\s\S]*?<\/script>/ig;
 let styleRx = /<style[\s\S]*?>[\s\S]*?<\/style>/ig;
 
 //Fetch page and replace content
-export async function fetchHttp(ops: FetchOptions) {
+export async function fetchHttp(ops: FetchOptions, reqid: string, done: (el: HTMLElement)=> void) {
     //Make sure we're allowed to fetch
     if(!ops.allowExternal) {
         if(ops.href.startsWith("http")) return;
@@ -32,13 +46,10 @@ export async function fetchHttp(ops: FetchOptions) {
     if(code && ops?.onCode?.(code) == false) return;
 
     //Handle response code gate
-    if(ops.allowCodes?.length) {
-        for(let allow of ops?.allowCodes) {
-            let allowRx = new RegExp(allow.replace(/\./g, "\\d"));
-            if(code && !allowRx.test(code.toString())) {
-                console.warn(`Fetch ${ops.href} aborted due to disallowed status ${code}`);
-                return;
-            }
+    for(let allow of ops?.allowCodes || []) {
+        if(code && !(new RegExp(allow.replace(/\./g, "\\d"))).test(code.toString())) {
+            console.warn(`${ops.method} ${ops.href} aborted: status ${code}`);
+            return;
         }
     }
 
@@ -48,42 +59,45 @@ export async function fetchHttp(ops: FetchOptions) {
 
     if((ops?.type || "text") == "text" && ops?.replace) {
         //Extract and replace (assumed HTML)
-        let newHtml = parser.parseFromString(text, 'text/html').body;
-        let replacement = newHtml.querySelector(ops.extract)?.innerHTML || "";
-        let target = document.querySelector(ops.replace);
+        let replacements = ops.extract.map(ext=> (parser.parseFromString(text, 'text/html').body).querySelector(ext)?.innerHTML || "");
 
         //Clear existing scripts and styles (any previously dynamically loaded)
-        for(let el of [...pageScripts, ...pageStyles]) el.remove();
-        for(let style of pageStyles) style.remove();
+        for(let el of [...pageScripts.get(reqid) || [], ...pageStyles.get(reqid) || []]) el.remove();
 
         //Handle scripts
-        if(!ops.scriptUse) replacement = replacement.replace(scriptRx, "");
-        else {
-            scriptRx.exec(ops.scriptUse == "all" ? text : replacement)?.every(scriptStr=> {
+        if(ops.allowScripts) {
+            scriptRx.exec(text)?.every(scriptStr=> {
                 let script = document.createElement("script");
+                script.type = "text/javascript";
                 script.src = scriptStr.match(/src="([\s\S]*?)"/i)?.[1] || "";
-                if(!script.src) script.appendChild(document.createTextNode(scriptStr.replace(/<\/?script>/ig, "")));
+                script.text = scriptStr.replace(/<\/?script>/ig, "");
                 
-                pageScripts.push(script);
+                if(!pageScripts.has(reqid)) pageScripts.set(reqid, []);
+                pageScripts.get(reqid)?.push(script);
                 document.body.appendChild(script);
             });
         }
+        else replacements = replacements.map(r=> r.replace(scriptRx, ""));
 
         //Handle styles
-        if(!ops.styleUse) replacement = replacement.replace(styleRx, "");
-        else if(ops.styleUse == "all") {
+        if(!ops.allowStyles) replacements = replacements.map(r=> r.replace(styleRx, ""));
+        else if(ops.allowStyles == "all") {
             for(let styleTxt of styleRx.exec(text) || []) {
                 let style = document.createElement("style");
                 style.textContent = styleTxt.replace(/<\/?style>/ig, "");
                 
-                pageStyles.push(style);
+                if(!pageStyles.has(reqid)) pageStyles.set(reqid, []);
+                pageStyles.get(reqid)?.push(style);
                 document.head.appendChild(style);
             }
         }
 
-        if(target) {
-            target.innerHTML = replacement;
-            ops.done?.(target as HTMLElement);
+        let targets = ops.replace.map(r=> document.querySelector(r));
+        for(let i=0; i < ops.replace.length; i++) {
+            if(targets[i]) {
+                (targets[i] as HTMLElement).innerHTML = replacements[i];
+                done?.(targets[i] as HTMLElement);
+            }
         }
     }
 }
