@@ -65,14 +65,14 @@ export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (e
             }
         }
 
-        let targets = ops.replace.map(r=> ["this", "outer", "inner"].includes(r) ? parent : document.querySelector(r));
-        for(let i=0; i < ops.replace.length; i++) {
-            if(targets[i]) {
-                let newEl = document.createDocumentFragment();
-                newEl.append(...Array.from(replacements[i].childNodes));
-                targets[i]?.after(newEl);
-                done?.(newEl as any);
+        let targets = ops.replace.map(r=> ["this", "outer", "inner"].includes(r) ? parent : document.querySelector(r)) as (HTMLElement | null)[];
+        targets.forEach((target, i) => {
+            if (target) {
+              const newEl = document.createElement('div');
+              newEl.append(...Array.from(replacements[i].childNodes));
+              target.after(newEl);
+              done?.(newEl);
             }
-        }
+        });
     }
 }
