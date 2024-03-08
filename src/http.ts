@@ -1,29 +1,12 @@
-export type FetchOptions = {
-    method: string, 
-    href: string, 
-    type?: "json" | "text", 
-    extract: string[], 
-    replace: string[], 
-    options?: {[key: string]: any}, 
-    cb?: (val: any)=> void, 
-    err?: (err: any)=> void, 
-    allowCodes?: string[],
-    onCode?: (code: number)=> boolean | void,
-    allowExternal?: string[],
-    allowScripts?: true | false, 
-    allowStyles?: true | false | "all",
-}
+import { FetchOptions } from "./domRegistrar";
 
 //Track page scripts
 let pageScripts: Map<string, HTMLScriptElement[]> = new Map();
 let pageStyles: Map<string, HTMLStyleElement[]> = new Map();
 let parser = new DOMParser();
 
-let scriptRx = /<script[\s\S]*?>[\s\S]*?<\/script>/ig;
-let styleRx = /<style[\s\S]*?>[\s\S]*?<\/style>/ig;
-
 //Fetch page and replace content
-export async function fetchHttp(ops: FetchOptions, reqid: string, done: (el: HTMLElement)=> void) {
+export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (el: HTMLElement)=> void) {
     //Make sure we're allowed to fetch
     if(Array.isArray(ops.allowExternal) && !ops.allowExternal.some(allowed=> ops.href?.startsWith(allowed))) {
         console.warn(`${ops.method} ${ops.href} not allowed`);
@@ -59,44 +42,36 @@ export async function fetchHttp(ops: FetchOptions, reqid: string, done: (el: HTM
 
     if((ops?.type || "text") == "text" && ops?.replace) {
         //Extract and replace (assumed HTML)
-        let replacements = ops.extract.map(ext=> (parser.parseFromString(text, 'text/html').body).querySelector(ext)?.innerHTML || "");
+        let fullMarkup = parser.parseFromString(text, 'text/html').body;
+        let replacements: NodeListOf<HTMLElement> = fullMarkup.querySelectorAll(ops.extract.join(","));
 
         //Clear existing scripts and styles (any previously dynamically loaded)
-        for(let el of [...pageScripts.get(reqid) || [], ...pageStyles.get(reqid) || []]) el.remove();
+        for(let el of [...pageScripts.get(parent.id) || [], ...pageStyles.get(parent.id) || []]) el.remove();
 
-        //Handle scripts
-        if(ops.allowScripts) {
-            scriptRx.exec(text)?.every(scriptStr=> {
-                let script = document.createElement("script");
-                script.type = "text/javascript";
-                script.src = scriptStr.match(/src="([\s\S]*?)"/i)?.[1] || "";
-                script.text = scriptStr.replace(/<\/?script>/ig, "");
-                
-                if(!pageScripts.has(reqid)) pageScripts.set(reqid, []);
-                pageScripts.get(reqid)?.push(script);
-                document.body.appendChild(script);
-            });
-        }
-        else replacements = replacements.map(r=> r.replace(scriptRx, ""));
+        //Get scripts and styles
+        let seek: string[] = ops.allowScripts ? ["scripts"] : [];
+        if(ops.allowStyles) seek.push("style");
+        if(seek.length) {
+            let globls: NodeListOf<HTMLScriptElement | HTMLStyleElement> = fullMarkup.querySelectorAll(seek.join(","));
+            for(let el of globls) {
+                let isScript = el instanceof HTMLScriptElement;
+                let source = isScript ? pageScripts : pageStyles;
 
-        //Handle styles
-        if(!ops.allowStyles) replacements = replacements.map(r=> r.replace(styleRx, ""));
-        else if(ops.allowStyles == "all") {
-            for(let styleTxt of styleRx.exec(text) || []) {
-                let style = document.createElement("style");
-                style.textContent = styleTxt.replace(/<\/?style>/ig, "");
-                
-                if(!pageStyles.has(reqid)) pageStyles.set(reqid, []);
-                pageStyles.get(reqid)?.push(style);
-                document.head.appendChild(style);
+                if(isScript ? ops.allowScripts : ops.allowStyles){
+                    if(!source.has(parent.id)) source.set(parent.id, []);
+                    source.get(parent.id)?.push(el as any);
+                }
+                else if(isScript) el.parentNode?.removeChild(el);
             }
         }
 
-        let targets = ops.replace.map(r=> document.querySelector(r));
+        let targets = ops.replace.map(r=> ["this", "outer", "inner"].includes(r) ? parent : document.querySelector(r));
         for(let i=0; i < ops.replace.length; i++) {
             if(targets[i]) {
-                (targets[i] as HTMLElement).innerHTML = replacements[i];
-                done?.(targets[i] as HTMLElement);
+                let newEl = document.createDocumentFragment();
+                newEl.append(...Array.from(replacements[i].childNodes));
+                targets[i]?.after(newEl);
+                done?.(newEl as any);
             }
         }
     }

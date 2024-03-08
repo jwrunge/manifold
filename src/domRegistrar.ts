@@ -1,9 +1,38 @@
 import { Store } from "./store";
-import { FetchOptions, fetchHttp } from "./http";
+import { fetchHttp } from "./http";
 
-interface CuOptions extends Omit<FetchOptions, "method" | "href" | "done" | "extract" | "replace"> {
-    fetchProfiles?: { [ key: string ]: Partial<FetchOptions> }
+export type FetchOptions = {
+    //No user access
+    fetchProfiles?: { [ key: string ]: Partial<FetchOptions> },
+    method: string, 
+    href: string, 
+    extract: string[], 
+    replace: string[],
+
+    //User access
+    type?: "json" | "text",  
+    options?: {[key: string]: any}, 
+    cb?: (val: any)=> void, 
+    err?: (err: any)=> void, 
+    allowCodes?: string[],
+    onCode?: (code: number)=> boolean | void,
+    allowExternal?: string[],
+    allowScripts?: true | false, 
+    allowStyles?: true | false | "all",
+
+    //Animation
+    transClass?: string,
+    inDur?: number,
+    outDur?: number,
+    swapDelay?: number,
+    inStartHook?: (el: HTMLElement)=> void,
+    outStartHook?: (el: HTMLElement)=> void,
+    inEndHook?: (el: HTMLElement)=> void,
+    outEndHook?: (el: HTMLElement)=> void,
+    applyCss?: (el: HTMLElement, css: string)=> void,
 }
+
+type LimitedFetchOptions = Omit<FetchOptions, "fetchProfiles" | "method" | "href" | "extract" | "replace">
 
 let commaSepRx = /, {0,}/g;
 let elIdx = 0;
@@ -16,10 +45,11 @@ function paramsInParens(str: string) {
     return str?.split(commaSepRx) || [];
 }
 
-let ops: CuOptions = {}
+let ops: Partial<FetchOptions> = {};
 
-export function options(newops: Partial<CuOptions>) {
-    ops = { ...ops, ...newops };
+export function options(newops: LimitedFetchOptions, profileName?: string) {
+    if(profileName) ops.fetchProfiles = { ...ops.fetchProfiles, [profileName]: newops };
+    else ops = { ...ops, ...newops };
 }
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
@@ -66,7 +96,7 @@ export function registerSubs(parent?: HTMLElement) {
                 });
 
                 //Fetch-specific
-                let href: string, fetchOverrides: Partial<CuOptions>, fetchOps: Partial<CuOptions> = {};
+                let href: string, fetchOverrides: Partial<LimitedFetchOptions>, fetchOps: Partial<LimitedFetchOptions> = {};
 
                 if(!["bind", "sync"].includes(mode)) {
                     href = external.splice(0, 1)[0];
@@ -93,7 +123,7 @@ export function registerSubs(parent?: HTMLElement) {
                                     allowStyles: true,
                                     ...fetchOps,
                                 },
-                                el.id,
+                                el,
                                 (el: HTMLElement)=> registerSubs(el)
                             )
                         }
