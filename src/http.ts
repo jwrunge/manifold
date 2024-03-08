@@ -66,7 +66,11 @@ export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (e
         }
 
         let targets = ops.replace.map(r=> ["this", "outer", "inner"].includes(r) ? parent : document.querySelector(r)) as (HTMLElement | null)[];
+        console.log(ops.replace, ops.extract)
+        console.log(targets, replacements)
         targets.forEach((target, i) => {
+            console.log(target)
+            console.log(replacements[i])
             const newEl = document.createElement('div');
             newEl.append(...Array.from(replacements[i].childNodes));
             target?.after(newEl);
