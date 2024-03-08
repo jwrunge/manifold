@@ -53,7 +53,7 @@
   </div>
 
   <div class="special-insert">Default insert</div>
-  <nav data-get="on(mount) (/tests/header.html, header, .special) -> (inner, .special-insert)" data-fetchOps='{ "allowScripts": true }'></nav>
+  <nav data-get="on(mount) (/tests/header.html, header, .special) -> (this, .special-insert)" data-fetchOps='{ "allowScripts": true }'></nav>
 
   <div class="trans" data-bind="specialStyling(store1)"></div>
 
@@ -163,3 +163,9 @@
   </script>
 </body>
 </html>
+
+<style>
+  nav {
+    background: blue;
+  }
+</style>

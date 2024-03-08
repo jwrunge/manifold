@@ -140,6 +140,7 @@ export function registerSubs(parent?: HTMLElement) {
                         //Handle bind
                         if(mode == "bind") {
                             let domSubscription = ()=> {
+                                //Make sure to schedule this in an animationFrame handler
                                 (el as any)[internal[i]] = processFunc?.(
                                     ...externalData.map(
                                         s=> nestedValue(Store.store(s.name)?.value, s.path)
@@ -148,6 +149,8 @@ export function registerSubs(parent?: HTMLElement) {
                                 nestedValue(
                                     Store.store(externalData[0].name || "")?.value, externalData[0].path
                                 );
+
+                                //Make sure to update dependent stores on value update
                             }
                         
                             //Add subscription - run whenever store updates

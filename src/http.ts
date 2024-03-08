@@ -1,4 +1,5 @@
 import { FetchOptions } from "./domRegistrar";
+import { scheduleDomUpdate } from "./domUpdates";
 
 //Track scripts and styles
 let pageScripts = new WeakMap();
@@ -43,46 +44,54 @@ export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (e
     if ((ops?.type || "text") === "text" && ops?.replace) {
         //Extract content
         let fullMarkup = parser.parseFromString(text, 'text/html').body;
-        let replacements = Array.from(fullMarkup.querySelectorAll(ops.extract.join(",")));
     
-        //Clear existing scripts/styles
-        clearDynamicElements(parent, pageScripts, "script");
-        clearDynamicElements(parent, pageStyles, "style");;
+        // //Clear existing scripts/styles
+        // clearDynamicElements(parent, pageScripts, "script");
+        // clearDynamicElements(parent, pageStyles, "style");;
 
-        //Get scripts and styles
-        let seek: string[] = ops.allowScripts ? ["scripts"] : [];
-        if(ops.allowStyles) seek.push("style");
-        if(seek.length) {
-            let globls: NodeListOf<HTMLScriptElement | HTMLStyleElement> = fullMarkup.querySelectorAll(seek.join(","));
-            for(let el of globls) {
-                let isScript = el instanceof HTMLScriptElement;
-                let source = isScript ? pageScripts : pageStyles;
+        // //Get scripts and styles
+        // let seek: string[] = ops.allowScripts ? ["scripts"] : [];
+        // if(ops.allowStyles) seek.push("style");
+        // if(seek.length) {
+        //     let globls: NodeListOf<HTMLScriptElement | HTMLStyleElement> = fullMarkup.querySelectorAll(seek.join(","));
+        //     for(let el of globls) {
+        //         let isScript = el instanceof HTMLScriptElement;
+        //         let source = isScript ? pageScripts : pageStyles;
 
-                if(isScript ? ops.allowScripts : ops.allowStyles){
-                    if(!source.has(parent)) source.set(parent, []);
-                    source.get(parent)?.push(el as any);
-                }
-                else if(isScript) el.parentNode?.removeChild(el);
-            }
-        }
+        //         if(isScript ? ops.allowScripts : ops.allowStyles){
+        //             if(!source.has(parent)) source.set(parent, []);
+        //             source.get(parent)?.push(el as any);
+        //         }
+        //         else if(isScript) el.parentNode?.removeChild(el);
+        //     }
+        // }
 
-        let targets = ops.replace.map(r=> ["this", "outer", "inner"].includes(r) ? parent : document.querySelector(r)) as (HTMLElement | null)[];
+        let targets = ops.replace.map(r=> {
+            let [ selector, relation ] = r.split(":");
+            if(relation && !["inner", "append", "outer"].includes(relation)) throw(`Invalid relation: ${relation}`);
+            let el = selector == "this" ? parent : document.querySelector(selector);
+            return { el, relation };
+        }) as { el: HTMLElement | null, relation: string }[];
 
-        //Replacement with fragment batching
-        let fragment = document.createDocumentFragment();
+        let replacements = ops.extract.map(e=> fullMarkup.querySelector(e)) as (HTMLElement | null)[];
+
+        if(replacements.length !== targets.length) throw(`Target and replacement counts do not match`);
+
         targets.forEach((target, i) => {
-            let newEl = fragment.appendChild(replacements[i].cloneNode(true)); //Clone for safety
-            
-            target?.after(newEl);
-            done?.(newEl as HTMLElement);
+            if(!target || !replacements[i]) return;
+            scheduleDomUpdate({
+                in: replacements[i] as HTMLElement,
+                out: target.el as HTMLElement,
+                relation: target.relation,
+                done
+            })
         });
-        parent.appendChild(fragment); //Append all elements at once
     }
 }
 
-//Clear dynamic elements
-function clearDynamicElements(parent: HTMLElement, map: WeakMap<HTMLElement, any[]>, type: string) {
-    let elements = map.get(parent) || [];
-    elements.forEach(el => el.remove());
-    map.set(parent, []);
-}
+// //Clear dynamic elements
+// function clearDynamicElements(parent: HTMLElement, map: WeakMap<HTMLElement, any[]>, type: string) {
+//     let elements = map.get(parent) || [];
+//     elements.forEach(el => el.remove());
+//     map.set(parent, []);
+// }
