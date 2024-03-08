@@ -60,6 +60,7 @@ export function registerSubs(parent?: HTMLElement) {
 
         //Loop over all data attributes (modes)
         for(let mode in el.dataset) {
+            if(!modes.includes(mode)) continue;
             let shouldHaveTriggers = mode != "bind";
             let err_detail = `(#${el.id} on ${mode})`;
 
@@ -111,7 +112,7 @@ export function registerSubs(parent?: HTMLElement) {
                 if(!triggers?.length) triggers = [""]
                 for(let trigger of triggers) {
                     //No internal loops for fetch
-                    if(!["bind", "fetch"].includes(mode)) {
+                    if(!["bind", "sync"].includes(mode)) {
                         let ev = (e?: Event)=> {  
                             e?.preventDefault();                             
                             fetchHttp(

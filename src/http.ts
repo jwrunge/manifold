@@ -15,6 +15,7 @@ export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (e
     }
 
     //Fetch data
+    console.log("FETCHING", ops)
     let data = await fetch(ops.href, {
         ...ops.options,
         method: ops.method,
