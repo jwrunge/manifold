@@ -1,8 +1,8 @@
 import { FetchOptions } from "./domRegistrar";
 
-//Track page scripts
-let pageScripts: Map<string, HTMLScriptElement[]> = new Map();
-let pageStyles: Map<string, HTMLStyleElement[]> = new Map();
+//Track scripts and styles
+let pageScripts = new WeakMap();
+let pageStyles = new WeakMap();
 let parser = new DOMParser();
 
 //Fetch page and replace content
@@ -40,13 +40,14 @@ export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (e
     let text = await data?.[ops.type || "text"]();
     ops.cb?.(text);
 
-    if((ops?.type || "text") == "text" && ops?.replace) {
-        //Extract and replace (assumed HTML)
+    if ((ops?.type || "text") === "text" && ops?.replace) {
+        //Extract content
         let fullMarkup = parser.parseFromString(text, 'text/html').body;
-        let replacements: NodeListOf<HTMLElement> = fullMarkup.querySelectorAll(ops.extract.join(","));
-
-        //Clear existing scripts and styles (any previously dynamically loaded)
-        for(let el of [...pageScripts.get(parent.id) || [], ...pageStyles.get(parent.id) || []]) el.remove();
+        let replacements = Array.from(fullMarkup.querySelectorAll(ops.extract.join(",")));
+    
+        //Clear existing scripts/styles
+        clearDynamicElements(parent, pageScripts, "script");
+        clearDynamicElements(parent, pageStyles, "style");;
 
         //Get scripts and styles
         let seek: string[] = ops.allowScripts ? ["scripts"] : [];
@@ -58,23 +59,30 @@ export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (e
                 let source = isScript ? pageScripts : pageStyles;
 
                 if(isScript ? ops.allowScripts : ops.allowStyles){
-                    if(!source.has(parent.id)) source.set(parent.id, []);
-                    source.get(parent.id)?.push(el as any);
+                    if(!source.has(parent)) source.set(parent, []);
+                    source.get(parent)?.push(el as any);
                 }
                 else if(isScript) el.parentNode?.removeChild(el);
             }
         }
 
         let targets = ops.replace.map(r=> ["this", "outer", "inner"].includes(r) ? parent : document.querySelector(r)) as (HTMLElement | null)[];
-        console.log(ops.replace, ops.extract)
-        console.log(targets, replacements)
+
+        //Replacement with fragment batching
+        let fragment = document.createDocumentFragment();
         targets.forEach((target, i) => {
-            console.log(target)
-            console.log(replacements[i])
-            const newEl = document.createElement('div');
-            newEl.append(...Array.from(replacements[i].childNodes));
+            let newEl = fragment.appendChild(replacements[i].cloneNode(true)); //Clone for safety
+            
             target?.after(newEl);
-            done?.(newEl);
+            done?.(newEl as HTMLElement);
         });
+        parent.appendChild(fragment); //Append all elements at once
     }
+}
+
+//Clear dynamic elements
+function clearDynamicElements(parent: HTMLElement, map: WeakMap<HTMLElement, any[]>, type: string) {
+    let elements = map.get(parent) || [];
+    elements.forEach(el => el.remove());
+    map.set(parent, []);
 }
