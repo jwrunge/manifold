@@ -110,8 +110,8 @@ export class Store<T> {
             const store = Store.store(storeName);
 
             //Don't repeat work if an upstream store will cascade
-            store.#downstreamStores.every(d=> Store.#workOrder.delete(d));   //Delete downstream stores from work order
-            store.#upstreamStores.every(u=> Store.#workOrder.has(u) ? Store.#workOrder.delete(storeName) : true);
+            store.#downstreamStores.forEach(d=> Store.#workOrder.delete(d));   //Delete downstream stores from work order
+            store.#upstreamStores.forEach(u=> Store.#workOrder.has(u) ? Store.#workOrder.delete(storeName) : true);
         }
 
         //Apply changes to top-level workers, then cascade     

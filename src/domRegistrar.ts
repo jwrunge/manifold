@@ -63,7 +63,7 @@ export function registerSubs(parent?: HTMLElement) {
             let shouldHaveTriggers = mode != "bind";
             let err_detail = `(#${el.id} on ${mode})`;
 
-            el?.dataset?.[mode]?.split(";").every(setting=> {
+            el?.dataset?.[mode]?.split(";").forEach(setting=> {
                 //Break out settings
                 let _parts = setting?.split(/(?:(?:\)|->) ?){1,}/g) || []; 
         
