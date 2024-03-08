@@ -60,6 +60,16 @@
   <!-- Store script -->
   <script src="../dist/dev.copper.js"></script>
   <script>
+    Cu.config({
+      inStartHook: (el)=> console.log("In start hook", el),
+      inEndHook: (el)=> console.log("In end hook", el),
+      outStartHook: (el)=> console.log("Out start hook", el),
+      outEndHook: (el)=> console.log("Out end hook", el),
+      inDur: 1000,
+      outDur: 1000,
+      swapDur: 1000
+    })
+
     // let store1 = Cu.store("store1", { value: "My text" });
     const store3 = Cu.store("store3", { value: "one" });
     const store2 = Cu.store("store2", { 
