@@ -29,7 +29,7 @@ export type FetchOptions = {
     outStartHook?: (el: HTMLElement)=> void,
     inEndHook?: (el: HTMLElement)=> void,
     outEndHook?: (el: HTMLElement)=> void,
-    applyCss?: (el: HTMLElement, css: string)=> void,
+    preset?: "fade" | "scale" | "slide" | "flyUp" | "flyDown" | "flyLeft" | "flyRight"
 }
 
 type LimitedFetchOptions = Omit<FetchOptions, "fetchProfiles" | "method" | "href" | "extract" | "replace">

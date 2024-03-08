@@ -1,20 +1,18 @@
+import { FetchOptions } from "./domRegistrar";
+
 type DomWorkOrder = {
     in: HTMLElement,
     out: HTMLElement,
     relation: string,
+    ops: Partial<FetchOptions>,
     done: (el: HTMLElement)=> void
-}
+};
 
-let tempDom: Map<HTMLElement, { fragment: DocumentFragment, workOrders: DomWorkOrder[]}> = new Map();
+let workArray: (DomWorkOrder | Function)[] = [];
 let cancelAnimationFrame = false;
 
-export function scheduleDomUpdate(update: DomWorkOrder) {
-    if(!tempDom.has(update.out)) {
-        tempDom.set(update.out, { fragment: document.createDocumentFragment(), workOrders: [] });
-        tempDom.get(update.out)?.fragment.appendChild(update.out);
-    }
-
-    tempDom.get(update.out)?.workOrders.push(update);
+export function scheduleDomUpdate(update: DomWorkOrder | Function) {
+    workArray.push(update);
     if(!cancelAnimationFrame) {
         cancelAnimationFrame = true;
         requestAnimationFrame(runDomUpdates);
@@ -24,38 +22,70 @@ export function scheduleDomUpdate(update: DomWorkOrder) {
 function runDomUpdates() {
     cancelAnimationFrame = false;
 
-    console.log("Running animation frame")
+    console.log("RUNNING DOM UPDATES")
     
-    //Loop through all elements with updates
-    for(let [el, { fragment, workOrders }] of tempDom) {
-        //Loop through all work orders
-        for(let order of workOrders) {
-            console.log(el, fragment, order)
-
-            if(!order.in) return;
-            const newEl = order.in as HTMLElement;
-
+    //Loop through all work orders
+    for(let order of workArray as DomWorkOrder[]) {
+        if(typeof order === "function") (order as Function)();
+        else {
             //Remove old children
-            if(order.relation === "inner" || order.relation === undefined) {
-                let oldChildren = Array.from(order.out?.childNodes || []);
-                oldChildren.forEach(c=> c.remove());    //Separate animationFrame callback after timeout
-            }
+            if(!order.relation || order.relation == "inner") {
+                //Remove old children before appending
+                applyTransition(order.out, "out", order.ops, ()=> {
+                    let oldChildren = Array.from(order.out?.childNodes || []);
+                    oldChildren.forEach(c=> c.remove());
+                });
 
-            //Append or insert
-            if(order.relation === "inner" || order.relation === undefined) {
-                order.out?.appendChild(newEl);
-            } else {
-                order.out?.after(newEl);
+                //Append
+                applyTransition(order.in, "in", order.ops, ()=> {
+                    order.out?.appendChild(order.in);
+                });
             }
+            //Insert after old element before removing
+            else applyTransition(order.in, "in", order.ops, ()=> {
+                order.out?.after(order.in);
+            });
 
             //Remove old element
-            if(order.relation === "outer") {
-                order.out?.remove();                    //Separate animationFrame callback after timeout
-            }
+            if(order.relation === "outer") applyTransition(order.out, "out", {}, ()=> {
+                order.out?.remove();
+            });
 
-            order.done?.(newEl);
+            order.done?.(order.in);
         }
+    }
 
-        tempDom.delete(el);
+    workArray = [];
+}
+
+function applyTransition(el: HTMLElement, dir: "in" | "out", ops: Partial<FetchOptions>, fn: Function) {
+    if(ops.transClass) el?.classList?.add(ops.transClass);
+    el?.classList?.add("cu-trans");
+    el?.classList?.add("in");
+    ops[`${dir}StartHook`]?.(el);
+
+    let wrapup = ()=> {
+        if(ops.transClass) el?.classList?.remove(ops.transClass);
+        el?.classList?.remove("cu-trans");
+        el?.classList?.remove("out");
+        ops[`${dir}EndHook`]?.(el);
+    }
+    
+    if(ops[`${dir}Dur`]) {
+        setTimeout(()=> {
+            scheduleDomUpdate(()=> {
+                el?.classList?.remove("in");
+                el?.classList?.add("out");
+                fn();
+                wrapup();
+            });
+        }, 
+        (ops[`${dir}Dur`] as number) + (dir == "in" ? ops.swapDelay || 0 : 0));
+    }
+    else {
+        workArray.push(fn);
+        ops[`${dir}EndHook`]?.(el);
+        el?.classList?.remove("in");
+        wrapup();
     }
 }

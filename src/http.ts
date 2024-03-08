@@ -83,6 +83,7 @@ export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (e
                 in: replacements[i] as HTMLElement,
                 out: target.el as HTMLElement,
                 relation: target.relation,
+                ops,
                 done
             })
         });
