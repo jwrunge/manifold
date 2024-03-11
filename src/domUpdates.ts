@@ -1,11 +1,11 @@
 import { FetchOptions } from "./domRegistrar";
 
 type DomWorkOrder = {
-    in: HTMLElement,
-    out: HTMLElement,
+    in: HTMLElement | null,
+    out: HTMLElement | null,
     relation: string,
     ops: Partial<FetchOptions>,
-    done: (el: HTMLElement)=> void
+    done: (el: HTMLElement | null)=> void
 };
 
 let workArray: (DomWorkOrder | Function)[] = [];
@@ -28,26 +28,28 @@ function runDomUpdates() {
     for(let order of workArray as DomWorkOrder[]) {
         if(typeof order === "function") (order as Function)();
         else {
-            //Remove old children
-            if(!order.relation || order.relation == "inner") {
-                //Remove old children before appending
-                applyTransition(order.out, "out", order.ops, ()=> {
-                    let oldChildren = Array.from(order.out?.childNodes || []);
-                    oldChildren.forEach(c=> c.remove());
-                });
+            // Remove old children
+            if([">", "+"].includes(order.relation)) {
+                if(order.relation == ">") {
+                    //Remove old children before appending
+                    applyTransition(order.out, "out", order.ops, ()=> {
+                        let oldChildren = Array.from(order.out?.childNodes || []);
+                        oldChildren.forEach(c=> c.remove());
+                    });
+                }
 
                 //Append
                 applyTransition(order.in, "in", order.ops, ()=> {
-                    order.out?.appendChild(order.in);
+                    if(order.in) order.out?.appendChild(order.in);
                 });
             }
             //Insert after old element before removing
             else applyTransition(order.in, "in", order.ops, ()=> {
-                order.out?.after(order.in);
+                if(order.in) order.out?.after(order.in);
             });
 
             //Remove old element
-            if(order.relation === "outer") applyTransition(order.out, "out", {}, ()=> {
+            if(order.relation === "/") applyTransition(order.out, "out", {}, ()=> {
                 order.out?.remove();
             });
 
@@ -58,24 +60,23 @@ function runDomUpdates() {
     workArray = [];
 }
 
-function applyTransition(el: HTMLElement, dir: "in" | "out", ops: Partial<FetchOptions>, fn: Function) {
+function applyTransition(el: HTMLElement | null, dir: "in" | "out", ops: Partial<FetchOptions>, fn: Function) {
+    if(!el) return;
     if(ops.transClass) el?.classList?.add(ops.transClass);
     el?.classList?.add("cu-trans");
-    el?.classList?.add("in");
+    el?.classList?.add(dir);
     ops[`${dir}StartHook`]?.(el);
 
     let wrapup = ()=> {
         if(ops.transClass) el?.classList?.remove(ops.transClass);
         el?.classList?.remove("cu-trans");
-        el?.classList?.remove("out");
+        el?.classList?.remove(dir);
         ops[`${dir}EndHook`]?.(el);
     }
     
     if(ops[`${dir}Dur`]) {
         setTimeout(()=> {
             scheduleDomUpdate(()=> {
-                el?.classList?.remove("in");
-                el?.classList?.add("out");
                 fn();
                 wrapup();
             });
@@ -85,7 +86,7 @@ function applyTransition(el: HTMLElement, dir: "in" | "out", ops: Partial<FetchO
     else {
         workArray.push(fn);
         ops[`${dir}EndHook`]?.(el);
-        el?.classList?.remove("in");
+        el?.classList?.remove(dir);
         wrapup();
     }
 }

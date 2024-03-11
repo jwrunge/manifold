@@ -6,7 +6,6 @@ export type FetchOptions = {
     fetchProfiles?: { [ key: string ]: Partial<FetchOptions> },
     method: string, 
     href: string, 
-    extract: string[], 
     replace: string[],
 
     //User access
@@ -53,7 +52,7 @@ export function options(newops: LimitedFetchOptions, profileName?: string) {
 }
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
-export function registerSubs(parent?: HTMLElement) {
+export function registerSubs(parent?: HTMLElement | null) {
     let modes = ["bind", "sync", "get", "post", "put", "patch", "delete", "head", "options", "trace", "connect"];
     for(let el of (parent || document.body)?.querySelectorAll(`[data-${modes.join("],[data-")}]`) as NodeListOf<HTMLElement>) {
         if(!el.id) el.id = `cu-${elIdx++}`;
@@ -96,18 +95,6 @@ export function registerSubs(parent?: HTMLElement) {
                     }
                 });
 
-                //Fetch-specific
-                let href: string, fetchOverrides: Partial<LimitedFetchOptions>, fetchOps: Partial<LimitedFetchOptions> = {};
-
-                if(!["bind", "sync"].includes(mode)) {
-                    href = external.splice(0, 1)[0];
-                    fetchOverrides = ops.fetchProfiles?.[el.dataset["fetchops"] || ""] || JSON.parse(el.dataset["fetchops"] || "{}") || {};
-                    fetchOps = {
-                        ...ops,
-                        ...fetchOverrides
-                    }
-                }
-
                 //Loop over triggers
                 if(!triggers?.length) triggers = [""]
                 for(let trigger of triggers) {
@@ -118,14 +105,14 @@ export function registerSubs(parent?: HTMLElement) {
                             fetchHttp(
                                 {
                                     method: mode, 
-                                    href,
-                                    extract: external,
+                                    href: external[0],
                                     replace: internal,
                                     allowStyles: true,
-                                    ...fetchOps,
+                                    ...ops,
+                                    ...ops.fetchProfiles?.[el.dataset["fetchops"] || ""] || JSON.parse(el.dataset["fetchops"] || "{}") || {},
                                 },
                                 el,
-                                (el: HTMLElement)=> registerSubs(el)
+                                (el: HTMLElement | null)=> {if(el) registerSubs(el)}
                             )
                         }
 

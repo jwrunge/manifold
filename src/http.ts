@@ -7,7 +7,7 @@ let pageStyles = new WeakMap();
 let parser = new DOMParser();
 
 //Fetch page and replace content
-export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (el: HTMLElement)=> void) {
+export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (el: HTMLElement | null)=> void) {
     //Make sure we're allowed to fetch
     if(Array.isArray(ops.allowExternal) && !ops.allowExternal.some(allowed=> ops.href?.startsWith(allowed))) {
         console.warn(`${ops.method} ${ops.href} not allowed`);
@@ -15,7 +15,6 @@ export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (e
     }
 
     //Fetch data
-    console.log("FETCHING", ops)
     let data = await fetch(ops.href, {
         ...ops.options,
         method: ops.method,
@@ -67,23 +66,13 @@ export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (e
         //     }
         // }
 
-        let targets = ops.replace.map(r=> {
-            let [ selector, relation ] = r.split(":");
-            if(relation && !["inner", "append", "outer"].includes(relation)) throw(`Invalid relation: ${relation}`);
-            let el = selector == "this" ? parent : document.querySelector(selector);
-            return { el, relation };
-        }) as { el: HTMLElement | null, relation: string }[];
+        ops.replace.forEach(r => {
+            let [ extract, relation, replace ] = r.split(/\s*(>|\/|\+)\s*/);
 
-        let replacements = ops.extract.map(e=> fullMarkup.querySelector(e)) as (HTMLElement | null)[];
-
-        if(replacements.length !== targets.length) throw(`Target and replacement counts do not match`);
-
-        targets.forEach((target, i) => {
-            if(!target || !replacements[i]) return;
             scheduleDomUpdate({
-                in: replacements[i] as HTMLElement,
-                out: target.el as HTMLElement,
-                relation: target.relation,
+                in: fullMarkup.querySelector(extract),
+                out: document.querySelector(replace),
+                relation,
                 ops,
                 done
             })

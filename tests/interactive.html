@@ -53,7 +53,7 @@
   </div>
 
   <div class="special-insert">Default insert</div>
-  <nav data-get="on(mount) (/tests/header.html, header, .special) -> (this, .special-insert)" data-fetchOps='{ "allowScripts": true }'></nav>
+  <nav data-get="on(mount) /tests/header.html -> (header>this, .special>.special-insert)" data-fetchOps='{ "allowScripts": true }'></nav>
 
   <div class="trans" data-bind="specialStyling(store1)"></div>
 
@@ -65,9 +65,9 @@
       inEndHook: (el)=> console.log("In end hook", el),
       outStartHook: (el)=> console.log("Out start hook", el),
       outEndHook: (el)=> console.log("Out end hook", el),
-      inDur: 1000,
-      outDur: 1000,
-      swapDur: 1000
+      inDur: 5000,
+      outDur: 5000,
+      swapDur: 5000
     })
 
     // let store1 = Cu.store("store1", { value: "My text" });
@@ -177,5 +177,22 @@
 <style>
   nav {
     background: blue;
+  }
+
+  .cu-trans {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  .cu-trans.out {
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: transform 1s, opacity 1s;
+  }
+
+  .cu-trans.in {
+    transform: translateX(50%);
+    opacity: 0;
+    transition: transform 1s, opacity 1s;
   }
 </style>
