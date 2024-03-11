@@ -32,10 +32,9 @@ function runDomUpdates() {
             if([">", "+"].includes(order.relation)) {
                 if(order.relation == ">") {
                     //Remove old children before appending
-                    applyTransition(order.out, "out", order.ops, ()=> {
-                        let oldChildren = Array.from(order.out?.childNodes || []);
-                        oldChildren.forEach(c=> c.remove());
-                    });
+                    for(let child of Array.from(order.out?.childNodes || [])) {
+                        applyTransition(child as HTMLElement, "out", order.ops);
+                    }
                 }
 
                 //Append
@@ -49,9 +48,7 @@ function runDomUpdates() {
             });
 
             //Remove old element
-            if(order.relation === "/") applyTransition(order.out, "out", {}, ()=> {
-                order.out?.remove();
-            });
+            if(order.relation === "/") applyTransition(order.out, "out", {});
 
             order.done?.(order.in);
         }
@@ -60,33 +57,68 @@ function runDomUpdates() {
     workArray = [];
 }
 
-function applyTransition(el: HTMLElement | null, dir: "in" | "out", ops: Partial<FetchOptions>, fn: Function) {
+function applyTransition(el: HTMLElement | null, dir: "in" | "out", ops: Partial<FetchOptions>, fn?: Function) {
+    //Handle text nodes
+    if(el?.nodeType == Node.TEXT_NODE) {
+        let text = el.textContent;
+        let newNode = document.createElement("div");
+        newNode.textContent = text;
+        el.replaceWith(newNode);
+        el = newNode as HTMLElement;
+    }
+
     if(!el) return;
+
+    //Initiate transition
     if(ops.transClass) el?.classList?.add(ops.transClass);
     el?.classList?.add("cu-trans");
-    el?.classList?.add(dir);
     ops[`${dir}StartHook`]?.(el);
 
+    //Wait to apply class
+    if(dir == "out") {
+        setTimeout(()=> {
+            scheduleDomUpdate(()=> {
+                el?.classList?.add(dir);
+            })
+        }, 0);
+    }
+    else {
+        setTimeout(()=> {
+            scheduleDomUpdate(()=> {
+                el?.classList?.add(dir);
+                fn?.();
+
+                //Remove transition class
+                setTimeout(()=> {
+                    scheduleDomUpdate(()=> {
+                        el?.classList?.remove(dir);
+                    });
+                }, 0);
+            });
+        }, ops.swapDelay || 0);
+    }
+
+    //Wrap up after duration
     let wrapup = ()=> {
         if(ops.transClass) el?.classList?.remove(ops.transClass);
         el?.classList?.remove("cu-trans");
-        el?.classList?.remove(dir);
-        ops[`${dir}EndHook`]?.(el);
+        if(el) ops[`${dir}EndHook`]?.(el);
     }
     
     if(ops[`${dir}Dur`]) {
+        //Wrap up after timeout
         setTimeout(()=> {
             scheduleDomUpdate(()=> {
-                fn();
+                if(dir == "out") el?.remove();
                 wrapup();
             });
         }, 
         (ops[`${dir}Dur`] as number) + (dir == "in" ? ops.swapDelay || 0 : 0));
     }
     else {
-        workArray.push(fn);
+        //Run in currently-scheduled animation frame
+        if(dir == "out") workArray.push(()=> el?.remove());
         ops[`${dir}EndHook`]?.(el);
         el?.classList?.remove(dir);
-        wrapup();
     }
 }

@@ -71,7 +71,7 @@ export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (e
 
             scheduleDomUpdate({
                 in: fullMarkup.querySelector(extract),
-                out: document.querySelector(replace),
+                out: ["this", "self"].includes(replace) ? parent : document.querySelector(replace),
                 relation,
                 ops,
                 done

@@ -61,13 +61,13 @@
   <script src="../dist/dev.copper.js"></script>
   <script>
     Cu.config({
-      inStartHook: (el)=> console.log("In start hook", el),
-      inEndHook: (el)=> console.log("In end hook", el),
-      outStartHook: (el)=> console.log("Out start hook", el),
-      outEndHook: (el)=> console.log("Out end hook", el),
-      inDur: 5000,
-      outDur: 5000,
-      swapDur: 5000
+      // inStartHook: (el)=> console.log("In start hook", el),
+      // inEndHook: (el)=> console.log("In end hook", el),
+      // outStartHook: (el)=> console.log("Out start hook", el),
+      // outEndHook: (el)=> console.log("Out end hook", el),
+      inDur: 1000,
+      outDur: 1000,
+      swapDelay: 0
     })
 
     // let store1 = Cu.store("store1", { value: "My text" });
@@ -180,6 +180,7 @@
   }
 
   .cu-trans {
+    transition: transform 1s, opacity 1s;
     transform: translateX(0);
     opacity: 1;
   }
@@ -187,12 +188,10 @@
   .cu-trans.out {
     transform: translateX(-50%);
     opacity: 0;
-    transition: transform 1s, opacity 1s;
   }
 
   .cu-trans.in {
     transform: translateX(50%);
     opacity: 0;
-    transition: transform 1s, opacity 1s;
   }
 </style>
