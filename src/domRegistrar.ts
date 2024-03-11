@@ -24,11 +24,12 @@ export type FetchOptions = {
     inDur?: number,
     outDur?: number,
     swapDelay?: number,
+    applyCssDurations?: true | false,
+    smartOutroStyling?: true | false,
     inStartHook?: (el: HTMLElement)=> void,
     outStartHook?: (el: HTMLElement)=> void,
     inEndHook?: (el: HTMLElement)=> void,
     outEndHook?: (el: HTMLElement)=> void,
-    preset?: "fade" | "scale" | "slide" | "flyUp" | "flyDown" | "flyLeft" | "flyRight"
 }
 
 type LimitedFetchOptions = Omit<FetchOptions, "fetchProfiles" | "method" | "href" | "extract" | "replace">

@@ -69,12 +69,14 @@ export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (e
         ops.replace.forEach(r => {
             let [ extract, relation, replace ] = r.split(/\s*(>|\/|\+)\s*/);
 
+            let outEl = ["this", "self"].includes(replace) ? parent : document.querySelector(replace);
+
             scheduleDomUpdate({
                 in: fullMarkup.querySelector(extract),
                 out: ["this", "self"].includes(replace) ? parent : document.querySelector(replace),
                 relation,
                 ops,
-                done
+                done,
             })
         });
     }
