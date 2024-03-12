@@ -11,8 +11,7 @@ type DomWorkOrder = {
 let workArray: (DomWorkOrder | Function)[] = [];
 let cancelAnimationFrame = false;
 let spacer: HTMLElement | null;
-let wrapperPaddingTop: string | null;
-let wrapperPaddingBottom: string | null;
+let spacerHeight = "";
 
 export function scheduleDomUpdate(update: DomWorkOrder | Function) {
     workArray.push(update);
@@ -25,19 +24,17 @@ export function scheduleDomUpdate(update: DomWorkOrder | Function) {
 function addSpacer(inEl: HTMLElement | null, wrapper: HTMLElement | null, wrapperHeight: number) {
     //Conserve parent size
     spacer = document.createElement("div");
-    wrapperPaddingTop = window.getComputedStyle(wrapper as HTMLElement).paddingTop;
-    wrapperPaddingBottom = window.getComputedStyle(wrapper as HTMLElement).paddingBottom;
+    let { paddingTop, paddingBottom } = window.getComputedStyle(wrapper as HTMLElement);
 
-    let spacerHeight = Math.abs(wrapperHeight - (inEl?.clientHeight || 0));
-    spacer.style.height = `calc(${spacerHeight}px - ${wrapperPaddingTop} - ${wrapperPaddingBottom})`;
+    spacerHeight = spacer.style.height = `calc(${(Math.abs(wrapperHeight - (inEl?.clientHeight || 0)))}px - ${paddingTop} - ${paddingBottom})`;
     wrapper?.after(spacer);
 }
 
-function handleHeightAdjust(inEl: HTMLElement | null, wrapper: HTMLElement | null, wrapperHeight: number) {
+function handleHeightAdjust(inEl: HTMLElement | null, wrapper: HTMLElement | null) {
     scheduleDomUpdate(()=> {
         spacer?.remove();
         inEl?.animate?.([
-            { height: `calc(${wrapperHeight}px - ${wrapperPaddingTop} - ${wrapperPaddingBottom})` },
+            { height: spacerHeight },
             { height: `${inEl.clientHeight || 0}px` }
         ], 300);
     });
@@ -48,14 +45,10 @@ function runDomUpdates() {
     
     //Loop through all work orders
     for(let order of workArray as DomWorkOrder[]) {
-        let wrapperHeight = 0;
-        if(order?.ops?.smartOutroStyling != false && order.out) {
-            order.out.style.position = "relative";
-            wrapperHeight = order.out.clientHeight;
-        }
-
         if(typeof order === "function") (order as Function)();
         else {
+            let wrapperHeight = order.ops?.smartOutroStyling !== false && order.out ? order.out.clientHeight : 0;
+
             // Remove old children
             if([">", "+"].includes(order.relation)) {
                 if(order.relation == ">") {
@@ -68,21 +61,22 @@ function runDomUpdates() {
                     applyTransition(container, "out", order.ops);
                 }
 
-                addSpacer(order.in, order.out, wrapperHeight);
+                if(order.ops.smartOutroStyling != false) addSpacer(order.in, order.out, wrapperHeight);
 
                 //Append
                 applyTransition(order.in, "in", order.ops, ()=> {
                     if(order.in) order.out?.appendChild(order.in);
-                    handleHeightAdjust(order.in, order.out, wrapperHeight);
+                    if(order.ops.smartOutroStyling != false) handleHeightAdjust(order.in, order.out);
                 });
             }
             //Insert after old element before removing
             else applyTransition(order.in, "in", order.ops, ()=> {
-                addSpacer(order.in, order.out, wrapperHeight);
+                order.out?.after(order.in as HTMLElement);
 
-                if(order.in) order.out?.after(order.in);
-
-                handleHeightAdjust(order.in, order.out, wrapperHeight)
+                if(order.ops.smartOutroStyling != false) {
+                    addSpacer(order.in, order.out, wrapperHeight);
+                    handleHeightAdjust(order.in, order.out);
+                }
 
                 //Remove old element
                 if(order.relation === "/") applyTransition(order.out, "out", order.ops);

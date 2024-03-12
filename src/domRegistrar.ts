@@ -27,6 +27,7 @@ export type FetchOptions = {
     swapDelay?: number,
     applyCssDurations?: true | false,
     smartOutroStyling?: true | false,
+    wrapperTransDur?: number,
     inStartHook?: (el: HTMLElement)=> void,
     outStartHook?: (el: HTMLElement)=> void,
     inEndHook?: (el: HTMLElement)=> void,
