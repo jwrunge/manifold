@@ -19,13 +19,26 @@ export function scheduleDomUpdate(update: DomWorkOrder | Function) {
     }
 }
 
+function handleHeightAdjust(inEl: HTMLElement | null, wrapperHeight: number) {
+    scheduleDomUpdate(()=> {
+        inEl?.animate?.([
+            { height: `${wrapperHeight}px` },
+            { height: `${inEl.scrollHeight}px` }
+        ], 300);
+    });
+}
+
 function runDomUpdates() {
     cancelAnimationFrame = false;
-
-    console.log("RUNNING DOM UPDATES")
     
     //Loop through all work orders
     for(let order of workArray as DomWorkOrder[]) {
+        let wrapperHeight = 0;
+        if(order?.ops?.smartOutroStyling != false && order.out) {
+            order.out.style.position = "relative";
+            wrapperHeight = order.out.scrollHeight;
+        }
+
         if(typeof order === "function") (order as Function)();
         else {
             // Remove old children
@@ -37,17 +50,19 @@ function runDomUpdates() {
                         container.appendChild(child);
                     }
                     order.out?.replaceChildren(container);
-                    applyTransition(container, "out", order.ops, undefined, true);
+                    applyTransition(container, "out", order.ops);
                 }
 
                 //Append
                 applyTransition(order.in, "in", order.ops, ()=> {
                     if(order.in) order.out?.appendChild(order.in);
+                    handleHeightAdjust(order.in, wrapperHeight);
                 });
             }
             //Insert after old element before removing
             else applyTransition(order.in, "in", order.ops, ()=> {
                 if(order.in) order.out?.after(order.in);
+                handleHeightAdjust(order.in, wrapperHeight)
 
                 //Remove old element
                 if(order.relation === "/") applyTransition(order.out, "out", order.ops);
@@ -60,7 +75,7 @@ function runDomUpdates() {
     workArray = [];
 }
 
-function applyTransition(el: HTMLElement | null, dir: "in" | "out", ops: Partial<FetchOptions>, fn?: Function, inset?: boolean) {
+function applyTransition(el: HTMLElement | null, dir: "in" | "out", ops: Partial<FetchOptions>, fn?: Function) {
     //Handle text nodes
     if(el?.nodeType == Node.TEXT_NODE) {
         let text = el.textContent;
@@ -77,30 +92,22 @@ function applyTransition(el: HTMLElement | null, dir: "in" | "out", ops: Partial
     el?.classList?.add("cu-trans");
     ops[`${dir}StartHook`]?.(el);
 
-    let parent = inset ? (el as HTMLElement).parentElement : el; 
-
     //Wait to apply class
     if(dir == "out") {
-        setTimeout(()=> {
-            scheduleDomUpdate(()=> {
-                console.log("SCHEDULED DOM OUT")
-                if(ops.smartOutroStyling !== false) {
-                    //Handle absolute positioning and size conservation
-                    (el as HTMLElement).style.width = `${el.clientWidth}px`;
-                    (el as HTMLElement).style.height = `${el.clientHeight}px`;
-                    (el as HTMLElement).style.position = "absolute";
+        scheduleDomUpdate(()=> {
+            if(ops.smartOutroStyling !== false) {
+                //Handle absolute positioning and size conservation
+                (el as HTMLElement).style.width = `${el.clientWidth}px`;
+                (el as HTMLElement).style.height = `${el.clientHeight}px`;
+                (el as HTMLElement).style.position = "absolute";
+            }
+            
+            //Handle auto duration setting
+            if(ops.applyCssDurations !== false) (el as HTMLElement).style.transitionDuration = `${ops[`${dir}Dur`] || 0}ms`;
 
-                    //Handle smooth parent height resize tracking
-                    // if(parent) parent.style.height = `${parent.scrollHeight}px`;
-                }
-                
-                //Handle auto duration setting
-                if(ops.applyCssDurations !== false) (el as HTMLElement).style.transitionDuration = `${ops[`${dir}Dur`] || 0}ms`;
-
-                //Add outro class
-                (el as HTMLElement).classList?.add(dir);
-            })
-        }, 0);  //This should queue up at the end of the cycle, then schedule for the next DOM update
+            //Add outro class
+            (el as HTMLElement).classList?.add(dir);
+        })
     }
     //If dir == in
     else {
@@ -111,13 +118,9 @@ function applyTransition(el: HTMLElement | null, dir: "in" | "out", ops: Partial
                 fn?.();
 
                 //Remove transition class
-                setTimeout(()=> {
-                    scheduleDomUpdate(()=> {
-                        el?.classList?.remove(dir);
-
-                        //Update height
-                    });
-                }, 0);
+                scheduleDomUpdate(()=> {
+                    el?.classList?.remove(dir);
+                });
             });
         }, ops.swapDelay || 0);
     }
@@ -133,7 +136,9 @@ function applyTransition(el: HTMLElement | null, dir: "in" | "out", ops: Partial
         //Wrap up after timeout
         setTimeout(()=> {
             scheduleDomUpdate(()=> {
-                if(dir == "out") el?.remove();
+                if(dir == "out") {
+                    el?.remove();
+                }
                 wrapup();
             });
         }, 

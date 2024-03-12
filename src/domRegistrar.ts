@@ -37,6 +37,15 @@ type LimitedFetchOptions = Omit<FetchOptions, "fetchProfiles" | "method" | "href
 let commaSepRx = /, {0,}/g;
 let elIdx = 0;
 
+window.addEventListener("popstate", (e)=> {
+    let el = document.getElementById(e.state?.elId);
+    fetchHttp(
+        e.state.fetchData,
+        el,
+        (el: HTMLElement | null)=> {if(el) registerSubs(el)}
+    );
+});
+
 function paramsInParens(str: string) {
     if(str?.includes("(")) {
         let matches = str.match(/[^\(\)]{1,}/g);
@@ -102,16 +111,24 @@ export function registerSubs(parent?: HTMLElement | null) {
                     //No internal loops for fetch
                     if(!["bind", "sync"].includes(mode)) {
                         let ev = (e?: Event)=> {  
-                            e?.preventDefault();                             
+                            e?.preventDefault();
+                            e?.stopPropagation();  
+
+                            let fetchData = {
+                                method: mode, 
+                                href: external[0],
+                                replace: internal,
+                                allowStyles: true,
+                                ...ops,
+                                ...ops.fetchProfiles?.[el.dataset["fetchops"] || ""] || JSON.parse(el.dataset["fetchops"] || "{}") || {},
+                            };
+                            
+                            if(["click", "submit"].includes(trigger) || (e?.target as HTMLElement)?.nodeName == "A") {
+                                history.pushState({fetchData, elId: el.id}, "", (e?.target as HTMLAnchorElement)?.href || "");
+                            }
+
                             fetchHttp(
-                                {
-                                    method: mode, 
-                                    href: external[0],
-                                    replace: internal,
-                                    allowStyles: true,
-                                    ...ops,
-                                    ...ops.fetchProfiles?.[el.dataset["fetchops"] || ""] || JSON.parse(el.dataset["fetchops"] || "{}") || {},
-                                },
+                                fetchData,
                                 el,
                                 (el: HTMLElement | null)=> {if(el) registerSubs(el)}
                             )

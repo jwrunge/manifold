@@ -7,7 +7,9 @@ let pageStyles = new WeakMap();
 let parser = new DOMParser();
 
 //Fetch page and replace content
-export async function fetchHttp(ops: FetchOptions, parent: HTMLElement, done: (el: HTMLElement | null)=> void) {
+export async function fetchHttp(ops: FetchOptions, parent: HTMLElement | null, done: (el: HTMLElement | null)=> void) {
+    console.log("We're in th http func")
+
     //Make sure we're allowed to fetch
     if(Array.isArray(ops.allowExternal) && !ops.allowExternal.some(allowed=> ops.href?.startsWith(allowed))) {
         console.warn(`${ops.method} ${ops.href} not allowed`);
