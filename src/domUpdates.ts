@@ -10,6 +10,9 @@ type DomWorkOrder = {
 
 let workArray: (DomWorkOrder | Function)[] = [];
 let cancelAnimationFrame = false;
+let spacer: HTMLElement | null;
+let wrapperPaddingTop: string | null;
+let wrapperPaddingBottom: string | null;
 
 export function scheduleDomUpdate(update: DomWorkOrder | Function) {
     workArray.push(update);
@@ -19,11 +22,23 @@ export function scheduleDomUpdate(update: DomWorkOrder | Function) {
     }
 }
 
-function handleHeightAdjust(inEl: HTMLElement | null, wrapperHeight: number) {
+function addSpacer(inEl: HTMLElement | null, wrapper: HTMLElement | null, wrapperHeight: number) {
+    //Conserve parent size
+    spacer = document.createElement("div");
+    wrapperPaddingTop = window.getComputedStyle(wrapper as HTMLElement).paddingTop;
+    wrapperPaddingBottom = window.getComputedStyle(wrapper as HTMLElement).paddingBottom;
+
+    let spacerHeight = Math.abs(wrapperHeight - (inEl?.clientHeight || 0));
+    spacer.style.height = `calc(${spacerHeight}px - ${wrapperPaddingTop} - ${wrapperPaddingBottom})`;
+    wrapper?.after(spacer);
+}
+
+function handleHeightAdjust(inEl: HTMLElement | null, wrapper: HTMLElement | null, wrapperHeight: number) {
     scheduleDomUpdate(()=> {
+        spacer?.remove();
         inEl?.animate?.([
-            { height: `${wrapperHeight}px` },
-            { height: `${inEl.scrollHeight}px` }
+            { height: `calc(${wrapperHeight}px - ${wrapperPaddingTop} - ${wrapperPaddingBottom})` },
+            { height: `${inEl.clientHeight || 0}px` }
         ], 300);
     });
 }
@@ -36,7 +51,7 @@ function runDomUpdates() {
         let wrapperHeight = 0;
         if(order?.ops?.smartOutroStyling != false && order.out) {
             order.out.style.position = "relative";
-            wrapperHeight = order.out.scrollHeight;
+            wrapperHeight = order.out.clientHeight;
         }
 
         if(typeof order === "function") (order as Function)();
@@ -53,16 +68,21 @@ function runDomUpdates() {
                     applyTransition(container, "out", order.ops);
                 }
 
+                addSpacer(order.in, order.out, wrapperHeight);
+
                 //Append
                 applyTransition(order.in, "in", order.ops, ()=> {
                     if(order.in) order.out?.appendChild(order.in);
-                    handleHeightAdjust(order.in, wrapperHeight);
+                    handleHeightAdjust(order.in, order.out, wrapperHeight);
                 });
             }
             //Insert after old element before removing
             else applyTransition(order.in, "in", order.ops, ()=> {
+                addSpacer(order.in, order.out, wrapperHeight);
+
                 if(order.in) order.out?.after(order.in);
-                handleHeightAdjust(order.in, wrapperHeight)
+
+                handleHeightAdjust(order.in, order.out, wrapperHeight)
 
                 //Remove old element
                 if(order.relation === "/") applyTransition(order.out, "out", order.ops);

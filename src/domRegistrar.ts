@@ -66,7 +66,7 @@ export function options(newops: LimitedFetchOptions, profileName?: string) {
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: HTMLElement | null) {
-    let modes = ["bind", "sync", "get", "post", "put", "patch", "delete", "head", "options", "trace", "connect"];
+    let modes = ["bind", "sync", "autoanchor", "get", "post", "put", "patch", "delete", "head", "options", "trace", "connect"];
     for(let el of (parent || document.body)?.querySelectorAll(`[data-${modes.join("],[data-")}]`) as NodeListOf<HTMLElement>) {
         if(!el.id) el.id = `cu-${elIdx++}`;
 
@@ -172,7 +172,7 @@ export function registerSubs(parent?: HTMLElement | null) {
                         else if(mode == "sync") {
                             if(externalData.length > 1) throw(`Only one store supported: ${err_detail}`)
                             let ev = ()=> {
-                                let value = (el as any)[internal[i]];
+                                let value = (el as any)[internal[i].trim()];
                                 
                                 if(processFunc) value = processFunc?.(value, el);
                                 const store = Store.store(externalData[0]?.name);
