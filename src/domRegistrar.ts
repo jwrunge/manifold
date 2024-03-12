@@ -1,5 +1,6 @@
 import { Store } from "./store";
 import { fetchHttp } from "./http";
+import { scheduleDomUpdate } from "./domUpdates";
 
 export type FetchOptions = {
     //No user access
@@ -39,11 +40,13 @@ let elIdx = 0;
 
 window.addEventListener("popstate", (e)=> {
     let el = document.getElementById(e.state?.elId);
-    fetchHttp(
-        e.state.fetchData,
-        el,
-        (el: HTMLElement | null)=> {if(el) registerSubs(el)}
-    );
+    if(e?.state?.fetchData) {
+        fetchHttp(
+            e.state.fetchData,
+            el,
+            (el: HTMLElement | null)=> {if(el) registerSubs(el)}
+        );
+    }
 });
 
 function paramsInParens(str: string) {
@@ -146,17 +149,19 @@ export function registerSubs(parent?: HTMLElement | null) {
                         //Handle bind
                         if(mode == "bind") {
                             let domSubscription = ()=> {
-                                //Make sure to schedule this in an animationFrame handler
-                                (el as any)[internal[i]] = processFunc?.(
-                                    ...externalData.map(
-                                        s=> nestedValue(Store.store(s.name)?.value, s.path)
-                                    ), el
-                                ) ??
-                                nestedValue(
-                                    Store.store(externalData[0].name || "")?.value, externalData[0].path
-                                );
+                                scheduleDomUpdate(()=> {
+                                    (el as any)[internal[i]] = processFunc?.(
+                                        ...externalData.map(
+                                            s=> nestedValue(Store.store(s.name)?.value, s.path)
+                                        ), el
+                                    ) ??
+                                    nestedValue(
+                                        Store.store(externalData[0].name || "")?.value, externalData[0].path
+                                    );
 
-                                //Make sure to update dependent stores on value update
+                                    //Make sure to update dependent stores on value update
+                                    el.dispatchEvent(new CustomEvent(trigger))
+                                });
                             }
                         
                             //Add subscription - run whenever store updates
