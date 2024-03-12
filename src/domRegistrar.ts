@@ -124,7 +124,7 @@ export function registerSubs(parent?: HTMLElement | null) {
                                 replace: internal,
                                 allowStyles: true,
                                 ...ops,
-                                ...ops.fetchProfiles?.[el.dataset["fetchops"] || ""] || JSON.parse(el.dataset["fetchops"] || "{}") || {},
+                                ...ops.fetchProfiles?.[el.dataset["overrides"] || ""] || JSON.parse(el.dataset["overrides"] || "{}") || {},
                             };
                             
                             if(["click", "submit"].includes(trigger) || (e?.target as HTMLElement)?.nodeName == "A") {
