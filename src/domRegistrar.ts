@@ -28,10 +28,10 @@ export type FetchOptions = {
     applyCssDurations?: true | false,
     smartOutroStyling?: true | false,
     wrapperTransDur?: number,
-    inStartHook?: (el: HTMLElement)=> void,
-    outStartHook?: (el: HTMLElement)=> void,
-    inEndHook?: (el: HTMLElement)=> void,
-    outEndHook?: (el: HTMLElement)=> void,
+    inStartHook?: string | ((el: HTMLElement)=> void),
+    outStartHook?: string | ((el: HTMLElement)=> void),
+    inEndHook?: string | ((el: HTMLElement)=> void),
+    outEndHook?: string | ((el: HTMLElement)=> void),
 }
 
 type LimitedFetchOptions = Omit<FetchOptions, "fetchProfiles" | "method" | "href" | "extract" | "replace">

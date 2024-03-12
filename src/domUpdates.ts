@@ -1,4 +1,5 @@
 import { FetchOptions } from "./domRegistrar";
+import { Store } from "./store";
 
 type DomWorkOrder = {
     in: HTMLElement | null,
@@ -104,15 +105,16 @@ function applyTransition(el: HTMLElement | null, dir: "in" | "out", ops: Partial
     //Initiate transition
     if(ops.transClass) el?.classList?.add(ops.transClass);
     el?.classList?.add("cu-trans");
-    ops[`${dir}StartHook`]?.(el);
+
+    getHook(dir, "Start", ops)?.(el);
 
     //Wait to apply class
     if(dir == "out") {
         scheduleDomUpdate(()=> {
             if(ops.smartOutroStyling !== false) {
                 //Handle absolute positioning and size conservation
-                (el as HTMLElement).style.width = `${el.clientWidth}px`;
-                (el as HTMLElement).style.height = `${el.clientHeight}px`;
+                (el as HTMLElement).style.width = `${(el as HTMLElement).clientWidth}px`;
+                (el as HTMLElement).style.height = `${(el as HTMLElement).clientHeight}px`;
                 (el as HTMLElement).style.position = "absolute";
             }
             
@@ -143,7 +145,7 @@ function applyTransition(el: HTMLElement | null, dir: "in" | "out", ops: Partial
     let wrapup = ()=> {
         if(ops.transClass) el?.classList?.remove(ops.transClass);
         el?.classList?.remove("cu-trans");
-        if(el) ops[`${dir}EndHook`]?.(el);
+        if(el) getHook(dir, "End", ops)?.(el);
     }
     
     if(ops[`${dir}Dur`]) {
@@ -161,7 +163,13 @@ function applyTransition(el: HTMLElement | null, dir: "in" | "out", ops: Partial
     else {
         //Run in currently-scheduled animation frame
         if(dir == "out") workArray.push(()=> el?.remove());
-        ops[`${dir}EndHook`]?.(el);
+        getHook(dir, "End", ops)?.(el);
         el?.classList?.remove(dir);
     }
+}
+
+function getHook(dir: "in" | "out", pos: "Start" | "End", ops: Partial<FetchOptions>): Function | undefined {
+    return typeof ops[`${dir}${pos}Hook`] == "string" ? 
+        globalThis[ops[`${dir}${pos}Hook`] as keyof typeof globalThis] || Store.func((ops[`${dir}${pos}Hook`] || "") as string) : 
+        ops[`${dir}${pos}Hook`];
 }
