@@ -31,13 +31,16 @@ function addSpacer(inEl: HTMLElement | null, wrapper: HTMLElement | null, wrappe
     wrapper?.after(spacer);
 }
 
-function handleHeightAdjust(inEl: HTMLElement | null, wrapper: HTMLElement | null) {
+function handleHeightAdjust(inEl: HTMLElement | null, wrapper: HTMLElement | null, ops: Partial<FetchOptions>) {
     scheduleDomUpdate(()=> {
         spacer?.remove();
         inEl?.animate?.([
             { height: spacerHeight },
             { height: `${inEl.clientHeight || 0}px` }
-        ], 300);
+        ], {
+            duration: ops.wrapperTransDur || 300,
+            easing: "ease-in-out",
+        });
     });
 }
 
@@ -67,7 +70,7 @@ function runDomUpdates() {
                 //Append
                 applyTransition(order.in, "in", order.ops, ()=> {
                     if(order.in) order.out?.appendChild(order.in);
-                    if(order.ops.smartOutroStyling != false) handleHeightAdjust(order.in, order.out);
+                    if(order.ops.smartOutroStyling != false) handleHeightAdjust(order.in, order.out, order.ops);
                 });
             }
             //Insert after old element before removing
@@ -76,7 +79,7 @@ function runDomUpdates() {
 
                 if(order.ops.smartOutroStyling != false) {
                     addSpacer(order.in, order.out, wrapperHeight);
-                    handleHeightAdjust(order.in, order.out);
+                    handleHeightAdjust(order.in, order.out, order.ops);
                 }
 
                 //Remove old element

@@ -19,6 +19,7 @@ export type FetchOptions = {
     allowExternal?: string[],
     allowScripts?: true | false, 
     allowStyles?: true | false | "all",
+    convertAnchors?: true | false,
 
     //Animation
     transClass?: string,
@@ -59,6 +60,7 @@ function paramsInParens(str: string) {
 }
 
 let ops: Partial<FetchOptions> = {};
+let modes = ["bind", "sync", "get", "post", "put", "patch", "delete", "head", "options", "trace", "connect"];
 
 export function options(newops: LimitedFetchOptions, profileName?: string) {
     if(profileName) ops.fetchProfiles = { ...ops.fetchProfiles, [profileName]: newops };
@@ -67,8 +69,7 @@ export function options(newops: LimitedFetchOptions, profileName?: string) {
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 export function registerSubs(parent?: HTMLElement | null) {
-    let modes = ["bind", "sync", "autoanchor", "get", "post", "put", "patch", "delete", "head", "options", "trace", "connect"];
-    for(let el of (parent || document.body)?.querySelectorAll(`[data-${modes.join("],[data-")}]`) as NodeListOf<HTMLElement>) {
+    for(let el of (parent || document.body)?.querySelectorAll(`[data-${modes.join("],[data-")}]${ops.convertAnchors != false ? ",a" : ""}`) as NodeListOf<HTMLElement>) {
         if(!el.id) el.id = `cu-${elIdx++}`;
 
         //Loop over all data attributes (modes)
