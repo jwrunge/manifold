@@ -28,3 +28,14 @@ PATTERNS:
   get(url):value ingressFunction                          //GET from URL, process input, and put in value
   get(url):value post:event                               //GET from URL, POST change to URL on event
   get(url):value post:event egressFunction                //Get from URL, POST processed change to URL
+
+
+MAYBE HANDLE HTTP LIKE THIS???
+
+Replace, append, prepend:
+<div data-get="/user" data-replace>                     // Get data from /user, replace current div
+<div data-post="assembleUser() -> /user" data-append>   // Post the result of assembleUser() to /user and append the response
+<form data-post="assembleUser() -> /user" data-prepend> // Post the result of assembleUser (processing form data) to /user and prepend response
+
+Store result
+<div data-get="/user" data-resolve="process()-> store1">// Get data from /user, process the result and put it into store1

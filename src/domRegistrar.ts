@@ -199,7 +199,7 @@ function nestedValue(obj: any, path: (string | number)[], newval?: any) {
     let ptr = obj;
 
     for(let key of path) {
-        //Dynamically letruct object if it doesn't exist
+        //Dynamically construct object if it doesn't exist
         if(ptr == undefined) ptr = typeof key == "number" ? [] : {};
 
         //Set or get value
