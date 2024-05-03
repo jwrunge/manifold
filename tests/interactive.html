@@ -53,7 +53,7 @@
   </div>
 
   <div class="special-insert">Default insert</div>
-  <nav data-get="on(mount) /tests/header.html -> (header>this, .special>.special-insert)" data-overrides='{ "allowScripts": true }'></nav>
+  <nav data-fetch="on(mount) /tests/header.html -> (header>this, .special>.special-insert)" data-method="GET" data-overrides='{ "allowScripts": true }'></nav>
 
   <div class="trans" data-bind="specialStyling(store1)"></div>
 

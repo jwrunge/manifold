@@ -51,16 +51,8 @@ window.addEventListener("popstate", (e)=> {
     }
 });
 
-function paramsInParens(str: string) {
-    if(str?.includes("(")) {
-        let matches = str.match(/[^\(\)]{1,}/g);
-        str = matches?.[matches.length - 1] || "";
-    }
-    return str?.split(commaSepRx) || [];
-}
-
 let ops: Partial<FetchOptions> = {};
-let modes = ["bind", "sync", "get", "post", "put", "patch", "delete", "head", "options", "trace", "connect"];
+let modes = ["bind", "sync", "fetch"];
 
 export function options(newops: LimitedFetchOptions, profileName?: string) {
     if(profileName) ops.fetchProfiles = { ...ops.fetchProfiles, [profileName]: newops };
@@ -114,13 +106,13 @@ export function registerSubs(parent?: HTMLElement | null) {
                 if(!triggers?.length) triggers = [""]
                 for(let trigger of triggers) {
                     //No internal loops for fetch
-                    if(!["bind", "sync"].includes(mode)) {
+                    if(mode == "fetch") {
                         let ev = (e?: Event)=> {  
                             e?.preventDefault();
                             e?.stopPropagation();  
 
                             let fetchData = {
-                                method: mode, 
+                                method: el.dataset["method"]?.toLowerCase() || "get", 
                                 href: external[0],
                                 replace: internal,
                                 allowStyles: true,
@@ -208,4 +200,12 @@ function nestedValue(obj: any, path: (string | number)[], newval?: any) {
     }
 
     return ptr;
+}
+
+function paramsInParens(str: string) {
+    if(str?.includes("(")) {
+        let matches = str.match(/[^\(\)]{1,}/g);
+        str = matches?.[matches.length - 1] || "";
+    }
+    return str?.split(commaSepRx) || [];
 }
