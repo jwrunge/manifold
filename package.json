@@ -1,22 +1,16 @@
 {
     "name": "@jwrunge/copper",
-    "version": "1.0.1",
-    "main": "dist/copper.iife.js",
+    "version": "0.0.1",
+    "main": "dist/copper.js",
     "type": "module",
-    "typings": "dist/copper.d.ts",
     "exports": {
         ".": "./dist",
-        "./ts": "./src/index.ts",
-        "./js": "./dist/unified/copper.esm.js",
-        "./js/iife": "./dist/unified/copper.iife.js",
-        "./js/client": "./dist/client/copper.esm.js",
-        "./js/client/iife": "./dist/client/copper.iife.js",
-        "./js/http": "./dist/http/copper.esm.js",
-        "./js/http/iife": "./dist/http/copper.iife.js"
+        "./ts": "./src/index.ts"
     },
     "scripts": {
         "build": "rollup -c",
-        "dev": "sirv --port 5000 --dev true --single tests/interactive.html",
+        "example": "npm run build & sirv tests --port 5000 --dev true ",
+        "dev": "npm run build & sirv --port 5000 --dev true --single tests/interactive.html",
         "increment-patch": "node util/incrementPatchVersion.js",
         "publish.no-increment": "run-s build test && npm publish",
         "publish": "run-s build test && increment-patch && npm publish",

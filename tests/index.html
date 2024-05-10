@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/style.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <title>Copper Demo</title>
+</head>
+<body>
+    <main>
+        <div class="content">
+            <h1>Let's get started!</h1>
+            <nav>
+                <h2>Contents</h2>
+                <a href="/">Startup</a>
+                <a href="/bind-sync">Bind & Sync</a>
+                <a href="/fetch-replace">Fetch & Replace</a>
+                <a href="/stores">Stores</a>
+                <a href="/components">Components</a>
+            </nav>
+            <section id="about">
+                <h2>What is Copper?</h2>
+                <p>Some words about Copper.</p>
+            </section>
+            <section id="installation">
+                <h2>Installation</h2>
+                <p>Copper was made to be flexible, so it can be used all on its own or alongside other libraries and frameworks in a JS build system.</p>
+                <div class="block">
+                    <span class="lang">HTML</span>
+                    <pre><code class="language-html">
+            
+&lt;!-- Include the script in your HTML - JSDoc provides types for you! --&gt;
+&lt;script src="https://cdn/path/to/copper.min.js"&gt;&lt;/script&gt;
+
+&lt;!-- We recommend downloading the script and serving it yourself -- it's only 10KB! --&gt;
+&lt;script src="./scripts/copper.min.js"&gt;&lt;/script&gt;
+
+&lt;!-- If you need Copper stack traces, you can include the version with source maps. --&gt;
+&lt;script src="./scripts/dev.copper.js"&gt;&lt;/script&gt;
+                    </code></pre>
+                </div>
+                <div class="block"><span class="lang">TypeScript</span>
+                    <pre><code class="language-typescript">
+            
+// If you are building or bundling your code already, you can import Copper as a TypeScript module.
+import Copper from 'copper';
+                    </code></pre>
+                </div>
+            </section>
+            <section id="quick-start">
+                <h2>A Quick Example</h2>
+                <p>Let's test out your setup. We'll get into what all of this does in subsequent pages, but for now, feel free to copy, paste, run, and observe.</p>
+                <div class="block">
+                    <span class="lang">HTML</span>
+                    <pre><code class="language-html">
+            
+&lt;!-- Include the script in your HTML - JSDoc provides types for you! --&gt;
+&lt;script src="https://cdn/path/to/copper.min.js"&gt;&lt;/script&gt;
+
+&lt;!-- This should probably be a codepen --&gt;
+                    </code></pre>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <section class="next-previous">
+        <br>
+        <a href="/bind-sync">Bind & Sync &#9654;</a>
+    </section>
+
+    <!-- Highlight code blocks -->
+    <script>
+        hljs.highlightAll();
+    </script>
+</body>
+</html>
+
+<style>
+    .cu-trans {
+        transition-property: transform, opacity;
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    .cu-trans.out {
+        transform: translateX(-50%);
+        opacity: 0;
+    }
+
+    .cu-trans.in {
+        transform: translateX(50%);
+        opacity: 0;
+    }
+</style>

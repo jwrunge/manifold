@@ -36,9 +36,26 @@ export type FetchOptions = {
 }
 
 type LimitedFetchOptions = Omit<FetchOptions, "fetchProfiles" | "method" | "href" | "extract" | "replace">
+type StringifiableFetchOptions = Omit<LimitedFetchOptions, "inStartHook" | "outStartHook" | "inEndHook" | "outEndHook">
 
 let commaSepRx = /, {0,}/g;
 let elIdx = 0;
+
+// Initialize from script params
+function intialize() {
+    let scriptParamsStr = document.currentScript?.dataset?.init;
+
+    if(scriptParamsStr) {
+        try {
+            let scriptParams = JSON.parse(scriptParamsStr);
+            options(scriptParams);
+        } catch(e) {
+            console.warn(`Invalid script params: ${scriptParamsStr}, e`);
+        }
+    }
+}
+
+intialize();
 
 window.addEventListener("popstate", (e)=> {
     let el = document.getElementById(e.state?.elId);
@@ -107,34 +124,7 @@ export function registerSubs(parent?: HTMLElement | null) {
                 for(let trigger of triggers) {
                     //No internal loops for fetch
                     if(mode == "fetch") {
-                        let ev = (e?: Event)=> {  
-                            e?.preventDefault();
-                            e?.stopPropagation();  
-
-                            let fetchData = {
-                                method: el.dataset["method"]?.toLowerCase() || "get", 
-                                href: external[0],
-                                replace: internal,
-                                allowStyles: true,
-                                ...ops,
-                                ...ops.fetchProfiles?.[el.dataset["overrides"] || ""] || JSON.parse(el.dataset["overrides"] || "{}") || {},
-                            };
-                            
-                            if(["click", "submit"].includes(trigger) || (e?.target as HTMLElement)?.nodeName == "A") {
-                                history.pushState({fetchData, elId: el.id}, "", (e?.target as HTMLAnchorElement)?.href || "");
-                            }
-
-                            fetchHttp(
-                                fetchData,
-                                el,
-                                (el: HTMLElement | null)=> {if(el) registerSubs(el)}
-                            )
-                        }
-
-                        if(trigger == "mount") {
-                            ev();
-                        }
-                        else el.addEventListener(trigger, ev);
+                        handleFetch(el, trigger, external, internal, ops);
                     }
 
                     //Loop over internal
@@ -208,4 +198,39 @@ function paramsInParens(str: string) {
         str = matches?.[matches.length - 1] || "";
     }
     return str?.split(commaSepRx) || [];
+}
+
+function handleFetch(el: HTMLElement, trigger: string, external: string[], internal: string[], ops: Partial<FetchOptions>) {
+    let ev = (e?: Event)=> {  
+        e?.preventDefault();
+        e?.stopPropagation();  
+
+        let fetchData = {
+            method: el.dataset["method"]?.toLowerCase() || "get", 
+            href: external[0],
+            replace: internal,
+            allowStyles: true,
+            ...ops,
+            ...ops.fetchProfiles?.[el.dataset["overrides"] || ""] || JSON.parse(el.dataset["overrides"] || "{}") || {},
+        };
+        
+        if(["click", "submit"].includes(trigger) || ["A", "FORM"].includes((e?.target as HTMLElement)?.nodeName)) {
+            history.pushState(
+                {fetchData, elId: el.id}, 
+                "", 
+                (e?.target as HTMLAnchorElement)?.href || (e?.target as HTMLFormElement)?.action || ""
+            );
+        }
+
+        fetchHttp(
+            fetchData,
+            el,
+            (el: HTMLElement | null)=> {if(el) registerSubs(el)}
+        )
+    }
+
+    if(trigger == "mount") {
+        ev();
+    }
+    else el.addEventListener(trigger, ev);
 }
