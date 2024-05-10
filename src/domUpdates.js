@@ -41,7 +41,7 @@ function _handleHeightAdjust(inEl, ops) {
             { height: spacerHeight },
             { height: `${inEl.clientHeight || 0}px` }
         ], {
-            duration: ops.wrapperTransDur || 300,
+            duration: ops.outDur || 300,
             easing: "ease-in-out",
         });
     });

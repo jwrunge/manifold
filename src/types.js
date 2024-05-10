@@ -19,7 +19,6 @@
  * @property {number} [outDur] - Animation
  * @property {number} [swapDelay] - Animation
  * @property {true | false} [smartOutro] - Animation
- * @property {number} [wrapperTransDur] - Animation
  * @property {string | ((el: HTMLElement)=> void)} [inStartHook] - Animation
  * @property {string | ((el: HTMLElement)=> void)} [outStartHook] - Animation
  * @property {string | ((el: HTMLElement)=> void)} [inEndHook] - Animation
