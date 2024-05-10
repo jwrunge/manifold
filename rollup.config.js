@@ -1,11 +1,10 @@
 // rollup.config.js
-import typescript from '@rollup/plugin-typescript';
 import terser from '@rollup/plugin-terser';
 
 function constructProfiles(prefixes, sourceMaps) {
     return prefixes.map((prefix, i)=> { 
         return {
-            input: `src/index.ts`,
+            input: `src/index.js`,
             output: [
                 {
                     file: `dist/${prefix ? prefix + "." : ""}copper.js`,
@@ -15,7 +14,6 @@ function constructProfiles(prefixes, sourceMaps) {
                 }
             ],
             plugins: [
-                typescript(), 
                 terser()
             ],
         }
