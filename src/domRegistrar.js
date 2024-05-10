@@ -7,16 +7,18 @@ let elIdx = 0;
 
 // Initialize from script params
 function _intialize() {
-    let scriptParamsStr = document.currentScript?.dataset?.init;
+    let ds = document.currentScript?.dataset;
 
-    if(scriptParamsStr) {
+    if(ds?.config) {
         try {
-            let scriptParams = JSON.parse(scriptParamsStr);
+            let scriptParams = JSON.parse(ds?.config);
             _setOptions(scriptParams);
         } catch(e) {
-            console.warn(`Invalid script params: ${scriptParamsStr}, e`);
+            console.warn("Invalid Cu params", e);
         }
     }
+
+    if(ds?.init) _registerSubs();
 }
 
 _intialize();
@@ -50,10 +52,9 @@ export function _setOptions(newops, profileName) {
  * @param {HTMLElement | null} [parent] 
  */
 export function _registerSubs(parent) {
-    /** 
-     * @type {NodeListOf<HTMLElement> | []} 
-     */
-    let els = parent?.querySelectorAll(`[data-${modes.join("],[data-")}]${ops.convertAnchors != false ? ",a" : ""}`) || [];
+    // console.log("REGISTERING SUBS")
+    /** @type {NodeListOf<HTMLElement> | []} */
+    let els = parent?.querySelectorAll(`[data-${modes.join("],[data-")}]${ops.autoFetch != false ? ",a" : ""}`) || [];
     for(let el of els) {
         /** @type {HTMLElement} */
         if(!el.id) el.id = `cu-${elIdx++}`;

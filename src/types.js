@@ -8,18 +8,17 @@
  * @property {{[key: string]: any}} [options] - User access
  * @property {(val: any)=> void} [cb] - User access
  * @property {(err: any)=> void} [err] - User access
- * @property {string[]} [allowCodes] - User access
+ * @property {string[]} [httpCodes] - User access
  * @property {(code: number)=> boolean | void} [onCode] - User access
- * @property {string[]} [allowExternal] - User access
- * @property {true | false} [allowScripts] - User access
- * @property {true | false | "all"} [allowStyles] - User access
- * @property {true | false} [convertAnchors] - User access
+ * @property {string[]} [external] - User access
+ * @property {true | false} [scripts] - User access
+ * @property {true | false | "all"} [styles] - User access
+ * @property {true | false} [autoFetch] - User access
  * @property {string} [transClass] - Animation
  * @property {number} [inDur] - Animation
  * @property {number} [outDur] - Animation
  * @property {number} [swapDelay] - Animation
- * @property {true | false} [applyCssDurations] - Animation
- * @property {true | false} [smartOutroStyling] - Animation
+ * @property {true | false} [smartOutro] - Animation
  * @property {number} [wrapperTransDur] - Animation
  * @property {string | ((el: HTMLElement)=> void)} [inStartHook] - Animation
  * @property {string | ((el: HTMLElement)=> void)} [outStartHook] - Animation

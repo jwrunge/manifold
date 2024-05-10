@@ -57,7 +57,7 @@ function _runDomUpdates() {
     for(let order of workArray) {
         if(typeof order === "function") (/** @type {Function} */ order)();
         else {
-            let wrapperHeight = order.ops?.smartOutroStyling !== false && order.out ? order.out.clientHeight : 0;
+            let wrapperHeight = order.ops?.smartOutro !== false && order.out ? order.out.clientHeight : 0;
 
             // Remove old children
             if([">", "+"].includes(order.relation)) {
@@ -71,19 +71,19 @@ function _runDomUpdates() {
                     _applyTransition(container, "out", order.ops);
                 }
 
-                if(order.ops.smartOutroStyling != false) _addSpacer(order.in, order.out, wrapperHeight);
+                if(order.ops.smartOutro != false) _addSpacer(order.in, order.out, wrapperHeight);
 
                 //Append
                 _applyTransition(order.in, "in", order.ops, ()=> {
                     if(order.in) order.out?.appendChild(order.in);
-                    if(order.ops.smartOutroStyling != false) _handleHeightAdjust(order.in, order.ops);
+                    if(order.ops.smartOutro != false) _handleHeightAdjust(order.in, order.ops);
                 });
             }
             //Insert after old element before removing
             else _applyTransition(order.in, "in", order.ops, ()=> {
                 order.out?.after(order.in);
 
-                if(order.ops.smartOutroStyling != false) {
+                if(order.ops.smartOutro != false) {
                     _addSpacer(order.in, order.out, wrapperHeight);
                     _handleHeightAdjust(order.in, order.ops);
                 }
@@ -127,7 +127,7 @@ function _applyTransition(el, dir, ops, fn) {
     //Wait to apply class
     if(dir == "out") {
         _scheduleDomUpdate(()=> {
-            if(ops.smartOutroStyling !== false) {
+            if(ops.smartOutro !== false) {
                 //Handle absolute positioning and size conservation
                 el.style.width = `${(el).clientWidth}px`;
                 el.style.height = `${(el).clientHeight}px`;
@@ -135,7 +135,7 @@ function _applyTransition(el, dir, ops, fn) {
             }
             
             //Handle auto duration setting
-            if(ops.applyCssDurations !== false) el.style.transitionDuration = `${ops[`${dir}Dur`] || 0}ms`;
+            if(ops[`${dir}Dur`]) el.style.transitionDuration = `${ops[`${dir}Dur`] || 0}ms`;
 
             //Add outro class
             el.classList?.add(dir);
@@ -145,7 +145,7 @@ function _applyTransition(el, dir, ops, fn) {
     else {
         setTimeout(()=> {
             _scheduleDomUpdate(()=> {
-                if(ops.applyCssDurations !== false) el.style.transitionDuration = `${ops[`${dir}Dur`] || 0}ms`;
+                if(ops[`${dir}Dur`]) el.style.transitionDuration = `${ops[`${dir}Dur`] || 0}ms`;
                 el?.classList?.add(dir);
                 fn?.();
 

@@ -15,7 +15,7 @@ let parser = new DOMParser();
  */
 export async function _fetchHttp(ops, parent, done) {
     //Make sure we're allowed to fetch
-    if(Array.isArray(ops.allowExternal) && !ops.allowExternal.some(allowed=> ops.href?.startsWith(allowed))) {
+    if(Array.isArray(ops.external) && !ops.external.some(allowed=> ops.href?.startsWith(allowed))) {
         console.warn(`${ops.method} ${ops.href} not allowed`);
         return;
     }
@@ -36,7 +36,7 @@ export async function _fetchHttp(ops, parent, done) {
     if(code && ops?.onCode?.(code) == false) return;
 
     //Handle response code gate
-    for(let allow of ops?.allowCodes || []) {
+    for(let allow of ops?.httpCodes || []) {
         if(code && !(new RegExp(allow.replace(/\./g, "\\d"))).test(code.toString())) {
             console.warn(`${ops.method} ${ops.href} aborted: status ${code}`);
             return;
