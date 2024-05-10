@@ -60,9 +60,17 @@
 
 /**
  * @template T
+ * @callback UpdaterFunction
+ * @param {Array<any>} upstreamValues
+ * @param {T} [curVal]
+ * @returns {T}
+ */
+
+/**
+ * @template T
  * @typedef {Object} StoreOptions
  * @property {T} [value]
  * @property {string} [name]
  * @property {Array<string>} [upstream]
- * @property {function(Array<any>, T): T} [updater]
+ * @property {UpdaterFunction<T>} [updater]
  */

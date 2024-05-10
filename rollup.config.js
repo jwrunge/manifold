@@ -14,7 +14,23 @@ function constructProfiles(prefixes, sourceMaps) {
                 }
             ],
             plugins: [
-                terser()
+                terser({
+                    ecma: 2015,
+                    module: true,
+                    toplevel: true,
+                    mangle: {
+                        eval: true,
+                        module: true,
+                        properties: {
+                            regex: /^[#_].*/
+                        }
+                    },
+                    format: {
+                        comments: "some",
+                        ecma: 2015,
+                        semicolons: false,
+                    }
+                })
             ],
         }
     });
