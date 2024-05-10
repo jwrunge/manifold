@@ -1,33 +1,33 @@
-import { Store } from "./store";
-import { fetchHttp } from "./http";
-import { scheduleDomUpdate } from "./domUpdates";
+import { _store, _func } from "./store";
+import { _fetchHttp } from "./http";
+import { _scheduleDomUpdate } from "./domUpdates";
 
 let commaSepRx = /, {0,}/g;
 let elIdx = 0;
 
 // Initialize from script params
-function intialize() {
+function _intialize() {
     let scriptParamsStr = document.currentScript?.dataset?.init;
 
     if(scriptParamsStr) {
         try {
             let scriptParams = JSON.parse(scriptParamsStr);
-            options(scriptParams);
+            _setOptions(scriptParams);
         } catch(e) {
             console.warn(`Invalid script params: ${scriptParamsStr}, e`);
         }
     }
 }
 
-intialize();
+_intialize();
 
 window.addEventListener("popstate", (e)=> {
     let el = document.getElementById(e.state?.elId);
     if(e?.state?.fetchData) {
-        fetchHttp(
+        _fetchHttp(
             e.state.fetchData,
             el,
-            el=> {if(el) registerSubs(el)}
+            el=> {if(el) _registerSubs(el)}
         );
     }
 });
@@ -40,7 +40,7 @@ let modes = ["bind", "sync", "fetch"];
  * @param {Partial<FetchOptions>} newops 
  * @param {string} [profileName] 
  */
-export function options(newops, profileName) {
+export function _setOptions(newops, profileName) {
     if(profileName) ops.fetchProfiles = { ...ops.fetchProfiles, [profileName]: newops };
     else ops = { ...ops, ...newops };
 }
@@ -49,7 +49,7 @@ export function options(newops, profileName) {
 /**
  * @param {HTMLElement | null} [parent] 
  */
-export function registerSubs(parent) {
+export function _registerSubs(parent) {
     /** 
      * @type {NodeListOf<HTMLElement> | []} 
      */
@@ -69,10 +69,10 @@ export function registerSubs(parent) {
                 let _parts = setting?.split(/(?:(?:\)|->) ?){1,}/g) || []; 
         
                 //Extract settings
-                let triggers = shouldHaveTriggers ? paramsInParens(_parts.splice(0,1)[0]) : [];
+                let triggers = shouldHaveTriggers ? _paramsInParens(_parts.splice(0,1)[0]) : [];
                 let processFuncName = _parts[0]?.includes("(") ? _parts[0]?.match(/^[^\(]{1,}/)?.[0] || "" : "";
-                let external = paramsInParens(_parts.splice(mode == "sync" ? 1 : 0, 1)[0]);
-                let internal = paramsInParens(_parts[0]);
+                let external = _paramsInParens(_parts.splice(mode == "sync" ? 1 : 0, 1)[0]);
+                let internal = _paramsInParens(_parts[0]);
 
                 //Handle errors
                 if(shouldHaveTriggers && !triggers?.length) throw(`No trigger: ${err_detail}.`)
@@ -80,7 +80,7 @@ export function registerSubs(parent) {
                 /** @type {Function | undefined} */
                 let processFunc;
                 if(processFuncName) {
-                    processFunc = globalThis[processFuncName] || Store.func(processFuncName);
+                    processFunc = globalThis[processFuncName] || _func(processFuncName);
                     if(!processFunc) throw(`"${processFuncName}" not registered: ${err_detail}`);
                     if(((!shouldHaveTriggers && external.length > 1) || (shouldHaveTriggers && internal.length > 1))) throw(`Multiple sources: ${err_detail}`);
                 }
@@ -102,7 +102,7 @@ export function registerSubs(parent) {
                 for(let trigger of triggers) {
                     //No internal loops for fetch
                     if(mode == "fetch") {
-                        handleFetch(el, trigger, external, internal, ops);
+                        _handleFetch(el, trigger, external, internal, ops);
                     }
 
                     //Loop over internal
@@ -111,14 +111,14 @@ export function registerSubs(parent) {
                         //Handle bind
                         if(mode == "bind") {
                             let domSubscription = ()=> {
-                                scheduleDomUpdate(()=> {
+                                _scheduleDomUpdate(()=> {
                                     el[internal[i]] = processFunc?.(
                                         ...externalData.map(
-                                            s=> nestedValue(Store.store(s.name)?.value, s.path)
+                                            s=> _nestedValue(_store(s.name)?.value, s.path)
                                         ), el
                                     ) ??
-                                    nestedValue(
-                                        Store.store(externalData[0].name || "")?.value, externalData[0].path
+                                    _nestedValue(
+                                        _store(externalData[0].name || "")?.value, externalData[0].path
                                     );
 
                                     //Make sure to update dependent stores on value update
@@ -127,7 +127,7 @@ export function registerSubs(parent) {
                             }
                         
                             //Add subscription - run whenever store updates
-                            for(let store of externalData) Store.store(store.name)?.addSub(el.id, domSubscription);
+                            for(let store of externalData) _store(store.name)?.addSub(el.id, domSubscription);
                         }
 
                         //Handle sync
@@ -137,11 +137,11 @@ export function registerSubs(parent) {
                                 let value = el[internal[i].trim()];
                                 
                                 if(processFunc) value = processFunc?.(value, el);
-                                const store = Store.store(externalData[0]?.name);
+                                const store = _store(externalData[0]?.name);
                                 
                                 if(value !== undefined) {
                                     store?.update?.(curVal=> {
-                                        return externalData[0]?.path?.length ? nestedValue(curVal, externalData[0]?.path, value) : value
+                                        return externalData[0]?.path?.length ? _nestedValue(curVal, externalData[0]?.path, value) : value
                                     });
                                 }
                             }
@@ -162,7 +162,7 @@ export function registerSubs(parent) {
  * @param {any} [newval] 
  * @returns 
  */
-function nestedValue(obj, path, newval) {
+function _nestedValue(obj, path, newval) {
     let ptr = obj;
 
     for(let key of path) {
@@ -181,7 +181,7 @@ function nestedValue(obj, path, newval) {
  * @param {string} str 
  * @returns 
  */
-function paramsInParens(str) {
+function _paramsInParens(str) {
     if(str?.includes("(")) {
         let matches = str.match(/[^\(\)]{1,}/g);
         str = matches?.[matches.length - 1] || "";
@@ -196,7 +196,7 @@ function paramsInParens(str) {
  * @param {string[]} internal 
  * @param {Partial<FetchOptions>} ops 
  */
-function handleFetch(el, trigger, external, internal, ops) {
+function _handleFetch(el, trigger, external, internal, ops) {
     /**
      * @param {Event} [e]
      */
@@ -223,10 +223,10 @@ function handleFetch(el, trigger, external, internal, ops) {
             );
         }
 
-        fetchHttp(
+        _fetchHttp(
             fetchData,
             el,
-            el=> {if(el) registerSubs(el)}
+            el=> {if(el) _registerSubs(el)}
         )
     }
 

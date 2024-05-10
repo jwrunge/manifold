@@ -1,4 +1,4 @@
-import { Store } from "./store";
+import { _store, _func } from "./store";
 
 /** @type {(DomWorkOrder | Function)[]} */ let workArray = [];
 let cancelAnimationFrame = false;
@@ -6,11 +6,11 @@ let cancelAnimationFrame = false;
 let spacerHeight = "";
 
 /** @export @param {(DomWorkOrder | Function)} update */
-export function scheduleDomUpdate(update) {
+export function _scheduleDomUpdate(update) {
     workArray.push(update);
     if(!cancelAnimationFrame) {
         cancelAnimationFrame = true;
-        requestAnimationFrame(runDomUpdates);
+        requestAnimationFrame(_runDomUpdates);
     }
 }
 
@@ -20,7 +20,7 @@ export function scheduleDomUpdate(update) {
  * @param {(HTMLElement)} wrapper
  * @param {number} wrapperHeight
  */
-function addSpacer(inEl, wrapper, wrapperHeight) {
+function _addSpacer(inEl, wrapper, wrapperHeight) {
     //Conserve parent size
     spacer = document.createElement("div");
     let { paddingTop, paddingBottom } = window.getComputedStyle(wrapper);
@@ -34,8 +34,8 @@ function addSpacer(inEl, wrapper, wrapperHeight) {
  * @param {(HTMLElement)} inEl
  * @param {Partial<FetchOptions>} ops
  */
-function handleHeightAdjust(inEl, ops) {
-    scheduleDomUpdate(()=> {
+function _handleHeightAdjust(inEl, ops) {
+    _scheduleDomUpdate(()=> {
         spacer?.remove();
         inEl?.animate?.([
             { height: spacerHeight },
@@ -47,7 +47,7 @@ function handleHeightAdjust(inEl, ops) {
     });
 }
 
-function runDomUpdates() {
+function _runDomUpdates() {
     cancelAnimationFrame = false;
     
     //Loop through all work orders
@@ -68,28 +68,28 @@ function runDomUpdates() {
                         container.appendChild(child);
                     }
                     order.out?.replaceChildren(container);
-                    applyTransition(container, "out", order.ops);
+                    _applyTransition(container, "out", order.ops);
                 }
 
-                if(order.ops.smartOutroStyling != false) addSpacer(order.in, order.out, wrapperHeight);
+                if(order.ops.smartOutroStyling != false) _addSpacer(order.in, order.out, wrapperHeight);
 
                 //Append
-                applyTransition(order.in, "in", order.ops, ()=> {
+                _applyTransition(order.in, "in", order.ops, ()=> {
                     if(order.in) order.out?.appendChild(order.in);
-                    if(order.ops.smartOutroStyling != false) handleHeightAdjust(order.in, order.ops);
+                    if(order.ops.smartOutroStyling != false) _handleHeightAdjust(order.in, order.ops);
                 });
             }
             //Insert after old element before removing
-            else applyTransition(order.in, "in", order.ops, ()=> {
+            else _applyTransition(order.in, "in", order.ops, ()=> {
                 order.out?.after(order.in);
 
                 if(order.ops.smartOutroStyling != false) {
-                    addSpacer(order.in, order.out, wrapperHeight);
-                    handleHeightAdjust(order.in, order.ops);
+                    _addSpacer(order.in, order.out, wrapperHeight);
+                    _handleHeightAdjust(order.in, order.ops);
                 }
 
                 //Remove old element
-                if(order.relation === "/") applyTransition(order.out, "out", order.ops);
+                if(order.relation === "/") _applyTransition(order.out, "out", order.ops);
             });
 
             order.done?.(order.in);
@@ -106,7 +106,7 @@ function runDomUpdates() {
  * @param {Function} [fn] 
  * @returns 
  */
-function applyTransition(el, dir, ops, fn) {
+function _applyTransition(el, dir, ops, fn) {
     //Handle text nodes
     if(el?.nodeType == Node.TEXT_NODE) {
         let text = el.textContent;
@@ -122,11 +122,11 @@ function applyTransition(el, dir, ops, fn) {
     if(ops.transClass) el?.classList?.add(ops.transClass);
     el?.classList?.add("cu-trans");
 
-    getHook(dir, "Start", ops)?.(el);
+    _getHook(dir, "Start", ops)?.(el);
 
     //Wait to apply class
     if(dir == "out") {
-        scheduleDomUpdate(()=> {
+        _scheduleDomUpdate(()=> {
             if(ops.smartOutroStyling !== false) {
                 //Handle absolute positioning and size conservation
                 el.style.width = `${(el).clientWidth}px`;
@@ -144,13 +144,13 @@ function applyTransition(el, dir, ops, fn) {
     //If dir == in
     else {
         setTimeout(()=> {
-            scheduleDomUpdate(()=> {
+            _scheduleDomUpdate(()=> {
                 if(ops.applyCssDurations !== false) el.style.transitionDuration = `${ops[`${dir}Dur`] || 0}ms`;
                 el?.classList?.add(dir);
                 fn?.();
 
                 //Remove transition class
-                scheduleDomUpdate(()=> {
+                _scheduleDomUpdate(()=> {
                     el?.classList?.remove(dir);
                 });
             });
@@ -161,13 +161,13 @@ function applyTransition(el, dir, ops, fn) {
     let wrapup = ()=> {
         if(ops.transClass) el?.classList?.remove(ops.transClass);
         el?.classList?.remove("cu-trans");
-        if(el) getHook(dir, "End", ops)?.(el);
+        if(el) _getHook(dir, "End", ops)?.(el);
     }
     
     if(ops[`${dir}Dur`]) {
         //Wrap up after timeout
         setTimeout(()=> {
-            scheduleDomUpdate(()=> {
+            _scheduleDomUpdate(()=> {
                 if(dir == "out") {
                     el?.remove();
                 }
@@ -179,7 +179,7 @@ function applyTransition(el, dir, ops, fn) {
     else {
         //Run in currently-scheduled animation frame
         if(dir == "out") workArray.push(()=> el?.remove());
-        getHook(dir, "End", ops)?.(el);
+        _getHook(dir, "End", ops)?.(el);
         el?.classList?.remove(dir);
     }
 }
@@ -190,8 +190,8 @@ function applyTransition(el, dir, ops, fn) {
  * @param {Partial<FetchOptions>} ops 
  * @returns { Function | undefined }
  */
-function getHook(dir, pos, ops) {
+function _getHook(dir, pos, ops) {
     return typeof ops[`${dir}${pos}Hook`] == "string" ? 
-        globalThis[ops[`${dir}${pos}Hook` || ""]] || Store.func((ops[`${dir}${pos}Hook` || ""])) : 
+        globalThis[ops[`${dir}${pos}Hook` || ""]] || _func((ops[`${dir}${pos}Hook` || ""])) : 
         ops[`${dir}${pos}Hook`];
 }

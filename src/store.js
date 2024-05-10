@@ -2,13 +2,13 @@
  * @param {any} input 
  * @returns {any}
  */
-export function hashAny(input) {
+function _hashAny(input) {
     if (typeof input === 'number') return input;
     if(input === true) return 1;
 
     if(typeof input === 'object') {
-        if(input instanceof Map) return hashAny(input.entries());
-        if(input instanceof Set) return hashAny(Array.from(input));
+        if(input instanceof Map) return _hashAny(input.entries());
+        if(input instanceof Set) return _hashAny(Array.from(input));
         return Date.now();
     }
 
@@ -20,15 +20,21 @@ export function hashAny(input) {
     return hash;
 }
 
+//Static
+/** @type {Map<string, Store<any>>} */ let _stores = new Map();
+/** @type {Map<string, Function>} */ let _funcs = new Map();
+/** @type {Map<string, UpdaterValue<any>>} */ let _workOrder = new Map();
+/** @type {any} */ let _workCacheTimeout;
+
 /**
  * @template T
  */
 export class Store {
     /** @type {UpdaterFunction<T> | undefined} */ #updater = undefined;
-    /** @type {Map<string, SubFunction>} */ #subscriptions = new Map();
-    /** @type {string | undefined} */ #storedHash = undefined;
-    /** @type {Array<string>} */ #downstreamStores = [];
-    /** @type {Array<string>} */ #upstreamStores = [];
+    /** @type {Map<string, SubFunction>} */ _subscriptions = new Map();
+    /** @type {string | undefined} */ _storedHash = undefined;
+    /** @type {Array<string>} */ _downstreamStores = [];
+    /** @type {Array<string>} */ _upstreamStores = [];
 
     /**
      * @param {StoreOptions<T>} ops
@@ -39,30 +45,12 @@ export class Store {
         this.modify(ops);
     }
 
-    //Static
-    /** 
-     * @type {Map<string, Store<any>>}
-     */ 
-    static #stores = new Map();
-    /** 
-     * @type {Map<string, Function>}
-     */ 
-    static #funcs = new Map();
-    /**
-     * @type {Map<string, UpdaterValue<any>>}
-     */ 
-    static #workOrder = new Map();
-    /** 
-     * @type {any}
-     */ 
-    static #workCacheTimeout;
-
     /**
      * @param {string} ref
      * @param {() => void} sub
      */
     addSub(ref, sub) {
-        this.#subscriptions.set(ref, sub);
+        this._subscriptions.set(ref, sub);
         sub?.();
     }
 
@@ -73,12 +61,12 @@ export class Store {
     modify(ops) {
         if(ops?.name) {
             this.name = ops.name;
-            Store.#stores.set(ops.name, this);
+            _stores.set(ops.name, this);
         }
-        this.#upstreamStores = ops?.upstream || [];
-        for(let storeName of this.#upstreamStores || []) {
-            let store = Store.store(storeName);
-            if(store) store.#downstreamStores?.push(this.name || "");
+        this._upstreamStores = ops?.upstream || [];
+        for(let storeName of this._upstreamStores || []) {
+            let store = _store(storeName);
+            if(store) store._downstreamStores?.push(this.name || "");
         }
         this.value = ops?.value;
         this.#updater = ops?.updater;
@@ -91,87 +79,87 @@ export class Store {
     * @param {UpdaterValue<T> | undefined} value
     */
     async update(value) {
-        Store.#workOrder.set(this.name || "", value);
-        clearTimeout(Store.#workCacheTimeout);
-        Store.#workCacheTimeout = setTimeout(Store.applyChanges, 0);    //Hack to force running all updates at the end of the JS event loop
+        _workOrder.set(this.name || "", value);
+        clearTimeout(_workCacheTimeout);
+        _workCacheTimeout = setTimeout(_applyChanges, 0);    //Hack to force running all updates at the end of the JS event loop
     }
 
     //Auto update
-    async autoUpdate() {
+    async _autoUpdate() {
         this.update(
             await (this.#updater?.(
-                this.#upstreamStores?.map(store => Store.store(store)?.value) || [], 
+                this._upstreamStores?.map(store => _store(store)?.value) || [], 
                 /** @type {T} */(this?.value)
             ) || this.value),
         )
     }
+}
 
-    /**
-     * STORE STATIC METHODS
-     */
-    /**
-     * @template U
-     * @param {string} name 
-     * @param {StoreOptions<U>} [ops] 
-     * @returns {Store<U>}
-     */
-    static store(name, ops) {
-        const store = Store.#stores.get(name);
-        if(ops) return store?.modify(ops) || new Store({...ops, name});
-        return store || new Store({name})
+/**
+ * STORE STATIC METHODS
+ */
+/**
+ * @template U
+ * @param {string} name 
+ * @param {StoreOptions<U>} [ops] 
+ * @returns {Store<U>}
+ */
+export function _store(name, ops) {
+    const store = _stores.get(name);
+    if(ops) return store?.modify(ops) || new Store({...ops, name});
+    return store || new Store({name})
+}
+
+/**
+ * @param {string} name 
+ * @returns {Function | undefined}
+ */
+export function _func(name) {
+    return _funcs.get(name);
+}
+
+/**
+ * @param {{[key: string]: Function}} funcs 
+ */
+export function _assign(funcs) {
+    for(let key in funcs) _funcs.set(key, funcs[key]);
+}
+
+async function _applyChanges() {
+    //Sort this.#workOrder such that dependencies are updated first, duplicate work is filtered out
+    for(let [storeName, _] of _workOrder) {
+        const store = _store(storeName);
+
+        //Don't repeat work if an upstream store will cascade
+        store._downstreamStores.forEach(d=> _workOrder.delete(d));   //Delete downstream stores from work order
+        store._upstreamStores.forEach(u=> _workOrder.has(u) ? _workOrder.delete(storeName) : true);
     }
 
-    /**
-     * @param {string} name 
-     * @returns 
-     */
-    static func(name) {
-        return Store.#funcs.get(name);
-    }
+    //Apply changes to top-level workers, then cascade     
+    /** @type {string[]} */ let downstream = [];  
+    for(let [storeName, value] of _workOrder) {
+        let store = _store(storeName);
+        let newValue = await (typeof value == "function" ? /** @type {Function} */(value)?.(store.value) : value);
 
-    /**
-     * @param {{[key: string]: Function}} funcs 
-     */
-    static assign(funcs) {
-        for(let key in funcs) Store.#funcs.set(key, funcs[key]);
-    }
+        //Check complex object lengths (avoid lengthy hashes) -- if the lengths indicate the value HAS NOT CHANGED, double-check via hash
+        let valueChanged = Array.from((store.value || []))?.length !== Array.from(newValue).length;
+        store.value = newValue;
 
-    static async applyChanges() {
-        //Sort this.#workOrder such that dependencies are updated first, duplicate work is filtered out
-        for(let [storeName, _] of Store.#workOrder) {
-            const store = Store.store(storeName);
-
-            //Don't repeat work if an upstream store will cascade
-            store.#downstreamStores.forEach(d=> Store.#workOrder.delete(d));   //Delete downstream stores from work order
-            store.#upstreamStores.forEach(u=> Store.#workOrder.has(u) ? Store.#workOrder.delete(storeName) : true);
+        let newHash = "";
+        if(!valueChanged) {
+            newHash = _hashAny(store.value);
+            valueChanged = newHash !== store._storedHash;    //Double-check that the value has not changed via hash
         }
 
-        //Apply changes to top-level workers, then cascade     
-        /** @type {string[]} */ let downstream = [];  
-        for(let [storeName, value] of Store.#workOrder) {
-            let store = Store.store(storeName);
-            let newValue = await (typeof value == "function" ? /** @type {Function} */(value)?.(store.value) : value);
-
-            //Check complex object lengths (avoid lengthy hashes) -- if the lengths indicate the value HAS NOT CHANGED, double-check via hash
-            let valueChanged = Array.from((store.value || []))?.length !== Array.from(newValue).length;
-            store.value = newValue;
-
-            let newHash = "";
-            if(!valueChanged) {
-                newHash = hashAny(store.value);
-                valueChanged = newHash !== store.#storedHash;    //Double-check that the value has not changed via hash
-            }
-
-            //If the value HAS DEFINITELY CHANGED or is LIKELY TO HAVE CHANGED, update the stored hash and cascade
-            if(valueChanged) {
-                store.#storedHash = newHash;
-                for(let S of store.#downstreamStores) downstream.push(S);
-                for(let [ref, sub] of store.#subscriptions) sub?.(store.value, ref);
-            }
+        //If the value HAS DEFINITELY CHANGED or is LIKELY TO HAVE CHANGED, update the stored hash and cascade
+        if(valueChanged) {
+            store._storedHash = newHash;
+            for(let S of store._downstreamStores) downstream.push(S);
+            for(let [ref, sub] of store._subscriptions) sub?.(store.value, ref);
         }
-
-        //Clear work order and cascade
-        Store.#workOrder.clear();
-        for(let S of downstream) if(Store.store(S)) Store.store(S).autoUpdate();
     }
+
+    //Clear work order and cascade
+    _workOrder.clear();
+    for(let S of downstream) if(_store(S)) _store(S)._autoUpdate();
 }

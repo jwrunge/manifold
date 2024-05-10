@@ -1,4 +1,4 @@
-import { scheduleDomUpdate } from "./domUpdates";
+import { _scheduleDomUpdate } from "./domUpdates";
 
 //Track scripts and styles
 let pageScripts = new WeakMap();
@@ -13,7 +13,7 @@ let parser = new DOMParser();
  * @param {(el: HTMLElement | null)=> void} done 
  * @returns 
  */
-export async function fetchHttp(ops, parent, done) {
+export async function _fetchHttp(ops, parent, done) {
     //Make sure we're allowed to fetch
     if(Array.isArray(ops.allowExternal) && !ops.allowExternal.some(allowed=> ops.href?.startsWith(allowed))) {
         console.warn(`${ops.method} ${ops.href} not allowed`);
@@ -77,7 +77,7 @@ export async function fetchHttp(ops, parent, done) {
 
             // let outEl = ["this", "self"].includes(replace) ? parent : document.querySelector(replace);
 
-            scheduleDomUpdate({
+            _scheduleDomUpdate({
                 in: /** @type {HTMLElement} */ (fullMarkup.querySelector(extract)),
                 out: /** @type {HTMLElement} */ (["this", "self"].includes(replace) ? parent : document.querySelector(replace)),
                 relation,

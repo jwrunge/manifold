@@ -1,9 +1,11 @@
-import { Store } from "./store";
-import { registerSubs, options } from "./domRegistrar";
+import { _store, _func, _assign } from "./store";
+import { _registerSubs, _setOptions } from "./domRegistrar";
 
-document.body.onload = ()=> { registerSubs(); };
+document.body.onload = ()=> { _registerSubs(); };
 
-export default {
-    store: Store.store,
-    config: options
-};
+globalThis.Cu = {
+    store: _store,
+    getFunc: _func,
+    addFuncs: _assign,
+    config: _setOptions
+}
