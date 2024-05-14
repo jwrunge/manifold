@@ -11,6 +11,7 @@
         "build": "rollup -c",
         "example": "npm run build & sirv tests --port 5000 --dev true ",
         "dev": "npm run build & sirv --port 5000 --dev true --single tests/interactive.html",
+        "gen-docs": "jsdoc dist/typed.copper.js --destination docs",
         "increment-patch": "node util/incrementPatchVersion.js",
         "publish.no-increment": "npm run build && npm run test && npm publish",
         "publish": "npm run build && npm run test && increment-patch && npm publish",

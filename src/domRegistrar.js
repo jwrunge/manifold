@@ -1,6 +1,7 @@
 import { _store, _func } from "./store";
 import { _fetchHttp } from "./http";
 import { _scheduleDomUpdate } from "./domUpdates";
+/** @typedef {import("./domUpdates").CuOps} CuOps */
 
 let commaSepRx = /, {0,}/g;
 let elIdx = 0;
@@ -23,27 +24,29 @@ function _intialize() {
 
 _intialize();
 
-window.addEventListener("popstate", (e)=> {
-    let el = document.getElementById(e.state?.elId);
-    if(e?.state?.fetchData) {
-        _fetchHttp(
-            e.state.fetchData,
-            el,
-            el=> {if(el) _registerSubs(el)}
-        );
-    }
-});
+// globalThis.addEventListener("popstate", (e)=> {
+//     let el = document.getElementById(e.state?.elId);
+//     if(e?.state?.fetchData) {
+//         _fetchHttp(
+//             "get", 
+//             "",
+//             e.state.fetchData,
+//             el,
+//             el=> {if(el) _registerSubs(el)}
+//         );
+//     }
+// });
 
-/** @type {Partial<FetchOptions>} */
+/** @type {Partial<CuOps>} */
 let ops = {};
 let modes = ["bind", "sync", "fetch"];
 
 /**
- * @param {Partial<FetchOptions>} newops 
+ * @param {Partial<CuOps>} newops 
  * @param {string} [profileName] 
  */
 export function _setOptions(newops, profileName) {
-    if(profileName) ops.fetchProfiles = { ...ops.fetchProfiles, [profileName]: newops };
+    if(profileName) ops.profiles = { ...ops.profiles, [profileName]: newops };
     else ops = { ...ops, ...newops };
 }
 
@@ -52,9 +55,9 @@ export function _setOptions(newops, profileName) {
  * @param {HTMLElement | null} [parent] 
  */
 export function _registerSubs(parent) {
-    // console.log("REGISTERING SUBS")
+    console.log("REGISTERING SUBS")
     /** @type {NodeListOf<HTMLElement> | []} */
-    let els = parent?.querySelectorAll(`[data-${modes.join("],[data-")}]${ops.autoFetch != false ? ",a" : ""}`) || [];
+    let els = parent?.querySelectorAll(`[data-${modes.join("],[data-")}]${ops.fetch?.auto != false ? ",a" : ""}`) || [];
     for(let el of els) {
         /** @type {HTMLElement} */
         if(!el.id) el.id = `cu-${elIdx++}`;
@@ -195,7 +198,7 @@ function _paramsInParens(str) {
  * @param {string} trigger 
  * @param {string[]} external 
  * @param {string[]} internal 
- * @param {Partial<FetchOptions>} ops 
+ * @param {Partial<CuOps>} ops 
  */
 function _handleFetch(el, trigger, external, internal, ops) {
     /**
@@ -206,16 +209,11 @@ function _handleFetch(el, trigger, external, internal, ops) {
         e?.stopPropagation();  
 
         let fetchData = {
-            method: el.dataset["method"]?.toLowerCase() || "get", 
-            href: external[0],
-            replace: internal,
-            allowStyles: true,
             ...ops,
-            ...ops.fetchProfiles?.[el.dataset["overrides"] || ""] || JSON.parse(el.dataset["overrides"] || "{}") || {},
+            ...ops.profiles?.[el.dataset["overrides"] || ""] || JSON.parse(el.dataset["overrides"] || "{}") || {},
         };
 
-        /** @type {any} */
-        let target = e?.target;
+        /** @type {any} */ let target = e?.target;
         if(["click", "submit"].includes(trigger) || ["A", "FORM"].includes(target?.nodeName)) {
             history.pushState(
                 {fetchData, elId: el.id}, 
@@ -225,10 +223,14 @@ function _handleFetch(el, trigger, external, internal, ops) {
         }
 
         _fetchHttp(
+            {
+                method: el.dataset["method"]?.toLowerCase() || "get",
+                href: target?.href,
+                el
+            },
             fetchData,
-            el,
             el=> {if(el) _registerSubs(el)}
-        )
+        );
     }
 
     if(trigger == "mount") {

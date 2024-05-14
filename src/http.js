@@ -5,86 +5,77 @@ let pageScripts = new WeakMap();
 let pageStyles = new WeakMap();
 let parser = new DOMParser();
 
+/** @typedef {import("./domUpdates").CuOps} CuOps */
+
 //Fetch page and replace content
 /**
  * 
- * @param {FetchOptions} ops 
- * @param {HTMLElement | null} parent 
+ * @param {CuOps} ops 
+ * @param {{method: string, href: string, el: HTMLElement}} target
  * @param {(el: HTMLElement | null)=> void} done 
  * @returns 
  */
-export async function _fetchHttp(ops, parent, done) {
+export async function _fetchHttp(target, ops, done) {
     //Make sure we're allowed to fetch
-    if(Array.isArray(ops.external) && !ops.external.some(allowed=> ops.href?.startsWith(allowed))) {
-        console.warn(`${ops.method} ${ops.href} not allowed`);
-        return;
-    }
-
-    //Fetch data
-    let data = await fetch(ops.href, {
-        ...ops.options,
-        method: ops.method,
-        body: ops.options?.body ? JSON.stringify(ops.options?.body || {}) : undefined,
-    })
-    .catch(error=> {
-        ops.err?.(error);
-    });
-
-    let code = data?.status;
-
-    //Handle onCode callback
-    if(code && ops?.onCode?.(code) == false) return;
-
-    //Handle response code gate
-    for(let allow of ops?.httpCodes || []) {
-        if(code && !(new RegExp(allow.replace(/\./g, "\\d"))).test(code.toString())) {
-            console.warn(`${ops.method} ${ops.href} aborted: status ${code}`);
-            return;
-        }
-    }
-
-    //Return JSON or text in callback
-    let text = await data?.[ops.type || "text"]();
-    ops.cb?.(text);
-
-    if ((ops?.type || "text") === "text" && ops?.replace) {
-        //Extract content
-        let fullMarkup = parser.parseFromString(text, 'text/html').body;
-    
-        // //Clear existing scripts/styles
-        // clearDynamicElements(parent, pageScripts, "script");
-        // clearDynamicElements(parent, pageStyles, "style");;
-
-        // //Get scripts and styles
-        // let seek: string[] = ops.allowScripts ? ["scripts"] : [];
-        // if(ops.allowStyles) seek.push("style");
-        // if(seek.length) {
-        //     let globls: NodeListOf<HTMLScriptElement | HTMLStyleElement> = fullMarkup.querySelectorAll(seek.join(","));
-        //     for(let el of globls) {
-        //         let isScript = el instanceof HTMLScriptElement;
-        //         let source = isScript ? pageScripts : pageStyles;
-
-        //         if(isScript ? ops.allowScripts : ops.allowStyles){
-        //             if(!source.has(parent)) source.set(parent, []);
-        //             source.get(parent)?.push(el as any);
-        //         }
-        //         else if(isScript) el.parentNode?.removeChild(el);
-        //     }
-        // }
-
-        ops.replace.forEach(r => {
-            let [ extract, relation, replace ] = r.split(/\s*(>|\/|\+)\s*/);
-
-            // let outEl = ["this", "self"].includes(replace) ? parent : document.querySelector(replace);
-
-            _scheduleDomUpdate({
-                in: /** @type {HTMLElement} */ (fullMarkup.querySelector(extract)),
-                out: /** @type {HTMLElement} */ (["this", "self"].includes(replace) ? parent : document.querySelector(replace)),
-                relation,
-                ops,
-                done,
-            })
+    if(!ops.fetch?.externals?.some(allowed=> target?.href?.startsWith(allowed.domain))) {
+        //Fetch data
+        let fOps = ops.fetch;
+        let data = await fetch(target?.href, {
+            ...(fOps?.request || {}),
+            method: target?.method,
+            body: fOps?.request?.body ? JSON.stringify(fOps?.request?.body || {}) : undefined,
+        })
+        .catch(error=> {
+            fOps?.err?.(error);
         });
+
+        //Handle onCode callback
+        let code = data?.status;
+        if(code && fOps?.onCode?.(code) == false) return;
+
+        //Return JSON or text in callback
+        let text = await data?.[ops.fetch?.type || "text"]();
+        ops.fetch?.cb?.(text);
+
+        if((ops?.fetch?.type) != "json") {
+            //Extract content
+            let fullMarkup = parser.parseFromString(text, 'text/html').body;
+        
+            // //Clear existing scripts/styles
+            // clearDynamicElements(parent, pageScripts, "script");
+            // clearDynamicElements(parent, pageStyles, "style");;
+
+            // //Get scripts and styles
+            // let seek: string[] = ops.allowScripts ? ["scripts"] : [];
+            // if(ops.allowStyles) seek.push("style");
+            // if(seek.length) {
+            //     let globls: NodeListOf<HTMLScriptElement | HTMLStyleElement> = fullMarkup.querySelectorAll(seek.join(","));
+            //     for(let el of globls) {
+            //         let isScript = el instanceof HTMLScriptElement;
+            //         let source = isScript ? pageScripts : pageStyles;
+
+            //         if(isScript ? ops.allowScripts : ops.allowStyles){
+            //             if(!source.has(parent)) source.set(parent, []);
+            //             source.get(parent)?.push(el as any);
+            //         }
+            //         else if(isScript) el.parentNode?.removeChild(el);
+            //     }
+            // }
+
+            // ops.replace.forEach(r => {
+            //     let [ extract, relation, replace ] = r.split(/\s*(>|\/|\+)\s*/);
+
+            //     // let outEl = ["this", "self"].includes(replace) ? parent : document.querySelector(replace);
+
+            //     _scheduleDomUpdate({
+            //         in: /** @type {HTMLElement} */ (fullMarkup.querySelector(extract)),
+            //         out: /** @type {HTMLElement} */ (["this", "self"].includes(replace) ? parent : document.querySelector(replace)),
+            //         relation,
+            //         ops,
+            //         done,
+            //     })
+            // });
+        }
     }
 }
 

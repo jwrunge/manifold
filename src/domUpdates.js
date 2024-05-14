@@ -1,9 +1,32 @@
 import { _store, _func } from "./store";
 
+/** @type {{ adjust?: Function, space?: Function, size?: Function } | undefined} */
+let smartOutro = globalThis.smartOutro;
+
+/**
+ * @preserve
+ * @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey
+ */
+
+/**
+ * @preserve
+ * @typedef {Object} CuOps
+ * @property {{ [ key: string ]: Partial<CuOps> }} [profiles] - Fetch profiles assignable to elements
+ * @property {{request: RequestInit, type?: "json" | "text", cb: (val: any)=> void, err: (err: Error)=> void, onCode: (code: number)=> boolean | void, auto?: boolean, externals: {domain: string, scripts?: boolean, styles?: boolean }[]}} [fetch] - Fetch options - see https://google.com
+ * @property {{class?: string, dur?: [number, number] | number, swap?: number, hooks?: { [key in HookKey]: (el: HTMLElement)=> void }}} [trans] - Transition settings - see https://google.com
+ */
+
+/**
+ * @typedef {Object} DomWorkOrder
+ * @property {HTMLElement} in - The input HTMLElement
+ * @property {HTMLElement} out - The output HTMLElement
+ * @property {string} relation - The relation between the input and output elements
+ * @property {Partial<CuOps>} ops - The fetch options for the operation
+ * @property {(el: HTMLElement | null) => void} done - The callback function to be executed when the operation is done
+ */
+
 /** @type {(DomWorkOrder | Function)[]} */ let workArray = [];
 let cancelAnimationFrame = false;
-/** @type {HTMLElement | null} */ let spacer;
-let spacerHeight = "";
 
 /** @export @param {(DomWorkOrder | Function)} update */
 export function _scheduleDomUpdate(update) {
@@ -14,51 +37,15 @@ export function _scheduleDomUpdate(update) {
     }
 }
 
-/**
- * @export
- * @param {(HTMLElement)} inEl
- * @param {(HTMLElement)} wrapper
- * @param {number} wrapperHeight
- */
-function _addSpacer(inEl, wrapper, wrapperHeight) {
-    //Conserve parent size
-    spacer = document.createElement("div");
-    let { paddingTop, paddingBottom } = window.getComputedStyle(wrapper);
-
-    spacerHeight = spacer.style.height = `calc(${(Math.abs(wrapperHeight - (inEl?.clientHeight || 0)))}px - ${paddingTop} - ${paddingBottom})`;
-    wrapper?.after(spacer);
-}
-
-/**
- * @export
- * @param {(HTMLElement)} inEl
- * @param {Partial<FetchOptions>} ops
- */
-function _handleHeightAdjust(inEl, ops) {
-    _scheduleDomUpdate(()=> {
-        spacer?.remove();
-        inEl?.animate?.([
-            { height: spacerHeight },
-            { height: `${inEl.clientHeight || 0}px` }
-        ], {
-            duration: ops.outDur || 300,
-            easing: "ease-in-out",
-        });
-    });
-}
-
 function _runDomUpdates() {
     cancelAnimationFrame = false;
     
-    //Loop through all work orders
-    /*
-    * @type {DomWorkOrder[]} workArray
+    /**
+    * @type {DomWorkOrder[]}
     */
     for(let order of workArray) {
         if(typeof order === "function") (/** @type {Function} */ order)();
         else {
-            let wrapperHeight = order.ops?.smartOutro !== false && order.out ? order.out.clientHeight : 0;
-
             // Remove old children
             if([">", "+"].includes(order.relation)) {
                 if(order.relation == ">") {
@@ -71,22 +58,19 @@ function _runDomUpdates() {
                     _applyTransition(container, "out", order.ops);
                 }
 
-                if(order.ops.smartOutro != false) _addSpacer(order.in, order.out, wrapperHeight);
+                smartOutro?.space?.(order.in, order.out);
 
                 //Append
                 _applyTransition(order.in, "in", order.ops, ()=> {
                     if(order.in) order.out?.appendChild(order.in);
-                    if(order.ops.smartOutro != false) _handleHeightAdjust(order.in, order.ops);
+                    smartOutro?.adjust?.(order.in, order.ops);
                 });
             }
             //Insert after old element before removing
             else _applyTransition(order.in, "in", order.ops, ()=> {
                 order.out?.after(order.in);
-
-                if(order.ops.smartOutro != false) {
-                    _addSpacer(order.in, order.out, wrapperHeight);
-                    _handleHeightAdjust(order.in, order.ops);
-                }
+                smartOutro?.space?.(order.in, order.out);
+                smartOutro?.adjust?.(order.in, order.ops);
 
                 //Remove old element
                 if(order.relation === "/") _applyTransition(order.out, "out", order.ops);
@@ -102,7 +86,7 @@ function _runDomUpdates() {
 /**
  * @param {HTMLElement} el 
  * @param {"in" | "out"} dir 
- * @param {Partial<FetchOptions>} ops 
+ * @param {Partial<CuOps>} ops 
  * @param {Function} [fn] 
  * @returns 
  */
@@ -116,82 +100,47 @@ function _applyTransition(el, dir, ops, fn) {
         el = newNode;
     }
 
-    if(!el) return;
+    if(el) {
+        let dur = Array.isArray(ops.trans?.dur) ? ops.trans?.dur[dir == "in" ? 0 : 1] || ops.trans?.dur[0] : ops.trans?.dur || 0;
 
-    //Initiate transition
-    if(ops.transClass) el?.classList?.add(ops.transClass);
-    el?.classList?.add("cu-trans");
+        //Initiate transition
+        let transClass = ops?.trans?.class || "cu-trans";
+        el?.classList?.add(transClass);
+        ops.trans?.hooks?.[`${dir}-start`]?.(el);
 
-    _getHook(dir, "Start", ops)?.(el);
-
-    //Wait to apply class
-    if(dir == "out") {
-        _scheduleDomUpdate(()=> {
-            if(ops.smartOutro !== false) {
-                //Handle absolute positioning and size conservation
-                el.style.width = `${(el).clientWidth}px`;
-                el.style.height = `${(el).clientHeight}px`;
-                el.style.position = "absolute";
-            }
-            
-            //Handle auto duration setting
-            if(ops[`${dir}Dur`]) el.style.transitionDuration = `${ops[`${dir}Dur`] || 0}ms`;
-
-            //Add outro class
-            el.classList?.add(dir);
-        })
-    }
-    //If dir == in
-    else {
-        setTimeout(()=> {
+        //Wait to apply class
+        if(dir == "out") {
             _scheduleDomUpdate(()=> {
-                if(ops[`${dir}Dur`]) el.style.transitionDuration = `${ops[`${dir}Dur`] || 0}ms`;
-                el?.classList?.add(dir);
-                fn?.();
-
-                //Remove transition class
+                smartOutro?.size?.(el);
+                if(dur) el.style.transitionDuration = `${dur}ms`;
+                el.classList?.add(dir);
+            })
+        }
+        //If dir == in
+        else {
+            setTimeout(()=> {
                 _scheduleDomUpdate(()=> {
-                    el?.classList?.remove(dir);
-                });
-            });
-        }, ops.swapDelay || 0);
-    }
+                    if(dur) el.style.transitionDuration = `${dur}ms`;
+                    el?.classList?.add(dir);
+                    fn?.();
 
-    //Wrap up after duration
-    let wrapup = ()=> {
-        if(ops.transClass) el?.classList?.remove(ops.transClass);
-        el?.classList?.remove("cu-trans");
-        if(el) _getHook(dir, "End", ops)?.(el);
-    }
-    
-    if(ops[`${dir}Dur`]) {
-        //Wrap up after timeout
+                    //Remove transition class
+                    _scheduleDomUpdate(()=> {
+                        el?.classList?.remove(dir);
+                    });
+                });
+            }, ops.trans?.swap || 0);
+        }
+        
         setTimeout(()=> {
             _scheduleDomUpdate(()=> {
-                if(dir == "out") {
-                    el?.remove();
-                }
-                wrapup();
+                //Wrapup
+                if(dir == "out") el?.remove();
+                el?.classList?.remove(transClass);
+                el?.classList?.remove(dir);
+                ops.trans?.hooks?.[`${dir}-end`]?.(el);
             });
         }, 
-        (ops[`${dir}Dur`] || 0) + (dir == "in" ? ops.swapDelay || 0 : 0));
+        dur + (dir == "in" ? ops.trans?.swap || 0 : 0));
     }
-    else {
-        //Run in currently-scheduled animation frame
-        if(dir == "out") workArray.push(()=> el?.remove());
-        _getHook(dir, "End", ops)?.(el);
-        el?.classList?.remove(dir);
-    }
-}
-
-/**
- * @param {"in" | "out"} dir 
- * @param {"Start" | "End"} pos 
- * @param {Partial<FetchOptions>} ops 
- * @returns { Function | undefined }
- */
-function _getHook(dir, pos, ops) {
-    return typeof ops[`${dir}${pos}Hook`] == "string" ? 
-        globalThis[ops[`${dir}${pos}Hook` || ""]] || _func((ops[`${dir}${pos}Hook` || ""])) : 
-        ops[`${dir}${pos}Hook`];
 }
