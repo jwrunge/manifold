@@ -1,26 +1,17 @@
+/** 
+ * @template T
+ * @typedef {import("./index").UpdaterFunction<T>} UpdaterFunction 
+ */
+/** 
+ * @template T
+ * @typedef {import("./index").StoreOptions<T>} StoreOptions 
+ */
+
 /**
  * @callback SubFunction
  * @param {any} value
  * @param {string} [ref]
  * @returns {void}
- */
-
-/**
- * @preserve
- * @template T
- * @callback UpdaterFunction
- * @param {Array<any>} upstreamValues
- * @param {T} [curVal]
- * @returns {T}
- */
-
-/**
- * @template T
- * @typedef {Object} StoreOptions
- * @property {T} [value]
- * @property {string} name
- * @property {Array<string>} [upstream]
- * @property {UpdaterFunction<T>} [updater]
  */
 
 /**
@@ -46,8 +37,8 @@ function _hashAny(input) {
 }
 
 //Static
-/** @type {Map<string, Store<any>>} */ let _stores = new Map();
-/** @type {Map<string, Function>} */ let _funcs = new Map();
+/** @type {Map<string, Store<any>>} */ export let _stores = new Map();
+/** @type {Map<string, Function>} */ export let _funcs = new Map();
 /** @type {Map<string, (any | ((any)=> any))>} */ let _workOrder = new Map();
 /** @type {any} */ let _workCacheTimeout;
 
@@ -64,9 +55,9 @@ export class Store {
     /**
      * @param {StoreOptions<T>} ops
      */
-    constructor(ops) {
-        this.name = ops.name;
-        _stores.set(ops.name, this);
+    constructor(name, ops) {
+        this.name = name;
+        _stores.set(name, this);
         
         this._upstreamStores = ops?.upstream || [];
         for(let storeName of this._upstreamStores) _store(storeName)?._downstreamStores?.push(this.name || "");
@@ -148,17 +139,12 @@ export class Store {
 /**
  * STORE STATIC METHODS
  */
-/**
- * @preserve
- * @template U
- * @param {string} name - The name of the store (required)
- * @param {{value?: U, upstream: string[], updater: UpdaterFunction<U>}} [ops] - Options to update the store (optional)
- * @returns {Store<U>}
- * @description Create a new store or retrieve an existing store by name
+/** 
+ * @template T
+ * @typedef {import("./index").StoreFn<T>} StoreFn
  */
 export function _store(name, ops) {
-    if(ops) return new Store({...ops, name});
-    return _stores.get(name) || new Store({name})
+    return _stores.get(name) || new Store(name, ops);
 }
 
 /**
@@ -167,11 +153,4 @@ export function _store(name, ops) {
  */
 export function _func(name) {
     return _funcs.get(name);
-}
-
-/**
- * @param {{[key: string]: Function}} funcs 
- */
-export function _assign(funcs) {
-    for(let key in funcs) _funcs.set(key, funcs[key]);
 }

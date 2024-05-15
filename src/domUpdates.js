@@ -1,20 +1,8 @@
 import { _store, _func } from "./store";
+/** @typedef {import("./index").CuOps} CuOps */
 
 /** @type {{ adjust?: Function, space?: Function, size?: Function } | undefined} */
 let smartOutro = globalThis.smartOutro;
-
-/**
- * @preserve
- * @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey
- */
-
-/**
- * @preserve
- * @typedef {Object} CuOps
- * @property {{ [ key: string ]: Partial<CuOps> }} [profiles] - Fetch profiles assignable to elements
- * @property {{request: RequestInit, type?: "json" | "text", cb: (val: any)=> void, err: (err: Error)=> void, onCode: (code: number)=> boolean | void, auto?: boolean, externals: {domain: string, scripts?: boolean, styles?: boolean }[]}} [fetch] - Fetch options - see https://google.com
- * @property {{class?: string, dur?: [number, number] | number, swap?: number, hooks?: { [key in HookKey]: (el: HTMLElement)=> void }}} [trans] - Transition settings - see https://google.com
- */
 
 /**
  * @typedef {Object} DomWorkOrder

@@ -1,7 +1,7 @@
 import { _store, _func } from "./store";
 import { _fetchHttp } from "./http";
 import { _scheduleDomUpdate } from "./domUpdates";
-/** @typedef {import("./domUpdates").CuOps} CuOps */
+/** @typedef {import("./index").CuOps} CuOps */
 
 let commaSepRx = /, {0,}/g;
 let elIdx = 0;
@@ -41,7 +41,7 @@ _intialize();
 let ops = {};
 let modes = ["bind", "sync", "fetch"];
 
-/**
+/**!
  * @param {Partial<CuOps>} newops 
  * @param {string} [profileName] 
  */

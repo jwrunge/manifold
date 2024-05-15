@@ -20,26 +20,6 @@ const terserOps = {
 } 
 
 function constructProfiles(ops) {
-    let plugins = (op) => {
-        let plugins = [ terser({...terserOps, format: { ...terserOps.format, comments: op.jsdocTypes ? "some" : false }}) ];
-
-        if(op.prefix === "typed") {
-            plugins.push({
-                name: "assemble-dts",
-                buildEnd() {
-                    for(const id of this.getModuleIds()) {
-                        let info = this.getModuleInfo(id);
-                        for(let ast of info?.ast?.body || []) {
-                            console.log(ast)
-                        }
-                    }
-                }
-            })
-        }
-
-        return plugins;
-    };
-
     return ops.map((op, i)=> { 
         const { prefix, sourceMaps } = op;
         return {
@@ -47,27 +27,35 @@ function constructProfiles(ops) {
             output: [
                 {
                     file: `dist/${prefix ? prefix + "." : ""}copper.js`,
-                    format: 'iife',
+                    format: 'es',
                     name: "Cu",
-                    sourcemap: sourceMaps[i],
+                    sourcemap: sourceMaps,
                 }
             ],
-            plugins: plugins(op)
+            plugins: [
+                terser({
+                    ...terserOps, 
+                    format: { 
+                        ...terserOps.format, 
+                        comments: op.jsdocTypes ? "some" : false 
+                    }
+                }) 
+            ]
         }
     });
 }
 
 export default [
     ...constructProfiles([
-        { prefix: "", sourceMaps: true, jsdocTypes: false },
-        { prefix: "typed", sourceMaps: false, jsdocTypes: true },
+        { prefix: "", sourceMaps: false, jsdocTypes: true },
+        { prefix: "slim", sourceMaps: false, jsdocTypes: false },
         { prefix: "dev", sourceMaps: true, jsdocTypes: true }
     ]),
     {
         input: "src/extras/smartOutro.js",
         output: {
             file: "dist/extras/smartOutro.js",
-            format: "iife",
+            format: "es",
             name: "smartOutro"
         },
         plugins: [ terser(terserOps) ]
