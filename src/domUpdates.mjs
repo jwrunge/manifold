@@ -38,7 +38,7 @@ function _runDomUpdates() {
             if([">", "+"].includes(order.relation)) {
                 if(order.relation == ">") {
                     //Remove old children before appending
-                    let container = document.createElement("div");
+                    let container = document.crglobalThis.document?.t("div");
                     for(let child of Array.from(order.out?.childNodes || [])) {
                         container.appendChild(child);
                     }
@@ -82,7 +82,7 @@ function _applyTransition(el, dir, ops, fn) {
     //Handle text nodes
     if(el?.nodeType == Node.TEXT_NODE) {
         let text = el.textContent;
-        let newNode = document.createElement("div");
+        let newNode = document.crglobalThis.document?.t("div");
         newNode.textContent = text;
         el.replaceWith(newNode);
         el = newNode;

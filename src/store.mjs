@@ -65,6 +65,7 @@ export class Store {
         this.value = ops?.value;
         this.#updater = ops?.updater;
         
+        console.log(this);
         return this;
     }
 
@@ -91,12 +92,18 @@ export class Store {
     * @param {(T | function(T): T) | undefined} value
     */
     async update(value) {
+        console.log("Updating with value", value)
         _workOrder.set(this.name || "", value);
         clearTimeout(_workCacheTimeout);
+        console.log("Work order", _workOrder)
         _workCacheTimeout = setTimeout(()=> {
+            console.log("Work order timeout")
             //Sort this.#workOrder such that dependencies are updated first, duplicate work is filtered out
             for(let [storeName, _] of _workOrder) {
                 const store = _store(storeName);
+
+                console.log("Downstream stores", store._downstreamStores);
+                console.log("Upstream stores", store._upstreamStores);
 
                 //Don't repeat work if an upstream store will cascade
                 store._downstreamStores.forEach(d=> _workOrder.delete(d));   //Delete downstream stores from work order
@@ -104,7 +111,7 @@ export class Store {
             }
 
             //Apply changes to top-level workers, then cascade     
-            /** @type {string[]} */ let downstream = [];  
+            /** @type {string[]} */ let downstream = [];
             for(let [storeName, value] of _workOrder) {
                 async ()=> {
                     let store = _store(storeName);
@@ -137,6 +144,7 @@ export class Store {
 
     //Auto update
     async _autoUpdate() {
+        console.log("auto updating", this.name)
         this.update(
             await (this.#updater?.(
                 this._upstreamStores?.map(store => _store(store)?.value) || [], 

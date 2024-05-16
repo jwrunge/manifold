@@ -29,7 +29,7 @@ export function handleConditionals(el) {
             if(el.tagName == "TEMPLATE") {
                 const innerHTML = el.innerHTML;
                 const promoteAttr = el.getAttribute("cu-promote") || el.getAttribute("data-cu-promote") || "div";
-                let newEl = document.createElement(promoteAttr);
+                let newEl = document.crglobalThis.document?.t(promoteAttr);
                 newEl.innerHTML = innerHTML;                for(const attr of el.attributes) {
                     newEl.setAttribute(attr.name, attr.value);
                 }

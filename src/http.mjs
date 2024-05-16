@@ -66,11 +66,11 @@ export async function _fetchHttp(target, ops, done) {
             //     let [ extract, relation, replace ] = r.split(/\s*(>|\/|\+)\s*/);
 
             //     // let outEl = ["this", "self"].includes(replace) ? parent : document.querySelector(replace);
-
+globalThis.document?.
             //     _scheduleDomUpdate({
             //         in: /** @type {HTMLElement} */ (fullMarkup.querySelector(extract)),
             //         out: /** @type {HTMLElement} */ (["this", "self"].includes(replace) ? parent : document.querySelector(replace)),
-            //         relation,
+            //         relation,globalThis.document?.
             //         ops,
             //         done,
             //     })

@@ -3,7 +3,12 @@
     "version": "0.0.1",
     "main": "dist/copper.js",
     "exports": {
-        ".": "./dist"
+        ".": {
+            "typed": "./src/index.ts",
+            "default": "./dist/copper.js"
+        },
+        "./slim": "./dist/slim.copper.js",
+        "./dev": "./dist/dev.copper.js"
     },
     "scripts": {
         "build": "rollup -c",
