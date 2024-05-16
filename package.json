@@ -2,10 +2,8 @@
     "name": "@jwrunge/copper",
     "version": "0.0.1",
     "main": "dist/copper.js",
-    "type": "module",
     "exports": {
-        ".": "./dist",
-        "./ts": "./src/index.ts"
+        ".": "./dist"
     },
     "scripts": {
         "build": "rollup -c",

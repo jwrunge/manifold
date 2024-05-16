@@ -1,5 +1,5 @@
-import { _store, _funcs, _stores } from "./store";
-import { _registerSubs, _setOptions } from "./domRegistrar";
+import { _store, _funcs, _stores } from "./store.mjs";
+import { _registerSubs, _setOptions } from "./domRegistrar.mjs";
 
 /**! @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey*/
 

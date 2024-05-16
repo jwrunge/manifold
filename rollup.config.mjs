@@ -24,7 +24,7 @@ function constructProfiles(ops) {
     return ops.map((op, i)=> { 
         const { prefix, sourceMaps } = op;
         return {
-            input: `src/index.js`,
+            input: `src/index.mjs`,
             output: [
                 {
                     file: `dist/${prefix ? prefix + "." : ""}copper.js`,
@@ -53,7 +53,7 @@ export default [
         { prefix: "dev", sourceMaps: true, jsdocTypes: true }
     ]),
     {
-        input: "src/extras/smartOutro.js",
+        input: "src/extras/smartOutro.mjs",
         output: {
             file: "dist/extras/smartOutro.js",
             format: "es",
