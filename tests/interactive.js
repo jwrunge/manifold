@@ -14,7 +14,11 @@ Cu.config({
 let untyped = Cu.ustore("untyped", { value: "My text" });
 
 let typed = Cu.store("Typed_Store", { value: "My text" });
+typed.update("My text");
+typed.sub(cur=> cur === "!");
 let untyped2 = Cu.store("Typed_Store");
+
+typed.sub(cur=> cur === 32)
 
 
 Cu.config
@@ -36,9 +40,9 @@ const store2 = Cu.store("store2", {
     value: { values: ["one", "two"]},
     upstream: ["store1", "store3"],
     updater: ([Store1, Store3], cur)=> {
-    cur.values[1] = Store1;
-    cur.values[0] = Store3;
-    return cur;
+        cur.values[1] = Store1;
+        cur.values[0] = Store3;
+        return cur;
     }
 });
 const store4 = Cu.store("store4", {

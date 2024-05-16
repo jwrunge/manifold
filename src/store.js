@@ -72,9 +72,18 @@ export class Store {
      * @param {string} ref
      * @param {() => void} sub
      */
-    addSub(ref, sub) {
+    _addSub(ref, sub) {
         this._subscriptions.set(ref, sub);
         sub?.();
+    }
+
+    /**
+     * @param {(T)=> void} sub
+     */
+    sub(sub) {
+        let ref = "x".repeat(5).replace(/./g, c => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 62) ] );
+        this._subscriptions.set(ref, sub);
+        sub?.(this.value);
     }
 
     //Update (manual or automated -- cascades downstream)
@@ -147,5 +156,6 @@ export class Store {
  * @returns {Store<T>}
  */
 export function _store(name, ops) {
+    if(ops) return new Store(name, ops);
     return _stores.get(name) || new Store(name, ops);
 }

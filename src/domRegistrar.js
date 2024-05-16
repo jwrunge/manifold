@@ -131,7 +131,7 @@ export function _registerSubs(parent) {
                             }
                         
                             //Add subscription - run whenever store updates
-                            for(let store of externalData) _store(store.name)?.addSub(el.id, domSubscription);
+                            for(let store of externalData) _store(store.name)?._addSub(el.id, domSubscription);
                         }
 
                         //Handle sync

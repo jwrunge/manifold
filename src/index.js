@@ -41,7 +41,7 @@ import { _registerSubs, _setOptions } from "./domRegistrar";
  * @template T
  * @callback UpdaterFunction
  * @param {Array<any>} upstreamValues
- * @param {T} [curVal]
+ * @param {T} value
  * @returns {T}
  */
 
@@ -56,7 +56,9 @@ import { _registerSubs, _setOptions } from "./domRegistrar";
 /**!
  * @template T
  * @typedef Store
- * @prop {T} value
+ * @prop {T} value - The store's current value (read only)
+ * @prop {function(T):void} update - Update the store's current value
+ * @prop {function(function(T):void):void} sub - Add a subscription function to the store
  */
 
 /**!
