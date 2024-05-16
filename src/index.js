@@ -19,12 +19,6 @@ import { _registerSubs, _setOptions } from "./domRegistrar";
 
 /**!
  * @template T
- * @class Store
- * @property {T} value The current value of the store
- */
-
-/**!
- * @template T
  * @typedef {Object} StoreOptions
  * @property {T} value
  * @property {Array<string>} [upstream]
@@ -41,21 +35,21 @@ import { _registerSubs, _setOptions } from "./domRegistrar";
 
 /**!
  * @template T
- * @type {StoreFn<T>}
+ * @class Store
+ * @property {T} value The current value of the store
  */
-globalThis.CuStore = (name, ops)=> _stores.get(name) || new Store(name, ops);
 
 /**!
  * The global Copper interface.
- * @typdef {Object} Cu
- * @template T
- * @property {StoreFn<T>} store : The store object
- * @property {any} getFunc The getFunc object
- * @property {Function} addFuncs The addFuncs object
- * @property {(newops: Partial<CuOps>, profileName?: string)=> void} config The config object
  */
 globalThis.Cu = {
-    store: _store,
+    /**!
+     * @template T
+     * @param {string} name
+     * @param {T | StoreOptions<T>} val
+     * @returns {Store<T>}
+     */
+    store: (name, val)=> _store(name, {value: val}),
     getFunc: _func,
     addFuncs: funcs=> {for(let key in funcs) _funcs.set(key, funcs[key])},
     config: _setOptions,

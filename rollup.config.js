@@ -7,6 +7,7 @@ const terserOps = {
     module: true,
     toplevel: true,
     mangle: {
+        reserved: ["Cu"],
         eval: true,
         module: true,
         properties: {

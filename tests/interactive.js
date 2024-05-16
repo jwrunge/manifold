@@ -1,4 +1,4 @@
-/// <reference path="../src/index.js" />
+/// <reference path="../dist/copper.js" />
 
 Cu.config({
     trans: {
@@ -10,10 +10,15 @@ Cu.config({
     }
 }, "file1")
 
+let val = Cu.store("value", {
+    value: /** @type {Map<number, string>}*/(new Map()),
+    upstream: ["store1", "store2"],
+    updater: (_, val) => {
+        return val?.set?.(32, (val?.get(32) || "") + "...") || new Map();
+    }
+})
 let s1 = Cu.store("store1", { value: "My text" });
 s1
-
-let s2 = CuStore("store1", { value: "My text" });
 
 // let store1 = Cu.store("store1", { value: "My text" });
 const store3 = Cu.store("store3", { value: "one" });
