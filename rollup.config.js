@@ -7,9 +7,9 @@ const terserOps = {
     module: true,
     toplevel: true,
     mangle: {
-        reserved: ["Cu"],
         eval: true,
         module: true,
+        reserved: ["store_name", "store_ops"],
         properties: {
             regex: /^[#_].*/
         }

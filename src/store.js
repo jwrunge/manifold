@@ -53,7 +53,8 @@ export class Store {
     /** @type {Array<string>} */ _upstreamStores = [];
 
     /**
-     * @param {StoreOptions<T>} ops
+     * @param {string} name
+     * @param {StoreOptions<T>} [ops]
      */
     constructor(name, ops) {
         this.name = name;
@@ -139,18 +140,12 @@ export class Store {
 /**
  * STORE STATIC METHODS
  */
-/** 
+/**
  * @template T
- * @typedef {import("./index").StoreFn<T>} StoreFn
+ * @param {string} name - The name of the store
+ * @param {StoreOptions<T>} [ops] - Options to update the store
+ * @returns {Store<T>}
  */
 export function _store(name, ops) {
     return _stores.get(name) || new Store(name, ops);
-}
-
-/**
- * @param {string} name 
- * @returns {Function | undefined}
- */
-export function _func(name) {
-    return _funcs.get(name);
 }

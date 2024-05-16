@@ -1,4 +1,4 @@
-import { _store, _func } from "./store";
+import { _store } from "./store";
 /** @typedef {import("./index").CuOps} CuOps */
 
 /** @type {{ adjust?: Function, space?: Function, size?: Function } | undefined} */

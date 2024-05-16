@@ -1,4 +1,4 @@
-import { _store, _func, _funcs, _stores, Store } from "./store";
+import { _store, _funcs, _stores } from "./store";
 import { _registerSubs, _setOptions } from "./domRegistrar";
 
 /**! @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey*/
@@ -27,16 +27,8 @@ import { _registerSubs, _setOptions } from "./domRegistrar";
 
 /**!
  * @template T
- * @typedef {Function} StoreFn
- * @param {string} name - The name of the store
- * @param {StoreOptions<T>} ops - Options to update the store
- * @returns {Store<T>}
- */
-
-/**!
- * @template T
- * @class Store
- * @property {T} value The current value of the store
+ * @typedef Store
+ * @prop {T} value
  */
 
 /**!
@@ -45,12 +37,12 @@ import { _registerSubs, _setOptions } from "./domRegistrar";
 globalThis.Cu = {
     /**!
      * @template T
-     * @param {string} name
-     * @param {T | StoreOptions<T>} val
+     * @param {string} store_name
+     * @param {StoreOptions<T>} store_ops
      * @returns {Store<T>}
      */
-    store: (name, val)=> _store(name, {value: val}),
-    getFunc: _func,
+    store: (store_name, store_ops)=> /**@type {Store<T>}*/(_store(store_name, store_ops)),
+    getFunc: (name)=> _funcs.get(name),
     addFuncs: funcs=> {for(let key in funcs) _funcs.set(key, funcs[key])},
     config: _setOptions,
 }

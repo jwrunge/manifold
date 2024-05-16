@@ -5,7 +5,8 @@ Cu.config({
         hooks: {
             "in-end": (el)=> {
 
-            }
+            },
+            "in-start": (el)=> el
         }
     }
 }, "file1")

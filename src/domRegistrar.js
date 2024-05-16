@@ -1,4 +1,4 @@
-import { _store, _func } from "./store";
+import { _funcs, _store } from "./store";
 import { _fetchHttp } from "./http";
 import { _scheduleDomUpdate } from "./domUpdates";
 /** @typedef {import("./index").CuOps} CuOps */
@@ -84,7 +84,7 @@ export function _registerSubs(parent) {
                 /** @type {Function | undefined} */
                 let processFunc;
                 if(processFuncName) {
-                    processFunc = globalThis[processFuncName] || _func(processFuncName);
+                    processFunc = globalThis[processFuncName] || _funcs.get(processFuncName);
                     if(!processFunc) throw(`"${processFuncName}" not registered: ${err_detail}`);
                     if(((!shouldHaveTriggers && external.length > 1) || (shouldHaveTriggers && internal.length > 1))) throw(`Multiple sources: ${err_detail}`);
                 }
