@@ -65,7 +65,6 @@ export class Store {
         this.value = ops?.value;
         this.#updater = ops?.updater;
         
-        console.log(this);
         return this;
     }
 
@@ -92,18 +91,12 @@ export class Store {
     * @param {(T | function(T): T) | undefined} value
     */
     async update(value) {
-        console.log("Updating with value", value)
         _workOrder.set(this.name || "", value);
         clearTimeout(_workCacheTimeout);
-        console.log("Work order", _workOrder)
-        _workCacheTimeout = setTimeout(()=> {
-            console.log("Work order timeout")
+        _workCacheTimeout = setTimeout(async ()=> {
             //Sort this.#workOrder such that dependencies are updated first, duplicate work is filtered out
             for(let [storeName, _] of _workOrder) {
                 const store = _store(storeName);
-
-                console.log("Downstream stores", store._downstreamStores);
-                console.log("Upstream stores", store._upstreamStores);
 
                 //Don't repeat work if an upstream store will cascade
                 store._downstreamStores.forEach(d=> _workOrder.delete(d));   //Delete downstream stores from work order
@@ -118,18 +111,16 @@ export class Store {
 
                 //Check complex object lengths (avoid lengthy hashes) -- if the lengths indicate the value HAS NOT CHANGED, double-check via hash
                 let valueChanged = Array.from((store.value || []))?.length !== Array.from(newValue).length;
-                console.log("Value changed?", valueChanged)
-                store.value = newValue;
 
                 let newHash = "";
                 if(!valueChanged) {
                     newHash = _hashAny(store.value);
                     valueChanged = newHash !== store._storedHash;    //Double-check that the value has not changed via hash
-                    console.log("Value changed after rehash?", valueChanged)
                 }
 
                 //If the value HAS DEFINITELY CHANGED or is LIKELY TO HAVE CHANGED, update the stored hash and cascade
                 if(valueChanged) {
+                    store.value = newValue;
                     store._storedHash = newHash;
                     for(let S of store._downstreamStores) downstream.push(S);
                     for(let [ref, sub] of store._subscriptions) sub?.(store.value, ref);
@@ -138,14 +129,13 @@ export class Store {
 
             //Clear work order and cascade
             _workOrder.clear();
-            for(let S of downstream) if(_store(S)) _store(S)._autoUpdate();
+            for(let S of downstream) if(_store(S)) await _store(S)._autoUpdate();
         }, 0);    //Hack to force running all updates at the end of the JS event loop
     }
 
     //Auto update
     async _autoUpdate() {
-        console.log("auto updating", this.name)
-        this.update(
+        await this.update(
             await (this.#updater?.(
                 this._upstreamStores?.map(store => _store(store)?.value) || [], 
                 /** @type {T} */(this?.value)

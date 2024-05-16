@@ -1,5 +1,7 @@
 /// <reference path="../dist/copper.js" />
 
+console.log("Copper", Cu);
+
 Cu.config({
     trans: {
         hooks: {
@@ -18,7 +20,6 @@ typed.update("My text");
 typed.sub(cur=> cur === "!");
 let untyped2 = Cu.store("Typed_Store");
 
-typed.sub(cur=> cur === 32)
 
 
 Cu.config

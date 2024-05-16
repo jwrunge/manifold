@@ -48,7 +48,7 @@ import { _registerSubs, _setOptions } from "./domRegistrar.mjs";
 /**!
  * @template T
  * @typedef {Object} StoreOptions
- * @property {T} value
+ * @property {T} [value]
  * @property {Array<string>} [upstream]
  * @property {UpdaterFunction<T>} [updater]
  */
@@ -109,4 +109,4 @@ config:
  * @param {CuOps} newops
  * @param {string} [profileName]
  */ (newops, profileName)=> _setOptions(newops, profileName),
-}
+};

@@ -55,7 +55,6 @@ export function _setOptions(newops, profileName) {
  * @param {HTMLElement | null} [parent] 
  */
 export function _registerSubs(parent) {
-    console.log("REGISTERING SUBS")
     /** @type {NodeListOf<HTMLElement> | []} */
     let els = parent?.querySelectorAll(`[data-${modes.join("],[data-")}]${ops.fetch?.auto != false ? ",a" : ""}`) || [];
     for(let el of els) {
