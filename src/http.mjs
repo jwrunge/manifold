@@ -3,7 +3,7 @@ import { _scheduleDomUpdate } from "./domUpdates.mjs";
 //Track scripts and styles
 let pageScripts = new WeakMap();
 let pageStyles = new WeakMap();
-let parser = new DOMParser();
+let parser = DOMParser ? new DOMParser() : undefined;
 
 /** @typedef {import("./index.mjs").CuOps} CuOps */
 
@@ -16,6 +16,7 @@ let parser = new DOMParser();
  * @returns 
  */
 export async function _fetchHttp(target, ops, done) {
+    if(!parser) return;
     //Make sure we're allowed to fetch
     if(!ops.fetch?.externals?.some(allowed=> target?.href?.startsWith(allowed.domain))) {
         //Fetch data
