@@ -1,7 +1,7 @@
 import { _funcs, _store } from "./store.mjs";
 import { _fetchHttp } from "./http.mjs";
 import { _scheduleDomUpdate } from "./domUpdates.mjs";
-/** @typedef {import("./index.mjs").CuOps} CuOps */
+/** @typedef {import("./index.es.mjs").CuOps} CuOps */
 
 let commaSepRx = /, {0,}/g;
 let elIdx = 0;

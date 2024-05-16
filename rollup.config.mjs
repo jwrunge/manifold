@@ -24,11 +24,11 @@ function constructProfiles(ops) {
     return ops.map(op=> { 
         const { prefix, sourceMaps } = op;
         return {
-            input: `src/index.mjs`,
+            input: `src/index.${op.mod}.mjs`,
             output: [
                 {
-                    file: `dist/${prefix ? prefix + "." : ""}copper.js`,
-                    format: 'es',
+                    file: `dist/${prefix ? prefix + "." : ""}copper.${op.mod === "umd" ? "m" : ""}js`,
+                    format: ops.mod,
                     name: "Cu",
                     sourcemap: sourceMaps,
                 }
@@ -48,9 +48,9 @@ function constructProfiles(ops) {
 
 export default [
     ...constructProfiles([
-        { prefix: "", sourceMaps: false, jsdocTypes: true },
-        { prefix: "slim", sourceMaps: false, jsdocTypes: false },
-        { prefix: "dev", sourceMaps: true, jsdocTypes: true }
+        { prefix: "", mod: "es", sourceMaps: false, jsdocTypes: true },
+        { prefix: "slim", mod: "umd", sourceMaps: false, jsdocTypes: false },
+        { prefix: "dev", mod: "umd", sourceMaps: true, jsdocTypes: true }
     ]),
     {
         input: "src/extras/smartOutro.mjs",

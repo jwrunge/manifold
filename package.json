@@ -3,10 +3,12 @@
     "version": "0.0.1",
     "main": "dist/copper.js",
     "exports": {
-        ".": "./dist/copper.js",
-        "./slim": "./dist/slim.copper.js",
-        "./dev": "./dist/dev.copper.js"
+        ".": "./dist/slim.copper.mjs",
+        "./global": "./dist/copper.js",
+        "./slim": "./dist/slim.copper.mjs",
+        "./dev": "./dist/dev.copper.mjs"
     },
+    "types": "./dist/copper.js",
     "scripts": {
         "build": "rollup -c",
         "example": "npm run build & sirv tests --port 5000 --dev true ",

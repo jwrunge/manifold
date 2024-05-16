@@ -1,10 +1,10 @@
 /** 
  * @template T
- * @typedef {import("./index.mjs").UpdaterFunction<T>} UpdaterFunction 
+ * @typedef {import("./index.es.mjs").UpdaterFunction<T>} UpdaterFunction 
  */
 /** 
  * @template T
- * @typedef {import("./index.mjs").StoreOptions<T>} StoreOptions 
+ * @typedef {import("./index.es.mjs").StoreOptions<T>} StoreOptions 
  */
 
 /**
