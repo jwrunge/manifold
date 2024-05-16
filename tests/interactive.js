@@ -11,6 +11,15 @@ Cu.config({
     }
 }, "file1")
 
+let untyped = Cu.ustore("untyped", { value: "My text" });
+
+let typed = Cu.store("Typed_Store", { value: "My text" });
+let untyped2 = Cu.store("Typed_Store");
+
+
+Cu.config
+Cu.addFuncs
+
 let val = Cu.store("value", {
     value: /** @type {Map<number, string>}*/(new Map()),
     upstream: ["store1", "store2"],
