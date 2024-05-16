@@ -21,7 +21,7 @@ const terserOps = {
 } 
 
 function constructProfiles(ops) {
-    return ops.map((op, i)=> { 
+    return ops.map(op=> { 
         const { prefix, sourceMaps } = op;
         return {
             input: `src/index.mjs`,
