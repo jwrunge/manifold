@@ -8,7 +8,7 @@ let elIdx = 0;
 
 // Initialize from script params
 function _intialize() {
-    let ds = document.currentScript?.dataset;
+    let ds = globalThis.document?.currentScript?.dataset;
 
     if(ds?.config) {
         try {

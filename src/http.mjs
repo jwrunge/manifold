@@ -3,7 +3,7 @@ import { _scheduleDomUpdate } from "./domUpdates.mjs";
 //Track scripts and styles
 let pageScripts = new WeakMap();
 let pageStyles = new WeakMap();
-let parser = DOMParser ? new DOMParser() : undefined;
+let parser = globalThis.DOMParser ? new DOMParser() : undefined;
 
 /** @typedef {import("./index.mjs").CuOps} CuOps */
 
