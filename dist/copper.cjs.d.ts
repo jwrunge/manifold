@@ -174,5 +174,10 @@ declare module "@jwrunge/copper/cjs" {
          * @param {string} [profile_name]
          */
         function config(new_ops: CuOps, profile_name?: string): void;
+        /**!
+          * - Wait for the next Copper data update cycle to complete before executing the callback function.
+          * @param {()=> void} cb
+          */
+        function tick(t: any): void;
     }
 }
