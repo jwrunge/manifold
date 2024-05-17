@@ -1,5 +1,5 @@
 declare module "@jwrunge/copper" {
-    export { T as Cu };
+    export { $ as Cu };
     /**
      * !
      */
@@ -133,7 +133,7 @@ declare module "@jwrunge/copper" {
      * !
      */
     export type CuFunc = Function;
-    namespace T {
+    namespace $ {
         /**!
         * - Create or overwrite a _typed_ global Copper store by passing `store_ops` (`CuOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*

@@ -21,7 +21,7 @@ export function _scheduleDomUpdate(update) {
     workArray.push(update);
     if(!cancelAnimationFrame) {
         cancelAnimationFrame = true;
-        requestAnimationFrame(_runDomUpdates);
+        globalThis.requestAnimationFrame?.(_runDomUpdates);
     }
 }
 
