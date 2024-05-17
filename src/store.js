@@ -1,10 +1,10 @@
 /** 
  * @template T
- * @typedef {import("./index.tag.js").UpdaterFunction<T>} UpdaterFunction 
+ * @typedef {import("./index.module.js").UpdaterFunction<T>} UpdaterFunction 
  */
 /** 
  * @template T
- * @typedef {import("./index.tag.js").StoreOptions<T>} StoreOptions 
+ * @typedef {import("./index.module.js").StoreOptions<T>} StoreOptions 
  */
 
 /**
@@ -89,48 +89,53 @@ export class Store {
     //Update (manual or automated -- cascades downstream)
     /**
     * @param {(T | function(T): T) | undefined} value
+    * @returns {Promise<T | undefined>}
     */
     async update(value) {
-        _workOrder.set(this.name || "", value);
-        clearTimeout(_workCacheTimeout);
-        _workCacheTimeout = setTimeout(async ()=> {
-            //Sort this.#workOrder such that dependencies are updated first, duplicate work is filtered out
-            for(let [storeName, _] of _workOrder) {
-                const store = _store(storeName);
+        return new Promise((resolve)=> {
+            _workOrder.set(this.name || "", value);
+            clearTimeout(_workCacheTimeout);
+            _workCacheTimeout = setTimeout(async ()=> {
+                //Sort this.#workOrder such that dependencies are updated first, duplicate work is filtered out
+                for(let [storeName, _] of _workOrder) {
+                    const store = _store(storeName);
 
-                //Don't repeat work if an upstream store will cascade
-                store._downstreamStores.forEach(d=> _workOrder.delete(d));   //Delete downstream stores from work order
-                store._upstreamStores.forEach(u=> _workOrder.has(u) ? _workOrder.delete(storeName) : true);
-            }
-
-            //Apply changes to top-level workers, then cascade     
-            /** @type {string[]} */ let downstream = [];
-            for(let [storeName, value] of _workOrder) {
-                let store = _store(storeName);
-                let newValue = (typeof value == "function" ? /** @type {Function} */(value)?.(store.value) : value);
-
-                //Check complex object lengths (avoid lengthy hashes) -- if the lengths indicate the value HAS NOT CHANGED, double-check via hash
-                let valueChanged = Array.from((store.value || []))?.length !== Array.from(newValue).length;
-
-                let newHash = "";
-                if(!valueChanged) {
-                    newHash = _hashAny(store.value);
-                    valueChanged = newHash !== store._storedHash;    //Double-check that the value has not changed via hash
+                    //Don't repeat work if an upstream store will cascade
+                    store._downstreamStores.forEach(d=> _workOrder.delete(d));   //Delete downstream stores from work order
+                    store._upstreamStores.forEach(u=> _workOrder.has(u) ? _workOrder.delete(storeName) : true);
                 }
 
-                //If the value HAS DEFINITELY CHANGED or is LIKELY TO HAVE CHANGED, update the stored hash and cascade
-                if(valueChanged) {
-                    store.value = newValue;
-                    store._storedHash = newHash;
-                    for(let S of store._downstreamStores) downstream.push(S);
-                    for(let [ref, sub] of store._subscriptions) sub?.(store.value, ref);
-                }
-            }
+                //Apply changes to top-level workers, then cascade     
+                /** @type {string[]} */ let downstream = [];
+                for(let [storeName, value] of _workOrder) {
+                    let store = _store(storeName);
+                    let newValue = (typeof value == "function" ? /** @type {Function} */(value)?.(store.value) : value);
 
-            //Clear work order and cascade
-            _workOrder.clear();
-            for(let S of downstream) if(_store(S)) await _store(S)._autoUpdate();
-        }, 0);    //Hack to force running all updates at the end of the JS event loop
+                    //Check complex object lengths (avoid lengthy hashes) -- if the lengths indicate the value HAS NOT CHANGED, double-check via hash
+                    let valueChanged = Array.from((store.value || []))?.length !== Array.from(newValue).length;
+
+                    let newHash = "";
+                    if(!valueChanged) {
+                        newHash = _hashAny(store.value);
+                        valueChanged = newHash !== store._storedHash;    //Double-check that the value has not changed via hash
+                    }
+
+                    //If the value HAS DEFINITELY CHANGED or is LIKELY TO HAVE CHANGED, update the stored hash and cascade
+                    if(valueChanged) {
+                        store.value = newValue;
+                        store._storedHash = newHash;
+                        for(let S of store._downstreamStores) downstream.push(S);
+                        for(let [ref, sub] of store._subscriptions) sub?.(store.value, ref);
+                    }
+                }
+
+                //Clear work order and cascade
+                _workOrder.clear();
+                for(let S of downstream) if(_store(S)) await _store(S)._autoUpdate();
+            }, 0);    //Hack to force running all updates at the end of the JS event loop
+
+            resolve(this.value);
+        });
     }
 
     //Auto update

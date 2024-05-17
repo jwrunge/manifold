@@ -1,5 +1,5 @@
 import { _store } from "./store.js";
-/** @typedef {import("./index.tag.js").CuOps} CuOps */
+/** @typedef {import("./index.module.js").CuOps} CuOps */
 
 /** @type {{ adjust?: Function, space?: Function, size?: Function } | undefined} */
 let smartOutro = globalThis.smartOutro;

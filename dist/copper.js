@@ -12,13 +12,13 @@ l=[]
 constructor(t,e){this.name=t,o.set(t,this),this.l=e?.upstream||[]
 for(let t of this.l)s(t)?.i?.push(this.name||"")
 return this.value=e?.value,this.#t=e?.updater,this}u(t,e){this.t.set(t,e),e?.()}sub(t){let e="x".repeat(5).replace(/./g,(t=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(62*Math.random())]))
-this.t.set(e,t),t?.(this.value)}async update(o){i.set(this.name||"",o),clearTimeout(e),e=setTimeout((async()=>{for(let[t,e]of i){const e=s(t)
+this.t.set(e,t),t?.(this.value)}async update(o){return new Promise((n=>{i.set(this.name||"",o),clearTimeout(e),e=setTimeout((async()=>{for(let[t,e]of i){const e=s(t)
 e.i.forEach((t=>i.delete(t))),e.l.forEach((e=>!i.has(e)||i.delete(t)))}let e=[]
 for(let[o,n]of i){let i=s(o),r="function"==typeof n?n?.(i.value):n,f=Array.from(i.value||[])?.length!==Array.from(r).length,l=""
 if(f||(l=t(i.value),f=l!==i.o),f){i.value=r,i.o=l
 for(let t of i.i)e.push(t)
 for(let[t,e]of i.t)e?.(i.value,t)}}i.clear()
-for(let t of e)s(t)&&await s(t).h()}),0)}async h(){await this.update(await(this.#t?.(this.l?.map((t=>s(t)?.value))||[],this?.value)||this.value))}}function s(t,e){return e?new r(t,e):o.get(t)||new r(t,e)}let f=globalThis.smartOutro,l=[],a=!1
+for(let t of e)s(t)&&await s(t).h()}),0),n(this.value)}))}async h(){await this.update(await(this.#t?.(this.l?.map((t=>s(t)?.value))||[],this?.value)||this.value))}}function s(t,e){return e?new r(t,e):o.get(t)||new r(t,e)}let f=globalThis.smartOutro,l=[],a=!1
 function u(t){l.push(t),a||(a=!0,requestAnimationFrame(c))}function c(){a=!1
 for(let t of l)if("function"==typeof t)t()
 else{if([">","+"].includes(t.relation)){if(">"==t.relation){let e=globalThis.document?.t("div")
@@ -29,9 +29,9 @@ o.textContent=e,t.replaceWith(o),t=o}if(t){let i=Array.isArray(o.trans?.dur)?o.t
 t?.classList?.add(r),o.trans?.hooks?.[`${e}-start`]?.(t),"out"==e?u((()=>{f?.size?.(t),i&&(t.style.transitionDuration=`${i}ms`),t.classList?.add(e)})):setTimeout((()=>{u((()=>{i&&(t.style.transitionDuration=`${i}ms`),t?.classList?.add(e),n?.(),u((()=>{t?.classList?.remove(e)}))}))}),o.trans?.swap||0),setTimeout((()=>{u((()=>{"out"==e&&t?.remove(),t?.classList?.remove(r),t?.classList?.remove(e),o.trans?.hooks?.[`${e}-end`]?.(t)}))}),i+("in"==e&&o.trans?.swap||0))}}let d=globalThis.DOMParser?new DOMParser:void 0
 let p=/, {0,}/g,y=0
 !function(){let t=globalThis.document?.currentScript?.dataset
-if(t?.config)try{w(JSON.parse(t?.config))}catch(t){console.warn("Invalid Cu params",t)}t?.init&&function(t){let e=t?.querySelectorAll(`[data-${g.join("],[data-")}]${0!=m.fetch?.auto?",a":""}`)||[]
+if(t?.config)try{g(JSON.parse(t?.config))}catch(t){console.warn("Invalid Cu params",t)}t?.init&&function(t){let e=t?.querySelectorAll(`[data-${w.join("],[data-")}]${0!=m.fetch?.auto?",a":""}`)||[]
 for(let t of e){t.id||(t.id="cu-"+y++)
-for(let e in t.dataset){if(!g.includes(e))continue
+for(let e in t.dataset){if(!w.includes(e))continue
 let o="bind"!=e,i=`(#${t.id} on ${e})`
 t?.dataset?.[e]?.split(";").forEach((r=>{let f,l=r?.split(/(?:(?:\)|->) ?){1,}/g)||[],a=o?M(l.splice(0,1)[0]):[],c=l[0]?.includes("(")&&l[0]?.match(/^[^\(]{1,}/)?.[0]||"",h=M(l.splice("sync"==e?1:0,1)[0]),d=M(l[0])
 if(o&&!a?.length)throw`No trigger: ${i}.`
@@ -47,13 +47,13 @@ f&&(e=f?.(e,t))
 const o=s(p[0]?.name)
 void 0!==e&&o?.update?.((t=>p[0]?.path?.length?b(t,p[0]?.path,e):e))}
 t.addEventListener(o,e)}}}))}}}()}()
-let m={},g=["bind","sync","fetch"]
+let m={},w=["bind","sync","fetch"]
 
 ;/**!
  * @param {Partial<CuOps>} newops 
  * @param {string} [profileName] 
  */
-function w(t,e){e?m.profiles={...m.profiles,[e]:t}:m={...m,...t}}function b(t,e,o){let n=t
+function g(t,e){e?m.profiles={...m.profiles,[e]:t}:m={...m,...t}}function b(t,e,o){let n=t
 for(let t of e)null==n&&(n="number"==typeof t?[]:{}),null==o||e[e.length-1]!==t?n=n instanceof Map?n?.get(t):n?.[t]:n instanceof Map?n.set(t,o):n[t]=o
 return n}function M(t){if(t?.includes("(")){let e=t.match(/[^\(\)]{1,}/g)
 t=e?.[e.length-1]||""}return t?.split(p)||[]}function T(t,e,o,n,i){let r=o=>{o?.preventDefault(),o?.stopPropagation()
@@ -111,7 +111,7 @@ e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&d.parseFromString(r,"text/html").body}}
  * @template T
  * @typedef Store
  * @prop {T} value - The store's current value (read only)
- * @prop {function(T):void} update - Update the store's current value
+ * @prop {function(T):Promise<T|undefined>} update - Update the store's current value
  * @prop {function(function(T):void):void} sub - Add a subscription function to the store
  */
 /**!
@@ -159,5 +159,5 @@ funcs=>{for(let t in funcs)n.set(t,funcs[t])},config:
  * @param {CuOps} new_ops
  * @param {string} [profile_name]
  */
-(new_ops,profile_name)=>w(new_ops,profile_name)}
+(new_ops,profile_name)=>g(new_ops,profile_name)}
 globalThis.Cu=$

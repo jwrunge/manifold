@@ -12,13 +12,13 @@ l=[]
 constructor(t,e){this.name=t,o.set(t,this),this.l=e?.upstream||[]
 for(let t of this.l)s(t)?.i?.push(this.name||"")
 return this.value=e?.value,this.#t=e?.updater,this}u(t,e){this.t.set(t,e),e?.()}sub(t){let e="x".repeat(5).replace(/./g,(t=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(62*Math.random())]))
-this.t.set(e,t),t?.(this.value)}async update(o){i.set(this.name||"",o),clearTimeout(e),e=setTimeout((async()=>{for(let[t,e]of i){const e=s(t)
+this.t.set(e,t),t?.(this.value)}async update(o){return new Promise((n=>{i.set(this.name||"",o),clearTimeout(e),e=setTimeout((async()=>{for(let[t,e]of i){const e=s(t)
 e.i.forEach((t=>i.delete(t))),e.l.forEach((e=>!i.has(e)||i.delete(t)))}let e=[]
 for(let[o,n]of i){let i=s(o),r="function"==typeof n?n?.(i.value):n,f=Array.from(i.value||[])?.length!==Array.from(r).length,l=""
 if(f||(l=t(i.value),f=l!==i.o),f){i.value=r,i.o=l
 for(let t of i.i)e.push(t)
 for(let[t,e]of i.t)e?.(i.value,t)}}i.clear()
-for(let t of e)s(t)&&await s(t).h()}),0)}async h(){await this.update(await(this.#t?.(this.l?.map((t=>s(t)?.value))||[],this?.value)||this.value))}}function s(t,e){return e?new r(t,e):o.get(t)||new r(t,e)}let f=globalThis.smartOutro,l=[],a=!1
+for(let t of e)s(t)&&await s(t).h()}),0),n(this.value)}))}async h(){await this.update(await(this.#t?.(this.l?.map((t=>s(t)?.value))||[],this?.value)||this.value))}}function s(t,e){return e?new r(t,e):o.get(t)||new r(t,e)}let f=globalThis.smartOutro,l=[],a=!1
 function u(t){l.push(t),a||(a=!0,requestAnimationFrame(c))}function c(){a=!1
 for(let t of l)if("function"==typeof t)t()
 else{if([">","+"].includes(t.relation)){if(">"==t.relation){let e=globalThis.document?.t("div")

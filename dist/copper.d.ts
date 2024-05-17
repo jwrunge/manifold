@@ -123,7 +123,7 @@ declare module "@jwrunge/copper" {
         /**
          * - Update the store's current value
          */
-        update: (arg0: T) => void;
+        update: (arg0: T) => Promise<T | undefined>;
         /**
          * - Add a subscription function to the store
          */

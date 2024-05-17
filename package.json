@@ -6,13 +6,11 @@
         ".": {
             "require": "./dist/slim.copper.cjs",
             "import": "./dist/slim.copper.js",
-            "default": "./dist/slim.copper.js",
             "types": "./dist/copper.d.ts"
         },
         "./dev": {
             "require": "./dist/dev.copper.cjs",
             "import": "./dist/dev.copper.js",
-            "default": "./dist/dev.copper.js",
             "types": "./dist/copper.dev.d.ts"
         },
         "./cjs": {
