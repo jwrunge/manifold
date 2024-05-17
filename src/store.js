@@ -81,7 +81,7 @@ export class Store {
      * @param {(T)=> void} sub
      */
     sub(sub) {
-        let ref = "x".repeat(5).replace(/./g, c => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 62) ] );
+        let ref = "x".repeat(5).replace(/./g, c => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36) ] );
         this._subscriptions.set(ref, sub);
         sub?.(this.value);
     }
