@@ -34,7 +34,7 @@ import { _registerSubs, _setOptions } from "./domRegistrar.js";
  * @typedef {Object} CuOps
  * @property {{ [ key: string ]: Partial<CuOps> }} [profiles] - Fetch profiles assignable to elements
  * @property {FetchOptions} [fetch] - Fetch options - see https://google.com
- * @property {TransitionOptions[]} [trans] - Transition settings - see https://google.com
+ * @property {TransitionOptions} [trans] - Transition settings - see https://google.com
  */
 
 /**!

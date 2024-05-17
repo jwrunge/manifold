@@ -91,7 +91,7 @@ e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&d.parseFromString(r,"text/html").body}}
  * @typedef {Object} CuOps
  * @property {{ [ key: string ]: Partial<CuOps> }} [profiles] - Fetch profiles assignable to elements
  * @property {FetchOptions} [fetch] - Fetch options - see https://google.com
- * @property {TransitionOptions[]} [trans] - Transition settings - see https://google.com
+ * @property {TransitionOptions} [trans] - Transition settings - see https://google.com
  */
 /**!
  * @template T

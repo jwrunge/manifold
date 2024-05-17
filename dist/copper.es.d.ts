@@ -98,7 +98,7 @@ declare module "@jwrunge/copper/es" {
         /**
          * - Transition settings - see https://google.com
          */
-        trans?: TransitionOptions[];
+        trans?: TransitionOptions;
     };
     /**
      * !
