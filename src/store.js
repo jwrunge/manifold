@@ -132,9 +132,8 @@ export class Store {
                 //Clear work order and cascade
                 _workOrder.clear();
                 for(let S of downstream) if(_store(S)) await _store(S)._autoUpdate();
+                resolve(this.value);
             }, 0);    //Hack to force running all updates at the end of the JS event loop
-
-            resolve(this.value);
         });
     }
 
