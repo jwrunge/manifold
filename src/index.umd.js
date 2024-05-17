@@ -1,5 +1,5 @@
-import { _store, _funcs, _stores } from "./store.mjs";
-import { _registerSubs, _setOptions } from "./domRegistrar.mjs";
+import { _store, _funcs, _stores } from "./store.js";
+import { _registerSubs, _setOptions } from "./domRegistrar.js";
 
 /**! @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey*/
 
@@ -70,7 +70,7 @@ import { _registerSubs, _setOptions } from "./domRegistrar.mjs";
 /**!
  * The global Copper interface.
  */
-export default {
+export const Cu = {
 store: 
 /**!
 * - Create or overwrite a _typed_ global Copper store by passing `store_ops` (`CuOps`) -> *returns `Store\<T\>`* 

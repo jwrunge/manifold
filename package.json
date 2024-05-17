@@ -2,15 +2,17 @@
     "name": "@jwrunge/copper",
     "version": "0.0.1",
     "main": "dist/copper.js",
+    "type": "module",
     "exports": {
-        ".": "./dist/slim.copper.mjs",
+        ".": "./dist/slim.copper.js",
+        "./typed": "./dist/typed.copper.js",
         "./global": "./dist/copper.js",
-        "./slim": "./dist/slim.copper.mjs",
-        "./dev": "./dist/dev.copper.mjs"
+        "./slim": "./dist/slim.copper.js",
+        "./dev": "./dist/dev.copper.js"
     },
-    "types": "./dist/copper.js",
+    "types": "./dist/copper.d.ts",
     "scripts": {
-        "build": "rollup -c",
+        "build": "rollup -c && npx -p typescript tsc dist/dev.copper.js --declaration --allowJs --emitDeclarationOnly --outFile dist/copper.d.ts",
         "example": "npm run build & sirv tests --port 5000 --dev true ",
         "dev": "npm run build & sirv --port 5000 --dev true --single tests/interactive.html",
         "gen-docs": "jsdoc dist/typed.copper.js --destination docs",
@@ -23,6 +25,7 @@
         "@rollup/plugin-terser": "^0.4.4",
         "rollup": "^4.5.0",
         "sirv-cli": "^2.0.2",
-        "terser": "^5.24.0"
+        "terser": "^5.24.0",
+        "typescript": "^5.4.5"
     }
 }

@@ -1,11 +1,11 @@
-import { _scheduleDomUpdate } from "./domUpdates.mjs";
+import { _scheduleDomUpdate } from "./domUpdates.js";
 
 //Track scripts and styles
 let pageScripts = new WeakMap();
 let pageStyles = new WeakMap();
 let parser = globalThis.DOMParser ? new DOMParser() : undefined;
 
-/** @typedef {import("./index.es.mjs").CuOps} CuOps */
+/** @typedef {import("./index.es.js").CuOps} CuOps */
 
 //Fetch page and replace content
 /**

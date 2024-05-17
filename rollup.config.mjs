@@ -1,4 +1,3 @@
-// rollup.config.js
 import terser from '@rollup/plugin-terser';
 
 /** @type {import('@rollup/plugin-terser').Options} */
@@ -24,10 +23,10 @@ function constructProfiles(ops) {
     return ops.map(op=> { 
         const { prefix, sourceMaps } = op;
         return {
-            input: `src/index.${op.mod}.mjs`,
+            input: `src/index.${op.mod}.js`,
             output: [
                 {
-                    file: `dist/${prefix ? prefix + "." : ""}copper.${op.mod === "umd" ? "m" : ""}js`,
+                    file: `dist/${prefix ? prefix + "." : ""}copper.js`,
                     format: ops.mod,
                     name: "Cu",
                     sourcemap: sourceMaps,
@@ -40,7 +39,7 @@ function constructProfiles(ops) {
                         ...terserOps.format, 
                         comments: op.jsdocTypes ? "some" : false 
                     }
-                }) 
+                }),
             ]
         }
     });
@@ -49,11 +48,12 @@ function constructProfiles(ops) {
 export default [
     ...constructProfiles([
         { prefix: "", mod: "es", sourceMaps: false, jsdocTypes: true },
+        { prefix: "typed", mod: "umd", sourceMaps: false, jsdocTypes: true, generateTypes: true},
         { prefix: "slim", mod: "umd", sourceMaps: false, jsdocTypes: false },
         { prefix: "dev", mod: "umd", sourceMaps: true, jsdocTypes: true }
     ]),
     {
-        input: "src/extras/smartOutro.mjs",
+        input: "src/extras/smartOutro.js",
         output: {
             file: "dist/extras/smartOutro.js",
             format: "es",

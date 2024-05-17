@@ -1,23 +1,23 @@
-import { _store, _funcs, _stores } from "./store.mjs";
-import { _registerSubs, _setOptions } from "./domRegistrar.mjs";
+import { _store, _funcs, _stores } from "./store.js";
+import { _registerSubs, _setOptions } from "./domRegistrar.js";
 
 /**! @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey*/
 
 /**!
  * @typedef {object} ExternalOptions
- * @property {string} domain - The domain name these settings apply to
- * @property {boolean} [scripts] - Allow scripts from this domain to execute
- * @property {boolean} [styles] - Allow styles from this domain to apply
- */
+ * @property {string} domain - External domain
+ * @property {boolean} [scripts] - Allow scripts?
+ * @property {boolean} [styles] - Allow styles?
+ */a
 
 /**!
  * @typedef {object} FetchOptions
- * @property {RequestInit} [request] - Fetch request options
- * @property {"json"|"text"} [type] - Response type (default: "text")
- * @property {(val: any)=> void} [cb] - Callback function - run on successful fetch; *val* is the un-parsed response body
- * @property {(err: Error)=> void} [err] - Error callback - run on fetch error
- * @property {(code: number)=> boolean | void} [onCode] - Callback function - run on fetch response code; return `false` to prevent further processing
- * @property {boolean} [auto] - Automatically fetch content on page load
+ * @property {RequestInit} [request] - Fetch options
+ * @property {"json"|"text"} [type] - Response type
+ * @property {(val: any)=> void} [cb] - Success callback
+ * @property {(err: Error)=> void} [err] - Error cllback
+ * @property {(code: number)=> boolean | void} [onCode] - Run on specific response code; return `false` to prevent further processing
+ * @property {boolean} [auto] - SPA-like handling of anchor and form submissions
  * @property {ExternalOptions[]} [externals] - External domain fetch settings
  */
 
@@ -25,16 +25,15 @@ import { _registerSubs, _setOptions } from "./domRegistrar.mjs";
  * @typedef {object} TransitionOptions
  * @property {string} [class] - CSS class applied to transitions (default: `cu-trans`)
  * @property {[number, number] | number} [dur] - Transition duration: [in, out] or single value (in ms); default: 300
- * @property {number} [swap] - Swap delay (in ms) - applied between one element's outro start and the replacement's intro start; default: 0
+ * @property {number} [swap] - Swap delay (in ms); default: 0
  * @property {{ [key in HookKey]?: (el: HTMLElement)=> void }} [hooks] - Transition hooks
  */
 
 /**!
- * Copper options for `fetch`, `trans`, and `profiles`.
  * @typedef {Object} CuOps
- * @property {{ [ key: string ]: Partial<CuOps> }} [profiles] - Fetch profiles assignable to elements
- * @property {FetchOptions} [fetch] - Fetch options - see https://google.com
- * @property {TransitionOptions[]} [trans] - Transition settings - see https://google.com
+ * @property {{ [ key: string ]: Partial<CuOps> }} [profiles]
+ * @property {FetchOptions} [fetch]
+ * @property {TransitionOptions[]} [trans]
  */
 
 /**!
@@ -56,9 +55,9 @@ import { _registerSubs, _setOptions } from "./domRegistrar.mjs";
 /**!
  * @template T
  * @typedef Store
- * @prop {T} value - The store's current value (read only)
- * @prop {function(T):void} update - Update the store's current value
- * @prop {function(function(T):void):void} sub - Add a subscription function to the store
+ * @prop {T} value
+ * @prop {function(T):void} update - Update value
+ * @prop {function(function(T):void):void} sub - Add subscription function
  */
 
 /**!
