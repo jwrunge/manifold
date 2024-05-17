@@ -6,12 +6,12 @@
         ".": {
             "require": "./dist/slim.copper.cjs",
             "import": "./dist/slim.copper.js",
-            "types": "./dist/typed.copper.d.ts"
+            "types": "./dist/dev.copper.d.ts"
         },
         "./dev": {
             "require": "./dist/dev.copper.cjs",
             "import": "./dist/dev.copper.js",
-            "types": "./dist/typed.copper.d.ts"
+            "types": "./dist/dev.copper.d.ts"
         }
     },
     "type": "module",
@@ -19,7 +19,6 @@
         "build": "rollup -c && node generate_d.ts.js",
         "example": "npm run build & sirv tests --port 5000 --dev true ",
         "dev": "npm run build & sirv --port 5000 --dev true --single tests/interactive.html",
-        "gen-docs": "jsdoc dist/typed.copper.js --destination docs",
         "increment-patch": "node util/incrementPatchVersion.js",
         "publish.no-increment": "npm run build && npm run test && npm publish",
         "publish": "npm run build && npm run test && increment-patch && npm publish",

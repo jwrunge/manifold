@@ -48,9 +48,8 @@ function constructProfiles(ops) {
 export default [
     ...constructProfiles([
         { prefix: "", mod: "es", sourceMaps: false, jsdocTypes: true },
-        { prefix: "typed", mod: "es", module: true, sourceMaps: false, jsdocTypes: true, generateTypes: true},
         { prefix: "slim", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: false },
-        { prefix: "dev", mod: "cjs", module: true, sourceMaps: true, jsdocTypes: true },
+        { prefix: "dev", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: true },
         { prefix: "slim", mod: "es", module: true, sourceMaps: false, jsdocTypes: false },
         { prefix: "dev", mod: "es", module: true, sourceMaps: true, jsdocTypes: true }
     ]),
