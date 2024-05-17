@@ -6,12 +6,22 @@
         ".": {
             "require": "./dist/slim.copper.cjs",
             "import": "./dist/slim.copper.js",
-            "types": "./dist/dev.copper.d.ts"
+            "default": "./dist/slim.copper.js",
+            "types": "./dist/copper.d.ts"
         },
         "./dev": {
             "require": "./dist/dev.copper.cjs",
             "import": "./dist/dev.copper.js",
-            "types": "./dist/dev.copper.d.ts"
+            "default": "./dist/dev.copper.js",
+            "types": "./dist/copper.dev.d.ts"
+        },
+        "./cjs": {
+            "default": "./dist/slim.copper.cjs",
+            "types": "./dist/copper.cjs.d.ts"
+        },
+        "./es": {
+            "default": "./dist/slim.copper.js",
+            "types": "./dist/copper.es.d.ts"
         }
     },
     "type": "module",

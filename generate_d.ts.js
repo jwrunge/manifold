@@ -7,7 +7,8 @@ console.log("Generating .d.ts file for", devFile);
 
 //Run .d.ts generator
 for(let devFile of ["./dist/dev.copper.js"]) {
-    exec(`npx -p typescript tsc ${devFile} --declaration --allowJs --emitDeclarationOnly --outFile ${devFile.replace("js", "d.ts")}`, (error, _, stderr) => {
+    let newFile = devFile.replace("dev.", "");
+    exec(`npx -p typescript tsc ${devFile} --declaration --allowJs --emitDeclarationOnly --outFile ${newFile.replace("js", "d.ts")}`, (error, _, stderr) => {
         if (error) {
             console.log(`Error: ${error.message}`);
             return;
@@ -18,14 +19,18 @@ for(let devFile of ["./dist/dev.copper.js"]) {
         }
 
         // Read the .d.ts file
-        fs.readFile(`${devFile.replace("js", "d.ts")}`, 'utf8', function (err, data) {
+        fs.readFile(`${newFile.replace("js", "d.ts")}`, 'utf8', function (err, data) {
             if (err) {
                 return console.log(err);
             }
-            let result = data.replace(`declare module "dev.copper" {`, `declare module "@jwrunge/copper" {`);
-            fs.writeFile(`${devFile.replace("js", "d.ts")}`, result, 'utf8', function (err) {
-                if (err) return console.log(err);
-            });
+
+            // Replace the module name for each subpath
+            for(let subpath of ["", "dev", "es", "cjs"]) {
+                let result = data.replace(`declare module "dev.copper" {`, `declare module "@jwrunge/copper${subpath ? "/" + subpath : ""}" {`);
+                fs.writeFile(`${newFile.replace("js", `${subpath ? subpath + "." : ""}d.ts`)}`, result, 'utf8', function (err) {
+                    if (err) return console.log(err);
+                });
+            }
         });
     });
 }

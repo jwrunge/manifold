@@ -21,12 +21,12 @@ const terserOps = {
 
 function constructProfiles(ops) {
     return ops.map(op=> { 
-        const { prefix, sourceMaps } = op;
+        const { prefix, suffix, sourceMaps } = op;
         return {
             input: `src/index.${op.module ? "module" : "tag"}.js`,
             output: [
                 {
-                    file: `dist/${prefix ? prefix + "." : ""}copper${op.module ? op.mod === "es" ? ".js" : "." + op.mod : ".js"}`,
+                    file: `dist/${prefix ? prefix + "." : ""}copper${suffix ? "." + suffix : ""}${op.module ? op.mod === "es" ? ".js" : "." + op.mod : ".js"}`,
                     format: op.mod,
                     name: "Cu",
                     sourcemap: sourceMaps,
@@ -48,7 +48,7 @@ function constructProfiles(ops) {
 export default [
     ...constructProfiles([
         { prefix: "", mod: "es", sourceMaps: false, jsdocTypes: true },
-        { prefix: "slim", mod: "es", sourceMaps: false, jsdocTypes: false },
+        { suffix: "slim", mod: "es", sourceMaps: false, jsdocTypes: false },
         { prefix: "slim", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: false },
         { prefix: "slim", mod: "es", module: true, sourceMaps: false, jsdocTypes: false },
         { prefix: "dev", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: true },
