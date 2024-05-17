@@ -22,10 +22,10 @@ for(let t of e)s(t)&&await s(t).h()
 n(this.value)}),0)}))}async h(){await this.update(await(this.#t?.(this.l?.map((t=>s(t)?.value))||[],this?.value)||this.value))}}function s(t,e){return e?new r(t,e):o.get(t)||new r(t,e)}let f=globalThis.smartOutro,l=[],a=!1
 function u(t){l.push(t),a||(a=!0,requestAnimationFrame(c))}function c(){a=!1
 for(let t of l)if("function"==typeof t)t()
-else{if([">","+"].includes(t.relation)){if(">"==t.relation){let e=globalThis.document?.t("div")
+else{if([">","+"].includes(t.relation)){if(">"==t.relation){let e=globalThis.document?.createElement("div")
 for(let o of Array.from(t.out?.childNodes||[]))e.appendChild(o)
 t.out?.replaceChildren(e),h(e,"out",t.ops)}f?.space?.(t.in,t.out),h(t.in,"in",t.ops,(()=>{t.in&&t.out?.appendChild(t.in),f?.adjust?.(t.in,t.ops)}))}else h(t.in,"in",t.ops,(()=>{t.out?.after(t.in),f?.space?.(t.in,t.out),f?.adjust?.(t.in,t.ops),"/"===t.relation&&h(t.out,"out",t.ops)}))
-t.done?.(t.in)}l=[]}function h(t,e,o,n){if(t?.nodeType==Node.TEXT_NODE){let e=t.textContent,o=globalThis.document?.t("div")
+t.done?.(t.in)}l=[]}function h(t,e,o,n){if(t?.nodeType==Node.TEXT_NODE){let e=t.textContent,o=globalThis.document?.createElement("div")
 o.textContent=e,t.replaceWith(o),t=o}if(t){let i=Array.isArray(o.trans?.dur)?o.trans?.dur["in"==e?0:1]||o.trans?.dur[0]:o.trans?.dur||0,r=o?.trans?.class||"cu-trans"
 t?.classList?.add(r),o.trans?.hooks?.[`${e}-start`]?.(t),"out"==e?u((()=>{f?.size?.(t),i&&(t.style.transitionDuration=`${i}ms`),t.classList?.add(e)})):setTimeout((()=>{u((()=>{i&&(t.style.transitionDuration=`${i}ms`),t?.classList?.add(e),n?.(),u((()=>{t?.classList?.remove(e)}))}))}),o.trans?.swap||0),setTimeout((()=>{u((()=>{"out"==e&&t?.remove(),t?.classList?.remove(r),t?.classList?.remove(e),o.trans?.hooks?.[`${e}-end`]?.(t)}))}),i+("in"==e&&o.trans?.swap||0))}}let d=globalThis.DOMParser?new DOMParser:void 0
 let p=/, {0,}/g,y=0
@@ -160,6 +160,11 @@ funcs=>{for(let t in funcs)n.set(t,funcs[t])},config:
  * @param {CuOps} new_ops
  * @param {string} [profile_name]
  */
-(new_ops,profile_name)=>g(new_ops,profile_name)}
+(new_ops,profile_name)=>g(new_ops,profile_name),tick:
+/**!
+  * - Wait for the next Copper data update cycle to complete before executing the callback function.
+  * @param {()=> void} cb
+  */
+t=>u(t)}
 export{T as Cu}
 //# sourceMappingURL=dev.copper.js.map

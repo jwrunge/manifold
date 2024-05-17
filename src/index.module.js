@@ -1,5 +1,6 @@
-import { _store, _funcs, _stores } from "./store.js";
+import { _store, _funcs } from "./store.js";
 import { _registerSubs, _setOptions } from "./domRegistrar.js";
+import { _scheduleDomUpdate } from "./domUpdates.js";
 
 /**! @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey*/
 
@@ -109,4 +110,9 @@ config:
  * @param {CuOps} new_ops
  * @param {string} [profile_name]
  */ (new_ops, profile_name)=> _setOptions(new_ops, profile_name),
+ tick:
+ /**!
+  * - Wait for the next Copper data update cycle to complete before executing the callback function.
+  * @param {()=> void} cb
+  */ (cb)=> _scheduleDomUpdate(cb)
 };
