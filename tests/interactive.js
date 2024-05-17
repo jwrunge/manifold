@@ -1,4 +1,4 @@
-/// <reference path="../dist/copper.js" />
+/// <reference path="../dist/dev.copper.cjs.js" />
 
 console.log("Copper", Cu);
 

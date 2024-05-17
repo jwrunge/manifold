@@ -8,7 +8,7 @@ const terserOps = {
     mangle: {
         eval: true,
         module: true,
-        reserved: ["store_name", "store_ops"],
+        reserved: ["store_name", "store_ops", "func_name", "funcs", "new_ops", "profile_name"],
         properties: {
             regex: /^[#_].*/
         }
@@ -23,11 +23,11 @@ function constructProfiles(ops) {
     return ops.map(op=> { 
         const { prefix, sourceMaps } = op;
         return {
-            input: `src/index.${op.mod}.js`,
+            input: `src/index.${op.module ? "module" : "tag"}.js`,
             output: [
                 {
-                    file: `dist/${prefix ? prefix + "." : ""}copper.js`,
-                    format: ops.mod,
+                    file: `dist/${prefix ? prefix + "." : ""}copper${op.module ? op.mod === "es" ? ".js" : "." + op.mod : ".js"}`,
+                    format: op.mod,
                     name: "Cu",
                     sourcemap: sourceMaps,
                 }
@@ -39,7 +39,7 @@ function constructProfiles(ops) {
                         ...terserOps.format, 
                         comments: op.jsdocTypes ? "some" : false 
                     }
-                }),
+                })
             ]
         }
     });
@@ -48,9 +48,11 @@ function constructProfiles(ops) {
 export default [
     ...constructProfiles([
         { prefix: "", mod: "es", sourceMaps: false, jsdocTypes: true },
-        { prefix: "typed", mod: "umd", sourceMaps: false, jsdocTypes: true, generateTypes: true},
-        { prefix: "slim", mod: "umd", sourceMaps: false, jsdocTypes: false },
-        { prefix: "dev", mod: "umd", sourceMaps: true, jsdocTypes: true }
+        { prefix: "typed", mod: "es", module: true, sourceMaps: false, jsdocTypes: true, generateTypes: true},
+        { prefix: "slim", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: false },
+        { prefix: "dev", mod: "cjs", module: true, sourceMaps: true, jsdocTypes: true },
+        { prefix: "slim", mod: "es", module: true, sourceMaps: false, jsdocTypes: false },
+        { prefix: "dev", mod: "es", module: true, sourceMaps: true, jsdocTypes: true }
     ]),
     {
         input: "src/extras/smartOutro.js",

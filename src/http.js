@@ -5,7 +5,7 @@ let pageScripts = new WeakMap();
 let pageStyles = new WeakMap();
 let parser = globalThis.DOMParser ? new DOMParser() : undefined;
 
-/** @typedef {import("./index.es.js").CuOps} CuOps */
+/** @typedef {import("./index.tag.js").CuOps} CuOps */
 
 //Fetch page and replace content
 /**

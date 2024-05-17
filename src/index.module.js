@@ -106,7 +106,7 @@ config:
 /**!
  * - Set Copper configuration options, including `trans` (DOM transition settings), `fetch` (fetch options), and `profiles` (configuration option overrides that can be set on elements ad-hoc via `cu-overrides`).
  * - Providing the optional `profileName` parameter allows you to save the configuration as a named profile. Otherwise, the profile is saved as the default configuration.
- * @param {CuOps} newops
- * @param {string} [profileName]
- */ (newops, profileName)=> _setOptions(newops, profileName),
+ * @param {CuOps} new_ops
+ * @param {string} [profile_name]
+ */ (new_ops, profile_name)=> _setOptions(new_ops, profile_name),
 };
