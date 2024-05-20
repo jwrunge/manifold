@@ -1,4 +1,4 @@
-import { _store, _funcs } from "./store.js";
+import { _store, _funcs, _addToNextTickQueue } from "./store.js";
 import { _registerSubs, _setOptions } from "./domRegistrar.js";
 import { _scheduleDomUpdate } from "./domUpdates.js";
 
@@ -114,5 +114,5 @@ config:
  /**!
   * - Wait for the next Copper data update cycle to complete before executing the callback function.
   * @param {()=> void} cb
-  */ (cb)=> _scheduleDomUpdate(cb)
+  */ (cb)=> _addToNextTickQueue(cb),
 };

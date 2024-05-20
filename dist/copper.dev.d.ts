@@ -1,5 +1,5 @@
 declare module "@jwrunge/copper/dev" {
-    export { $ as Cu };
+    export { v as Cu };
     /**
      * !
      */
@@ -133,7 +133,7 @@ declare module "@jwrunge/copper/dev" {
      * !
      */
     export type CuFunc = Function;
-    namespace $ {
+    namespace v {
         /**!
         * - Create or overwrite a _typed_ global Copper store by passing `store_ops` (`CuOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
@@ -178,6 +178,6 @@ declare module "@jwrunge/copper/dev" {
           * - Wait for the next Copper data update cycle to complete before executing the callback function.
           * @param {()=> void} cb
           */
-        function tick(t: any): void;
+        function tick(t: any): any;
     }
 }

@@ -36,6 +36,16 @@ function _hashAny(input) {
     return hash;
 }
 
+// Next tick queue
+/**
+ * @type {Function[]}
+ */
+let _nextTickQueue = [];
+
+export function _addToNextTickQueue(fn) {
+    _nextTickQueue.push(fn);
+}
+
 //Static
 /** @type {Map<string, Store<any>>} */ export let _stores = new Map();
 /** @type {Map<string, Function>} */ export let _funcs = new Map();
@@ -132,6 +142,12 @@ export class Store {
                 //Clear work order and cascade
                 _workOrder.clear();
                 for(let S of downstream) if(_store(S)) await _store(S)._autoUpdate();
+
+                //Handle queued nextTick functions
+                _nextTickQueue.forEach(fn=> fn());
+                _nextTickQueue = [];
+
+                //Resolve value
                 resolve(this.value);
             }, 0);    //Hack to force running all updates at the end of the JS event loop
         });
