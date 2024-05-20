@@ -1,25 +1,25 @@
 {
-    "name": "mfld",
+    "name": "manifold",
     "version": "0.0.2",
-    "main": "dist/mfld.js",
+    "main": "dist/manifold.js",
     "exports": {
         ".": {
-            "require": "./dist/slim.mfld.cjs",
-            "import": "./dist/slim.mfld.js",
-            "types": "./dist/mfld.d.ts"
+            "require": "./dist/slim.manifold.cjs",
+            "import": "./dist/slim.manifold.js",
+            "types": "./dist/manifold.d.ts"
         },
         "./dev": {
-            "require": "./dist/dev.mfld.cjs",
-            "import": "./dist/dev.mfld.js",
-            "types": "./dist/mfld.dev.d.ts"
+            "require": "./dist/dev.manifold.cjs",
+            "import": "./dist/dev.manifold.js",
+            "types": "./dist/manifold.dev.d.ts"
         },
         "./cjs": {
-            "default": "./dist/slim.mfld.cjs",
-            "types": "./dist/mfld.cjs.d.ts"
+            "default": "./dist/slim.manifold.cjs",
+            "types": "./dist/manifold.cjs.d.ts"
         },
         "./es": {
-            "default": "./dist/slim.mfld.js",
-            "types": "./dist/mfld.es.d.ts"
+            "default": "./dist/slim.manifold.js",
+            "types": "./dist/manifold.es.d.ts"
         }
     },
     "type": "module",
@@ -29,8 +29,8 @@
         "dev": "npm run build & sirv --port 5000 --dev true --single tests/interactive.html",
         "version": "node ./util/updateVersion.js",
         "increment-patch": "node util/incrementPatchVersion.js",
-        "publish": "npm run build && npm publish",
-        "test.gzip": "wsl gzip -c ./dist/mfld.js > ./dist/cu.gz"
+        "publish": "npm run build && npm run incrementPatchVersion && npm publish",
+        "test.gzip": "wsl gzip -c ./dist/manifold.js > ./dist/cu.gz"
     },
     "devDependencies": {
         "@rollup/plugin-terser": "^0.4.4",

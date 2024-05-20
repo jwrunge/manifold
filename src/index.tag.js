@@ -1,2 +1,2 @@
-import {MFLD} from "./index.module.js";
-globalThis.MFLD = MFLD;
+import {Mfld} from "./index.module.js";
+globalThis.Mfld = Mfld;

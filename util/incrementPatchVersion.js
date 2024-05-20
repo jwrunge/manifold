@@ -41,6 +41,7 @@ pkg.version = pkg.version?.split?.('.')?.map((v, i) => {
 
 //Save package.json
 try {
+    fs.writeFileSync('./util/lastPublish.txt', pkg.version, 'utf8');
     fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 4), 'utf8');
 }
 catch(err) {

@@ -1,4 +1,4 @@
-# Copper
+# Manifold (MFLD)
 
 ## WARNING: This is pre-production software meant for testing only. Full, accurate documentation is coming soon (@1.0.0).
 
@@ -10,19 +10,19 @@ The documentation below is just a placeholder / brainstorming.😬
 
 Reactive state, easy ad-hoc modules, and dynamic markup fragment loading from the server. Wicked small and 0% magic.
 
-Copper is a small, simple, drop-in reactivity library that enables you to propagate value changes to variables and DOM elements.
+Manifold is a small, simple, drop-in reactivity library that enables you to propagate value changes to variables and DOM elements.
 
-At xx minified and g-zipped, Copper is xx smaller than [React](https://react.dev/) and xx smaller than [Vue.js](https://vuejs.org/). An equivalent app in [Svelte](https://svelte.dev/) is about x% bigger.
+At xx minified and g-zipped, Manifold is xx smaller than [React](https://react.dev/) and xx smaller than [Vue.js](https://vuejs.org/). An equivalent app in [Svelte](https://svelte.dev/) is about x% bigger.
 
-Copper does all of this while staying as invisible as possible: reactive updates are [progressive enhancements](https://developer.mozilla.org/en-US/docs/Glossary/Progressive_Enhancement) to your core HTML markup; you can better maintain [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) between your markup and reactive logic; and your application remains just as flexible, modular, and refactorable as it would be if you didn't use it at all.
+Manifold does all of this while staying as invisible as possible: reactive updates are [progressive enhancements](https://developer.mozilla.org/en-US/docs/Glossary/Progressive_Enhancement) to your core HTML markup; you can better maintain [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) between your markup and reactive logic; and your application remains just as flexible, modular, and refactorable as it would be if you didn't use it at all.
 
-Despite its small size, Copper also strives to be modular, so that you are including as little bloat as possible. There are three Copper modules:
+Despite its small size, Manifold also strives to be modular, so that you are including as little bloat as possible. There are three Manifold modules:
 
 * **The client-side reactivity module** - enable reactive linking between Svelte-inspired stores, variables, and the DOM. SIZE???
 * **The remote reactivity module** - prompt granular changes in response to HTTP requests, like a stripped-down [htmx](https://htmx.org/). Omit this module if you are using something like htmx already; include it if you need to respond to non-HTML responses from your server. SIZE???
 * **The web components module** - easily spin up ad-hoc web components that integrate seamlessly with your existing component library. SIZE???
 
-You may be interested in Copper if:
+You may be interested in Manifold if:
 
 * Monolithic reactive libraries like React, Vue, or Svelte introduce too much complexity, bloat, or lock-in for your application
 * You want to make your MPA more dynamic (maybe you're using [Astro?](https://astro.build/))
@@ -32,4 +32,4 @@ You may be interested in Copper if:
 
 ## Documentation
 
-For full documentation, check out the [GitHub repo](https://github.com/jwrunge/Copper).
+For full documentation, check out the [GitHub repo](https://github.com/jwrunge/Manifold).

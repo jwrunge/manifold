@@ -31,7 +31,7 @@ o.textContent=e,t.replaceWith(o),t=o}if(t){let i=Array.isArray(o.trans?.dur)?o.t
 t?.classList?.add(r),o.trans?.hooks?.[`${e}-start`]?.(t),"out"==e?c((()=>{l?.size?.(t),i&&(t.style.transitionDuration=`${i}ms`),t.classList?.add(e)})):setTimeout((()=>{c((()=>{i&&(t.style.transitionDuration=`${i}ms`),t?.classList?.add(e),n?.(),c((()=>{t?.classList?.remove(e)}))}))}),o.trans?.swap||0),setTimeout((()=>{c((()=>{"out"==e&&t?.remove(),t?.classList?.remove(r),t?.classList?.remove(e),o.trans?.hooks?.[`${e}-end`]?.(t)}))}),i+("in"==e&&o.trans?.swap||0))}}let p=globalThis.DOMParser?new DOMParser:void 0
 let y=/, {0,}/g,g=0
 !function(){let t=globalThis.document?.currentScript?.dataset
-if(t?.config)try{m(JSON.parse(t?.config))}catch(t){console.warn("Invalid MFLD params",t)}t?.init&&function(t){let e=t?.querySelectorAll(`[data-${b.join("],[data-")}]${0!=w.fetch?.auto?",a":""}`)||[]
+if(t?.config)try{m(JSON.parse(t?.config))}catch(t){console.warn("Invalid Mfld params",t)}t?.init&&function(t){let e=t?.querySelectorAll(`[data-${b.join("],[data-")}]${0!=w.fetch?.auto?",a":""}`)||[]
 for(let t of e){t.id||(t.id="cu-"+g++)
 for(let e in t.dataset){if(!b.includes(e))continue
 let o="bind"!=e,n=`(#${t.id} on ${e})`
@@ -42,7 +42,7 @@ if(!o&&h.length>1||o&&d.length>1)throw`Multiple sources: ${n}`}let p=h.map((t=>{
 return{name:e,path:o.map((t=>isNaN(parseInt(t))?t:parseInt(t))).filter((t=>t))}}))
 a?.length||(a=[""])
 for(let o of a){"fetch"==e&&$(t,o,h,d,w),d?.length||(d=[""])
-for(let i=0;i<d.length;i++)if("bind"==e){let e=()=>{c((()=>{t[d[i]]=s?.(...p.map((t=>M(f(t.name)?.value,t.path))),t)??M(f(p[0].name||"")?.value,p[0].path),t.dispatchEvent(new MFLDstomEvent(o))}))}
+for(let i=0;i<d.length;i++)if("bind"==e){let e=()=>{c((()=>{t[d[i]]=s?.(...p.map((t=>M(f(t.name)?.value,t.path))),t)??M(f(p[0].name||"")?.value,p[0].path),t.dispatchEvent(new MfldstomEvent(o))}))}
 for(let o of p)f(o.name)?.u(t.id,e)}else if("sync"==e){if(p.length>1)throw`Only one store supported: ${n}`
 let e=()=>{let e=t[d[i].trim()]
 s&&(e=s?.(e,t))
@@ -52,7 +52,7 @@ t.addEventListener(o,e)}}}))}}}()}()
 let w={},b=["bind","sync","fetch"]
 
 ;/**!
- * @param {Partial<MFLDOps>} newops 
+ * @param {Partial<MfldOps>} newops 
  * @param {string} [profileName] 
  */
 function m(t,e){e?w.profiles={...w.profiles,[e]:t}:w={...w,...t}}function M(t,e,o){let n=t
@@ -90,8 +90,8 @@ e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}
  */
 /**!
  * Manifold options for `fetch`, `trans`, and `profiles`.
- * @typedef {Object} MFLDOps
- * @property {{ [ key: string ]: Partial<MFLDOps> }} [profiles] - Fetch profiles assignable to elements
+ * @typedef {Object} MfldOps
+ * @property {{ [ key: string ]: Partial<MfldOps> }} [profiles] - Fetch profiles assignable to elements
  * @property {FetchOptions} [fetch] - Fetch options - see https://google.com
  * @property {TransitionOptions} [trans] - Transition settings - see https://google.com
  */
@@ -117,7 +117,7 @@ e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}
  * @prop {function(function(T):void):void} sub - Add a subscription function to the store
  */
 /**!
- * @typedef {Function} MFLDFunc
+ * @typedef {Function} MfldFunc
  * @param {any} val
  * @param {HTMLElement} [el]
  */
@@ -125,7 +125,7 @@ e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}
  * The global Manifold interface.
  */const v={store:
 /**!
-* - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MFLDOps`) -> *returns `Store\<T\>`* 
+* - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`* 
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
 * @template T
 * @param {string} store_name
@@ -134,7 +134,7 @@ e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}
 */
 (store_name,store_ops)=>f(store_name,store_ops),ustore:
 /**!
-* - Create or overwrite an untyped global Manifold store by passing `store_ops` (`MFLDOps`) -> *returns `Store\<any\>`* 
+* - Create or overwrite an untyped global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<any\>`* 
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
 * @param {string} store_name
 * @param {StoreOptions<any>} [store_ops]
@@ -142,23 +142,23 @@ e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}
 */
 (store_name,store_ops)=>f(store_name,store_ops),getFunc:
 /**!
- * - Retrieve a Manifold function by name. *val* refers to the store's current value; *el* refers to the element that triggered the update (if applicable). *returns `MFLDFunc`*
+ * - Retrieve a Manifold function by name. *val* refers to the store's current value; *el* refers to the element that triggered the update (if applicable). *returns `MfldFunc`*
  * - *Note:* Functions retrived using this method cannot infer the type of the store's value and is therefore **not** type-checked. It is preferable to keep a reference to the function if you need to preserve type information.
  * @param {string} func_name
- * @return {MFLDFunc}
+ * @return {MfldFunc}
  */
 func_name=>i.get(func_name),addFuncs:
 /**!
  * - Add functions to the Manifold function registry in key-value pairs.
  * - Functions must be registered in order to be accessible to HTML elements via `bind`, `sync`, and `resolve`. 
  * - It may still be beneficial to keep a reference to the original function if you need to preserve type information.
- * @param {{ [key: string]: MFLDFunc }} funcs
+ * @param {{ [key: string]: MfldFunc }} funcs
  */
 funcs=>{for(let t in funcs)i.set(t,funcs[t])},config:
 /**!
  * - Set Manifold configuration options, including `trans` (DOM transition settings), `fetch` (fetch options), and `profiles` (configuration option overrides that can be set on elements ad-hoc via `cu-overrides`).
  * - Providing the optional `profileName` parameter allows you to save the configuration as a named profile. Otherwise, the profile is saved as the default configuration.
- * @param {MFLDOps} new_ops
+ * @param {MfldOps} new_ops
  * @param {string} [profile_name]
  */
 (new_ops,profile_name)=>m(new_ops,profile_name),onTick:
@@ -167,4 +167,4 @@ funcs=>{for(let t in funcs)i.set(t,funcs[t])},config:
   * @param {()=> void} cb
   */
 t=>{var o;(o=t)&&e.push(o)}}
-globalThis.MFLD=v
+globalThis.Mfld=v

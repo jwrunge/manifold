@@ -32,8 +32,8 @@ import { _scheduleDomUpdate } from "./domUpdates.js";
 
 /**!
  * Manifold options for `fetch`, `trans`, and `profiles`.
- * @typedef {Object} MFLDOps
- * @property {{ [ key: string ]: Partial<MFLDOps> }} [profiles] - Fetch profiles assignable to elements
+ * @typedef {Object} MfldOps
+ * @property {{ [ key: string ]: Partial<MfldOps> }} [profiles] - Fetch profiles assignable to elements
  * @property {FetchOptions} [fetch] - Fetch options - see https://google.com
  * @property {TransitionOptions} [trans] - Transition settings - see https://google.com
  */
@@ -63,7 +63,7 @@ import { _scheduleDomUpdate } from "./domUpdates.js";
  */
 
 /**!
- * @typedef {Function} MFLDFunc
+ * @typedef {Function} MfldFunc
  * @param {any} val
  * @param {HTMLElement} [el]
  */
@@ -71,10 +71,10 @@ import { _scheduleDomUpdate } from "./domUpdates.js";
 /**!
  * The global Manifold interface.
  */
-export const MFLD = {
+export const Mfld = {
 store: 
 /**!
-* - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MFLDOps`) -> *returns `Store\<T\>`* 
+* - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`* 
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
 * @template T
 * @param {string} store_name
@@ -83,7 +83,7 @@ store:
 */ (store_name, store_ops)=> /**@type {Store<T>}*/(_store(store_name, store_ops)),
 ustore: 
 /**!
-* - Create or overwrite an untyped global Manifold store by passing `store_ops` (`MFLDOps`) -> *returns `Store\<any\>`* 
+* - Create or overwrite an untyped global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<any\>`* 
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
 * @param {string} store_name
 * @param {StoreOptions<any>} [store_ops]
@@ -91,23 +91,23 @@ ustore:
 */ (store_name, store_ops)=> /**@type {Store<any>}*/(_store(store_name, store_ops)),
 getFunc: 
 /**!
- * - Retrieve a Manifold function by name. *val* refers to the store's current value; *el* refers to the element that triggered the update (if applicable). *returns `MFLDFunc`*
+ * - Retrieve a Manifold function by name. *val* refers to the store's current value; *el* refers to the element that triggered the update (if applicable). *returns `MfldFunc`*
  * - *Note:* Functions retrived using this method cannot infer the type of the store's value and is therefore **not** type-checked. It is preferable to keep a reference to the function if you need to preserve type information.
  * @param {string} func_name
- * @return {MFLDFunc}
+ * @return {MfldFunc}
  */ (func_name)=> /** @type {(val: any, el?: HTMLElement)=> void}*/(_funcs.get(func_name)),
 addFuncs: 
 /**!
  * - Add functions to the Manifold function registry in key-value pairs.
  * - Functions must be registered in order to be accessible to HTML elements via `bind`, `sync`, and `resolve`. 
  * - It may still be beneficial to keep a reference to the original function if you need to preserve type information.
- * @param {{ [key: string]: MFLDFunc }} funcs
+ * @param {{ [key: string]: MfldFunc }} funcs
  */ funcs=> {for(let key in funcs) _funcs.set(key, funcs[key])},
 config:
 /**!
  * - Set Manifold configuration options, including `trans` (DOM transition settings), `fetch` (fetch options), and `profiles` (configuration option overrides that can be set on elements ad-hoc via `cu-overrides`).
  * - Providing the optional `profileName` parameter allows you to save the configuration as a named profile. Otherwise, the profile is saved as the default configuration.
- * @param {MFLDOps} new_ops
+ * @param {MfldOps} new_ops
  * @param {string} [profile_name]
  */ (new_ops, profile_name)=> _setOptions(new_ops, profile_name),
  onTick:

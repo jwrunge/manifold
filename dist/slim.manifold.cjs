@@ -31,7 +31,7 @@ o.textContent=e,t.replaceWith(o),t=o}if(t){let i=Array.isArray(o.trans?.dur)?o.t
 t?.classList?.add(r),o.trans?.hooks?.[`${e}-start`]?.(t),"out"==e?c((()=>{l?.size?.(t),i&&(t.style.transitionDuration=`${i}ms`),t.classList?.add(e)})):setTimeout((()=>{c((()=>{i&&(t.style.transitionDuration=`${i}ms`),t?.classList?.add(e),n?.(),c((()=>{t?.classList?.remove(e)}))}))}),o.trans?.swap||0),setTimeout((()=>{c((()=>{"out"==e&&t?.remove(),t?.classList?.remove(r),t?.classList?.remove(e),o.trans?.hooks?.[`${e}-end`]?.(t)}))}),i+("in"==e&&o.trans?.swap||0))}}let p=globalThis.DOMParser?new DOMParser:void 0
 let y=/, {0,}/g,w=0
 !function(){let t=globalThis.document?.currentScript?.dataset
-if(t?.config)try{b(JSON.parse(t?.config))}catch(t){console.warn("Invalid MFLD params",t)}t?.init&&function(t){let e=t?.querySelectorAll(`[data-${m.join("],[data-")}]${0!=g.fetch?.auto?",a":""}`)||[]
+if(t?.config)try{b(JSON.parse(t?.config))}catch(t){console.warn("Invalid Mfld params",t)}t?.init&&function(t){let e=t?.querySelectorAll(`[data-${m.join("],[data-")}]${0!=g.fetch?.auto?",a":""}`)||[]
 for(let t of e){t.id||(t.id="cu-"+w++)
 for(let e in t.dataset){if(!m.includes(e))continue
 let o="bind"!=e,n=`(#${t.id} on ${e})`
@@ -42,7 +42,7 @@ if(!o&&h.length>1||o&&d.length>1)throw`Multiple sources: ${n}`}let p=h.map((t=>{
 return{name:e,path:o.map((t=>isNaN(parseInt(t))?t:parseInt(t))).filter((t=>t))}}))
 a?.length||(a=[""])
 for(let o of a){"fetch"==e&&$(t,o,h,d,g),d?.length||(d=[""])
-for(let i=0;i<d.length;i++)if("bind"==e){let e=()=>{c((()=>{t[d[i]]=s?.(...p.map((t=>M(f(t.name)?.value,t.path))),t)??M(f(p[0].name||"")?.value,p[0].path),t.dispatchEvent(new MFLDstomEvent(o))}))}
+for(let i=0;i<d.length;i++)if("bind"==e){let e=()=>{c((()=>{t[d[i]]=s?.(...p.map((t=>M(f(t.name)?.value,t.path))),t)??M(f(p[0].name||"")?.value,p[0].path),t.dispatchEvent(new MfldstomEvent(o))}))}
 for(let o of p)f(o.name)?.u(t.id,e)}else if("sync"==e){if(p.length>1)throw`Only one store supported: ${n}`
 let e=()=>{let e=t[d[i].trim()]
 s&&(e=s?.(e,t))
@@ -59,4 +59,4 @@ if(i&&0==o?.onCode?.(i))return
 let r=await(n?.[e.fetch?.type||"text"]())
 e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}({method:t.dataset.method?.toLowerCase()||"get",href:r?.href,el:t},n)}
 "mount"==e?r():t.addEventListener(e,r)}const v={store:(store_name,store_ops)=>f(store_name,store_ops),ustore:(store_name,store_ops)=>f(store_name,store_ops),getFunc:func_name=>i.get(func_name),addFuncs:funcs=>{for(let t in funcs)i.set(t,funcs[t])},config:(new_ops,profile_name)=>b(new_ops,profile_name),onTick:t=>{var o;(o=t)&&e.push(o)}}
-exports.MFLD=v
+exports.Mfld=v
