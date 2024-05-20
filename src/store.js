@@ -30,7 +30,7 @@ function _hashAny(input) {
 
     let hash = 0;
     for(const char of new TextEncoder().encode(
-        typeof input === 'string' ? input : input.toString()
+        typeof input === 'string' ? input : input?.toString() || ""
     )) 
         hash = ((hash << 5) - hash) + char;
     return hash;
@@ -122,7 +122,9 @@ export class Store {
                     let newValue = (typeof value == "function" ? /** @type {Function} */await (value)?.(store.value) : value);
 
                     //Check complex object lengths (avoid lengthy hashes) -- if the lengths indicate the value HAS NOT CHANGED, double-check via hash
-                    let valueChanged = Array.from((store.value || []))?.length !== Array.from(newValue).length;
+                    let aLen = store.value?.length || store.value?.size || undefined;
+                    let bLen = newValue?.length || newValue?.size || undefined;
+                    let valueChanged = aLen !== bLen;
 
                     let newHash = "";
                     if(!valueChanged) {
