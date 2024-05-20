@@ -1,5 +1,5 @@
 {
-    "name": "manifold",
+    "name": "mfld",
     "version": "0.0.2",
     "main": "dist/manifold.js",
     "exports": {
@@ -29,7 +29,7 @@
         "dev": "npm run build & sirv --port 5000 --dev true --single tests/interactive.html",
         "version": "node ./util/updateVersion.js",
         "increment-patch": "node util/incrementPatchVersion.js",
-        "publish": "npm run build && npm run incrementPatchVersion && npm publish",
+        "publish": "npm run build && npm run increment-patch && npm publish",
         "test.gzip": "wsl gzip -c ./dist/manifold.js > ./dist/cu.gz"
     },
     "devDependencies": {
