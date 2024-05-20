@@ -26,7 +26,7 @@ function constructProfiles(ops) {
             input: `src/index.${op.module ? "module" : "tag"}.js`,
             output: [
                 {
-                    file: `dist/${prefix ? prefix + "." : ""}copper${suffix ? "." + suffix : ""}${op.module ? op.mod === "es" ? ".js" : "." + op.mod : ".js"}`,
+                    file: `dist/${prefix ? prefix + "." : ""}mfld${suffix ? "." + suffix : ""}${op.module ? op.mod === "es" ? ".js" : "." + op.mod : ".js"}`,
                     format: op.mod,
                     name: "Cu",
                     sourcemap: sourceMaps,

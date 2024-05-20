@@ -31,32 +31,32 @@ o.textContent=e,t.replaceWith(o),t=o}if(t){let i=Array.isArray(o.trans?.dur)?o.t
 t?.classList?.add(r),o.trans?.hooks?.[`${e}-start`]?.(t),"out"==e?c((()=>{l?.size?.(t),i&&(t.style.transitionDuration=`${i}ms`),t.classList?.add(e)})):setTimeout((()=>{c((()=>{i&&(t.style.transitionDuration=`${i}ms`),t?.classList?.add(e),n?.(),c((()=>{t?.classList?.remove(e)}))}))}),o.trans?.swap||0),setTimeout((()=>{c((()=>{"out"==e&&t?.remove(),t?.classList?.remove(r),t?.classList?.remove(e),o.trans?.hooks?.[`${e}-end`]?.(t)}))}),i+("in"==e&&o.trans?.swap||0))}}let p=globalThis.DOMParser?new DOMParser:void 0
 let y=/, {0,}/g,w=0
 !function(){let t=globalThis.document?.currentScript?.dataset
-if(t?.config)try{b(JSON.parse(t?.config))}catch(t){console.warn("Invalid Cu params",t)}t?.init&&function(t){let e=t?.querySelectorAll(`[data-${m.join("],[data-")}]${0!=g.fetch?.auto?",a":""}`)||[]
+if(t?.config)try{b(JSON.parse(t?.config))}catch(t){console.warn("Invalid MFLD params",t)}t?.init&&function(t){let e=t?.querySelectorAll(`[data-${m.join("],[data-")}]${0!=g.fetch?.auto?",a":""}`)||[]
 for(let t of e){t.id||(t.id="cu-"+w++)
 for(let e in t.dataset){if(!m.includes(e))continue
 let o="bind"!=e,n=`(#${t.id} on ${e})`
-t?.dataset?.[e]?.split(";").forEach((r=>{let s,l=r?.split(/(?:(?:\)|->) ?){1,}/g)||[],a=o?M(l.splice(0,1)[0]):[],u=l[0]?.includes("(")&&l[0]?.match(/^[^\(]{1,}/)?.[0]||"",h=M(l.splice("sync"==e?1:0,1)[0]),d=M(l[0])
+t?.dataset?.[e]?.split(";").forEach((r=>{let s,l=r?.split(/(?:(?:\)|->) ?){1,}/g)||[],a=o?T(l.splice(0,1)[0]):[],u=l[0]?.includes("(")&&l[0]?.match(/^[^\(]{1,}/)?.[0]||"",h=T(l.splice("sync"==e?1:0,1)[0]),d=T(l[0])
 if(o&&!a?.length)throw`No trigger: ${n}.`
 if(u){if(s=globalThis[u]||i.get(u),!s)throw`"${u}" not registered: ${n}`
 if(!o&&h.length>1||o&&d.length>1)throw`Multiple sources: ${n}`}let p=h.map((t=>{let[e,...o]=t.split(/[\.\[\]\?]{1,}/g)
 return{name:e,path:o.map((t=>isNaN(parseInt(t))?t:parseInt(t))).filter((t=>t))}}))
 a?.length||(a=[""])
 for(let o of a){"fetch"==e&&$(t,o,h,d,g),d?.length||(d=[""])
-for(let i=0;i<d.length;i++)if("bind"==e){let e=()=>{c((()=>{t[d[i]]=s?.(...p.map((t=>T(f(t.name)?.value,t.path))),t)??T(f(p[0].name||"")?.value,p[0].path),t.dispatchEvent(new CustomEvent(o))}))}
+for(let i=0;i<d.length;i++)if("bind"==e){let e=()=>{c((()=>{t[d[i]]=s?.(...p.map((t=>M(f(t.name)?.value,t.path))),t)??M(f(p[0].name||"")?.value,p[0].path),t.dispatchEvent(new MFLDstomEvent(o))}))}
 for(let o of p)f(o.name)?.u(t.id,e)}else if("sync"==e){if(p.length>1)throw`Only one store supported: ${n}`
 let e=()=>{let e=t[d[i].trim()]
 s&&(e=s?.(e,t))
 const o=f(p[0]?.name)
-void 0!==e&&o?.update?.((t=>p[0]?.path?.length?T(t,p[0]?.path,e):e))}
+void 0!==e&&o?.update?.((t=>p[0]?.path?.length?M(t,p[0]?.path,e):e))}
 t.addEventListener(o,e)}}}))}}}()}()
 let g={},m=["bind","sync","fetch"]
-function b(t,e){e?g.profiles={...g.profiles,[e]:t}:g={...g,...t}}function T(t,e,o){let n=t
+function b(t,e){e?g.profiles={...g.profiles,[e]:t}:g={...g,...t}}function M(t,e,o){let n=t
 for(let t of e)null==n&&(n="number"==typeof t?[]:{}),null==o||e[e.length-1]!==t?n=n instanceof Map?n?.get(t):n?.[t]:n instanceof Map?n.set(t,o):n[t]=o
-return n}function M(t){if(t?.includes("(")){let e=t.match(/[^\(\)]{1,}/g)
+return n}function T(t){if(t?.includes("(")){let e=t.match(/[^\(\)]{1,}/g)
 t=e?.[e.length-1]||""}return t?.split(y)||[]}function $(t,e,o,n,i){let r=o=>{o?.preventDefault(),o?.stopPropagation()
 let n={...i,...i.profiles?.[t.dataset.overrides||""]||JSON.parse(t.dataset.overrides||"{}")||{}},r=o?.target;(["click","submit"].includes(e)||["A","FORM"].includes(r?.nodeName))&&history.pushState({fetchData:n,elId:t.id},"",r?.href||r?.action||""),async function(t,e,o){if(p&&!e.fetch?.externals?.some((e=>t?.href?.startsWith(e.domain)))){let o=e.fetch,n=await fetch(t?.href,{...o?.request||{},method:t?.method,body:o?.request?.body?JSON.stringify(o?.request?.body||{}):void 0}).catch((t=>{o?.err?.(t)})),i=n?.status
 if(i&&0==o?.onCode?.(i))return
 let r=await(n?.[e.fetch?.type||"text"]())
 e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}({method:t.dataset.method?.toLowerCase()||"get",href:r?.href,el:t},n)}
 "mount"==e?r():t.addEventListener(e,r)}const v={store:(store_name,store_ops)=>f(store_name,store_ops),ustore:(store_name,store_ops)=>f(store_name,store_ops),getFunc:func_name=>i.get(func_name),addFuncs:funcs=>{for(let t in funcs)i.set(t,funcs[t])},config:(new_ops,profile_name)=>b(new_ops,profile_name),onTick:t=>{var o;(o=t)&&e.push(o)}}
-exports.Cu=v
+export{v as MFLD}

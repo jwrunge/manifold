@@ -1,2 +1,2 @@
-import {Cu} from "./index.module.js";
-globalThis.Cu = Cu;
+import {MFLD} from "./index.module.js";
+globalThis.MFLD = MFLD;

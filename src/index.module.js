@@ -31,9 +31,9 @@ import { _scheduleDomUpdate } from "./domUpdates.js";
  */
 
 /**!
- * Copper options for `fetch`, `trans`, and `profiles`.
- * @typedef {Object} CuOps
- * @property {{ [ key: string ]: Partial<CuOps> }} [profiles] - Fetch profiles assignable to elements
+ * Manifold options for `fetch`, `trans`, and `profiles`.
+ * @typedef {Object} MFLDOps
+ * @property {{ [ key: string ]: Partial<MFLDOps> }} [profiles] - Fetch profiles assignable to elements
  * @property {FetchOptions} [fetch] - Fetch options - see https://google.com
  * @property {TransitionOptions} [trans] - Transition settings - see https://google.com
  */
@@ -63,18 +63,18 @@ import { _scheduleDomUpdate } from "./domUpdates.js";
  */
 
 /**!
- * @typedef {Function} CuFunc
+ * @typedef {Function} MFLDFunc
  * @param {any} val
  * @param {HTMLElement} [el]
  */
 
 /**!
- * The global Copper interface.
+ * The global Manifold interface.
  */
-export const Cu = {
+export const MFLD = {
 store: 
 /**!
-* - Create or overwrite a _typed_ global Copper store by passing `store_ops` (`CuOps`) -> *returns `Store\<T\>`* 
+* - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MFLDOps`) -> *returns `Store\<T\>`* 
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
 * @template T
 * @param {string} store_name
@@ -83,7 +83,7 @@ store:
 */ (store_name, store_ops)=> /**@type {Store<T>}*/(_store(store_name, store_ops)),
 ustore: 
 /**!
-* - Create or overwrite an untyped global Copper store by passing `store_ops` (`CuOps`) -> *returns `Store\<any\>`* 
+* - Create or overwrite an untyped global Manifold store by passing `store_ops` (`MFLDOps`) -> *returns `Store\<any\>`* 
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
 * @param {string} store_name
 * @param {StoreOptions<any>} [store_ops]
@@ -91,28 +91,28 @@ ustore:
 */ (store_name, store_ops)=> /**@type {Store<any>}*/(_store(store_name, store_ops)),
 getFunc: 
 /**!
- * - Retrieve a Copper function by name. *val* refers to the store's current value; *el* refers to the element that triggered the update (if applicable). *returns `CuFunc`*
+ * - Retrieve a Manifold function by name. *val* refers to the store's current value; *el* refers to the element that triggered the update (if applicable). *returns `MFLDFunc`*
  * - *Note:* Functions retrived using this method cannot infer the type of the store's value and is therefore **not** type-checked. It is preferable to keep a reference to the function if you need to preserve type information.
  * @param {string} func_name
- * @return {CuFunc}
+ * @return {MFLDFunc}
  */ (func_name)=> /** @type {(val: any, el?: HTMLElement)=> void}*/(_funcs.get(func_name)),
 addFuncs: 
 /**!
- * - Add functions to the Copper function registry in key-value pairs.
+ * - Add functions to the Manifold function registry in key-value pairs.
  * - Functions must be registered in order to be accessible to HTML elements via `bind`, `sync`, and `resolve`. 
  * - It may still be beneficial to keep a reference to the original function if you need to preserve type information.
- * @param {{ [key: string]: CuFunc }} funcs
+ * @param {{ [key: string]: MFLDFunc }} funcs
  */ funcs=> {for(let key in funcs) _funcs.set(key, funcs[key])},
 config:
 /**!
- * - Set Copper configuration options, including `trans` (DOM transition settings), `fetch` (fetch options), and `profiles` (configuration option overrides that can be set on elements ad-hoc via `cu-overrides`).
+ * - Set Manifold configuration options, including `trans` (DOM transition settings), `fetch` (fetch options), and `profiles` (configuration option overrides that can be set on elements ad-hoc via `cu-overrides`).
  * - Providing the optional `profileName` parameter allows you to save the configuration as a named profile. Otherwise, the profile is saved as the default configuration.
- * @param {CuOps} new_ops
+ * @param {MFLDOps} new_ops
  * @param {string} [profile_name]
  */ (new_ops, profile_name)=> _setOptions(new_ops, profile_name),
  onTick:
  /**!
-  * - Wait for the next Copper data update cycle to complete before executing the callback function.
+  * - Wait for the next Manifold data update cycle to complete before executing the callback function.
   * @param {()=> void} cb
   */ (cb)=> _addToNextTickQueue(cb),
 };

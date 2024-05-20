@@ -1,5 +1,13 @@
 # Copper
 
+## WARNING: This is pre-production software meant for testing only. Full, accurate documentation is coming soon (@1.0.0).
+
+If you are interested in this library and want more information or notification on 1.0.0 release, please contact me @ [jwrunge@gmail.com](mailto:jwrunge@gmail.com).
+
+The documentation below is just a placeholder / brainstorming.😬
+
+---
+
 Reactive state, easy ad-hoc modules, and dynamic markup fragment loading from the server. Wicked small and 0% magic.
 
 Copper is a small, simple, drop-in reactivity library that enables you to propagate value changes to variables and DOM elements.

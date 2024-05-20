@@ -1,25 +1,25 @@
 {
-    "name": "@jwrunge/copper",
+    "name": "mfld",
     "version": "0.0.2",
-    "main": "dist/copper.js",
+    "main": "dist/mfld.js",
     "exports": {
         ".": {
-            "require": "./dist/slim.copper.cjs",
-            "import": "./dist/slim.copper.js",
-            "types": "./dist/copper.d.ts"
+            "require": "./dist/slim.mfld.cjs",
+            "import": "./dist/slim.mfld.js",
+            "types": "./dist/mfld.d.ts"
         },
         "./dev": {
-            "require": "./dist/dev.copper.cjs",
-            "import": "./dist/dev.copper.js",
-            "types": "./dist/copper.dev.d.ts"
+            "require": "./dist/dev.mfld.cjs",
+            "import": "./dist/dev.mfld.js",
+            "types": "./dist/mfld.dev.d.ts"
         },
         "./cjs": {
-            "default": "./dist/slim.copper.cjs",
-            "types": "./dist/copper.cjs.d.ts"
+            "default": "./dist/slim.mfld.cjs",
+            "types": "./dist/mfld.cjs.d.ts"
         },
         "./es": {
-            "default": "./dist/slim.copper.js",
-            "types": "./dist/copper.es.d.ts"
+            "default": "./dist/slim.mfld.js",
+            "types": "./dist/mfld.es.d.ts"
         }
     },
     "type": "module",
@@ -29,8 +29,8 @@
         "dev": "npm run build & sirv --port 5000 --dev true --single tests/interactive.html",
         "version": "node ./util/updateVersion.js",
         "increment-patch": "node util/incrementPatchVersion.js",
-        "publish": "npm run build && npm run test && increment-patch && npm publish",
-        "test.gzip": "wsl gzip -c ./dist/copper.js > ./dist/cu.gz"
+        "publish": "npm run build && npm publish",
+        "test.gzip": "wsl gzip -c ./dist/mfld.js > ./dist/cu.gz"
     },
     "devDependencies": {
         "@rollup/plugin-terser": "^0.4.4",

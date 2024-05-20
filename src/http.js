@@ -5,12 +5,12 @@ let pageScripts = new WeakMap();
 let pageStyles = new WeakMap();
 let parser = globalThis.DOMParser ? new DOMParser() : undefined;
 
-/** @typedef {import("./index.module.js").CuOps} CuOps */
+/** @typedef {import("./index.module.js").MFLDOps} MFLDOps */
 
 //Fetch page and replace content
 /**
  * 
- * @param {CuOps} ops 
+ * @param {MFLDOps} ops 
  * @param {{method: string, href: string, el: HTMLElement}} target
  * @param {(el: HTMLElement | null)=> void} done 
  * @returns 

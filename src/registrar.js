@@ -1,7 +1,7 @@
 import { _funcs, _store } from "./store.js";
 import { _fetchHttp } from "./http.js";
 import { _scheduleDomUpdate } from "./domUpdates.js";
-/** @typedef {import("./index.module.js").CuOps} CuOps */
+/** @typedef {import("./index.module.js").MFLDOps} MFLDOps */
 
 let commaSepRx = /, {0,}/g;
 let elIdx = 0;
@@ -15,7 +15,7 @@ function _intialize() {
             let scriptParams = JSON.parse(ds?.config);
             _setOptions(scriptParams);
         } catch(e) {
-            console.warn("Invalid Cu params", e);
+            console.warn("Invalid MFLD params", e);
         }
     }
 
@@ -40,12 +40,12 @@ _intialize();
 //     }
 // });
 
-/** @type {Partial<CuOps>} */
+/** @type {Partial<MFLDOps>} */
 let ops = {};
 let modes = ["bind", "sync", "fetch"];
 
 /**!
- * @param {Partial<CuOps>} newops 
+ * @param {Partial<MFLDOps>} newops 
  * @param {string} [profileName] 
  */
 export function _setOptions(newops, profileName) {
@@ -129,7 +129,7 @@ export function _registerSubs(parent) {
                                     );
 
                                     //Make sure to update dependent stores on value update
-                                    el.dispatchEvent(new CustomEvent(trigger))
+                                    el.dispatchEvent(new MFLDstomEvent(trigger))
                                 });
                             }
                         
@@ -201,7 +201,7 @@ function _paramsInParens(str) {
  * @param {string} trigger 
  * @param {string[]} external 
  * @param {string[]} internal 
- * @param {Partial<CuOps>} ops 
+ * @param {Partial<MFLDOps>} ops 
  */
 function _handleFetch(el, trigger, external, internal, ops) {
     /**

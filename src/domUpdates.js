@@ -1,5 +1,5 @@
 import { _store } from "./store.js";
-/** @typedef {import("./index.module.js").CuOps} CuOps */
+/** @typedef {import("./index.module.js").MFLDOps} MFLDOps */
 
 /** @type {{ adjust?: Function, space?: Function, size?: Function } | undefined} */
 let smartOutro = globalThis.smartOutro;
@@ -9,7 +9,7 @@ let smartOutro = globalThis.smartOutro;
  * @property {HTMLElement} in - The input HTMLElement
  * @property {HTMLElement} out - The output HTMLElement
  * @property {string} relation - The relation between the input and output elements
- * @property {Partial<CuOps>} ops - The fetch options for the operation
+ * @property {Partial<MFLDOps>} ops - The fetch options for the operation
  * @property {(el: HTMLElement | null) => void} done - The callback function to be executed when the operation is done
  */
 
@@ -74,7 +74,7 @@ function _runDomUpdates() {
 /**
  * @param {HTMLElement} el 
  * @param {"in" | "out"} dir 
- * @param {Partial<CuOps>} ops 
+ * @param {Partial<MFLDOps>} ops 
  * @param {Function} [fn] 
  * @returns 
  */
