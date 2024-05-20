@@ -6,7 +6,7 @@
         ".": {
             "require": "./dist/slim.manifold.cjs",
             "import": "./dist/slim.manifold.js",
-            "types": "./dist/manifold.d.ts"
+            "types": "./dist/manifold.es.d.ts"
         },
         "./dev": {
             "require": "./dist/dev.manifold.cjs",
