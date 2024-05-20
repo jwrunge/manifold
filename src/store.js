@@ -97,7 +97,7 @@ export class Store {
     }
 
     //Update (manual or automated -- cascades downstream)
-    /**
+    /**!
     * @param {(T | function(T): T) | undefined} value
     * @returns {Promise<T | undefined>}
     */
