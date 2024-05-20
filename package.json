@@ -1,6 +1,6 @@
 {
     "name": "@jwrunge/copper",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "main": "dist/copper.js",
     "exports": {
         ".": {
@@ -27,8 +27,8 @@
         "build": "rollup -c && node generate_d.ts.js",
         "example": "npm run build & sirv tests --port 5000 --dev true ",
         "dev": "npm run build & sirv --port 5000 --dev true --single tests/interactive.html",
+        "version": "node ./util/updateVersion.js",
         "increment-patch": "node util/incrementPatchVersion.js",
-        "publish.no-increment": "npm run build && npm run test && npm publish",
         "publish": "npm run build && npm run test && increment-patch && npm publish",
         "test.gzip": "wsl gzip -c ./dist/copper.js > ./dist/cu.gz"
     },

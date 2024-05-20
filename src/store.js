@@ -43,7 +43,7 @@ function _hashAny(input) {
 let _nextTickQueue = [];
 
 export function _addToNextTickQueue(fn) {
-    _nextTickQueue.push(fn);
+    if(fn) _nextTickQueue.push(fn);
 }
 
 //Static

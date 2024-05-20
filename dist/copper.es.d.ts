@@ -178,6 +178,6 @@ declare module "@jwrunge/copper/es" {
           * - Wait for the next Copper data update cycle to complete before executing the callback function.
           * @param {()=> void} cb
           */
-        function tick(t: any): any;
+        function onTick(t: any): void;
     }
 }

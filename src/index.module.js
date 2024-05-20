@@ -110,7 +110,7 @@ config:
  * @param {CuOps} new_ops
  * @param {string} [profile_name]
  */ (new_ops, profile_name)=> _setOptions(new_ops, profile_name),
- tick:
+ onTick:
  /**!
   * - Wait for the next Copper data update cycle to complete before executing the callback function.
   * @param {()=> void} cb
