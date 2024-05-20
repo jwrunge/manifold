@@ -97,9 +97,9 @@ export class Store {
     }
 
     //Update (manual or automated -- cascades downstream)
-    /**!
-    * @param {(T | function(T): T) | undefined} value
-    * @returns {Promise<T | undefined>}
+    /**
+    * @template T
+    * @param {T | ((T)=> T | Promise<T>)} value
     */
     async update(value) {
         return new Promise((resolve)=> {
@@ -119,7 +119,7 @@ export class Store {
                 /** @type {string[]} */ let downstream = [];
                 for(let [storeName, value] of _workOrder) {
                     let store = _store(storeName);
-                    let newValue = (typeof value == "function" ? /** @type {Function} */(value)?.(store.value) : value);
+                    let newValue = (typeof value == "function" ? /** @type {Function} */await (value)?.(store.value) : value);
 
                     //Check complex object lengths (avoid lengthy hashes) -- if the lengths indicate the value HAS NOT CHANGED, double-check via hash
                     let valueChanged = Array.from((store.value || []))?.length !== Array.from(newValue).length;

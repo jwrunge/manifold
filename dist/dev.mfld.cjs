@@ -13,14 +13,9 @@ l=[]
 constructor(t,e){this.name=t,n.set(t,this),this.l=e?.upstream||[]
 for(let t of this.l)f(t)?.i?.push(this.name||"")
 return this.value=e?.store_val,this.#t=e?.updater,this}u(t,e){this.t.set(t,e),e?.()}sub(t){let e="x".repeat(5).replace(/./g,(t=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(36*Math.random())]))
-this.t.set(e,t),t?.(this.value)}
-/**!
-    * @param {(T | function(T): T) | undefined} value
-    * @returns {Promise<T | undefined>}
-    */
-async update(n){return new Promise((i=>{r.set(this.name||"",n),clearTimeout(o),o=setTimeout((async()=>{for(let[t,e]of r){const e=f(t)
+this.t.set(e,t),t?.(this.value)}async update(n){return new Promise((i=>{r.set(this.name||"",n),clearTimeout(o),o=setTimeout((async()=>{for(let[t,e]of r){const e=f(t)
 e.i.forEach((t=>r.delete(t))),e.l.forEach((e=>!r.has(e)||r.delete(t)))}let o=[]
-for(let[e,n]of r){let i=f(e),r="function"==typeof n?n?.(i.value):n,s=Array.from(i.value||[])?.length!==Array.from(r).length,l=""
+for(let[e,n]of r){let i=f(e),r="function"==typeof n?await(n?.(i.value)):n,s=Array.from(i.value||[])?.length!==Array.from(r).length,l=""
 if(s||(l=t(i.value),s=l!==i.o),s){i.value=r,i.o=l
 for(let t of i.i)o.push(t)
 for(let[t,e]of i.t)e?.(i.value,t)}}r.clear()
@@ -118,7 +113,7 @@ e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}
  * @template T
  * @typedef Store
  * @prop {T} value - The store's current value (read only)
- * @prop {function(T):Promise<T|undefined>} update - Update the store's current value
+ * @prop {function(T | function(T):T|Promise<T>|undefined):T|Promise<T>|undefined} update - Update the store's current value
  * @prop {function(function(T):void):void} sub - Add a subscription function to the store
  */
 /**!

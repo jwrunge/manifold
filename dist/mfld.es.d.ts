@@ -123,7 +123,7 @@ declare module "mfld/es" {
         /**
          * - Update the store's current value
          */
-        update: (arg0: T) => Promise<T | undefined>;
+        update: (arg0: T | ((arg0: T) => T | Promise<T> | undefined)) => T | Promise<T> | undefined;
         /**
          * - Add a subscription function to the store
          */

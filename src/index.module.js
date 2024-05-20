@@ -58,7 +58,7 @@ import { _scheduleDomUpdate } from "./domUpdates.js";
  * @template T
  * @typedef Store
  * @prop {T} value - The store's current value (read only)
- * @prop {function(T):Promise<T|undefined>} update - Update the store's current value
+ * @prop {function(T | function(T):T|Promise<T>|undefined):T|Promise<T>|undefined} update - Update the store's current value
  * @prop {function(function(T):void):void} sub - Add a subscription function to the store
  */
 
