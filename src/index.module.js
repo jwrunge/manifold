@@ -43,13 +43,13 @@ import { _scheduleDomUpdate } from "./domUpdates.js";
  * @callback UpdaterFunction
  * @param {Array<any>} upstreamValues
  * @param {T} value
- * @returns {T}
+ * @returns {Promise<T>}
  */
 
 /**!
  * @template T
  * @typedef {Object} StoreOptions
- * @property {T} [value]
+ * @property {T} [store_val]
  * @property {Array<string>} [upstream]
  * @property {UpdaterFunction<T>} [updater]
  */
@@ -78,9 +78,14 @@ store:
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
 * @template T
 * @param {string} store_name
-* @param {StoreOptions<T>} [store_ops]
+* @param {StoreOptions<T> | T} [store_ops]
 * @return {Store<T>}
-*/ (store_name, store_ops)=> /**@type {Store<T>}*/(_store(store_name, store_ops)),
+*/ (store_name, store_ops)=> {
+    if(!store_ops?.hasOwnProperty("store_val") && !store_ops?.hasOwnProperty("updater")) {
+        return /**@type {Store<T>}*/(_store(store_name, { store_val: store_ops }))
+    }
+    return /**@type {Store<T>}*/(_store(store_name, store_ops))
+},
 ustore: 
 /**!
 * - Create or overwrite an untyped global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<any\>`* 

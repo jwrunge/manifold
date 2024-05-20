@@ -12,7 +12,7 @@ i=[]
 l=[]
 constructor(t,e){this.name=t,n.set(t,this),this.l=e?.upstream||[]
 for(let t of this.l)f(t)?.i?.push(this.name||"")
-return this.value=e?.value,this.#t=e?.updater,this}u(t,e){this.t.set(t,e),e?.()}sub(t){let e="x".repeat(5).replace(/./g,(t=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(36*Math.random())]))
+return this.value=e?.store_val,this.#t=e?.updater,this}u(t,e){this.t.set(t,e),e?.()}sub(t){let e="x".repeat(5).replace(/./g,(t=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(36*Math.random())]))
 this.t.set(e,t),t?.(this.value)}async update(n){return new Promise((i=>{r.set(this.name||"",n),clearTimeout(o),o=setTimeout((async()=>{for(let[t,e]of r){const e=f(t)
 e.i.forEach((t=>r.delete(t))),e.l.forEach((e=>!r.has(e)||r.delete(t)))}let o=[]
 for(let[e,n]of r){let i=f(e),r="function"==typeof n?n?.(i.value):n,s=Array.from(i.value||[])?.length!==Array.from(r).length,l=""
@@ -100,12 +100,12 @@ e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}
  * @callback UpdaterFunction
  * @param {Array<any>} upstreamValues
  * @param {T} value
- * @returns {T}
+ * @returns {Promise<T>}
  */
 /**!
  * @template T
  * @typedef {Object} StoreOptions
- * @property {T} [value]
+ * @property {T} [store_val]
  * @property {Array<string>} [upstream]
  * @property {UpdaterFunction<T>} [updater]
  */
@@ -129,10 +129,10 @@ e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
 * @template T
 * @param {string} store_name
-* @param {StoreOptions<T>} [store_ops]
+* @param {StoreOptions<T> | T} [store_ops]
 * @return {Store<T>}
 */
-(store_name,store_ops)=>f(store_name,store_ops),ustore:
+(store_name,store_ops)=>store_ops?.hasOwnProperty("store_val")||store_ops?.hasOwnProperty("updater")?f(store_name,store_ops):f(store_name,{store_val:store_ops}),ustore:
 /**!
 * - Create or overwrite an untyped global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<any\>`* 
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*

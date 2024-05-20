@@ -41,6 +41,7 @@ else {
 
 //Save package.json
 try {
+    fs.writeFileSync('./util/lastPublish.txt', pkg.version + ".dev", 'utf8');
     fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 4), 'utf8');
 }
 catch(err) {

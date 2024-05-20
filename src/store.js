@@ -72,7 +72,7 @@ export class Store {
         
         this._upstreamStores = ops?.upstream || [];
         for(let storeName of this._upstreamStores) _store(storeName)?._downstreamStores?.push(this.name || "");
-        this.value = ops?.value;
+        this.value = ops?.store_val;
         this.#updater = ops?.updater;
         
         return this;

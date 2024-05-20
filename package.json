@@ -1,36 +1,36 @@
 {
     "name": "mfld",
-    "version": "0.0.8",
-    "main": "dist/manifold.js",
+    "version": "0.0.9",
+    "main": "dist/mfld.slim.js",
     "exports": {
         ".": {
-            "require": "./dist/slim.manifold.cjs",
-            "import": "./dist/slim.manifold.js",
-            "types": "./dist/manifold.es.d.ts"
+            "require": "./dist/slim.mfld.cjs",
+            "import": "./dist/slim.mfld.js",
+            "types": "./dist/mfld.d.ts"
         },
         "./dev": {
-            "require": "./dist/dev.manifold.cjs",
-            "import": "./dist/dev.manifold.js",
-            "types": "./dist/manifold.dev.d.ts"
+            "require": "./dist/dev.mfld.cjs",
+            "import": "./dist/dev.mfld.js",
+            "types": "./dist/mfld.dev.d.ts"
         },
         "./cjs": {
-            "default": "./dist/slim.manifold.cjs",
-            "types": "./dist/manifold.cjs.d.ts"
+            "default": "./dist/slim.mfld.cjs",
+            "types": "./dist/mfld.cjs.d.ts"
         },
         "./es": {
-            "default": "./dist/slim.manifold.js",
-            "types": "./dist/manifold.es.d.ts"
+            "default": "./dist/slim.mfld.js",
+            "types": "./dist/mfld.es.d.ts"
         }
     },
     "type": "module",
     "scripts": {
-        "build": "rollup -c && node generate_d.ts.js",
+        "build": "rollup -c && node util/generate_d.ts.js",
         "example": "npm run build & sirv tests --port 5000 --dev true ",
         "dev": "npm run build & sirv --port 5000 --dev true --single tests/interactive.html",
         "version": "node ./util/updateVersion.js",
         "increment-patch": "node util/incrementPatchVersion.js",
         "pub": "npm run build && npm run increment-patch && npm publish",
-        "test.gzip": "wsl gzip -c ./dist/manifold.js > ./dist/cu.gz"
+        "test.gzip": "wsl gzip -c ./dist/mfld.js > ./dist/cu.gz"
     },
     "devDependencies": {
         "@rollup/plugin-terser": "^0.4.4",

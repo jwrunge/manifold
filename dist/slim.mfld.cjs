@@ -12,7 +12,7 @@ i=[]
 l=[]
 constructor(t,e){this.name=t,n.set(t,this),this.l=e?.upstream||[]
 for(let t of this.l)f(t)?.i?.push(this.name||"")
-return this.value=e?.value,this.#t=e?.updater,this}u(t,e){this.t.set(t,e),e?.()}sub(t){let e="x".repeat(5).replace(/./g,(t=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(36*Math.random())]))
+return this.value=e?.store_val,this.#t=e?.updater,this}u(t,e){this.t.set(t,e),e?.()}sub(t){let e="x".repeat(5).replace(/./g,(t=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(36*Math.random())]))
 this.t.set(e,t),t?.(this.value)}async update(n){return new Promise((i=>{r.set(this.name||"",n),clearTimeout(o),o=setTimeout((async()=>{for(let[t,e]of r){const e=f(t)
 e.i.forEach((t=>r.delete(t))),e.l.forEach((e=>!r.has(e)||r.delete(t)))}let o=[]
 for(let[e,n]of r){let i=f(e),r="function"==typeof n?n?.(i.value):n,s=Array.from(i.value||[])?.length!==Array.from(r).length,l=""
@@ -58,5 +58,5 @@ let n={...i,...i.profiles?.[t.dataset.overrides||""]||JSON.parse(t.dataset.overr
 if(i&&0==o?.onCode?.(i))return
 let r=await(n?.[e.fetch?.type||"text"]())
 e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}({method:t.dataset.method?.toLowerCase()||"get",href:r?.href,el:t},n)}
-"mount"==e?r():t.addEventListener(e,r)}const v={store:(store_name,store_ops)=>f(store_name,store_ops),ustore:(store_name,store_ops)=>f(store_name,store_ops),getFunc:func_name=>i.get(func_name),addFuncs:funcs=>{for(let t in funcs)i.set(t,funcs[t])},config:(new_ops,profile_name)=>b(new_ops,profile_name),onTick:t=>{var o;(o=t)&&e.push(o)}}
-export{v as Mfld}
+"mount"==e?r():t.addEventListener(e,r)}const v={store:(store_name,store_ops)=>store_ops?.hasOwnProperty("store_val")||store_ops?.hasOwnProperty("updater")?f(store_name,store_ops):f(store_name,{store_val:store_ops}),ustore:(store_name,store_ops)=>f(store_name,store_ops),getFunc:func_name=>i.get(func_name),addFuncs:funcs=>{for(let t in funcs)i.set(t,funcs[t])},config:(new_ops,profile_name)=>b(new_ops,profile_name),onTick:t=>{var o;(o=t)&&e.push(o)}}
+exports.Mfld=v
