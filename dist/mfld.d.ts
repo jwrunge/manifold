@@ -1,5 +1,5 @@
 declare module "mfld" {
-    export { $ as Mfld };
+    export { v as Mfld };
     /**
      * !
      */
@@ -133,38 +133,44 @@ declare module "mfld" {
      * !
      */
     export type MfldFunc = Function;
-    namespace $ {
+    namespace v {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
         * @template T
         * @param {string} store_name
-        * @param {StoreOptions<T> | T} [store_ops]
+        * @param {StoreOptions<T> | T} store_ops
         * @return {Store<T>}
         */
-        function store<T>(store_name: string, store_ops?: T | StoreOptions<T>): Store<T>;
+        function store<T>(store_name: string, store_ops: T | StoreOptions<T>): Store<T>;
         /**!
         * - Create or overwrite an untyped global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<any\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
         * @param {string} store_name
-        * @param {StoreOptions<any>} [store_ops]
+        * @param {StoreOptions<any> | any} store_ops
         * @return {Store<any>}
         */
-        function ustore(store_name: string, store_ops?: StoreOptions<any>): Store<any>;
+        function ustore(store_name: string, store_ops: any): Store<any>;
+        /**!
+         * - Retrieve a Manifold store by name. *returns `Store\<any\>`*
+         * @param {string} store_name
+         * @return {Store<any>}
+         */
+        function get(store_name: string): Store<any>;
         /**!
          * - Retrieve a Manifold function by name. *val* refers to the store's current value; *el* refers to the element that triggered the update (if applicable). *returns `MfldFunc`*
          * - *Note:* Functions retrived using this method cannot infer the type of the store's value and is therefore **not** type-checked. It is preferable to keep a reference to the function if you need to preserve type information.
          * @param {string} func_name
          * @return {MfldFunc}
          */
-        function getFunc(func_name: string): Function;
+        function func(func_name: string): Function;
         /**!
          * - Add functions to the Manifold function registry in key-value pairs.
          * - Functions must be registered in order to be accessible to HTML elements via `bind`, `sync`, and `resolve`.
          * - It may still be beneficial to keep a reference to the original function if you need to preserve type information.
          * @param {{ [key: string]: MfldFunc }} funcs
          */
-        function addFuncs(funcs: {
+        function funcs(funcs: {
             [key: string]: Function;
         }): void;
         /**!

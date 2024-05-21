@@ -47,8 +47,8 @@ export function _addToNextTickQueue(fn) {
 }
 
 //Static
-/** @type {Map<string, Store<any>>} */ export let _stores = new Map();
-/** @type {Map<string, Function>} */ export let _funcs = new Map();
+/** @type {Map<string, Store<any>>} */ if(!globalThis.Mfld_stores) globalThis.Mfld_stores = new Map();
+/** @type {Map<string, Function>} */ if(globalThis.Mfld_funcs) globalThis.Mfld_funcs = new Map();
 /** @type {Map<string, (any | ((any)=> any))>} */ let _workOrder = new Map();
 /** @type {any} */ let _workCacheTimeout;
 
@@ -68,12 +68,15 @@ export class Store {
      */
     constructor(name, ops) {
         this.name = name;
-        _stores.set(name, this);
+        globalThis.Mfld_stores.set(name, this);
         
         this._upstreamStores = ops?.upstream || [];
         for(let storeName of this._upstreamStores) _store(storeName)?._downstreamStores?.push(this.name || "");
         this.value = ops?.value;
+        console.log("Setting updater", name, ops?.updater)
         this.#updater = ops?.updater;
+
+        console.log("Constructed store", this)
         
         return this;
     }
@@ -177,5 +180,5 @@ export class Store {
  */
 export function _store(name, ops) {
     if(ops) return new Store(name, ops);
-    return _stores.get(name) || new Store(name, /** @type {StoreOptions<T>}*/(ops));
+    return globalThis.Mfld_stores.get(name) || new Store(name, /** @type {StoreOptions<T>}*/(ops));
 }

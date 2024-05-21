@@ -1,4 +1,4 @@
-import { _funcs, _store } from "./store.js";
+import { _store } from "./store.js";
 import { _fetchHttp } from "./http.js";
 import { _scheduleDomUpdate } from "./domUpdates.js";
 /** @typedef {import("./index.module.js").MfldOps} MfldOps */
@@ -83,7 +83,7 @@ export function _registerSubs(parent) {
                 /** @type {Function | undefined} */
                 let processFunc;
                 if(processFuncName) {
-                    processFunc = globalThis[processFuncName] || _funcs.get(processFuncName);
+                    processFunc = globalThis[processFuncName] || globalThis.Mfld_funcs.get(processFuncName);
                     if(!processFunc) throw(`"${processFuncName}" not registered: ${err_detail}`);
                     if(((!shouldHaveTriggers && external.length > 1) || (shouldHaveTriggers && internal.length > 1))) throw(`Multiple sources: ${err_detail}`);
                 }
@@ -125,7 +125,7 @@ export function _registerSubs(parent) {
                                     );
 
                                     //Make sure to update dependent stores on value update
-                                    el.dispatchEvent(new MfldstomEvent(trigger))
+                                    el.dispatchEvent(new CustomEvent(trigger))
                                 });
                             }
                         

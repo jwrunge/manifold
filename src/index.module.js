@@ -1,4 +1,4 @@
-import { _store, _funcs, _addToNextTickQueue } from "./store.js";
+import { _store, _addToNextTickQueue } from "./store.js";
 import { _registerSubs, _setOptions } from "./domRegistrar.js";
 import { _scheduleDomUpdate } from "./domUpdates.js";
 
@@ -78,7 +78,7 @@ store:
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
 * @template T
 * @param {string} store_name
-* @param {StoreOptions<T> | T} [store_ops]
+* @param {StoreOptions<T> | T} store_ops
 * @return {Store<T>}
 */ (store_name, store_ops)=> {
     if(!store_ops?.hasOwnProperty("value") && !store_ops?.hasOwnProperty("updater")) {
@@ -91,23 +91,29 @@ ustore:
 * - Create or overwrite an untyped global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<any\>`* 
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
 * @param {string} store_name
-* @param {StoreOptions<any>} [store_ops]
+* @param {StoreOptions<any> | any} store_ops
 * @return {Store<any>}
 */ (store_name, store_ops)=> /**@type {Store<any>}*/(_store(store_name, store_ops)),
-getFunc: 
+get:
+/**!
+ * - Retrieve a Manifold store by name. *returns `Store\<any\>`*
+ * @param {string} store_name
+ * @return {Store<any>}
+ */ (store_name)=> /**@type {Store<any>}*/(_store(store_name)),
+func: 
 /**!
  * - Retrieve a Manifold function by name. *val* refers to the store's current value; *el* refers to the element that triggered the update (if applicable). *returns `MfldFunc`*
  * - *Note:* Functions retrived using this method cannot infer the type of the store's value and is therefore **not** type-checked. It is preferable to keep a reference to the function if you need to preserve type information.
  * @param {string} func_name
  * @return {MfldFunc}
- */ (func_name)=> /** @type {(val: any, el?: HTMLElement)=> void}*/(_funcs.get(func_name)),
-addFuncs: 
+ */ (func_name)=> /** @type {(val: any, el?: HTMLElement)=> void}*/(globalThis.Mfld_funcs.get(func_name)),
+funcs: 
 /**!
  * - Add functions to the Manifold function registry in key-value pairs.
  * - Functions must be registered in order to be accessible to HTML elements via `bind`, `sync`, and `resolve`. 
  * - It may still be beneficial to keep a reference to the original function if you need to preserve type information.
  * @param {{ [key: string]: MfldFunc }} funcs
- */ funcs=> {for(let key in funcs) _funcs.set(key, funcs[key])},
+ */ funcs=> {for(let key in funcs) globalThis.Mfld_funcs.set(key, funcs[key])},
 config:
 /**!
  * - Set Manifold configuration options, including `trans` (DOM transition settings), `fetch` (fetch options), and `profiles` (configuration option overrides that can be set on elements ad-hoc via `cu-overrides`).
