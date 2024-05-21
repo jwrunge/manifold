@@ -67,17 +67,22 @@ export class Store {
      * @param {StoreOptions<T>} [ops]
      */
     constructor(name, ops) {
+        return this._modify(name, ops);        
+    }
+
+    /**
+     * @param {string} name
+     * @param {StoreOptions<T>} [ops]
+     */
+    _modify(name, ops) {
         this.name = name;
         globalThis.Mfld_stores.set(name, this);
         
         this._upstreamStores = ops?.upstream || [];
         for(let storeName of this._upstreamStores) _store(storeName)?._downstreamStores?.push(this.name || "");
         this.value = ops?.value;
-        console.log("Setting updater", name, ops?.updater)
         this.#updater = ops?.updater;
 
-        console.log("Constructed store", this)
-        
         return this;
     }
 
@@ -124,19 +129,9 @@ export class Store {
                     let store = _store(storeName);
                     let newValue = (typeof value == "function" ? /** @type {Function} */await (value)?.(store.value) : value);
 
-                    //Check complex object lengths (avoid lengthy hashes) -- if the lengths indicate the value HAS NOT CHANGED, double-check via hash
-                    let aLen = store.value?.length || store.value?.size || undefined;
-                    let bLen = newValue?.length || newValue?.size || undefined;
-                    let valueChanged = aLen !== bLen;
-
-                    let newHash = "";
-                    if(!valueChanged) {
-                        newHash = _hashAny(store.value);
-                        valueChanged = newHash !== store._storedHash;    //Double-check that the value has not changed via hash
-                    }
-
                     //If the value HAS DEFINITELY CHANGED or is LIKELY TO HAVE CHANGED, update the stored hash and cascade
-                    if(valueChanged) {
+                    let newHash = _hashAny(store.value);
+                    if(newHash !== store._storedHash) {
                         store.value = newValue;
                         store._storedHash = newHash;
                         for(let S of store._downstreamStores) downstream.push(S);
@@ -179,6 +174,12 @@ export class Store {
  * @returns {Store<T>}
  */
 export function _store(name, ops) {
-    if(ops) return new Store(name, ops);
-    return globalThis.Mfld_stores.get(name) || new Store(name, /** @type {StoreOptions<T>}*/(ops));
+    let found_store = globalThis.Mfld_stores.get(name);
+    if(ops) {
+        if(found_store) {
+            return found_store._modify(name, ops);
+        }
+        return new Store(name, ops);
+    }
+    return found_store || new Store(name, /** @type {StoreOptions<T>}*/(ops));
 }
