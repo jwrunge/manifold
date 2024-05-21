@@ -49,7 +49,7 @@ import { _scheduleDomUpdate } from "./domUpdates.js";
 /**!
  * @template T
  * @typedef {Object} StoreOptions
- * @property {T} [store_val]
+ * @property {T} [value]
  * @property {Array<string>} [upstream]
  * @property {UpdaterFunction<T>} [updater]
  */
@@ -81,10 +81,10 @@ store:
 * @param {StoreOptions<T> | T} [store_ops]
 * @return {Store<T>}
 */ (store_name, store_ops)=> {
-    if(!store_ops?.hasOwnProperty("store_val") && !store_ops?.hasOwnProperty("updater")) {
-        return /**@type {Store<T>}*/(_store(store_name, { store_val: store_ops }))
+    if(!store_ops?.hasOwnProperty("value") && !store_ops?.hasOwnProperty("updater")) {
+        store_ops = /** @type {StoreOptions<T>}*/({ value: /** @type {T}*/store_ops });
     }
-    return /**@type {Store<T>}*/(_store(store_name, store_ops))
+    return /**@type {Store<T>}*/(_store(store_name, /**@type {StoreOptions<T>}*/store_ops))
 },
 ustore: 
 /**!

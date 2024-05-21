@@ -72,7 +72,7 @@ export class Store {
         
         this._upstreamStores = ops?.upstream || [];
         for(let storeName of this._upstreamStores) _store(storeName)?._downstreamStores?.push(this.name || "");
-        this.value = ops?.store_val;
+        this.value = ops?.value;
         this.#updater = ops?.updater;
         
         return this;
@@ -172,10 +172,10 @@ export class Store {
 /**
  * @template T
  * @param {string} name - The name of the store
- * @param {StoreOptions<T>} [ops] - Options to update the store
+ * @param {StoreOptions<T> | T} [ops] - Options to update the store
  * @returns {Store<T>}
  */
 export function _store(name, ops) {
     if(ops) return new Store(name, ops);
-    return _stores.get(name) || new Store(name, ops);
+    return _stores.get(name) || new Store(name, /** @type {StoreOptions<T>}*/(ops));
 }

@@ -108,7 +108,7 @@ declare module "mfld/dev" {
      * !
      */
     export type StoreOptions<T> = {
-        store_val?: T;
+        value?: T;
         upstream?: Array<string>;
         updater?: UpdaterFunction<T>;
     };

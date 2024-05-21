@@ -12,7 +12,7 @@ i=[]
 l=[]
 constructor(t,e){this.name=t,i.set(t,this),this.l=e?.upstream||[]
 for(let t of this.l)f(t)?.i?.push(this.name||"")
-return this.value=e?.store_val,this.#t=e?.updater,this}u(t,e){this.t.set(t,e),e?.()}sub(t){let e="x".repeat(5).replace(/./g,(t=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(36*Math.random())]))
+return this.value=e?.value,this.#t=e?.updater,this}u(t,e){this.t.set(t,e),e?.()}sub(t){let e="x".repeat(5).replace(/./g,(t=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(36*Math.random())]))
 this.t.set(e,t),t?.(this.value)}async update(i){return new Promise((n=>{r.set(this.name||"",i),clearTimeout(o),o=setTimeout((async()=>{for(let[t,e]of r){const e=f(t)
 e.i.forEach((t=>r.delete(t))),e.l.forEach((e=>!r.has(e)||r.delete(t)))}let o=[]
 for(let[e,i]of r){let n=f(e),r="function"==typeof i?await(i?.(n.value)):i,s=(n.value?.length||n.value?.size||void 0)!==(r?.length||r?.size||void 0),l=""
@@ -105,7 +105,7 @@ e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}
 /**!
  * @template T
  * @typedef {Object} StoreOptions
- * @property {T} [store_val]
+ * @property {T} [value]
  * @property {Array<string>} [upstream]
  * @property {UpdaterFunction<T>} [updater]
  */
@@ -132,7 +132,7 @@ e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}
 * @param {StoreOptions<T> | T} [store_ops]
 * @return {Store<T>}
 */
-(store_name,store_ops)=>store_ops?.hasOwnProperty("store_val")||store_ops?.hasOwnProperty("updater")?f(store_name,store_ops):f(store_name,{store_val:store_ops}),ustore:
+(store_name,store_ops)=>(store_ops?.hasOwnProperty("value")||store_ops?.hasOwnProperty("updater")||(store_ops={value:store_ops}),f(store_name,store_ops)),ustore:
 /**!
 * - Create or overwrite an untyped global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<any\>`* 
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*

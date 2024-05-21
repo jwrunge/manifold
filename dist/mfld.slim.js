@@ -12,7 +12,7 @@ i=[]
 l=[]
 constructor(t,e){this.name=t,i.set(t,this),this.l=e?.upstream||[]
 for(let t of this.l)f(t)?.i?.push(this.name||"")
-return this.value=e?.store_val,this.#t=e?.updater,this}u(t,e){this.t.set(t,e),e?.()}sub(t){let e="x".repeat(5).replace(/./g,(t=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(36*Math.random())]))
+return this.value=e?.value,this.#t=e?.updater,this}u(t,e){this.t.set(t,e),e?.()}sub(t){let e="x".repeat(5).replace(/./g,(t=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(36*Math.random())]))
 this.t.set(e,t),t?.(this.value)}async update(i){return new Promise((n=>{r.set(this.name||"",i),clearTimeout(o),o=setTimeout((async()=>{for(let[t,e]of r){const e=f(t)
 e.i.forEach((t=>r.delete(t))),e.l.forEach((e=>!r.has(e)||r.delete(t)))}let o=[]
 for(let[e,i]of r){let n=f(e),r="function"==typeof i?await(i?.(n.value)):i,s=(n.value?.length||n.value?.size||void 0)!==(r?.length||r?.size||void 0),l=""
@@ -58,5 +58,5 @@ let i={...n,...n.profiles?.[t.dataset.overrides||""]||JSON.parse(t.dataset.overr
 if(n&&0==o?.onCode?.(n))return
 let r=await(i?.[e.fetch?.type||"text"]())
 e.fetch?.cb?.(r),"json"!=e?.fetch?.type&&p.parseFromString(r,"text/html").body}}({method:t.dataset.method?.toLowerCase()||"get",href:r?.href,el:t},i)}
-"mount"==e?r():t.addEventListener(e,r)}const $={store:(store_name,store_ops)=>store_ops?.hasOwnProperty("store_val")||store_ops?.hasOwnProperty("updater")?f(store_name,store_ops):f(store_name,{store_val:store_ops}),ustore:(store_name,store_ops)=>f(store_name,store_ops),getFunc:func_name=>n.get(func_name),addFuncs:funcs=>{for(let t in funcs)n.set(t,funcs[t])},config:(new_ops,profile_name)=>m(new_ops,profile_name),onTick:t=>{var o;(o=t)&&e.push(o)}}
+"mount"==e?r():t.addEventListener(e,r)}const $={store:(store_name,store_ops)=>(store_ops?.hasOwnProperty("value")||store_ops?.hasOwnProperty("updater")||(store_ops={value:store_ops}),f(store_name,store_ops)),ustore:(store_name,store_ops)=>f(store_name,store_ops),getFunc:func_name=>n.get(func_name),addFuncs:funcs=>{for(let t in funcs)n.set(t,funcs[t])},config:(new_ops,profile_name)=>m(new_ops,profile_name),onTick:t=>{var o;(o=t)&&e.push(o)}}
 globalThis.Mfld=$

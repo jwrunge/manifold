@@ -1,8 +1,8 @@
-/// <reference path="../dist/mfld.js" />
+/// <reference path="../dist/Mfld.js" />
 
-console.log("Manifold", MFLD);
+console.log("Manifold", Mfld);
 
-MFLD.config({
+Mfld.config({
     trans: {
         hooks: {
             "in-end": (el)=> {
@@ -13,40 +13,40 @@ MFLD.config({
     }
 }, "file1")
 
-let untyped = MFLD.ustore("untyped", { value: "My text" });
+let untyped = Mfld.ustore("untyped", { value: "My text" });
 
-let typed = MFLD.store("Typed_Store", { value: "My text" });
-typed.update("My text");
-typed.sub(mfldr=> mfldr === "!");
-let untyped2 = MFLD.store("Typed_Store");
+let typed = Mfld.store("Typed_Store", { value: "My text" });
+typed.update({value: "My text"});
+typed.sub(Mfldr=> Mfldr === "!");
+let untyped2 = Mfld.store("Typed_Store");
 
 
 
-MFLD.config
-MFLD.addFuncs
+Mfld.config
+Mfld.addFuncs
 
-let val = MFLD.store("value", {
+let val = Mfld.store("value", {
     value: /** @type {Map<number, string>}*/(new Map()),
     upstream: ["store1", "store2"],
     updater: (_, val) => {
         return val?.set?.(32, (val?.get(32) || "") + "...") || new Map();
     }
 })
-let s1 = MFLD.store("store1", { value: "My text" });
+let s1 = Mfld.store("store1", { value: "My text" });
 s1
 
-// let store1 = MFLD.store("store1", { value: "My text" });
-const store3 = MFLD.store("store3", { value: "one" });
-const store2 = MFLD.store("store2", { 
+// let store1 = Mfld.store("store1", { value: "My text" });
+const store3 = Mfld.store("store3", { value: "one" });
+const store2 = Mfld.store("store2", { 
     value: { values: ["one", "two"]},
     upstream: ["store1", "store3"],
-    updater: ([Store1, Store3], mfldr)=> {
-        mfldr.values[1] = Store1;
-        mfldr.values[0] = Store3;
-        return mfldr;
+    updater: ([Store1, Store3], Mfldr)=> {
+        Mfldr.values[1] = Store1;
+        Mfldr.values[0] = Store3;
+        return Mfldr;
     }
 });
-const store4 = MFLD.store("store4", {
+const store4 = Mfld.store("store4", {
     value: 1,
     upstream: ["store2"],
     updater: ([Store2])=> {
@@ -77,17 +77,17 @@ setTimeout(()=> {
 }, 15000)
 
 setTimeout(()=> {
-    MFLD.store("store1").update("<span class='colorful'>Another update</span>")
+    Mfld.store("store1").update("<span class='colorful'>Another update</span>")
 }, 4000)
 setTimeout(()=> {
-    MFLD.store("store1").update("We're at 4k")
+    Mfld.store("store1").update("We're at 4k")
 }, 8000)
 setTimeout(()=> {
-    MFLD.store("store1").update("Last one")
+    Mfld.store("store1").update("Last one")
 }, 12000)
 
 setTimeout(()=> {
-    MFLD.store("store1").update("FINAL");
+    Mfld.store("store1").update("FINAL");
     store2.update({ values: ["final", "final"] });
     store3.update("final");
     store4.update(1000)
@@ -133,5 +133,5 @@ function syncChecked(store1, store2) {
     // console.log("STORE 1 VAL", store1);
     // console.log("STORE 2 VAL", store2);
     // if(store1 === false) return "We're at 4k";
-    // MFLD.store("store1").update(store1 === false ? "We're at 4k" : store1);
+    // Mfld.store("store1").update(store1 === false ? "We're at 4k" : store1);
 }

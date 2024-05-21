@@ -1,7 +1,7 @@
 {
     "name": "mfld",
     "version": "0.0.9",
-    "main": "dist/mfld.slim.js",
+    "main": "dist/slim.mfld.js",
     "exports": {
         ".": {
             "require": "./dist/slim.mfld.cjs",
@@ -23,6 +23,7 @@
         }
     },
     "type": "module",
+    "types": "./dist/mfld.d.ts",
     "scripts": {
         "build": "rollup -c && node util/generate_d.ts.js",
         "example": "npm run build & sirv tests --port 5000 --dev true ",
