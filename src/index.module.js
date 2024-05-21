@@ -1,5 +1,5 @@
 import { _store, _addToNextTickQueue } from "./store.js";
-import { _registerSubs, _setOptions } from "./domRegistrar.js";
+import { _registerSubs, _setOptions } from "./registrar.js";
 import { _scheduleDomUpdate } from "./domUpdates.js";
 
 /**! @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey*/
@@ -126,4 +126,12 @@ config:
   * - Wait for the next Manifold data update cycle to complete before executing the callback function.
   * @param {()=> void} cb
   */ (cb)=> _addToNextTickQueue(cb),
+  register:
+  /**!
+   * - Register Manifold subscriptions on the DOM. *Optional:* Pass an `HTMLElement` or selector string to scope the registration to a specific element.
+   * @param {HTMLElement | string | null} [parent]
+   */ (parent)=> {
+    if(typeof parent == "string") parent = /** @type {HTMLElement | null}*/(document.querySelector(parent));
+    _registerSubs(parent)
+   },
 };

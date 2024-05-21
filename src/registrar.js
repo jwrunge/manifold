@@ -72,6 +72,7 @@ export function _registerSubs(parent) {
             let err_detail = `(#${el.id} on ${mode})`;
 
             el?.dataset?.[mode]?.split(";").forEach(setting=> {
+                console.log("SETTING", setting)
                 //Break out settings
                 let _parts = setting?.split(/(?:(?:\)|->) ?){1,}/g) || []; 
         
@@ -189,11 +190,13 @@ function _nestedValue(obj, path, newval) {
  * @returns 
  */
 function _paramsInParens(str) {
+    console.log("RUNNING PARAMS IN PARENS")
     if(str?.includes("(")) {
         let matches = str.match(/[^\(\)]{1,}/g);
         str = matches?.[matches.length - 1] || "";
     }
-    return str?.split(commaSepRx) || [];
+    console.log("SPLIT", str?.split(commaSepRx)?.map(s=> s.trim()))
+    return str?.split(commaSepRx)?.map(s=> s.trim()) || [];
 }
 
 /**
