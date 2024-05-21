@@ -83,7 +83,7 @@ export function _registerSubs(parent) {
                 /** @type {Function | undefined} */
                 let processFunc;
                 if(processFuncName) {
-                    processFunc = globalThis[processFuncName] || globalThis.Mfld_funcs.get(processFuncName);
+                    processFunc = globalThis[processFuncName] || globalThis.Mfld_funcs?.get(processFuncName);
                     if(!processFunc) throw(`"${processFuncName}" not registered: ${err_detail}`);
                     if(((!shouldHaveTriggers && external.length > 1) || (shouldHaveTriggers && internal.length > 1))) throw(`Multiple sources: ${err_detail}`);
                 }

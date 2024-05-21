@@ -19,14 +19,12 @@
  * @returns {any}
  */
 function _hashAny(input) {
-    if (typeof input === 'number') return input;
+    if(!input) return 0;
+    if(typeof input === 'number') return input;
     if(input === true) return 1;
 
-    if(typeof input === 'object') {
-        if(input instanceof Map) return _hashAny(input.entries());
-        if(input instanceof Set) return _hashAny(Array.from(input));
-        return Date.now();
-    }
+    if(input instanceof Map) return _hashAny(Array.from(input.entries()));
+    else if(input instanceof Set) return _hashAny(Array.from(input));
 
     let hash = 0;
     for(const char of new TextEncoder().encode(
@@ -130,7 +128,7 @@ export class Store {
                     let newValue = (typeof value == "function" ? /** @type {Function} */await (value)?.(store.value) : value);
 
                     //If the value HAS DEFINITELY CHANGED or is LIKELY TO HAVE CHANGED, update the stored hash and cascade
-                    let newHash = _hashAny(store.value);
+                    let newHash = _hashAny(newValue);
                     if(newHash !== store._storedHash) {
                         store.value = newValue;
                         store._storedHash = newHash;

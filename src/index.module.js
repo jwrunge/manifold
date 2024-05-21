@@ -106,7 +106,7 @@ func:
  * - *Note:* Functions retrived using this method cannot infer the type of the store's value and is therefore **not** type-checked. It is preferable to keep a reference to the function if you need to preserve type information.
  * @param {string} func_name
  * @return {MfldFunc}
- */ (func_name)=> /** @type {(val: any, el?: HTMLElement)=> void}*/(globalThis.Mfld_funcs.get(func_name)),
+ */ (func_name)=> /** @type {(val: any, el?: HTMLElement)=> void}*/(globalThis.Mfld_funcs?.get(func_name)),
 funcs: 
 /**!
  * - Add functions to the Manifold function registry in key-value pairs.

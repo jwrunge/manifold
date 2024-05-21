@@ -1,6 +1,8 @@
-function t(e){if("number"==typeof e)return e
+function t(e){if(!e)return 0
+if("number"==typeof e)return e
 if(!0===e)return 1
-if("object"==typeof e)return e instanceof Map?t(e.entries()):e instanceof Set?t(Array.from(e)):Date.now()
+if(e instanceof Map)return t(Array.from(e.entries()))
+if(e instanceof Set)return t(Array.from(e))
 let o=0
 for(const t of(new TextEncoder).encode("string"==typeof e?e:e?.toString()||""))o=(o<<5)-o+t
 return o}let e=[]
@@ -16,7 +18,7 @@ for(let t of this.l)l(t)?.i?.push(this.name||"")
 return this.value=e?.value,this.#t=e?.updater,this}h(t,e){this.t.set(t,e),e?.()}sub(t){let e="x".repeat(5).replace(/./g,(t=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(36*Math.random())]))
 this.t.set(e,t),t?.(this.value)}async update(n){return new Promise((s=>{i.set(this.name||"",n),clearTimeout(o),o=setTimeout((async()=>{for(let[t,e]of i){const e=l(t)
 e.i.forEach((t=>i.delete(t))),e.l.forEach((e=>!i.has(e)||i.delete(t)))}let o=[]
-for(let[e,n]of i){let i=l(e),s="function"==typeof n?await(n?.(i.value)):n,r=t(i.value)
+for(let[e,n]of i){let i=l(e),s="function"==typeof n?await(n?.(i.value)):n,r=t(s)
 if(r!==i.o){i.value=s,i.o=r
 for(let t of i.i)o.push(t)
 for(let[t,e]of i.t)e?.(i.value,t)}}i.clear()
@@ -39,7 +41,7 @@ for(let e in t.dataset){if(!p.includes(e))continue
 let o="bind"!=e,i=`(#${t.id} on ${e})`
 t?.dataset?.[e]?.split(";").forEach((n=>{let s,r=n?.split(/(?:(?:\)|->) ?){1,}/g)||[],f=o?y(r.splice(0,1)[0]):[],u=r[0]?.includes("(")&&r[0]?.match(/^[^\(]{1,}/)?.[0]||"",h=y(r.splice("sync"==e?1:0,1)[0]),c=y(r[0])
 if(o&&!f?.length)throw`No trigger: ${i}.`
-if(u){if(s=globalThis[u]||globalThis.Mfld_funcs.get(u),!s)throw`"${u}" not registered: ${i}`
+if(u){if(s=globalThis[u]||globalThis.Mfld_funcs?.get(u),!s)throw`"${u}" not registered: ${i}`
 if(!o&&h.length>1||o&&c.length>1)throw`Multiple sources: ${i}`}let d=h.map((t=>{let[e,...o]=t.split(/[\.\[\]\?]{1,}/g)
 return{name:e,path:o.map((t=>isNaN(parseInt(t))?t:parseInt(t))).filter((t=>t))}}))
 f?.length||(f=[""])
@@ -155,7 +157,7 @@ store_name=>l(store_name),func:
  * @param {string} func_name
  * @return {MfldFunc}
  */
-func_name=>globalThis.Mfld_funcs.get(func_name),funcs:
+func_name=>globalThis.Mfld_funcs?.get(func_name),funcs:
 /**!
  * - Add functions to the Manifold function registry in key-value pairs.
  * - Functions must be registered in order to be accessible to HTML elements via `bind`, `sync`, and `resolve`. 
