@@ -46,7 +46,7 @@ export function _addToNextTickQueue(fn) {
 
 //Static
 /** @type {Map<string, Store<any>>} */ if(!globalThis.Mfld_stores) globalThis.Mfld_stores = new Map();
-/** @type {Map<string, Function>} */ if(globalThis.Mfld_funcs) globalThis.Mfld_funcs = new Map();
+/** @type {Map<string, Function>} */ if(!globalThis.Mfld_funcs) globalThis.Mfld_funcs = new Map();
 /** @type {Map<string, (any | ((any)=> any))>} */ let _workOrder = new Map();
 /** @type {any} */ let _workCacheTimeout;
 

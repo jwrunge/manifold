@@ -43,7 +43,7 @@ import { _scheduleDomUpdate } from "./domUpdates.js";
  * @callback UpdaterFunction
  * @param {Array<any>} upstreamValues
  * @param {T} value
- * @returns {Promise<T>}
+ * @returns {T | Promise<T>}
  */
 
 /**!

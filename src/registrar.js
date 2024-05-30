@@ -3,29 +3,8 @@ import { _fetchHttp } from "./http.js";
 import { _scheduleDomUpdate } from "./domUpdates.js";
 /** @typedef {import("./index.module.js").MfldOps} MfldOps */
 
-let commaSepRx = /, {0,}/g;
-let elIdx = 0;
-
-// Initialize from script params
-function _intialize() {
-    let ds = globalThis.document?.currentScript?.dataset || {};
-
-    if(ds?.config) {
-        try {
-            let scriptParams = JSON.parse(ds?.config);
-            _setOptions(scriptParams);
-        } catch(e) {
-            console.warn("Invalid Mfld params", e);
-        }
-    }
-
-    if(ds?.init) {
-        console.log("INITIALIZING")
-        _registerSubs();
-    }
-}
-
-_intialize();
+let _commaSepRx = /, {0,}/g;
+let _elIdx = 0;
 
 // globalThis.addEventListener("popstate", (e)=> {
 //     let el = document?.getElementById(e.state?.elId);
@@ -41,16 +20,16 @@ _intialize();
 // });
 
 /** @type {Partial<MfldOps>} */
-let ops = {};
-let modes = ["bind", "sync", "fetch"];
+let _ops = {};
+let _modes = ["bind", "sync", "fetch"];
 
 /**!
  * @param {Partial<MfldOps>} newops 
  * @param {string} [profileName] 
  */
 export function _setOptions(newops, profileName) {
-    if(profileName) ops.profiles = { ...ops.profiles, [profileName]: newops };
-    else ops = { ...ops, ...newops };
+    if(profileName) _ops.profiles = { ..._ops.profiles, [profileName]: newops };
+    else _ops = { ..._ops, ...newops };
 }
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
@@ -58,21 +37,19 @@ export function _setOptions(newops, profileName) {
  * @param {HTMLElement | null} [parent] 
  */
 export function _registerSubs(parent) {
-    console.log("REGISTERING SUBS")
     /** @type {NodeListOf<HTMLElement> | []} */
-    let els = parent?.querySelectorAll(`[data-${modes.join("],[data-")}]${ops.fetch?.auto != false ? ",a" : ""}`) || [];
+    let els = (parent || document.body).querySelectorAll(`[data-${_modes.join("],[data-")}]${_ops.fetch?.auto != false ? ",a" : ""}`) || [];
     for(let el of els) {
         /** @type {HTMLElement} */
-        if(!el.id) el.id = `cu-${elIdx++}`;
+        if(!el.id) el.id = `cu-${_elIdx++}`;
 
         //Loop over all data attributes (modes)
         for(let mode in el.dataset) {
-            if(!modes.includes(mode)) continue;
+            if(!_modes.includes(mode)) continue;
             let shouldHaveTriggers = mode != "bind";
             let err_detail = `(#${el.id} on ${mode})`;
 
             el?.dataset?.[mode]?.split(";").forEach(setting=> {
-                console.log("SETTING", setting)
                 //Break out settings
                 let _parts = setting?.split(/(?:(?:\)|->) ?){1,}/g) || []; 
         
@@ -110,7 +87,7 @@ export function _registerSubs(parent) {
                 for(let trigger of triggers) {
                     //No internal loops for fetch
                     if(mode == "fetch") {
-                        _handleFetch(el, trigger, external, internal, ops);
+                        _handleFetch(el, trigger, external, internal, _ops);
                     }
 
                     //Loop over internal
@@ -190,13 +167,11 @@ function _nestedValue(obj, path, newval) {
  * @returns 
  */
 function _paramsInParens(str) {
-    console.log("RUNNING PARAMS IN PARENS")
     if(str?.includes("(")) {
         let matches = str.match(/[^\(\)]{1,}/g);
         str = matches?.[matches.length - 1] || "";
     }
-    console.log("SPLIT", str?.split(commaSepRx)?.map(s=> s.trim()))
-    return str?.split(commaSepRx)?.map(s=> s.trim()) || [];
+    return str?.split(_commaSepRx)?.map(s=> s.trim()) || [];
 }
 
 /**

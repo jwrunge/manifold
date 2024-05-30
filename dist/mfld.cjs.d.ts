@@ -1,5 +1,5 @@
 declare module "mfld/cjs" {
-    export { I as Mfld };
+    export { y as Mfld };
     /**
      * !
      */
@@ -103,7 +103,7 @@ declare module "mfld/cjs" {
     /**
      * !
      */
-    export type UpdaterFunction<T> = (upstreamValues: Array<any>, value: T) => Promise<T>;
+    export type UpdaterFunction<T> = (upstreamValues: Array<any>, value: T) => T | Promise<T>;
     /**
      * !
      */
@@ -133,7 +133,7 @@ declare module "mfld/cjs" {
      * !
      */
     export type MfldFunc = Function;
-    namespace I {
+    namespace y {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
@@ -179,7 +179,7 @@ declare module "mfld/cjs" {
          * @param {MfldOps} new_ops
          * @param {string} [profile_name]
          */
-        function config(new_ops: MfldOps, profile_name?: string): void;
+        function config(new_ops: MfldOps, profile_name?: string): any;
         /**!
           * - Wait for the next Manifold data update cycle to complete before executing the callback function.
           * @param {()=> void} cb

@@ -13,34 +13,21 @@ Mfld.config({
     }
 }, "file1")
 
-let untyped = Mfld.ustore("untyped", { value: "My text" });
-
-let typed = Mfld.store("Typed_Store", { value: "My text" });
-typed.update({value: "My text"});
-typed.sub(Mfldr=> Mfldr === "!");
-let untyped2 = Mfld.store("Typed_Store");
-
-
-
-Mfld.config
-Mfld.addFuncs
+Mfld.register(document.body);
 
 let val = Mfld.store("value", {
     value: /** @type {Map<number, string>}*/(new Map()),
     upstream: ["store1", "store2"],
-    updater: (_, val) => {
-        return val?.set?.(32, (val?.get(32) || "") + "...") || new Map();
-    }
+    updater: (_, val)=> val?.set?.(32, (val?.get(32) || "") + "...") || new Map()
 })
 let s1 = Mfld.store("store1", { value: "My text" });
-s1
 
 // let store1 = Mfld.store("store1", { value: "My text" });
 const store3 = Mfld.store("store3", { value: "one" });
 const store2 = Mfld.store("store2", { 
     value: { values: ["one", "two"]},
     upstream: ["store1", "store3"],
-    updater: ([Store1, Store3], Mfldr)=> {
+    updater: async ([Store1, Store3], Mfldr)=> {
         Mfldr.values[1] = Store1;
         Mfldr.values[0] = Store3;
         return Mfldr;
@@ -77,17 +64,17 @@ setTimeout(()=> {
 }, 15000)
 
 setTimeout(()=> {
-    Mfld.store("store1").update("<span class='colorful'>Another update</span>")
+    Mfld.get("store1").update("<span class='colorful'>Another update</span>")
 }, 4000)
 setTimeout(()=> {
-    Mfld.store("store1").update("We're at 4k")
+    Mfld.get("store1").update("We're at 4k")
 }, 8000)
 setTimeout(()=> {
-    Mfld.store("store1").update("Last one")
+    Mfld.get("store1").update("Last one")
 }, 12000)
 
 setTimeout(()=> {
-    Mfld.store("store1").update("FINAL");
+    Mfld.get("store1").update("FINAL");
     store2.update({ values: ["final", "final"] });
     store3.update("final");
     store4.update(1000)
@@ -119,7 +106,8 @@ function specialStyling(val, el) {
     }
 }
 
-function isChecked(val) {
+function isChecked(val, el) {
+    console.log("IS CHECKED?", el, val)
     if(val == "We're at 4k") return true;
     else return false;
 }
@@ -135,3 +123,5 @@ function syncChecked(store1, store2) {
     // if(store1 === false) return "We're at 4k";
     // Mfld.store("store1").update(store1 === false ? "We're at 4k" : store1);
 }
+
+Mfld.funcs({"isChecked": isChecked});
