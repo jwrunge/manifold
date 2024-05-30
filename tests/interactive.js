@@ -107,7 +107,6 @@ function specialStyling(val, el) {
 }
 
 function isChecked(val, el) {
-    console.log("IS CHECKED?", el, val)
     if(val == "We're at 4k") return true;
     else return false;
 }
