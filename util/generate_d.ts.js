@@ -6,8 +6,8 @@ let devFile = "./dist/dev.mfld.js";
 console.log("Generating .d.ts file for", devFile);
 
 //Run .d.ts generator
-for(let devFile of ["./dist/dev.mfld.js"]) {
-    let newFile = devFile.replace("dev.", "");
+for(let devFile of ["./dist/dev/mfld.mod.js"]) {
+    let newFile = devFile.replace("dev/", "").replace(".mod", "");
     exec(`npx -p typescript tsc ${devFile} --declaration --allowJs --emitDeclarationOnly --outFile ${newFile.replace("js", "d.ts")}`, (error, _, stderr) => {
         if (error) {
             console.log(`Error: ${error.message}`);
@@ -25,7 +25,7 @@ for(let devFile of ["./dist/dev.mfld.js"]) {
             }
 
             // Replace the module name for each subpath
-            for(let subpath of ["", "dev",]) {
+            for(let subpath of [""]) {
                 let result = data.replace(`declare module "dev.mfld" {`, `declare module "mfld${subpath ? "/" + subpath : ""}" {`);
                 fs.writeFile(`${newFile.replace("js", `${subpath ? subpath + "." : ""}d.ts`)}`, result, 'utf8', function (err) {
                     if (err) return console.log(err);

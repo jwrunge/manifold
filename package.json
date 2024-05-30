@@ -9,9 +9,9 @@
             "types": "./dist/mfld.d.ts"
         },
         "./dev": {
-            "require": "./dist/dev.mfld.mod.cjs",
-            "import": "./dist/dev.mfld.mod.js",
-            "types": "./dist/mfld.dev.d.ts"
+            "require": "./dist/dev/mfld.mod.cjs",
+            "import": "./dist/dev/mfld.mod.js",
+            "types": "./dist/mfld.d.ts"
         }
     },
     "type": "module",

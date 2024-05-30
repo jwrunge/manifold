@@ -26,7 +26,7 @@ function constructProfiles(ops) {
             input: `src/index.${op.module ? "module" : "tag"}.js`,
             output: [
                 {
-                    file: `dist/${prefix ? prefix + "." : ""}mfld${suffix ? "." + suffix : ""}${op.module ? op.mod === "es" ? ".js" : "." + op.mod : ".js"}`,
+                    file: `dist/${op.subfolder ? op.subfolder + "/" : ""}${prefix ? prefix + "." : ""}mfld${suffix ? "." + suffix : ""}${op.module ? op.mod === "es" ? ".js" : "." + op.mod : ".js"}`,
                     format: op.mod,
                     name: "Mfld",
                     sourcemap: sourceMaps,
@@ -51,8 +51,8 @@ export default [
         { suffix: "slim", mod: "es", sourceMaps: false, jsdocTypes: false },
         { prefix: "slim", suffix: "mod", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: false },
         { prefix: "slim", suffix: "mod", mod: "es", module: true, sourceMaps: false, jsdocTypes: false },
-        { prefix: "dev", suffix: "mod", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: true },
-        { prefix: "dev", suffix: "mod", mod: "es", module: true, sourceMaps: true, jsdocTypes: true }
+        { subfolder: "dev", suffix: "mod", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: true },
+        { subfolder: "dev", suffix: "mod", mod: "es", module: true, sourceMaps: true, jsdocTypes: true }
     ]),
     {
         input: "src/extras/smartOutro.js",
