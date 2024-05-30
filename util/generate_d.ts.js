@@ -25,7 +25,7 @@ for(let devFile of ["./dist/dev.mfld.js"]) {
             }
 
             // Replace the module name for each subpath
-            for(let subpath of ["", "dev", "es", "cjs"]) {
+            for(let subpath of ["", "dev",]) {
                 let result = data.replace(`declare module "dev.mfld" {`, `declare module "mfld${subpath ? "/" + subpath : ""}" {`);
                 fs.writeFile(`${newFile.replace("js", `${subpath ? subpath + "." : ""}d.ts`)}`, result, 'utf8', function (err) {
                     if (err) return console.log(err);

@@ -47,12 +47,12 @@ function constructProfiles(ops) {
 
 export default [
     ...constructProfiles([
-        { prefix: "", mod: "es", sourceMaps: false, jsdocTypes: true },
+        { mod: "es", sourceMaps: false, jsdocTypes: true },
         { suffix: "slim", mod: "es", sourceMaps: false, jsdocTypes: false },
-        { prefix: "slim", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: false },
-        { prefix: "slim", mod: "es", module: true, sourceMaps: false, jsdocTypes: false },
-        { prefix: "dev", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: true },
-        { prefix: "dev", mod: "es", module: true, sourceMaps: true, jsdocTypes: true }
+        { prefix: "slim", suffix: "mod", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: false },
+        { prefix: "slim", suffix: "mod", mod: "es", module: true, sourceMaps: false, jsdocTypes: false },
+        { prefix: "dev", suffix: "mod", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: true },
+        { prefix: "dev", suffix: "mod", mod: "es", module: true, sourceMaps: true, jsdocTypes: true }
     ]),
     {
         input: "src/extras/smartOutro.js",

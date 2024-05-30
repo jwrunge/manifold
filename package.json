@@ -4,22 +4,14 @@
     "main": "dist/slim.mfld.js",
     "exports": {
         ".": {
-            "require": "./dist/slim.mfld.cjs",
-            "import": "./dist/slim.mfld.js",
+            "require": "./dist/slim.mfld.mod.cjs",
+            "import": "./dist/slim.mfld.mod.js",
             "types": "./dist/mfld.d.ts"
         },
         "./dev": {
-            "require": "./dist/dev.mfld.cjs",
-            "import": "./dist/dev.mfld.js",
+            "require": "./dist/dev.mfld.mod.cjs",
+            "import": "./dist/dev.mfld.mod.js",
             "types": "./dist/mfld.dev.d.ts"
-        },
-        "./cjs": {
-            "default": "./dist/slim.mfld.cjs",
-            "types": "./dist/mfld.cjs.d.ts"
-        },
-        "./es": {
-            "default": "./dist/slim.mfld.js",
-            "types": "./dist/mfld.es.d.ts"
         }
     },
     "type": "module",

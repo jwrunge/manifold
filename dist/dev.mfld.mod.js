@@ -181,4 +181,4 @@ const o=r(d[0]?.name)
 void 0!==e&&o?.update?.((t=>d[0]?.path?.length?T(t,d[0]?.path,e):e))}
 t.addEventListener(o,e)}}}))}}}(t)}}
 export{y as Mfld}
-//# sourceMappingURL=dev.mfld.js.map
+//# sourceMappingURL=dev.mfld.mod.js.map
