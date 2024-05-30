@@ -37,7 +37,7 @@ export function _setOptions(newops, profileName) {
  * @param {HTMLElement | null} [parent] 
  */
 export function _registerSubs(parent) {
-    let modes = `[data-${_modes.join("],[data-")}],[data-cu-${_modes.join("],[data-cu-")}],[cu-${_modes.join("],[cu-")}]${_ops.fetch?.auto != false ? ",a" : ""}`;
+    let modes = `[data-cu-${_modes.join("],[data-cu-")}],[cu-${_modes.join("],[cu-")}]${_ops.fetch?.auto != false ? ",a" : ""}`;
     
     /** @type {NodeListOf<HTMLElement> | []} */
     let els = (parent || document.body).querySelectorAll(modes) || [];
@@ -51,7 +51,7 @@ export function _registerSubs(parent) {
             let shouldHaveTriggers = mode != "bind";
             let err_detail = `(#${el.id} on ${mode})`;
 
-            const settings = el.getAttribute(`data-${mode}`) || el.getAttribute(`cu-${mode}`) || el.getAttribute(`data-cu-${mode}`);
+            const settings = el.getAttribute(`cu-${mode}`) || el.getAttribute(`data-cu-${mode}`);
             settings?.split(";").forEach(setting=> {
                 //Break out settings
                 let _parts = setting?.split(/(?:(?:\)|->) ?){1,}/g) || []; 
