@@ -9,23 +9,23 @@
 <body>
   <h1>Reactivity test - IIFE</h1>
 
-  <p>This is an example of dynamic text! The current store value is: <span data-bind="store1->innerText">Here is a default value.</span></p>
-  <p>Here is text that can be HTML: <span data-bind="store1->innerHTML">Here is a default value.</span></p>
-  <p>Store 2 nested: <span data-bind="store2.values[1]->innerHTML">Here is a default value.</span></p>
-  <p>Checkbox set to checked? <span data-bind="store2.values[0]->innerText"></span></p>
-  <p>Store 4 value: <span data-bind="store4->innerText"></span></p>
-  <p>Checked store checked? <span data-bind="checkedStore-> innerText"></span></p>
+  <p>This is an example of dynamic text! The current store value is: <span cu-bind="store1->innerText">Here is a default value.</span></p>
+  <p>Here is text that can be HTML: <span cu-bind="store1->innerHTML">Here is a default value.</span></p>
+  <p>Store 2 nested: <span cu-bind="store2.values[1]->innerHTML">Here is a default value.</span></p>
+  <p>Checkbox set to checked? <span cu-bind="store2.values[0]->innerText"></span></p>
+  <p>Store 4 value: <span cu-bind="store4->innerText"></span></p>
+  <p>Checked store checked? <span cu-bind="checkedStore-> innerText"></span></p>
 
   <!-- Content -->
   <div class="sync-grid">
-    <label>On keyup:</label> <input data-bind="store1->value" data-sync="on(keyup, change) value -> store1">
-    <label>Bind only:</label> <input data-bind="store1->value">
-    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-bind="store1->checked" data-sync="on(change) checked->checkedStore">
-    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-bind="isChecked(store1)->checked">
+    <label>On keyup:</label> <input cu-bind="store1->value" cu-sync="on(keyup, change) value -> store1">
+    <label>Bind only:</label> <input cu-bind="store1->value">
+    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" cu-bind="store1->checked" cu-sync="on(change) checked->checkedStore">
+    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" cu-bind="isChecked(store1)->checked">
 
     <!-- Select (with dynamic options) -->
     <label>Dyn select</label>
-    <select data-bind="store1->value" data-sync="on(change) value->store1">
+    <select cu-bind="store1->value" cu-sync="on(change) value->store1">
       <!-- Dynamic frontend replace -->
       <template id="select-ops" cu-each="store1 as letter, index">
         <!-- Dynamic options -->
@@ -53,9 +53,9 @@
   </div>
 
   <div class="special-insert">Default insert</div>
-  <nav data-fetch="on(mount) /tests/header.html -> (header>this, .special>.special-insert)" data-method="GET" data-overrides='{ "allowScripts": true }'></nav>
+  <nav cu-fetch="on(mount) /tests/header.html -> (header>this, .special>.special-insert)" cu-method="GET" cu-overrides='{ "allowScripts": true }'></nav>
 
-  <div class="trans" data-bind="specialStyling(store1)"></div>
+  <div class="trans" cu-bind="specialStyling(store1)"></div>
 
   <!-- Store script -->
   <script src="../dist/mfld.js" type="module"></script>

@@ -39,10 +39,10 @@ let d=/, {0,}/g,g=0,b={},p=["bind","sync","fetch"]
  * @param {Partial<MfldOps>} newops 
  * @param {string} [profileName] 
  */
-function T(t,e){e?b.profiles={...b.profiles,[e]:t}:b={...b,...t}}function m(t){let e=`[data-${p.join("],[data-")}],[data-cu-${p.join("],[data-cu-")}],[cu-${p.join("],[cu-")}]${0!=b.fetch?.auto?",a":""}`,o=(t||document.body).querySelectorAll(e)||[]
+function T(t,e){e?b.profiles={...b.profiles,[e]:t}:b={...b,...t}}function m(t){let e=`[data-cu-${p.join("],[data-cu-")}],[cu-${p.join("],[cu-")}]${0!=b.fetch?.auto?",a":""}`,o=(t||document.body).querySelectorAll(e)||[]
 for(let t of o){t.id||(t.id="cu-"+g++)
 for(let e of p){let o="bind"!=e,i=`(#${t.id} on ${e})`
-const n=t.getAttribute(`data-${e}`)||t.getAttribute(`cu-${e}`)||t.getAttribute(`data-cu-${e}`)
+const n=t.getAttribute(`cu-${e}`)||t.getAttribute(`data-cu-${e}`)
 n?.split(";").forEach((n=>{let s,r=n?.split(/(?:(?:\)|->) ?){1,}/g)||[],a=o?w(r.splice(0,1)[0]):[],u=r[0]?.includes("(")&&r[0]?.match(/^[^\(]{1,}/)?.[0]||"",c=w(r.splice("sync"==e?1:0,1)[0]),h=w(r[0])
 if(o&&!a?.length)throw`No trigger: ${i}.`
 if(u){if(s=globalThis[u]||globalThis.Mfld_funcs?.get(u),!s)throw`"${u}" not registered: ${i}`

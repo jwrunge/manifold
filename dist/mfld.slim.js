@@ -34,10 +34,10 @@ t.done?.(t.in)}r=[]}function c(t,e,o,i){if(t?.nodeType==Node.TEXT_NODE){let e=t.
 o.textContent=e,t.replaceWith(o),t=o}if(t){let n=Array.isArray(o.trans?.dur)?o.trans?.dur["in"==e?0:1]||o.trans?.dur[0]:o.trans?.dur||0,l=o?.trans?.class||"cu-trans"
 t?.classList?.add(l),o.trans?.hooks?.[`${e}-start`]?.(t),"out"==e?f((()=>{s?.size?.(t),n&&(t.style.transitionDuration=`${n}ms`),t.classList?.add(e)})):setTimeout((()=>{f((()=>{n&&(t.style.transitionDuration=`${n}ms`),t?.classList?.add(e),i?.(),f((()=>{t?.classList?.remove(e)}))}))}),o.trans?.swap||0),setTimeout((()=>{f((()=>{"out"==e&&t?.remove(),t?.classList?.remove(l),t?.classList?.remove(e),o.trans?.hooks?.[`${e}-end`]?.(t)}))}),n+("in"==e&&o.trans?.swap||0))}}let h=globalThis.DOMParser?new DOMParser:void 0
 let d=/, {0,}/g,g=0,b={},p=["bind","sync","fetch"]
-function T(t,e){e?b.profiles={...b.profiles,[e]:t}:b={...b,...t}}function m(t){let e=`[data-${p.join("],[data-")}],[data-cu-${p.join("],[data-cu-")}],[cu-${p.join("],[cu-")}]${0!=b.fetch?.auto?",a":""}`,o=(t||document.body).querySelectorAll(e)||[]
+function T(t,e){e?b.profiles={...b.profiles,[e]:t}:b={...b,...t}}function m(t){let e=`[data-cu-${p.join("],[data-cu-")}],[cu-${p.join("],[cu-")}]${0!=b.fetch?.auto?",a":""}`,o=(t||document.body).querySelectorAll(e)||[]
 for(let t of o){t.id||(t.id="cu-"+g++)
 for(let e of p){let o="bind"!=e,i=`(#${t.id} on ${e})`
-const n=t.getAttribute(`data-${e}`)||t.getAttribute(`cu-${e}`)||t.getAttribute(`data-cu-${e}`)
+const n=t.getAttribute(`cu-${e}`)||t.getAttribute(`data-cu-${e}`)
 n?.split(";").forEach((n=>{let s,r=n?.split(/(?:(?:\)|->) ?){1,}/g)||[],a=o?w(r.splice(0,1)[0]):[],u=r[0]?.includes("(")&&r[0]?.match(/^[^\(]{1,}/)?.[0]||"",c=w(r.splice("sync"==e?1:0,1)[0]),h=w(r[0])
 if(o&&!a?.length)throw`No trigger: ${i}.`
 if(u){if(s=globalThis[u]||globalThis.Mfld_funcs?.get(u),!s)throw`"${u}" not registered: ${i}`
