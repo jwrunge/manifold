@@ -32,14 +32,17 @@ PATTERNS:
 MAYBE HANDLE HTTP LIKE THIS???
 
 Replace, append, prepend:
-<div data-get="/user" data-replace>                     // Get data from /user, replace current div
-<div data-post="assembleUser() -> /user" data-append>   // Post the result of assembleUser() to /user and append the response
-<form data-post="assembleUser() -> /user" data-prepend> // Post the result of assembleUser (processing form data) to /user and prepend response
+<div data-get="on(click) /user" data-replace>                     // Get data from /user, replace current div
+<div data-post="on(click) assembleUser() -> /user" data-append>   // Post the result of assembleUser() to /user and append the response
+<form data-post="on(click) store1 -> /user" data-prepend> // Post the value of store1 to /user and prepend response
+<form data-post="on(click) assembleUser(store1) -> /user" data-prepend> // Post the result of assembleUser (processing store1) to /user and prepend response
+<form data-post="on(click) $form -> /user" data-prepend> // Post form data to /user and prepend response
+<form data-post="on(click) assembleUser($form) -> /user" data-prepend> // Post processed form data to /user and prepend response
 
 Store result
-<div data-get="/user" data-resolve="x -> store1">// Get data from /user, put result into store1
-<div data-get="/user" data-resolve="process()">// Get data from /user, process the result
-<div data-get="/user" data-resolve="process()-> store1">// Get data from /user, process the result and put it into store1
+<div data-get="on(click) /user" data-resolve="x -> store1">// Get data from /user, put result into store1
+<div data-get="on(click) /user" data-resolve="process()">// Get data from /user, process the result
+<div data-get="on(click) /user" data-resolve="process()-> store1">// Get data from /user, process the result and put it into store1
 
 ## Importing
 

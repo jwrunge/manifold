@@ -3,6 +3,13 @@ import { _fetchHttp } from "./http.js";
 import { _scheduleDomUpdate } from "./domUpdates.js";
 /** @typedef {import("./index.module.js").MfldOps} MfldOps */
 
+/** @type {Partial<MfldOps>} */
+let _ops = {};
+
+const ATTR_PREFIX = "mf";
+
+const _http_modes = ["get", "head", "post", "put", "delete", "patch"];
+const _modes = [`${ATTR_PREFIX}bind`, `${ATTR_PREFIX}sync`, ..._http_modes.map(m=> `${ATTR_PREFIX}${m}`)];
 let _commaSepRx = /, {0,}/g;
 let _elIdx = 0;
 
@@ -19,10 +26,6 @@ let _elIdx = 0;
 //     }
 // });
 
-/** @type {Partial<MfldOps>} */
-let _ops = {};
-let _modes = ["bind", "sync", "fetch"];
-
 /**!
  * @param {Partial<MfldOps>} newops 
  * @param {string} [profileName] 
@@ -36,30 +39,28 @@ export function _setOptions(newops, profileName) {
 /**
  * @param {HTMLElement | null} [parent] 
  */
-export function _registerSubs(parent) {
-    let modes = `[data-cu-${_modes.join("],[data-cu-")}],[cu-${_modes.join("],[cu-")}]${_ops.fetch?.auto != false ? ",a" : ""}`;
-    
+export function _registerSubs(parent) {   
     /** @type {NodeListOf<HTMLElement> | []} */
-    let els = (parent || document.body).querySelectorAll(modes) || [];
+    let els = (parent || document.body).querySelectorAll(`[data-${_modes.join("],[data-")}]${_ops.fetch?.auto != false ? ",a" : ""}`) || [];
 
     for(let el of els) {
         /** @type {HTMLElement} */
-        if(!el.id) el.id = `cu-${_elIdx++}`;
+        if(!el.id) el.id = `${_elIdx++}`;
 
         //Loop over all data attributes (modes)
-        for(let mode of _modes) {
-            let shouldHaveTriggers = mode != "bind";
+        for(let mode in el.dataset) {
+            let shouldHaveTriggers = mode != `${ATTR_PREFIX}bind`;
             let err_detail = `(#${el.id} on ${mode})`;
 
-            const settings = el.getAttribute(`cu-${mode}`) || el.getAttribute(`data-cu-${mode}`);
-            settings?.split(";").forEach(setting=> {
+            //Loop over provided settings
+            el.dataset?.[mode]?.split(";").forEach(setting=> {
                 //Break out settings
                 let _parts = setting?.split(/(?:(?:\)|->) ?){1,}/g) || []; 
         
                 //Extract settings
                 let triggers = shouldHaveTriggers ? _paramsInParens(_parts.splice(0,1)[0]) : [];
                 let processFuncName = _parts[0]?.includes("(") ? _parts[0]?.match(/^[^\(]{1,}/)?.[0] || "" : "";
-                let output = _paramsInParens(_parts.splice(mode == "sync" ? 1 : 0, 1)[0]);
+                let output = _paramsInParens(_parts.splice(mode == `${ATTR_PREFIX}sync` ? 1 : 0, 1)[0]);
                 let input = _paramsInParens(_parts[0]);
 
                 //Handle errors
@@ -88,19 +89,24 @@ export function _registerSubs(parent) {
                 //Loop over triggers
                 if(!triggers?.length) triggers = [""]
                 for(let trigger of triggers) {
+                    /**
+                     * HANDLE MF-FETCH
+                     */
                     //No input loops for fetch
-                    if(mode == "fetch") {
-                        _handleFetch(el, trigger, output, input, _ops);
+                    if(["bind", "sync"].includes(mode)) {
+                        _handleFetch(el, trigger);
                     }
 
                     //Loop over input
                     if(!input?.length) input = [ "" ];
                     for(let i=0; i < input.length; i++) {
-                        //Handle bind
-                        if(mode == "bind") {
+                        /**
+                         * HANDLE MF-BIND
+                         */
+                        if(mode == `${ATTR_PREFIX}bind`) {
                             let domSubscription = ()=> {
                                 _scheduleDomUpdate(()=> {
-                                    el[input[i]] = processFunc?.(
+                                    const val = processFunc?.(
                                         ...outputData.map(
                                             s=> _nestedValue(_store(s.name)?.value, s.path)
                                         ), el
@@ -108,6 +114,8 @@ export function _registerSubs(parent) {
                                     _nestedValue(
                                         _store(outputData[0].name || "")?.value, outputData[0].path
                                     );
+
+                                    if(val !== undefined) el[input[i]] = val;
 
                                     //Make sure to update dependent stores on value update
                                     el.dispatchEvent(new CustomEvent(trigger))
@@ -118,8 +126,10 @@ export function _registerSubs(parent) {
                             for(let store of outputData) _store(store.name)?._addSub(el.id, domSubscription);
                         }
 
-                        //Handle sync
-                        else if(mode == "sync") {
+                        /**
+                         * HANDLE MF-SYNC
+                         */
+                        else if(mode == `${ATTR_PREFIX}sync`) {
                             if(outputData.length > 1) throw(`Only one store supported: ${err_detail}`)
                             let ev = ()=> {
                                 let value = el[input[i].trim()];
@@ -180,45 +190,94 @@ function _paramsInParens(str) {
 /**
  * @param {HTMLElement} el 
  * @param {string} trigger 
- * @param {string[]} output 
- * @param {string[]} input 
- * @param {Partial<MfldOps>} ops 
  */
-function _handleFetch(el, trigger, output, input, ops) {
+function _handleFetch(el, trigger) {
     /**
      * @param {Event} [e]
      */
-    let ev = e=> {  
+    let ev = async e=> {  
         e?.preventDefault();
         e?.stopPropagation();  
 
-        let fetchData = {
-            ...ops,
-            ...ops.profiles?.[el.dataset["overrides"] || ""] || JSON.parse(el.dataset["overrides"] || "{}") || {},
+        const fetchOps = {
+            ..._ops,
+            ..._ops.profiles?.[el.dataset["overrides"] || ""] || JSON.parse(el.dataset["overrides"] || "{}") || {},
         };
 
         /** @type {any} */ let target = e?.target;
-        if(["click", "submit"].includes(trigger) || ["A", "FORM"].includes(target?.nodeName)) {
-            history.pushState(
-                {fetchData, elId: el.id}, 
-                "", 
-                target?.href || target?.action || ""
-            );
+        // if(["click", "submit"].includes(trigger) || ["A", "FORM"].includes(target?.nodeName)) {
+        //     history.pushState(
+        //         {fetchData, elId: el.id}, 
+        //         "", 
+        //         target?.href || target?.action || ""
+        //     );
+        // }
+    
+        //Make sure we're allowed to fetch
+        if(!fetchOps?.fetch?.externals?.some(allowed=> target?.href?.startsWith(allowed.domain))) {
+            //Fetch data
+            let fOps = fetchOps.fetch;
+            let data = await fetch(target?.href, {
+                ...(fOps?.request || {}),
+                method: target?.method,
+                body: fOps?.request?.body ? JSON.stringify(fOps?.request?.body || {}) : undefined,
+            })
+            .catch(error=> {
+                fOps?.err?.(error);
+            });
+
+            //Handle onCode callback
+            let code = data?.status;
+            if(code && fOps?.onCode?.(code) == false) return;
+
+            //Return JSON or text in callback
+            let resp = await data?.[fetchOps.fetch?.type || "text"]();
+            fetchOps.fetch?.cb?.(resp);
+
+
+
+            if((fetchOps?.fetch?.type) != "json") {
+                //Extract content
+                let fullMarkup = globalThis.DOMParser ? new DOMParser().parseFromString(text, 'text/html').body : undefined;
+            
+                // //Clear existing scripts/styles
+                // clearDynamicElements(parent, pageScripts, "script");
+                // clearDynamicElements(parent, pageStyles, "style");;
+
+                // //Get scripts and styles
+                // let seek: string[] = ops.allowScripts ? ["scripts"] : [];
+                // if(ops.allowStyles) seek.push("style");
+                // if(seek.length) {
+                //     let globls: NodeListOf<HTMLScriptElement | HTMLStyleElement> = fullMarkup.querySelectorAll(seek.join(","));
+                //     for(let el of globls) {
+                //         let isScript = el instanceof HTMLScriptElement;
+                //         let source = isScript ? pageScripts : pageStyles;
+
+                //         if(isScript ? ops.allowScripts : ops.allowStyles){
+                //             if(!source.has(parent)) source.set(parent, []);
+                //             source.get(parent)?.push(el as any);
+                //         }
+                //         else if(isScript) el.parentNode?.removeChild(el);
+                //     }
+                // }
+
+                // ops.replace.forEach(r => {
+                //     let [ extract, relation, replace ] = r.split(/\s*(>|\/|\+)\s*/);
+
+                //     // let outEl = ["this", "self"].includes(replace) ? parent : document.querySelector(replace);
+    // globalThis.document?.
+                //     _scheduleDomUpdate({
+                //         in: /** @type {HTMLElement} */ (fullMarkup.querySelector(extract)),
+                //         out: /** @type {HTMLElement} */ (["this", "self"].includes(replace) ? parent : document.querySelector(replace)),
+                //         relation,globalThis.document?.
+                //         ops,
+                //         done,
+                //     })
+                // });
+            }
         }
-
-        _fetchHttp(
-            {
-                method: el.dataset["method"]?.toLowerCase() || "get",
-                href: target?.href,
-                el
-            },
-            fetchData,
-            el=> {if(el) _registerSubs(el)}
-        );
     }
 
-    if(trigger == "mount") {
-        ev();
-    }
+    if(trigger == "mount") ev();
     else el.addEventListener(trigger, ev);
 }

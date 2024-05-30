@@ -7,6 +7,8 @@
  * @typedef {import("./index.module.js").StoreOptions<T>} StoreOptions 
  */
 
+import { _scheduleDomUpdate } from "./domUpdates.js";
+
 /**
  * @callback SubFunction
  * @param {any} value
@@ -112,7 +114,7 @@ export class Store {
             _workOrder.set(this.name || "", value);
             clearTimeout(_workCacheTimeout);
             _workCacheTimeout = setTimeout(async ()=> {
-                //Sort this.#workOrder such that dependencies are updated first, duplicate work is filtered out
+                //Sort workOrder such that dependencies are updated first, duplicate work is filtered out
                 for(let [storeName, _] of _workOrder) {
                     const store = _store(storeName);
 
@@ -133,7 +135,7 @@ export class Store {
                         store.value = newValue;
                         store._storedHash = newHash;
                         for(let S of store._downstreamStores) downstream.push(S);
-                        for(let [ref, sub] of store._subscriptions) sub?.(store.value, ref);
+                        _scheduleDomUpdate(()=> {for(let [ref, sub] of store._subscriptions) sub?.(store.value, ref)});
                     }
                 }
 

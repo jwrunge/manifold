@@ -9,53 +9,53 @@
 <body>
   <h1>Reactivity test - IIFE</h1>
 
-  <p>This is an example of dynamic text! The current store value is: <span cu-bind="store1->innerText">Here is a default value.</span></p>
-  <p>Here is text that can be HTML: <span cu-bind="store1->innerHTML">Here is a default value.</span></p>
-  <p>Store 2 nested: <span cu-bind="store2.values[1]->innerHTML">Here is a default value.</span></p>
-  <p>Checkbox set to checked? <span cu-bind="store2.values[0]->innerText"></span></p>
-  <p>Store 4 value: <span cu-bind="store4->innerText"></span></p>
-  <p>Checked store checked? <span cu-bind="checkedStore-> innerText"></span></p>
+  <p>This is an example of dynamic text! The current store value is: <span data-mfBind="store1->innerText">Here is a default value.</span></p>
+  <p>Here is text that can be HTML: <span data-mfBind="store1->innerHTML">Here is a default value.</span></p>
+  <p>Store 2 nested: <span data-mfBind="store2.values[1]->innerHTML">Here is a default value.</span></p>
+  <p>Checkbox set to checked? <span data-mfBind="store2.values[0]->innerText"></span></p>
+  <p>Store 4 value: <span data-mfBind="store4->innerText"></span></p>
+  <p>Checked store checked? <span data-mfBind="checkedStore-> innerText">unknown</span></p>
 
   <!-- Content -->
   <div class="sync-grid">
-    <label>On keyup:</label> <input cu-bind="store1->value" cu-sync="on(keyup, change) value -> store1">
-    <label>Bind only:</label> <input cu-bind="store1->value">
-    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" cu-bind="store1->checked" cu-sync="on(change) checked->checkedStore">
-    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" cu-bind="isChecked(store1)->checked">
+    <label>On keyup:</label> <input data-mfBind="store1->value" data-mfSync="on(keyup, change) value -> store1">
+    <label>Bind only:</label> <input data-mfBind="store1->value">
+    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-mfBind="store1->checked" data-mfSync="on(change) checked->checkedStore">
+    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-mfBind="isChecked(store1)->checked">
 
     <!-- Select (with dynamic options) -->
     <label>Dyn select</label>
-    <select cu-bind="store1->value" cu-sync="on(change) value->store1">
+    <select data-mfBind="store1->value" data-mfSync="on(change) value->store1">
       <!-- Dynamic frontend replace -->
-      <template id="select-ops" cu-each="store1 as letter, index">
+      <template id="select-ops" data-mfeach="store1 as letter, index">
         <!-- Dynamic options -->
         <option value="${letter}">${index}: ${letter}</option>
       </template>
 
       <!-- Default / fallback options (replaced if dynamic options work) -->
-      <cu-default cu-template="select-ops">
+      <mfdefault data-mftemplate="select-ops">
         <option value="" default>Blank</option>
         <option value="My text">Initial Value</option>
         <option value="<span class='colorful'>Another update</span>">Show update text</option>
         <option value="We're at 4k">Show 4k text</option>
-      </cu-default>
+      </mfdefault>
 
       <!-- Always-present options -->
       <option value="Last one">Last one</option>
     </select>
 
     <label>Dyn div</label>
-    <cu-default cu-if="showDiv(store1)">
+    <mfdefault data-mfif="showDiv(store1)">
       Div is shown.
-    </cu-default>
-    <template cu-else-if="showDiv(store1)">Else if</template>
-    <template cu-else>Else</template>
+    </mfdefault>
+    <template data-mfelse-if="showDiv(store1)">Else if</template>
+    <template data-mfelse>Else</template>
   </div>
 
   <div class="special-insert">Default insert</div>
-  <nav cu-fetch="on(mount) /tests/header.html -> (header>this, .special>.special-insert)" cu-method="GET" cu-overrides='{ "allowScripts": true }'></nav>
+  <nav data-mffetch="on(mount) /tests/header.html -> (header>this, .special>.special-insert)" data-mfmethod="GET" data-mfoverrides='{ "allowScripts": true }'></nav>
 
-  <div class="trans" cu-bind="specialStyling(store1)"></div>
+  <div class="trans" data-mfBind="specialStyling(store1)"></div>
 
   <!-- Store script -->
   <script src="../dist/mfld.js" type="module"></script>
@@ -74,18 +74,18 @@
     padding: 1rem;
   }
 
-  .cu-trans {
+  .data-mftrans {
     transition-property: transform, opacity;
     transform: translateX(0);
     opacity: 1;
   }
 
-  .cu-trans.out {
+  .data-mftrans.out {
     transform: translateX(-50%);
     opacity: 0;
   }
 
-  .cu-trans.in {
+  .data-mftrans.in {
     transform: translateX(50%);
     opacity: 0;
   }

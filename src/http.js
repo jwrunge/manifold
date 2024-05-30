@@ -17,6 +17,7 @@ let parser = globalThis.DOMParser ? new DOMParser() : undefined;
  */
 export async function _fetchHttp(target, ops, done) {
     if(!parser) return;
+    
     //Make sure we're allowed to fetch
     if(!ops.fetch?.externals?.some(allowed=> target?.href?.startsWith(allowed.domain))) {
         //Fetch data

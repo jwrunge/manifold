@@ -28,7 +28,7 @@ export function handleConditionals(el) {
             //Promote all <template> tags to visible elements
             if(el.tagName == "TEMPLATE") {
                 const innerHTML = el.innerHTML;
-                const promoteAttr = el.getAttribute("cu-promote") || el.getAttribute("data-cu-promote") || "div";
+                const promoteAttr = el.getAttribute("mf-promote") || el.getAttribute("data-mf-promote") || "div";
                 let newEl = globalThis.document?.t(promoteAttr);
                 newEl.innerHTML = innerHTML;                for(const attr of el.attributes) {
                     newEl.setAttribute(attr.name, attr.value);

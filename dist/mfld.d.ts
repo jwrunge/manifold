@@ -59,7 +59,7 @@ declare module "mfld.mod" {
      */
     export type TransitionOptions = {
         /**
-         * - CSS class applied to transitions (default: `cu-trans`)
+         * - CSS class applied to transitions (default: `mf-trans`)
          */
         class?: string;
         /**
@@ -166,7 +166,7 @@ declare module "mfld.mod" {
         function func(func_name: string): Function;
         /**!
          * - Add functions to the Manifold function registry in key-value pairs.
-         * - Functions must be registered in order to be accessible to HTML elements via `bind`, `sync`, and `resolve`.
+         * - Functions must be registered in order to be accessible to HTML elements via `mf-bind`, `mf-sync`, and `mf-resolve`.
          * - It may still be beneficial to keep a reference to the original function if you need to preserve type information.
          * @param {{ [key: string]: MfldFunc }} funcs
          */
@@ -174,7 +174,7 @@ declare module "mfld.mod" {
             [key: string]: Function;
         }): void;
         /**!
-         * - Set Manifold configuration options, including `trans` (DOM transition settings), `fetch` (fetch options), and `profiles` (configuration option overrides that can be set on elements ad-hoc via `cu-overrides`).
+         * - Set Manifold configuration options, including `trans` (DOM transition settings), `fetch` (fetch options), and `profiles` (configuration option overrides that can be set on elements ad-hoc via `mf-overrides`).
          * - Providing the optional `profileName` parameter allows you to save the configuration as a named profile. Otherwise, the profile is saved as the default configuration.
          * @param {MfldOps} new_ops
          * @param {string} [profile_name]
@@ -186,9 +186,9 @@ declare module "mfld.mod" {
           */
         function onTick(t: any): void;
         /**!
-           * - Register Manifold subscriptions on the DOM. *Optional:* Pass an `HTMLElement` or selector string to scope the registration to a specific element.
-           * @param {HTMLElement | string | null} [parent]
-           */
+         * - Register Manifold subscriptions on the DOM. *Optional:* Pass an `HTMLElement` or selector string to scope the registration to a specific element.
+         * @param {HTMLElement | string | null} [parent]
+         */
         function register(t: any): void;
     }
 }
