@@ -22,7 +22,7 @@ import { _scheduleUpdate, _workOrder } from "./updates.js";
  */
 function _hashAny(input) {
     if(!input) return 0;
-    if(typeof input === 'number') return input;
+    if(typeof input == 'number') return input;
     if(input === true) return 1;
 
     if(input instanceof Map) return _hashAny(Array.from(input.entries()));
@@ -30,7 +30,7 @@ function _hashAny(input) {
 
     let hash = 0;
     for(let char of new TextEncoder().encode(
-        typeof input === 'string' ? input : input?.toString() || ""
+        typeof input == 'string' ? input : input?.toString() || ""
     )) 
         hash = ((hash << 5) - hash) + char;
     return hash;

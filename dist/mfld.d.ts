@@ -1,5 +1,5 @@
 declare module "mfld.mod" {
-    export { b as Mfld };
+    export { m as Mfld };
     /**
      * !
      */
@@ -59,7 +59,7 @@ declare module "mfld.mod" {
      */
     export type TransitionOptions = {
         /**
-         * - CSS class applied to transitions (default: `mf-trans`)
+         * - CSS class applied to transitions (default: `mfTrans`)
          */
         class?: string;
         /**
@@ -133,7 +133,7 @@ declare module "mfld.mod" {
      * !
      */
     export type MfldFunc = Function;
-    namespace b {
+    namespace m {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
@@ -166,7 +166,7 @@ declare module "mfld.mod" {
         function func(func_name: string): Function;
         /**!
          * - Add functions to the Manifold function registry in key-value pairs.
-         * - Functions must be registered in order to be accessible to HTML elements via `mf-bind`, `mf-sync`, and `mf-resolve`.
+         * - Functions must be registered in order to be accessible to HTML elements via `mfBind`, `mfSync`, and `mfResolve`.
          * - It may still be beneficial to keep a reference to the original function if you need to preserve type information.
          * @param {{ [key: string]: MfldFunc }} funcs
          */
@@ -174,7 +174,7 @@ declare module "mfld.mod" {
             [key: string]: Function;
         }): void;
         /**!
-         * - Set Manifold configuration options, including `trans` (DOM transition settings), `fetch` (fetch options), and `profiles` (configuration option overrides that can be set on elements ad-hoc via `mf-overrides`).
+         * - Set Manifold configuration options, including `trans` (DOM transition settings), `fetch` (fetch options), and `profiles` (configuration option overrides that can be set on elements ad-hoc via `mfOverrides`).
          * - Providing the optional `profileName` parameter allows you to save the configuration as a named profile. Otherwise, the profile is saved as the default configuration.
          * @param {MfldOps} new_ops
          * @param {string} [profile_name]

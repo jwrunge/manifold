@@ -7,7 +7,7 @@ let smartOutro = globalThis.smartOutro;
  * @typedef {Object} DomWorkOrder
  * @property {HTMLElement} in - The input HTMLElement
  * @property {HTMLElement} out - The output HTMLElement
- * @property {string} relation - The relation between the input and output elements
+ * @property {"$append" | "$prepend" | "$replace"} relation - The relation between the input and output elements
  * @property {Partial<MfldOps>} ops - The fetch options for the operation
  * @property {(el: HTMLElement | null) => void} done - The callback function to be executed when the operation is done
  */
@@ -56,11 +56,11 @@ function _runUpdates() {
     * @type {DomWorkOrder[]}
     */
     for(let order of workArray) {
-        if(typeof order === "function") (/** @type {Function} */ order)();
+        if(typeof order == "function") (/** @type {Function} */ order)();
         else {
             // Remove old children
-            if([">", "+"].includes(order.relation)) {
-                if(order.relation == ">") {
+            if(["$replace", "$append"].includes(order.relation)) {
+                if(order.relation == "$replace") {
                     //Remove old children before appending
                     let container = document?.createElement("div");
                     for(let child of Array.from(order.out?.childNodes || [])) {
@@ -85,7 +85,7 @@ function _runUpdates() {
                 smartOutro?.adjust?.(order.in, order.ops);
 
                 //Remove old element
-                if(order.relation === "/") _applyTransition(order.out, "out", order.ops);
+                if(order.relation == "$prepend") _applyTransition(order.out, "out", order.ops);
             });
 
             order.done?.(order.in);

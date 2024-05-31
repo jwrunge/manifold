@@ -8,10 +8,10 @@ let _ops = {};
 
 let ATTR_PREFIX = "mf";
 
-let _http_modes = ["get", "head", "post", "put", "delete", "patch"];
-let _modes = [`${ATTR_PREFIX}bind`, `${ATTR_PREFIX}sync`, ..._http_modes.map(m=> `${ATTR_PREFIX}${m}`)];
 let _commaSepRx = /, {0,}/g;
 let _elIdx = 0;
+let pageScripts = new WeakMap();
+let pageStyles = new WeakMap();
 
 // globalThis.addEventListener("popstate", (e)=> {
 //     let el = document?.getElementById(e.state?.elId);
@@ -41,7 +41,9 @@ export function _setOptions(newops, profileName) {
  */
 export function _registerSubs(parent) {   
     /** @type {NodeListOf<HTMLElement> | []} */
-    let els = (parent || document.body).querySelectorAll(`[data-${_modes.join("],[data-")}]${_ops.fetch?.auto != false ? ",a" : ""}`) || [];
+    let els = (parent || document.body).querySelectorAll(
+        `[data-${ATTR_PREFIX}${["bind", "sync", "get", "head", "post", "put", "delete", "patch"].join(`],[data-${ATTR_PREFIX}`)}]${_ops.fetch?.auto != false ? ",a" : ""}`
+    ) || [];
 
     for(let el of els) {
         /** @type {HTMLElement} */
@@ -94,8 +96,10 @@ export function _registerSubs(parent) {
                      * HANDLE MF-FETCH
                      */
                     //No input loops for fetch
-                    if(["bind", "sync"].includes(mode)) {
-                        _handleFetch(el, trigger);
+                    if(!mode.match(/bind|sync/)) {
+                        if(input.length > 1 || output.length > 1) throw(`Multiple sources: ${err_detail}`);
+                        _handleFetch(el, trigger, mode.replace(ATTR_PREFIX, ""), input[0], output[0]);
+                        return;
                     }
 
                     //Loop over input
@@ -134,7 +138,6 @@ export function _registerSubs(parent) {
                             if(outputData.length > 1) throw(`Only one store supported: ${err_detail}`)
                             let ev = ()=> {
                                 let prop = input[i].trim();
-                                console.log(prop, el, el[prop], el.getAttribute(prop), el.dataset[prop]);
                                 let value = el[prop] ?? el.getAttribute(prop) ?? el.dataset[prop] ?? undefined;
                                 
                                 if(processFunc) value = processFunc?.(value, el);
@@ -194,21 +197,34 @@ function _paramsInParens(str) {
 /**
  * @param {HTMLElement} el 
  * @param {string} trigger 
+ * @param {string} [method] 
+ * @param {BodyInit | null} [input]
+ * @param {string} [href]
  */
-function _handleFetch(el, trigger) {
+function _handleFetch(el, trigger, method, input, href) {
     /**
      * @param {Event} [e]
      */
     let ev = async e=> {  
         e?.preventDefault();
-        e?.stopPropagation();  
+        e?.stopPropagation();
+        let overrides = el.dataset[`${ATTR_PREFIX}overrides`] || "{}";
 
+        /** @type {MfldOps["fetch"]} */
         let fetchOps = {
             ..._ops,
-            ..._ops.profiles?.[el.dataset["overrides"] || ""] || JSON.parse(el.dataset["overrides"] || "{}") || {},
+            ..._ops.profiles?.[overrides]?.fetch || JSON.parse(overrides),
         };
 
-        /** @type {any} */ let target = e?.target;
+        // If no input data was provided, it's the href; use fetchOps.body if it exists (input overrides this)
+        if(!href) {
+            href = typeof input == "string" ? structuredClone(input) : null || /** @type {string} */(/** @type {any}*/(e?.target)?.href);
+            input = fetchOps?.request?.body;
+        }
+
+        // Set from target element if relevant; fall back to "get"
+        if(!method) method = /** @type {any}*/(e?.target)?.method || "get";
+
         // if(["click", "submit"].includes(trigger) || ["A", "FORM"].includes(target?.nodeName)) {
         //     history.pushState(
         //         {fetchData, elId: el.id}, 
@@ -218,70 +234,82 @@ function _handleFetch(el, trigger) {
         // }
     
         //Make sure we're allowed to fetch
-        if(!fetchOps?.fetch?.externals?.some(allowed=> target?.href?.startsWith(allowed.domain))) {
-            //Fetch data
-            let fOps = fetchOps.fetch;
-            let data = await fetch(target?.href, {
-                ...(fOps?.request || {}),
-                method: target?.method,
-                body: fOps?.request?.body ? JSON.stringify(fOps?.request?.body || {}) : undefined,
-            })
-            .catch(error=> {
-                fOps?.err?.(error);
-            });
+        let fOps = fetchOps;
 
-            //Handle onCode callback
-            let code = data?.status;
-            if(code && fOps?.onCode?.(code) == false) return;
+        let externalPermissions = fetchOps?.externals?.find(allowed=> href?.startsWith(allowed.domain)) || 
+            !href.match(/^https?:\/\//) || href.includes(location.origin) ? {
+                scripts: true,
+                styles: true,
+        } : undefined;
 
-            //Return JSON or text in callback
-            let resp = await data?.[fetchOps.fetch?.type || "text"]();
-            fetchOps.fetch?.cb?.(resp);
+        //Fetch data
+        let data = await fetch(href, {
+            ...(fOps?.request || {}),
+            method,
+            body: typeof input == "string" ? input : JSON.stringify(input),
+        })
+        .catch(error=> {
+            fOps?.err?.(error);
+        });
 
-            // Handle resolutions
-            let resolve = el.getAttribute("mf-resolve");
-            if(["$append", "$prepend", "$replace"].includes(resolve || "")) {
-                //Extract content
-                let fullMarkup = globalThis.DOMParser ? new DOMParser()?.parseFromString?.(resp, 'text/html')?.body : resp;
+        //Handle onCode callback
+        let code = data?.status;
+        if(code && fOps?.onCode?.(code) == false) return;
 
-                // //Clear existing scripts/styles
-                // clearDynamicElements(parent, pageScripts, "script");
-                // clearDynamicElements(parent, pageStyles, "style");;
+        //Return JSON or text in callback
+        let resp = await data?.[fetchOps?.type || "text"]();
+        fetchOps?.cb?.(resp);
 
-                // //Get scripts and styles
-                // let seek: string[] = ops.allowScripts ? ["scripts"] : [];
-                // if(ops.allowStyles) seek.push("style");
-                // if(seek.length) {
-                //     let globls: NodeListOf<HTMLScriptElement | HTMLStyleElement> = fullMarkup.querySelectorAll(seek.join(","));
-                //     for(let el of globls) {
-                //         let isScript = el instanceof HTMLScriptElement;
-                //         let source = isScript ? pageScripts : pageStyles;
+        // Handle resolutions
+        let resolve = el.dataset[`${ATTR_PREFIX}resolve`];
+        if(["$append", "$prepend", "$replace"].includes(resolve || "")) {
+            console.log("RESOLVE", resolve, resp);
 
-                //         if(isScript ? ops.allowScripts : ops.allowStyles){
-                //             if(!source.has(parent)) source.set(parent, []);
-                //             source.get(parent)?.push(el as any);
-                //         }
-                //         else if(isScript) el.parentNode?.removeChild(el);
-                //     }
-                // }
+            //Extract content
+            if(fOps?.type == "text") {
+                let fullMarkup = new DOMParser()?.parseFromString?.(resp, 'text/html');
 
-                // ops.replace.forEach(r => {
-                //     let [ extract, relation, replace ] = r.split(/\s*(>|\/|\+)\s*/);
-
-                //     // let outEl = ["this", "self"].includes(replace) ? parent : document.querySelector(replace);
-                // globalThis.document?.
-                // _scheduleUpdate({
-                //     in: /** @type {HTMLElement} */ (fullMarkup.querySelector(extract)),
-                //     out: /** @type {HTMLElement} */ (["this", "self"].includes(replace) ? parent : document.querySelector(replace)),
-                //     relation, globalThis.document?.
-                //     ops,
-                //     done,
-                // })
-                // });
+                if(fullMarkup) {
+                    _scheduleUpdate({
+                        in: /** @type {HTMLElement} */ (fullMarkup.querySelector("body")),
+                        out: /** @type {HTMLElement} */ el,
+                        //@ts-ignore
+                        relation: resolve,
+                        ops: fOps,
+                        done: ()=> true,
+                    })
+                }
+                else {
+                    // Handle paste text
+                }
             }
-            else if(resolve) {
 
-            }
+            // //Clear existing scripts/styles
+            // for(let s of [pageScripts, pageStyles]) {
+            //     let elements = s.get(fullMarkup) || [];
+            //     elements.forEach(el => el.remove());
+            //     s.set(fullMarkup, []);
+            // }
+
+            // //Get scripts and styles
+            // let seek: string[] = ops.allowScripts ? ["scripts"] : [];
+            // if(ops.allowStyles) seek.push("style");
+            // if(seek.length) {
+            //     let globls: NodeListOf<HTMLScriptElement | HTMLStyleElement> = fullMarkup.querySelectorAll(seek.join(","));
+            //     for(let el of globls) {
+            //         let isScript = el instanceof HTMLScriptElement;
+            //         let source = isScript ? pageScripts : pageStyles;
+
+            //         if(isScript ? ops.allowScripts : ops.allowStyles){
+            //             if(!source.has(parent)) source.set(parent, []);
+            //             source.get(parent)?.push(el as any);
+            //         }
+            //         else if(isScript) el.parentNode?.removeChild(el);
+            //     }
+            // }
+        }
+        else if(resolve) {
+
         }
     }
 

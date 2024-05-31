@@ -60,7 +60,6 @@ const DESCENDANT = Mfld.store("descendant", {
 })
 
 function sendAlert(val) {
-    alert("SENDING ALERT: " + val);
     return val
 }
 
@@ -109,29 +108,29 @@ function sendAlert(val) {
 //     });
 // }
 
-Mfld.get("mass_store0").update(0);
-Mfld.get("mass_store99").sub(val=> console.log("VALUE OF MASS STORE 99", val), "testLog");
-setTimeout(()=> {
-    Mfld.get("mass_store0").update(5);
-}, 2000)
-setTimeout(()=> {
-    Mfld.get("mass_store0").update(15);
-}, 4000)
-setTimeout(()=> {
-    Mfld.get("mass_store0").update(25);
-}, 6000)
-setTimeout(()=> {
-    Mfld.get("mass_store0").update(35);
-}, 7000)
-setTimeout(()=> {
-    Mfld.get("mass_store0").update(105);
-}, 8000)
-setTimeout(()=> {
-    Mfld.get("mass_store0").update(205);
-}, 9000)
-setTimeout(()=> {
-    Mfld.get("mass_store0").update(305);
-}, 10_000)
+// Mfld.get("mass_store0").update(0);
+// Mfld.get("mass_store99").sub(val=> console.log("VALUE OF MASS STORE 99", val), "testLog");
+// setTimeout(()=> {
+//     Mfld.get("mass_store0").update(5);
+// }, 2000)
+// setTimeout(()=> {
+//     Mfld.get("mass_store0").update(15);
+// }, 4000)
+// setTimeout(()=> {
+//     Mfld.get("mass_store0").update(25);
+// }, 6000)
+// setTimeout(()=> {
+//     Mfld.get("mass_store0").update(35);
+// }, 7000)
+// setTimeout(()=> {
+//     Mfld.get("mass_store0").update(105);
+// }, 8000)
+// setTimeout(()=> {
+//     Mfld.get("mass_store0").update(205);
+// }, 9000)
+// setTimeout(()=> {
+//     Mfld.get("mass_store0").update(305);
+// }, 10_000)
 
 setTimeout(()=> {
     store3.update("two")
