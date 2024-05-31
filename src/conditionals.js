@@ -2,9 +2,9 @@ import {breakOutSettings, registerDomSubscription, storeFromName} from "./util";
 
 function getConditionalElement(el) {
     for(let asType of [cc.attr.if, cc.attr.elseif]) {
-        const settings = el?.getAttribute(asType) || el?.getAttribute(`data-${asType}`);
+        let settings = el?.getAttribute(asType) || el?.getAttribute(`data-${asType}`);
         if(settings) {
-            const { storeName, ingressFunc } = breakOutSettings(settings);
+            let { storeName, ingressFunc } = breakOutSettings(settings);
             return { asType, storeName, ingressFunc };
         }
     }
@@ -19,7 +19,7 @@ function getConditionalElement(el) {
  */
 export function handleConditionals(el) {
     while(el) {
-        const { asType, storeName, ingressFunc } = getConditionalElement(/** @type {HTMLElement} */ el) || {};
+        let { asType, storeName, ingressFunc } = getConditionalElement(/** @type {HTMLElement} */ el) || {};
 
         if(!asType) {
             el = /** @type {HTMLElement} */ (el.nextElementSibling);
@@ -27,10 +27,10 @@ export function handleConditionals(el) {
         else {
             //Promote all <template> tags to visible elements
             if(el.tagName == "TEMPLATE") {
-                const innerHTML = el.innerHTML;
-                const promoteAttr = el.getAttribute("mf-promote") || el.getAttribute("data-mf-promote") || "div";
+                let innerHTML = el.innerHTML;
+                let promoteAttr = el.getAttribute("mf-promote") || el.getAttribute("data-mf-promote") || "div";
                 let newEl = globalThis.document?.t(promoteAttr);
-                newEl.innerHTML = innerHTML;                for(const attr of el.attributes) {
+                newEl.innerHTML = innerHTML;                for(let attr of el.attributes) {
                     newEl.setAttribute(attr.name, attr.value);
                 }
                 el.replaceWith(newEl);
@@ -38,7 +38,7 @@ export function handleConditionals(el) {
             }
 
             //Set callback to be called on store updates
-            const cb = ({val, el}: { val: boolean, el: HTMLElement })=> {
+            let cb = ({val, el}: { val: boolean, el: HTMLElement })=> {
                 el.style.display = val ? "" : "none";
             };
 

@@ -37,18 +37,26 @@ const store4 = Mfld.store("store4", {
     value: 1,
     upstream: ["store2"],
     updater: ([Store2])=> {
-    let val;
-    switch(Store2.values[0]) {
-        case "one": val = 1; break;
-        case "two": val = 2; break;
-        case "three": val = 3; break;
-        case "four": val = 4; break;
-        case "five": val = 5; break;
-        default: val = 0;
-    }
-    return val;
+        let val;
+        switch(Store2.values[0]) {
+            case "one": val = 1; break;
+            case "two": val = 2; break;
+            case "three": val = 3; break;
+            case "four": val = 4; break;
+            case "five": val = 5; break;
+            default: val = 0;
+        }
+        return val;
     }
 });
+
+const DESCENDANT = Mfld.store("descendant", {
+    upstream: ["store3"],
+    updater: ([Store3])=> {
+        console.log("UPDATING DESCENDANT", Store3)
+        return `"VALUE OF STORE 3: ${Store3}"`;
+    }
+})
 
 setTimeout(()=> {
     store3.update("two")

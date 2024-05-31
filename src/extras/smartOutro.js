@@ -9,8 +9,8 @@ let wrapperHeight = 0;
  */
 function _addSpacer(inEl, wrapper) {
     //Conserve parent size
-    spacer = globalThis.document?.createElement("div");
-    let { paddingTop, paddingBottom } = globalThis.getComputedStyle(wrapper);
+    spacer = document?.createElement("div");
+    let { paddingTop, paddingBottom } = getComputedStyle(wrapper);
 
     spacerHeight = spacer.style.height = `calc(${(Math.abs(wrapperHeight - (inEl?.clientHeight || 0)))}px - ${paddingTop} - ${paddingBottom})`;
     wrapper?.after(spacer);

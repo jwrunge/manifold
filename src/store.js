@@ -7,7 +7,7 @@
  * @typedef {import("./index.module.js").StoreOptions<T>} StoreOptions 
  */
 
-import { _scheduleDomUpdate } from "./domUpdates.js";
+import { _scheduleUpdate } from "./updates.js";
 
 /**
  * @callback SubFunction
@@ -29,38 +29,26 @@ function _hashAny(input) {
     else if(input instanceof Set) return _hashAny(Array.from(input));
 
     let hash = 0;
-    for(const char of new TextEncoder().encode(
+    for(let char of new TextEncoder().encode(
         typeof input === 'string' ? input : input?.toString() || ""
     )) 
         hash = ((hash << 5) - hash) + char;
     return hash;
 }
 
-// Next tick queue
-/**
- * @type {Function[]}
- */
-let _nextTickQueue = [];
-
-export function _addToNextTickQueue(fn) {
-    if(fn) _nextTickQueue.push(fn);
-}
-
 //Static
-/** @type {Map<string, Store<any>>} */ if(!globalThis.Mfld_stores) globalThis.Mfld_stores = new Map();
-/** @type {Map<string, Function>} */ if(!globalThis.Mfld_funcs) globalThis.Mfld_funcs = new Map();
-/** @type {Map<string, (any | ((any)=> any))>} */ let _workOrder = new Map();
-/** @type {any} */ let _workCacheTimeout;
+/** @type {Map<string, Store<any>>} */ if(!globalThis.MfSt) globalThis.MfSt = new Map();
+/** @type {Map<string, Function>} */ if(!globalThis.MfFn) globalThis.MfFn = new Map();
+/** @type {Map<string, (any | ((any)=> any))>} */ export let _workOrder = new Map();
 
 /**
  * @template T
  */
 export class Store {
-    /** @type {UpdaterFunction<T> | undefined} */ #updater = undefined;
+    /** @type {UpdaterFunction<T> | undefined} */ _updater = undefined;
     /** @type {Map<string, SubFunction>} */ _subscriptions = new Map();
     /** @type {string | undefined} */ _storedHash = undefined;
-    /** @type {Array<string>} */ _downstreamStores = [];
-    /** @type {Array<string>} */ _upstreamStores = [];
+    /** @type {Set<string>} */ _upstreamStores;
 
     /**
      * @param {string} name
@@ -76,91 +64,56 @@ export class Store {
      */
     _modify(name, ops) {
         this.name = name;
-        globalThis.Mfld_stores.set(name, this);
+        // @ts-ignore
+        MfSt.set(name, this);
         
-        this._upstreamStores = ops?.upstream || [];
-        for(let storeName of this._upstreamStores) _store(storeName)?._downstreamStores?.push(this.name || "");
+        this._upstreamStores = new Set(ops?.upstream || [])
         this.value = ops?.value;
-        this.#updater = ops?.updater;
+        this._updater = ops?.updater;
 
         return this;
     }
 
     /**
-     * @param {string} ref
-     * @param {() => void} sub
-     */
-    _addSub(ref, sub) {
-        this._subscriptions.set(ref, sub);
-        sub?.();
-    }
-
-    /**
      * @param {(T)=> void} sub
+     * @param {string | undefined} ref
      */
-    sub(sub) {
-        let ref = "x".repeat(5).replace(/./g, c => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36) ] );
-        this._subscriptions.set(ref, sub);
+    sub(sub, ref) {
+        this._subscriptions.set(ref || String(Date.now() + Math.random()), sub);
         sub?.(this.value);
     }
 
-    //Update (manual or automated -- cascades downstream)
+    //Update (manual or automated -- cascades downstream on batch updates)
     /**
     * @template T
     * @param {T | ((T)=> T | Promise<T>)} value
     */
     async update(value) {
-        return new Promise((resolve)=> {
-            _workOrder.set(this.name || "", value);
-            clearTimeout(_workCacheTimeout);
-            _workCacheTimeout = setTimeout(async ()=> {
-                //Sort workOrder such that dependencies are updated first, duplicate work is filtered out
-                for(let [storeName, _] of _workOrder) {
-                    const store = _store(storeName);
+        return new Promise(async (resolve)=> {
+            // Make sure an upstream store isn't scheduled to update; remove downstream stores from the work order
+            let mayDeleteDownstream = new Set();
+            for(let name of _workOrder.keys()) {
+                if(this._upstreamStores.has(name)) return;
+                if(_store(name)?._upstreamStores.has(this.name || "")) mayDeleteDownstream.add(name);
+            }
 
-                    //Don't repeat work if an upstream store will cascade
-                    store._downstreamStores.forEach(d=> _workOrder.delete(d));   //Delete downstream stores from work order
-                    store._upstreamStores.forEach(u=> _workOrder.has(u) ? _workOrder.delete(storeName) : true);
-                }
+            //Apply new value   
+            let newValue = (typeof value == "function" ? /** @type {Function} */(await value)?.(this.value) : value);
+            let newHash = _hashAny(newValue);
+            if(newHash !== this._storedHash) {
+                this.value = newValue;
+                this._storedHash = newHash;
 
-                //Apply changes to top-level workers, then cascade     
-                /** @type {string[]} */ let downstream = [];
-                for(let [storeName, value] of _workOrder) {
-                    let store = _store(storeName);
-                    let newValue = (typeof value == "function" ? /** @type {Function} */await (value)?.(store.value) : value);
+                // If updating, delete downstream stores and add this store to the work order
+                mayDeleteDownstream.forEach(name => _workOrder.delete(name));
+                _workOrder.set(this.name || "", await value);
 
-                    //If the value HAS DEFINITELY CHANGED or is LIKELY TO HAVE CHANGED, update the stored hash and cascade
-                    let newHash = _hashAny(newValue);
-                    if(newHash !== store._storedHash) {
-                        store.value = newValue;
-                        store._storedHash = newHash;
-                        for(let S of store._downstreamStores) downstream.push(S);
-                        _scheduleDomUpdate(()=> {for(let [ref, sub] of store._subscriptions) sub?.(store.value, ref)});
-                    }
-                }
-
-                //Clear work order and cascade
-                _workOrder.clear();
-                for(let S of downstream) if(_store(S)) await _store(S)._autoUpdate();
-
-                //Handle queued nextTick functions
-                _nextTickQueue.forEach(fn=> fn());
-                _nextTickQueue = [];
-
-                //Resolve value
-                resolve(this.value);
-            }, 0);    //Hack to force running all updates at the end of the JS event loop
+                // Wait for next animation frame to return the value
+                _scheduleUpdate(()=> {
+                    resolve(this.value);
+                });
+            }
         });
-    }
-
-    //Auto update
-    async _autoUpdate() {
-        await this.update(
-            await (this.#updater?.(
-                this._upstreamStores?.map(store => _store(store)?.value) || [], 
-                /** @type {T} */(this?.value)
-            ) || this.value),
-        )
     }
 }
 
@@ -174,7 +127,8 @@ export class Store {
  * @returns {Store<T>}
  */
 export function _store(name, ops) {
-    let found_store = globalThis.Mfld_stores.get(name);
+    // @ts-ignore
+    let found_store = MfSt.get(name);
     if(ops) {
         if(found_store) {
             return found_store._modify(name, ops);

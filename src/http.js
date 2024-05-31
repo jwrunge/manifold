@@ -1,4 +1,4 @@
-import { _scheduleDomUpdate } from "./domUpdates.js";
+import { _scheduleUpdate } from "./updates.js";
 
 //Track scripts and styles
 let pageScripts = new WeakMap();
@@ -69,7 +69,7 @@ export async function _fetchHttp(target, ops, done) {
 
             //     // let outEl = ["this", "self"].includes(replace) ? parent : document.querySelector(replace);
 // globalThis.document?.
-            //     _scheduleDomUpdate({
+            //     _scheduleUpdate({
             //         in: /** @type {HTMLElement} */ (fullMarkup.querySelector(extract)),
             //         out: /** @type {HTMLElement} */ (["this", "self"].includes(replace) ? parent : document.querySelector(replace)),
             //         relation,globalThis.document?.

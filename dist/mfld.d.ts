@@ -1,5 +1,5 @@
 declare module "mfld.mod" {
-    export { y as Mfld };
+    export { b as Mfld };
     /**
      * !
      */
@@ -127,13 +127,13 @@ declare module "mfld.mod" {
         /**
          * - Add a subscription function to the store
          */
-        sub: (arg0: (arg0: T) => void) => void;
+        sub: (arg0: (arg0: T) => void, arg1: string) => void;
     };
     /**
      * !
      */
     export type MfldFunc = Function;
-    namespace y {
+    namespace b {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*

@@ -6,13 +6,12 @@ globalThis.Mfld = Mfld;
 let ds = globalThis.document?.currentScript?.dataset || {};
 if(ds?.config) {
     try {
-        let scriptParams = JSON.parse(ds?.config);
-        _setOptions(scriptParams);
+        _setOptions(JSON.parse(ds?.config));
     } catch(e) {
         console.warn("Invalid Mfld params", e);
     }
 }
 
 if(ds?.init) {
-    _registerSubs();
+    _registerSubs(/** @type {HTMLElement}*/(document.querySelector(ds.init)));
 }

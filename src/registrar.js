@@ -1,15 +1,15 @@
 import { _store } from "./store.js";
 import { _fetchHttp } from "./http.js";
-import { _scheduleDomUpdate } from "./domUpdates.js";
+import { _scheduleUpdate } from "./updates.js";
 /** @typedef {import("./index.module.js").MfldOps} MfldOps */
 
 /** @type {Partial<MfldOps>} */
 let _ops = {};
 
-const ATTR_PREFIX = "mf";
+let ATTR_PREFIX = "mf";
 
-const _http_modes = ["get", "head", "post", "put", "delete", "patch"];
-const _modes = [`${ATTR_PREFIX}bind`, `${ATTR_PREFIX}sync`, ..._http_modes.map(m=> `${ATTR_PREFIX}${m}`)];
+let _http_modes = ["get", "head", "post", "put", "delete", "patch"];
+let _modes = [`${ATTR_PREFIX}bind`, `${ATTR_PREFIX}sync`, ..._http_modes.map(m=> `${ATTR_PREFIX}${m}`)];
 let _commaSepRx = /, {0,}/g;
 let _elIdx = 0;
 
@@ -69,7 +69,8 @@ export function _registerSubs(parent) {
                 /** @type {Function | undefined} */
                 let processFunc;
                 if(processFuncName) {
-                    processFunc = globalThis[processFuncName] || globalThis.Mfld_funcs?.get(processFuncName);
+                    // @ts-ignore
+                    processFunc = MfFn?.get(processFuncName);
                     if(!processFunc) throw(`"${processFuncName}" not registered: ${err_detail}`);
                     if(((!shouldHaveTriggers && output.length > 1) || (shouldHaveTriggers && input.length > 1))) throw(`Multiple sources: ${err_detail}`);
                 }
@@ -105,8 +106,8 @@ export function _registerSubs(parent) {
                          */
                         if(mode == `${ATTR_PREFIX}bind`) {
                             let domSubscription = ()=> {
-                                _scheduleDomUpdate(()=> {
-                                    const val = processFunc?.(
+                                _scheduleUpdate(()=> {
+                                    let val = processFunc?.(
                                         ...outputData.map(
                                             s=> _nestedValue(_store(s.name)?.value, s.path)
                                         ), el
@@ -123,7 +124,7 @@ export function _registerSubs(parent) {
                             }
                         
                             //Add subscription - run whenever store updates
-                            for(let store of outputData) _store(store.name)?._addSub(el.id, domSubscription);
+                            for(let store of outputData) _store(store.name)?.sub(domSubscription, el.id);
                         }
 
                         /**
@@ -135,7 +136,7 @@ export function _registerSubs(parent) {
                                 let value = el[input[i].trim()];
                                 
                                 if(processFunc) value = processFunc?.(value, el);
-                                const store = _store(outputData[0]?.name);
+                                let store = _store(outputData[0]?.name);
                                 
                                 if(value !== undefined) {
                                     store?.update?.(curVal=> {
@@ -164,7 +165,7 @@ function _nestedValue(obj, path, newval) {
     let ptr = obj;
 
     for(let key of path) {
-        //Dynamically construct object if it doesn't exist
+        //Dynamically letruct object if it doesn't exist
         if(ptr == undefined) ptr = typeof key == "number" ? [] : {};
 
         //Set or get value
@@ -199,7 +200,7 @@ function _handleFetch(el, trigger) {
         e?.preventDefault();
         e?.stopPropagation();  
 
-        const fetchOps = {
+        let fetchOps = {
             ..._ops,
             ..._ops.profiles?.[el.dataset["overrides"] || ""] || JSON.parse(el.dataset["overrides"] || "{}") || {},
         };
@@ -234,12 +235,12 @@ function _handleFetch(el, trigger) {
             let resp = await data?.[fetchOps.fetch?.type || "text"]();
             fetchOps.fetch?.cb?.(resp);
 
-
-
-            if((fetchOps?.fetch?.type) != "json") {
+            // Handle resolutions
+            let resolve = el.getAttribute("mf-resolve");
+            if(["$append", "$prepend", "$replace"].includes(resolve || "")) {
                 //Extract content
-                let fullMarkup = globalThis.DOMParser ? new DOMParser().parseFromString(text, 'text/html').body : undefined;
-            
+                let fullMarkup = globalThis.DOMParser ? new DOMParser()?.parseFromString?.(resp, 'text/html')?.body : resp;
+
                 // //Clear existing scripts/styles
                 // clearDynamicElements(parent, pageScripts, "script");
                 // clearDynamicElements(parent, pageStyles, "style");;
@@ -265,15 +266,18 @@ function _handleFetch(el, trigger) {
                 //     let [ extract, relation, replace ] = r.split(/\s*(>|\/|\+)\s*/);
 
                 //     // let outEl = ["this", "self"].includes(replace) ? parent : document.querySelector(replace);
-    // globalThis.document?.
-                //     _scheduleDomUpdate({
-                //         in: /** @type {HTMLElement} */ (fullMarkup.querySelector(extract)),
-                //         out: /** @type {HTMLElement} */ (["this", "self"].includes(replace) ? parent : document.querySelector(replace)),
-                //         relation,globalThis.document?.
-                //         ops,
-                //         done,
-                //     })
+                // globalThis.document?.
+                // _scheduleUpdate({
+                //     in: /** @type {HTMLElement} */ (fullMarkup.querySelector(extract)),
+                //     out: /** @type {HTMLElement} */ (["this", "self"].includes(replace) ? parent : document.querySelector(replace)),
+                //     relation, globalThis.document?.
+                //     ops,
+                //     done,
+                // })
                 // });
+            }
+            else if(resolve) {
+
             }
         }
     }

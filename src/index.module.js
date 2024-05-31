@@ -1,4 +1,5 @@
-import { _store, _addToNextTickQueue } from "./store.js";
+import { _store } from "./store.js";
+import { _addToNextTickQueue } from "./updates.js";
 import { _registerSubs, _setOptions } from "./registrar.js";
 
 /**! @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey*/
@@ -58,7 +59,7 @@ import { _registerSubs, _setOptions } from "./registrar.js";
  * @typedef Store
  * @prop {T} value - The store's current value (read only)
  * @prop {function(T | function(T):T|Promise<T>|undefined):T|Promise<T>|undefined} update - Update the store's current value
- * @prop {function(function(T):void):void} sub - Add a subscription function to the store
+ * @prop {function(function(T):void,string):void} sub - Add a subscription function to the store
  */
 
 /**!
@@ -70,7 +71,7 @@ import { _registerSubs, _setOptions } from "./registrar.js";
 /**!
  * The global Manifold interface.
  */
-export const Mfld = {
+export let Mfld = {
 store: 
 /**!
 * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`* 
@@ -105,14 +106,18 @@ func:
  * - *Note:* Functions retrived using this method cannot infer the type of the store's value and is therefore **not** type-checked. It is preferable to keep a reference to the function if you need to preserve type information.
  * @param {string} func_name
  * @return {MfldFunc}
- */ (func_name)=> /** @type {(val: any, el?: HTMLElement)=> void}*/(globalThis.Mfld_funcs?.get(func_name)),
+ */ (func_name)=> /** @type {(val: any, el?: HTMLElement)=> void}*/(
+// @ts-ignore
+ MfFn?.get(func_name)),
 funcs: 
 /**!
  * - Add functions to the Manifold function registry in key-value pairs.
  * - Functions must be registered in order to be accessible to HTML elements via `mf-bind`, `mf-sync`, and `mf-resolve`. 
  * - It may still be beneficial to keep a reference to the original function if you need to preserve type information.
  * @param {{ [key: string]: MfldFunc }} funcs
- */ funcs=> {for(let key in funcs) globalThis.Mfld_funcs.set(key, funcs[key])},
+ */ funcs=> {for(let key in funcs) 
+// @ts-ignore
+ MfFn.set(key, funcs[key])},
 config:
 /**!
  * - Set Manifold configuration options, including `trans` (DOM transition settings), `fetch` (fetch options), and `profiles` (configuration option overrides that can be set on elements ad-hoc via `mf-overrides`).

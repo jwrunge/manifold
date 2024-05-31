@@ -1,4 +1,4 @@
-import { _store } from "./store.js";
+import { _store, _workOrder } from "./store.js";
 /** @typedef {import("./index.module.js").MfldOps} MfldOps */
 
 /** @type {{ adjust?: Function, space?: Function, size?: Function } | undefined} */
@@ -15,18 +15,54 @@ let smartOutro = globalThis.smartOutro;
 
 /** @type {(DomWorkOrder | Function)[]} */ let workArray = [];
 let cancelAnimationFrame = false;
+/** @type {Map<string, (any | ((any)=> any))>} */
+
+// Next tick queue
+/**
+ * @type {Function[]}
+ */
+let _nextTickQueue = [];
+
+// Polyfill requestAnimationFrame
+let tick = globalThis?.requestAnimationFrame || ((fn)=> setTimeout(fn, 0));
+
+export function _addToNextTickQueue(fn) {
+    if(fn) _nextTickQueue.push(fn);
+}
 
 /** @export @param {(DomWorkOrder | Function)} update */
-export function _scheduleDomUpdate(update) {
+export function _scheduleUpdate(update) {
     workArray.push(update);
     if(!cancelAnimationFrame) {
         cancelAnimationFrame = true;
-        globalThis.requestAnimationFrame?.(_runDomUpdates);
+        tick(_runUpdates);
     }
 }
 
-function _runDomUpdates() {
+function _runUpdates() {
     cancelAnimationFrame = false;
+
+    // Update stores and cascade downstream
+    for(let [storeName, newValue] of _workOrder) {
+        let S = _store(storeName);
+        for(let [ref, sub] of S?._subscriptions || []) sub?.(S.value, ref);
+
+        // @ts-ignore
+        for(let [downstreamName, downstream] of MfSt) {
+
+        }
+
+        // Cascade downstream
+        // await this.update(
+        //     await (this._updater?.(
+        //         Array.from(this._upstreamStores)?.map(store => _store(store)?.value) || [], 
+        //         /** @type {T} */(this?.value)
+        //     ) || this.value),
+        // )
+    }
+
+    // Clear work order
+    _workOrder.clear();
     
     /**
     * @type {DomWorkOrder[]}
@@ -38,7 +74,7 @@ function _runDomUpdates() {
             if([">", "+"].includes(order.relation)) {
                 if(order.relation == ">") {
                     //Remove old children before appending
-                    let container = globalThis.document?.createElement("div");
+                    let container = document?.createElement("div");
                     for(let child of Array.from(order.out?.childNodes || [])) {
                         container.appendChild(child);
                     }
@@ -68,6 +104,9 @@ function _runDomUpdates() {
         }
     }
 
+    //Handle queued nextTick functions
+    _nextTickQueue.forEach(fn=> fn());
+    _nextTickQueue = [];
     workArray = [];
 }
 
@@ -82,7 +121,7 @@ function _applyTransition(el, dir, ops, fn) {
     //Handle text nodes
     if(el?.nodeType == Node.TEXT_NODE) {
         let text = el.textContent;
-        let newNode = globalThis.document?.createElement("div");
+        let newNode = document?.createElement("div");
         newNode.textContent = text;
         el.replaceWith(newNode);
         el = newNode;
@@ -98,7 +137,7 @@ function _applyTransition(el, dir, ops, fn) {
 
         //Wait to apply class
         if(dir == "out") {
-            _scheduleDomUpdate(()=> {
+            _scheduleUpdate(()=> {
                 smartOutro?.size?.(el);
                 if(dur) el.style.transitionDuration = `${dur}ms`;
                 el.classList?.add(dir);
@@ -107,13 +146,13 @@ function _applyTransition(el, dir, ops, fn) {
         //If dir == in
         else {
             setTimeout(()=> {
-                _scheduleDomUpdate(()=> {
+                _scheduleUpdate(()=> {
                     if(dur) el.style.transitionDuration = `${dur}ms`;
                     el?.classList?.add(dir);
                     fn?.();
 
                     //Remove transition class
-                    _scheduleDomUpdate(()=> {
+                    _scheduleUpdate(()=> {
                         el?.classList?.remove(dir);
                     });
                 });
@@ -121,7 +160,7 @@ function _applyTransition(el, dir, ops, fn) {
         }
         
         setTimeout(()=> {
-            _scheduleDomUpdate(()=> {
+            _scheduleUpdate(()=> {
                 //Wrapup
                 if(dir == "out") el?.remove();
                 el?.classList?.remove(transClass);
