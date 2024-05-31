@@ -70,8 +70,8 @@ export function _registerSubs(parent) {
                 let processFunc;
                 if(processFuncName) {
                     // @ts-ignore
-                    processFunc = MfFn?.get(processFuncName);
-                    if(!processFunc) throw(`"${processFuncName}" not registered: ${err_detail}`);
+                    processFunc = globalThis[processFuncName] || MfFn?.get(processFuncName);
+                    if(!processFunc) console.warn(`"${processFuncName}" not registered: ${err_detail}`);
                     if(((!shouldHaveTriggers && output.length > 1) || (shouldHaveTriggers && input.length > 1))) throw(`Multiple sources: ${err_detail}`);
                 }
 

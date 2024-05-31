@@ -51,9 +51,8 @@ const store4 = Mfld.store("store4", {
 });
 
 const DESCENDANT = Mfld.store("descendant", {
-    upstream: ["store3"],
-    updater: ([Store3])=> {
-        console.log("UPDATING DESCENDANT", Store3)
+    upstream: ["store3", "store1", "store2"],
+    updater: ([Store1, Store2, Store3])=> {
         return `"VALUE OF STORE 3: ${Store3}"`;
     }
 })

@@ -43,22 +43,25 @@ function _runUpdates() {
     cancelAnimationFrame = false;
 
     // Update stores and cascade downstream
-    for(let [storeName, newValue] of _workOrder) {
+    let dsStores = new Set();
+    for(let [storeName] of _workOrder) {
         let S = _store(storeName);
         for(let [ref, sub] of S?._subscriptions || []) sub?.(S.value, ref);
 
         // @ts-ignore
-        for(let [downstreamName, downstream] of MfSt) {
-
+        for(let [_, downstream] of MfSt) {
+            // Make a downstream set to prevent duplicating work
+            if(downstream._upstreamStores?.has(storeName)) dsStores.add(downstream);
         }
+    }
 
-        // Cascade downstream
-        // await this.update(
-        //     await (this._updater?.(
-        //         Array.from(this._upstreamStores)?.map(store => _store(store)?.value) || [], 
-        //         /** @type {T} */(this?.value)
-        //     ) || this.value),
-        // )
+    for(let store of dsStores) {
+        store.update(
+            store._updater?.(
+                Array.from(store._upstreamStores)?.map(store => _store(store)?.value) || [], 
+                /** @type {T} */(store?.value)
+            ) || store.value,
+        )
     }
 
     // Clear work order
