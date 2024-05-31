@@ -14,7 +14,9 @@
   <p>Store 2 nested: <span data-mfBind="store2.values[1]->innerHTML">Here is a default value.</span></p>
   <p>Checkbox set to checked? <span data-mfBind="store2.values[0]->innerText"></span></p>
   <p>Store 4 value: <span data-mfBind="store4->innerText"></span></p>
-  <p>Checked store checked? <span data-mfBind="checkedStore-> innerText">unknown</span></p>
+  <p>Checked store checked? <span data-mfBind="checkedStore-> innerText">Unknown</span></p>
+  <p>Value of Mass Store 99: <span data-mfBind="mass_store99 -> innerText">Unknown</span></p>
+  <div data-secret="THIS IS A SECRET" data-mfSync="on($mount) sendAlert(data-secret) -> checkedStore"></div>
 
   <!-- Content -->
   <div class="sync-grid">
@@ -53,7 +55,7 @@
   </div>
 
   <div class="special-insert">Default insert</div>
-  <nav data-mfGet="on(mount) /tests/header.html -> (header>this, .special>.special-insert)" data-mfmethod="GET" data-mfoverrides='{ "allowScripts": true }'></nav>
+  <nav data-mfGet="on($mount) /tests/header.html -> (header>this, .special>.special-insert)" data-mfmethod="GET" data-mfoverrides='{ "allowScripts": true }'></nav>
 
   <div class="trans" data-mfBind="specialStyling(store1)"></div>
 

@@ -18,7 +18,7 @@ Mfld.register(document.body);
 let val = Mfld.store("value", {
     value: /** @type {Map<number, string>}*/(new Map()),
     upstream: ["store1", "store2"],
-    updater: (_, val)=> val?.set?.(32, (val?.get(32) || "") + "...") || new Map()
+    updater: (_, val)=> val.set(32, (val?.get(32) || "") + "...") || new Map()
 })
 let s1 = Mfld.store("store1", { value: "My text" });
 
@@ -28,8 +28,10 @@ const store2 = Mfld.store("store2", {
     value: { values: ["one", "two"]},
     upstream: ["store1", "store3"],
     updater: async ([Store1, Store3], Mfldr)=> {
-        Mfldr.values[1] = Store1;
-        Mfldr.values[0] = Store3;
+        if(Mfldr.values) {
+            Mfldr.values[1] = Store1;
+            Mfldr.values[0] = Store3;
+        }
         return Mfldr;
     }
 });
@@ -38,7 +40,7 @@ const store4 = Mfld.store("store4", {
     upstream: ["store2"],
     updater: ([Store2])=> {
         let val;
-        switch(Store2.values[0]) {
+        switch(Store2.values?.[0]) {
             case "one": val = 1; break;
             case "two": val = 2; break;
             case "three": val = 3; break;
@@ -52,10 +54,84 @@ const store4 = Mfld.store("store4", {
 
 const DESCENDANT = Mfld.store("descendant", {
     upstream: ["store3", "store1", "store2"],
-    updater: ([Store1, Store2, Store3])=> {
-        return `"VALUE OF STORE 3: ${Store3}"`;
+    updater: (stores)=> {
+        return `"VALUE OF STORE 3: ${stores[0]}"`;
     }
 })
+
+function sendAlert(val) {
+    alert("SENDING ALERT: " + val);
+    return val
+}
+
+// // Sequence test - Even though later stores depend on multiple earlier stores, updates to the earlier stores SHOULD NOT result in multiple updates to the later stores
+// for(let i=0; i<5; i++) {
+//     Mfld.store(`mass_store${i}`, { 
+//         upstream: Array.from({length: i - 1 > 0 ? i - 1 : 0}).map((_, idx)=> `mass_store${idx}`),
+//         updater: (stores)=> {
+//             let sum = 0;
+//             stores.forEach(s=> sum += (s || 0));
+//             console.log("UPDATING MASS STORE", i, sum);
+//             return sum;
+//         }
+//     });
+// }
+
+// // Large test
+// for(let i=0; i<1000; i++) {
+//     Mfld.store(`mass_store${i}`, { 
+//         upstream: [ `mass_store${i - 1}` ],
+//         updater: ([Previous])=> {
+//             return Previous * 2;
+//         }
+//     });
+// }
+
+// // Load test
+// for(let i=0; i<100_000; i++) {
+//     Mfld.store(`mass_store${i}`, { 
+//         upstream: [ `mass_store${i - 1}` ],
+//         updater: ([Previous])=> {
+//             return Previous * 2;
+//         }
+//     });
+// }
+
+// // Intensity test
+// for(let i=0; i<1_000; i++) {
+//     Mfld.store(`mass_store${i}`, { 
+//         upstream: Array.from({length: i - 1 > 0 ? i - 1 : 0}).map((_, idx)=> `mass_store${idx}`),
+//         updater: (stores)=> {
+//             let sum = 0;
+//             stores.forEach(s=> sum += (s || 0));
+//             return sum;
+//         }
+//     });
+// }
+
+Mfld.get("mass_store0").update(0);
+Mfld.get("mass_store99").sub(val=> console.log("VALUE OF MASS STORE 99", val), "testLog");
+setTimeout(()=> {
+    Mfld.get("mass_store0").update(5);
+}, 2000)
+setTimeout(()=> {
+    Mfld.get("mass_store0").update(15);
+}, 4000)
+setTimeout(()=> {
+    Mfld.get("mass_store0").update(25);
+}, 6000)
+setTimeout(()=> {
+    Mfld.get("mass_store0").update(35);
+}, 7000)
+setTimeout(()=> {
+    Mfld.get("mass_store0").update(105);
+}, 8000)
+setTimeout(()=> {
+    Mfld.get("mass_store0").update(205);
+}, 9000)
+setTimeout(()=> {
+    Mfld.get("mass_store0").update(305);
+}, 10_000)
 
 setTimeout(()=> {
     store3.update("two")

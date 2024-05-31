@@ -7,7 +7,7 @@
  * @typedef {import("./index.module.js").StoreOptions<T>} StoreOptions 
  */
 
-import { _scheduleUpdate } from "./updates.js";
+import { _scheduleUpdate, _workOrder } from "./updates.js";
 
 /**
  * @callback SubFunction
@@ -39,7 +39,6 @@ function _hashAny(input) {
 //Static
 /** @type {Map<string, Store<any>>} */ if(!globalThis.MfSt) globalThis.MfSt = new Map();
 /** @type {Map<string, Function>} */ if(!globalThis.MfFn) globalThis.MfFn = new Map();
-/** @type {Map<string, (any | ((any)=> any))>} */ export let _workOrder = new Map();
 
 /**
  * @template T
@@ -48,7 +47,8 @@ export class Store {
     /** @type {UpdaterFunction<T> | undefined} */ _updater = undefined;
     /** @type {Map<string, SubFunction>} */ _subscriptions = new Map();
     /** @type {string | undefined} */ _storedHash = undefined;
-    /** @type {Set<string>} */ _upstreamStores;
+    /** @type {Set<Store<any>>} */ _upstreamStores;
+    /** @type {Set<Store<any>>} */ _downstreamStores = new Set();
 
     /**
      * @param {string} name
@@ -67,7 +67,8 @@ export class Store {
         // @ts-ignore
         MfSt.set(name, this);
         
-        this._upstreamStores = new Set(ops?.upstream || [])
+        this._upstreamStores = new Set(ops?.upstream?.map(s=> _store(s)) || []);
+        this._upstreamStores.forEach(s=> s?._downstreamStores?.add(this));
         this.value = ops?.value;
         this._updater = ops?.updater;
 
@@ -90,13 +91,6 @@ export class Store {
     */
     async update(value) {
         return new Promise(async (resolve)=> {
-            // Make sure an upstream store isn't scheduled to update; remove downstream stores from the work order
-            let mayDeleteDownstream = new Set();
-            for(let name of _workOrder.keys()) {
-                if(this._upstreamStores.has(name)) return;
-                if(_store(name)?._upstreamStores.has(this.name || "")) mayDeleteDownstream.add(name);
-            }
-
             //Apply new value   
             let newValue = (typeof value == "function" ? /** @type {Function} */(await value)?.(this.value) : value);
             let newHash = _hashAny(newValue);
@@ -104,16 +98,26 @@ export class Store {
                 this.value = newValue;
                 this._storedHash = newHash;
 
-                // If updating, delete downstream stores and add this store to the work order
-                mayDeleteDownstream.forEach(name => _workOrder.delete(name));
-                _workOrder.set(this.name || "", await value);
+                // Add this store to the work order
+                _workOrder.set(this, await value);
+                for(let ds of this._downstreamStores) _workOrder.set(ds, await ds._auto_update());
 
                 // Wait for next animation frame to return the value
                 _scheduleUpdate(()=> {
                     resolve(this.value);
                 });
             }
+            else resolve(this.value);
         });
+    }
+
+    async _auto_update() {
+        await this.update(
+            await this._updater?.(
+                Array.from(this._upstreamStores)?.map(S => S?.value) || [], 
+                /** @type {T} */(this?.value)
+            ) || this.value,
+        )
     }
 }
 

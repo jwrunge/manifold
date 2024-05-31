@@ -1,4 +1,3 @@
-import { _store, _workOrder } from "./store.js";
 /** @typedef {import("./index.module.js").MfldOps} MfldOps */
 
 /** @type {{ adjust?: Function, space?: Function, size?: Function } | undefined} */
@@ -26,6 +25,8 @@ let _nextTickQueue = [];
 // Polyfill requestAnimationFrame
 let tick = globalThis?.requestAnimationFrame || ((fn)=> setTimeout(fn, 0));
 
+/** @type {Map<Store<any>, (any | ((any)=> any))>} */ export let _workOrder = new Map();
+
 export function _addToNextTickQueue(fn) {
     if(fn) _nextTickQueue.push(fn);
 }
@@ -43,28 +44,12 @@ function _runUpdates() {
     cancelAnimationFrame = false;
 
     // Update stores and cascade downstream
-    let dsStores = new Set();
-    for(let [storeName] of _workOrder) {
-        let S = _store(storeName);
-        for(let [ref, sub] of S?._subscriptions || []) sub?.(S.value, ref);
-
+    for(let [S] of _workOrder) {
         // @ts-ignore
-        for(let [_, downstream] of MfSt) {
-            // Make a downstream set to prevent duplicating work
-            if(downstream._upstreamStores?.has(storeName)) dsStores.add(downstream);
-        }
+        for(let [ref, sub] of S?._subscriptions || []) sub?.(S.value, ref);
     }
 
-    for(let store of dsStores) {
-        store.update(
-            store._updater?.(
-                Array.from(store._upstreamStores)?.map(store => _store(store)?.value) || [], 
-                /** @type {T} */(store?.value)
-            ) || store.value,
-        )
-    }
-
-    // Clear work order
+    // Clear work order and update derived stores
     _workOrder.clear();
     
     /**

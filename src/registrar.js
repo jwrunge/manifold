@@ -133,7 +133,9 @@ export function _registerSubs(parent) {
                         else if(mode == `${ATTR_PREFIX}sync`) {
                             if(outputData.length > 1) throw(`Only one store supported: ${err_detail}`)
                             let ev = ()=> {
-                                let value = el[input[i].trim()];
+                                let prop = input[i].trim();
+                                console.log(prop, el, el[prop], el.getAttribute(prop), el.dataset[prop]);
+                                let value = el[prop] ?? el.getAttribute(prop) ?? el.dataset[prop] ?? undefined;
                                 
                                 if(processFunc) value = processFunc?.(value, el);
                                 let store = _store(outputData[0]?.name);
@@ -144,7 +146,8 @@ export function _registerSubs(parent) {
                                     });
                                 }
                             }
-                            el.addEventListener(trigger, ev);
+                            if(trigger == "$mount") ev();
+                            else el.addEventListener(trigger, ev);
                         }
                     }   //End loop input
                 }   //End loop triggers
@@ -282,6 +285,6 @@ function _handleFetch(el, trigger) {
         }
     }
 
-    if(trigger == "mount") ev();
+    if(trigger == "$mount") ev();
     else el.addEventListener(trigger, ev);
 }
