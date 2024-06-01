@@ -7,7 +7,7 @@ let smartOutro = globalThis.smartOutro;
  * @typedef {Object} DomWorkOrder
  * @property {HTMLElement} in - The input HTMLElement
  * @property {HTMLElement} out - The output HTMLElement
- * @property {"$append" | "$prepend" | "$replace"} relation - The relation between the input and output elements
+ * @property {"append" | "prepend" | "swapinner" | "swapouter"} relation - The relation between the input and output elements
  * @property {Partial<MfldOps>} ops - The fetch options for the operation
  * @property {(el: HTMLElement | null) => void} done - The callback function to be executed when the operation is done
  */
@@ -25,7 +25,7 @@ let _nextTickQueue = [];
 // Polyfill requestAnimationFrame
 let tick = globalThis?.requestAnimationFrame || ((fn)=> setTimeout(fn, 0));
 
-/** @type {Map<Store<any>, (any | ((any)=> any))>} */ export let _workOrder = new Map();
+/** @type {Map<import("./index.module.js").Store<any>, (any | ((any)=> any))>} */ export let _workOrder = new Map();
 
 export function _addToNextTickQueue(fn) {
     if(fn) _nextTickQueue.push(fn);
@@ -59,8 +59,8 @@ function _runUpdates() {
         if(typeof order == "function") (/** @type {Function} */ order)();
         else {
             // Remove old children
-            if(["$replace", "$append"].includes(order.relation)) {
-                if(order.relation == "$replace") {
+            if(["swapinner", "append"].includes(order.relation)) {
+                if(order.relation == "swapinner") {
                     //Remove old children before appending
                     let container = document?.createElement("div");
                     for(let child of Array.from(order.out?.childNodes || [])) {
@@ -78,6 +78,16 @@ function _runUpdates() {
                     smartOutro?.adjust?.(order.in, order.ops);
                 });
             }
+            //Prepend
+            else if(order.relation == "prepend") {
+                smartOutro?.space?.(order.in, order.out);
+
+                //Prepend
+                _applyTransition(order.in, "in", order.ops, ()=> {
+                    if(order.in) order.out?.prepend(order.in);
+                    smartOutro?.adjust?.(order.in, order.ops);
+                });
+            }
             //Insert after old element before removing
             else _applyTransition(order.in, "in", order.ops, ()=> {
                 order.out?.after(order.in);
@@ -85,7 +95,7 @@ function _runUpdates() {
                 smartOutro?.adjust?.(order.in, order.ops);
 
                 //Remove old element
-                if(order.relation == "$prepend") _applyTransition(order.out, "out", order.ops);
+                if(order.relation == "swapouter") _applyTransition(order.out, "out", order.ops);
             });
 
             order.done?.(order.in);
@@ -106,6 +116,7 @@ function _runUpdates() {
  * @returns 
  */
 function _applyTransition(el, dir, ops, fn) {
+    console.log("Applying transition", el, dir, ops, fn)
     //Handle text nodes
     if(el?.nodeType == Node.TEXT_NODE) {
         let text = el.textContent;

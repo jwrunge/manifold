@@ -44,7 +44,7 @@ declare module "mfld.mod" {
         /**
          * - Callback function - run on fetch response code; return `false` to prevent further processing
          */
-        onCode?: (code: number) => boolean | void;
+        onCode?: (code: number, data: void | Response) => boolean | void;
         /**
          * - Automatically fetch content on page load
          */

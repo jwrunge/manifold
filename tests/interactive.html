@@ -55,7 +55,9 @@
   </div>
 
   <div class="special-insert">Default insert</div>
-  <nav data-mfGet="on($mount) /tests/header.html" data-mfResolve="$replace"></nav>
+  <nav data-mfGet="on($mount) /tests/header.html" data-mfAppend="header -> h1">
+    <p>This is some default nav content.</p>
+  </nav>
 
   <div class="trans" data-mfBind="specialStyling(store1)"></div>
 
@@ -76,18 +78,18 @@
     padding: 1rem;
   }
 
-  .data-mftrans {
+  .mf-trans {
     transition-property: transform, opacity;
     transform: translateX(0);
     opacity: 1;
   }
 
-  .data-mftrans.out {
+  .mf-trans.out {
     transform: translateX(-50%);
     opacity: 0;
   }
 
-  .data-mftrans.in {
+  .mf-trans.in {
     transform: translateX(50%);
     opacity: 0;
   }

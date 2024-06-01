@@ -3,10 +3,10 @@ function s(t){e.push(t),n||(n=!0,i(l))}function l(){n=!1
 for(let[t]of r)for(let[e,n]of t?.t||[])n?.(t.value,e)
 r.clear()
 for(let n of e)if("function"==typeof n)n()
-else{if(["$replace","$append"].includes(n.relation)){if("$replace"==n.relation){let t=document?.createElement("div")
+else{if(["swapinner","append"].includes(n.relation)){if("swapinner"==n.relation){let t=document?.createElement("div")
 for(let e of Array.from(n.out?.childNodes||[]))t.appendChild(e)
-n.out?.replaceChildren(t),a(t,"out",n.ops)}t?.space?.(n.in,n.out),a(n.in,"in",n.ops,(()=>{n.in&&n.out?.appendChild(n.in),t?.adjust?.(n.in,n.ops)}))}else a(n.in,"in",n.ops,(()=>{n.out?.after(n.in),t?.space?.(n.in,n.out),t?.adjust?.(n.in,n.ops),"$prepend"==n.relation&&a(n.out,"out",n.ops)}))
-n.done?.(n.in)}o.forEach((t=>t())),o=[],e=[]}function a(e,n,o,i){if(e?.nodeType==Node.TEXT_NODE){let t=e.textContent,n=document?.createElement("div")
+n.out?.replaceChildren(t),a(t,"out",n.ops)}t?.space?.(n.in,n.out),a(n.in,"in",n.ops,(()=>{n.in&&n.out?.appendChild(n.in),t?.adjust?.(n.in,n.ops)}))}else"prepend"==n.relation?(t?.space?.(n.in,n.out),a(n.in,"in",n.ops,(()=>{n.in&&n.out?.prepend(n.in),t?.adjust?.(n.in,n.ops)}))):a(n.in,"in",n.ops,(()=>{n.out?.after(n.in),t?.space?.(n.in,n.out),t?.adjust?.(n.in,n.ops),"swapouter"==n.relation&&a(n.out,"out",n.ops)}))
+n.done?.(n.in)}o.forEach((t=>t())),o=[],e=[]}function a(e,n,o,i){if(console.log("Applying transition",e,n,o,i),e?.nodeType==Node.TEXT_NODE){let t=e.textContent,n=document?.createElement("div")
 n.textContent=t,e.replaceWith(n),e=n}if(e){let r=Array.isArray(o.trans?.dur)?o.trans?.dur["in"==n?0:1]||o.trans?.dur[0]:o.trans?.dur||0,l=o?.trans?.class||"mf-trans"
 e?.classList?.add(l),o.trans?.hooks?.[`${n}-start`]?.(e),"out"==n?s((()=>{t?.size?.(e),r&&(e.style.transitionDuration=`${r}ms`),e.classList?.add(n)})):setTimeout((()=>{s((()=>{r&&(e.style.transitionDuration=`${r}ms`),e?.classList?.add(n),i?.(),s((()=>{e?.classList?.remove(n)}))}))}),o.trans?.swap||0),setTimeout((()=>{s((()=>{"out"==n&&e?.remove(),e?.classList?.remove(l),e?.classList?.remove(n),o.trans?.hooks?.[`${n}-end`]?.(e)}))}),r+("in"==n&&o.trans?.swap||0))}}function f(t){if(!t)return 0
 if("number"==typeof t)return t
@@ -21,50 +21,47 @@ t=new Map
 i=void 0
 l
 u=new Set
-constructor(t,e){return this.h(t,e)}h(t,e){return this.name=t,MfSt.set(t,this),this.l=new Set(e?.upstream?.map((t=>c(t)))||[]),this.l.forEach((t=>t?.u?.add(this))),this.value=e?.value,this.o=e?.updater,this}sub(t,e){this.t.set(e||String(Date.now()+Math.random()),t),t?.(this.value)}async update(t){return new Promise((async e=>{let n="function"==typeof t?(await t)?.(this.value):t,o=f(n)
+constructor(t,e){return this.p(t,e)}p(t,e){return this.name=t,MfSt.set(t,this),this.l=new Set(e?.upstream?.map((t=>c(t)))||[]),this.l.forEach((t=>t?.u?.add(this))),this.value=e?.value,this.o=e?.updater,this}sub(t,e){this.t.set(e||String(Date.now()+Math.random()),t),t?.(this.value)}async update(t){return new Promise((async e=>{let n="function"==typeof t?(await t)?.(this.value):t,o=f(n)
 if(o!==this.i){this.value=n,this.i=o,r.set(this,await t)
-for(let t of this.u)r.set(t,await t.p())
-s((()=>{e(this.value)}))}else e(this.value)}))}async p(){await this.update(await(this.o?.(Array.from(this.l)?.map((t=>t?.value))||[],this?.value))||this.value)}}function c(t,e){let n=MfSt.get(t)
-return e?n?n.h(t,e):new u(t,e):n||new u(t,e)}globalThis.DOMParser&&new DOMParser
-let h={},d="mf",p=/, {0,}/g,$=0
+for(let t of this.u)r.set(t,await t.h())
+s((()=>{e(this.value)}))}else e(this.value)}))}async h(){await this.update(await(this.o?.(Array.from(this.l)?.map((t=>t?.value))||[],this?.value))||this.value)}}function c(t,e){let n=MfSt.get(t)
+return e?n?n.p(t,e):new u(t,e):n||new u(t,e)}globalThis.DOMParser&&new DOMParser
+let p={},h="mf",d=/, {0,}/g,w=0
 
 ;/**!
  * @param {Partial<MfldOps>} newops 
  * @param {string} [profileName] 
  */
-function g(t,e){e?h.profiles={...h.profiles,[e]:t}:h={...h,...t}}function y(t){let e=(t||document.body).querySelectorAll(`[data-${d}${["bind","sync","get","head","post","put","delete","patch"].join(`],[data-${d}`)}]${0!=h.fetch?.auto?",a":""}`)||[]
-for(let t of e){t.id||(t.id=""+$++)
-for(let e in t.dataset){let n=e!=`${d}bind`,o=`(#${t.id} on ${e})`
-t.dataset?.[e]?.split(";").forEach((i=>{let r,l=i?.split(/(?:(?:\)|->) ?){1,}/g)||[],a=n?w(l.splice(0,1)[0]):[],f=l[0]?.includes("(")&&l[0]?.match(/^[^\(]{1,}/)?.[0]||"",u=w(l.splice(e==`${d}sync`?1:0,1)[0]),h=w(l[0])
+function g(t,e){e?p.profiles={...p.profiles,[e]:t}:p={...p,...t}}function y(t){let e=(t||document.body).querySelectorAll(`[data-${h}${["bind","sync","get","head","post","put","delete","patch"].join(`],[data-${h}`)}]${0!=p.fetch?.auto?",a":""}`)||[]
+for(let t of e){t.id||(t.id=""+w++)
+for(let e in t.dataset){let n=e!=`${h}bind`,o=`(#${t.id} on ${e})`
+t.dataset?.[e]?.split(";").forEach((i=>{let r,l=i?.split(/(?:(?:\)|->) ?){1,}/g)||[],a=n?$(l.splice(0,1)[0]):[],f=l[0]?.includes("(")&&l[0]?.match(/^[^\(]{1,}/)?.[0]||"",u=$(l.splice(e==`${h}sync`?1:0,1)[0]),p=$(l[0])
 if(n&&!a?.length)throw`No trigger: ${o}.`
-if(f&&(r=globalThis[f]||MfFn?.get(f),r||console.warn(`"${f}" not registered: ${o}`),!n&&u.length>1||n&&h.length>1))throw`Multiple sources: ${o}`
-let p=u.map((t=>{let[e,...n]=t.split(/[\.\[\]\?]{1,}/g)
+if(f&&(r=globalThis[f]||MfFn?.get(f),r||console.warn(`"${f}" not registered: ${o}`),!n&&u.length>1||n&&p.length>1))throw`Multiple sources: ${o}`
+let d=u.map((t=>{let[e,...n]=t.split(/[\.\[\]\?]{1,}/g)
 return{name:e,path:n.map((t=>isNaN(parseInt(t))?t:parseInt(t))).filter((t=>t))}}))
 a?.length||(a=[""])
-for(let n of a){if(!e.match(/bind|sync/)){if(h.length>1||u.length>1)throw`Multiple sources: ${o}`
-return void b(t,n,e.replace(d,""),h[0],u[0])}h?.length||(h=[""])
-for(let i=0;i<h.length;i++)if(e==`${d}bind`){let e=()=>{s((()=>{let e=r?.(...p.map((t=>m(c(t.name)?.value,t.path))),t)??m(c(p[0].name||"")?.value,p[0].path)
-void 0!==e&&(t[h[i]]=e),t.dispatchEvent(new CustomEvent(n))}))}
-for(let n of p)c(n.name)?.sub(e,t.id)}else if(e==`${d}sync`){if(p.length>1)throw`Only one store supported: ${o}`
-let e=()=>{let e=h[i].trim(),n=t[e]??t.getAttribute(e)??t.dataset[e]??void 0
+for(let n of a){if(!e.match(/bind|sync/)){if(p.length>1||u.length>1)throw`Multiple sources: ${o}`
+return void b(t,n,e.replace(h,""),p[0],u[0])}p?.length||(p=[""])
+for(let i=0;i<p.length;i++)if(e==`${h}bind`){let e=()=>{s((()=>{let e=r?.(...d.map((t=>m(c(t.name)?.value,t.path))),t)??m(c(d[0].name||"")?.value,d[0].path)
+void 0!==e&&(t[p[i]]=e),t.dispatchEvent(new CustomEvent(n))}))}
+for(let n of d)c(n.name)?.sub(e,t.id)}else if(e==`${h}sync`){if(d.length>1)throw`Only one store supported: ${o}`
+let e=()=>{let e=p[i].trim(),n=t[e]??t.getAttribute(e)??t.dataset[e]??void 0
 r&&(n=r?.(n,t))
-let o=c(p[0]?.name)
-void 0!==n&&o?.update?.((t=>p[0]?.path?.length?m(t,p[0]?.path,n):n))}
+let o=c(d[0]?.name)
+void 0!==n&&o?.update?.((t=>d[0]?.path?.length?m(t,d[0]?.path,n):n))}
 "$mount"==n?e():t.addEventListener(n,e)}}}))}}}function m(t,e,n){let o=t
 for(let t of e)null==o&&(o="number"==typeof t?[]:{}),null==n||e[e.length-1]!==t?o=o instanceof Map?o?.get(t):o?.[t]:o instanceof Map?o.set(t,n):o[t]=n
-return o}function w(t){if(t?.includes("(")){let e=t.match(/[^\(\)]{1,}/g)
-t=e?.[e.length-1]||""}return t?.split(p)?.map((t=>t.trim()))||[]}function b(t,e,n,o,i){let r=async e=>{e?.preventDefault(),e?.stopPropagation()
-let r=t.dataset[`${d}overrides`]||"{}",l={...h,...h.profiles?.[r]?.fetch||JSON.parse(r)}
-i||(i="string"==typeof o?structuredClone(o):(e?.target)?.href,o=l?.request?.body),n||(n=(e?.target)?.method||"get")
-let a=l
-l?.externals?.find((t=>i?.startsWith(t.domain)))||!i.match(/^https?:\/\//)||i.includes(location.origin)
-let f=await fetch(i,{...a?.request||{},method:n,body:"string"==typeof o?o:JSON.stringify(o)}).catch((t=>{a?.err?.(t)})),u=f?.status
-if(u&&0==a?.onCode?.(u))return
-let c=await(f?.[l?.type||"text"]())
-l?.cb?.(c)
-let p=t.dataset[`${d}resolve`]
-if(["$append","$prepend","$replace"].includes(p||"")&&(console.log("RESOLVE",p,c),"text"==a?.type)){let e=(new DOMParser)?.parseFromString?.(c,"text/html")
-e&&s({in:e.querySelector("body"),out:t,relation:p,ops:a,done:()=>!0})}}
+return o}function $(t){if(t?.includes("(")){let e=t.match(/[^\(\)]{1,}/g)
+t=e?.[e.length-1]||""}return t?.split(d)?.map((t=>t.trim()))||[]}function b(t,e,n,o,i){let r=async e=>{e?.preventDefault(),e?.stopPropagation()
+let r=t.dataset[`${h}overrides`]||"{}",l=p.profiles?.[r]?.fetch||JSON.parse(r),a=l?{...p,...l}:p
+i||(i="string"==typeof o?structuredClone(o):(e?.target)?.href,o=a?.fetch?.request?.body),n||(n=(e?.target)?.method||"get"),a?.fetch?.externals?.find((t=>i?.startsWith(t.domain)))||!i.match(/^https?:\/\//)||i.includes(location.origin)
+let f=await fetch(i,{...a?.fetch?.request||{},method:n,body:"string"==typeof o?o:JSON.stringify(o)}).catch((t=>{a?.fetch?.err?.(t)})),u=f?.status
+if(u&&0==a?.fetch?.onCode?.(u,f))return
+let c=await(f?.[a?.fetch?.type||"text"]())
+a?.fetch?.cb?.(c)
+for(let e of["append","prepend","swapinner","swapouter"]){let[n,o]=t.dataset[`${h}${e}`]?.split("->").map((t=>t.trim()))||[],i=(new DOMParser)?.parseFromString?.(c,"text/html")
+i&&s({in:i.querySelector(n||"body"),out:o?document.querySelector(o):t,relation:e,ops:a,done:()=>!0})}t.dataset?.[`${h}resolve`]&&alert("RESOLVING")}
 "$mount"==e?r():t.addEventListener(e,r)}
 /**! @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey*/
 /**!
@@ -79,7 +76,7 @@ e&&s({in:e.querySelector("body"),out:t,relation:p,ops:a,done:()=>!0})}}
  * @property {"json"|"text"} [type] - Response type (default: "text")
  * @property {(val: any)=> void} [cb] - Callback function - run on successful fetch; *val* is the un-parsed response body
  * @property {(err: Error)=> void} [err] - Error callback - run on fetch error
- * @property {(code: number)=> boolean | void} [onCode] - Callback function - run on fetch response code; return `false` to prevent further processing
+ * @property {(code: number, data: void | Response)=> boolean | void} [onCode] - Callback function - run on fetch response code; return `false` to prevent further processing
  * @property {boolean} [auto] - Automatically fetch content on page load
  * @property {ExternalOptions[]} [externals] - External domain fetch settings
  */

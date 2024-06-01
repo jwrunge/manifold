@@ -208,18 +208,20 @@ function _handleFetch(el, trigger, method, input, href) {
     let ev = async e=> {  
         e?.preventDefault();
         e?.stopPropagation();
-        let overrides = el.dataset[`${ATTR_PREFIX}overrides`] || "{}";
 
-        /** @type {MfldOps["fetch"]} */
-        let fetchOps = {
+        let overrides = el.dataset[`${ATTR_PREFIX}overrides`] || "{}";
+        let overrideOps = _ops.profiles?.[overrides]?.fetch || JSON.parse(overrides);
+
+        /** @type {MfldOps} */
+        let fetchOps = overrideOps ? {
             ..._ops,
-            ..._ops.profiles?.[overrides]?.fetch || JSON.parse(overrides),
-        };
+            ...overrideOps,
+        } : _ops;
 
         // If no input data was provided, it's the href; use fetchOps.body if it exists (input overrides this)
         if(!href) {
             href = typeof input == "string" ? structuredClone(input) : null || /** @type {string} */(/** @type {any}*/(e?.target)?.href);
-            input = fetchOps?.request?.body;
+            input = fetchOps?.fetch?.request?.body;
         }
 
         // Set from target element if relevant; fall back to "get"
@@ -234,9 +236,7 @@ function _handleFetch(el, trigger, method, input, href) {
         // }
     
         //Make sure we're allowed to fetch
-        let fOps = fetchOps;
-
-        let externalPermissions = fetchOps?.externals?.find(allowed=> href?.startsWith(allowed.domain)) || 
+        let externalPermissions = fetchOps?.fetch?.externals?.find(allowed=> href?.startsWith(allowed.domain)) || 
             !href.match(/^https?:\/\//) || href.includes(location.origin) ? {
                 scripts: true,
                 styles: true,
@@ -244,45 +244,42 @@ function _handleFetch(el, trigger, method, input, href) {
 
         //Fetch data
         let data = await fetch(href, {
-            ...(fOps?.request || {}),
+            ...(fetchOps?.fetch?.request || {}),
             method,
             body: typeof input == "string" ? input : JSON.stringify(input),
         })
         .catch(error=> {
-            fOps?.err?.(error);
+            fetchOps?.fetch?.err?.(error);
         });
 
         //Handle onCode callback
         let code = data?.status;
-        if(code && fOps?.onCode?.(code) == false) return;
+        if(code && fetchOps?.fetch?.onCode?.(code, data) == false) return;
 
         //Return JSON or text in callback
-        let resp = await data?.[fetchOps?.type || "text"]();
-        fetchOps?.cb?.(resp);
+        let resp = await data?.[fetchOps?.fetch?.type || "text"]();
+        fetchOps?.fetch?.cb?.(resp);
 
         // Handle resolutions
-        let resolve = el.dataset[`${ATTR_PREFIX}resolve`];
-        if(["$append", "$prepend", "$replace"].includes(resolve || "")) {
-            console.log("RESOLVE", resolve, resp);
+        for(let instruction of ["append", "prepend", "swapinner", "swapouter"]) {
+            let [selector, toReplace] = el.dataset[`${ATTR_PREFIX}${instruction}`]?.split("->").map(s=> s.trim()) || [];
 
-            //Extract content
-            if(fOps?.type == "text") {
-                let fullMarkup = new DOMParser()?.parseFromString?.(resp, 'text/html');
-
-                if(fullMarkup) {
-                    _scheduleUpdate({
-                        in: /** @type {HTMLElement} */ (fullMarkup.querySelector("body")),
-                        out: /** @type {HTMLElement} */ el,
-                        //@ts-ignore
-                        relation: resolve,
-                        ops: fOps,
-                        done: ()=> true,
-                    })
-                }
-                else {
-                    // Handle paste text
-                }
+            //Extract content and schedule a DOM update
+            let fullMarkup = (new DOMParser())?.parseFromString?.(resp, 'text/html');
+            if(fullMarkup) {
+                _scheduleUpdate({
+                    in: /** @type {HTMLElement} */ (fullMarkup.querySelector(selector || "body")),
+                    out: /** @type {HTMLElement} */ (toReplace ? document.querySelector(toReplace) : el),
+                    relation: /** @type {"append" | "prepend" | "swapinner" | "swapouter"}*/(instruction),
+                    ops: fetchOps,
+                    done: ()=> true,
+                })
             }
+        }
+
+        if(el.dataset?.[`${ATTR_PREFIX}resolve`]) {
+            alert("RESOLVING")
+        }
 
             // //Clear existing scripts/styles
             // for(let s of [pageScripts, pageStyles]) {
@@ -307,10 +304,6 @@ function _handleFetch(el, trigger, method, input, href) {
             //         else if(isScript) el.parentNode?.removeChild(el);
             //     }
             // }
-        }
-        else if(resolve) {
-
-        }
     }
 
     if(trigger == "$mount") ev();

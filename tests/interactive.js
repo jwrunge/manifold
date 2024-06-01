@@ -4,14 +4,10 @@ console.log("Manifold", Mfld);
 
 Mfld.config({
     trans: {
-        hooks: {
-            "in-end": (el)=> {
-
-            },
-            "in-start": (el)=> el
-        }
+        dur: 500,
+        swap: 500
     }
-}, "file1")
+});
 
 Mfld.register(document.body);
 
