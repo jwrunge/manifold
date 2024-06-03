@@ -71,6 +71,10 @@ declare module "mfld.mod" {
          */
         swap?: number;
         /**
+         * - Enable smart transitions (default: true)
+         */
+        smartTransition?: boolean;
+        /**
          * - Transition hooks
          */
         hooks?: {

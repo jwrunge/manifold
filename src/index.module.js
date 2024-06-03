@@ -27,6 +27,7 @@ import { _registerSubs, _setOptions } from "./registrar.js";
  * @property {string} [class] - CSS class applied to transitions (default: `mfTrans`)
  * @property {[number, number] | number} [dur] - Transition duration: [in, out] or single value (in ms); default: 300
  * @property {number} [swap] - Swap delay (in ms) - applied between one element's outro start and the replacement's intro start; default: 0
+ * @property {boolean} [smartTransition] - Enable smart transitions (default: true)
  * @property {{ [key in HookKey]?: (el: HTMLElement)=> void }} [hooks] - Transition hooks
  */
 

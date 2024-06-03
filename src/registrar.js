@@ -311,4 +311,6 @@ function _handleFetch(el, trigger, method, input, href) {
 
     if(trigger == "$mount") ev();
     else el.addEventListener(trigger, ev);
+    console.log("Adding event listener", trigger, el)
+
 }
