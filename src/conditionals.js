@@ -1,5 +1,3 @@
-import {breakOutSettings, registerDomSubscription, storeFromName} from "./util";
-
 function getConditionalElement(el) {
     for(let asType of [cc.attr.if, cc.attr.elseif]) {
         let settings = el?.getAttribute(asType) || el?.getAttribute(`data-${asType}`);

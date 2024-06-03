@@ -26,8 +26,6 @@ let spacerHeight = "";
 // Polyfill requestAnimationFrame
 let tick = globalThis?.requestAnimationFrame || ((fn)=> setTimeout(fn, 0));
 
-/** @type {Map<import("./index.module.js").Store<any>, (any | ((any)=> any))>} */ export let _workOrder = new Map();
-
 export function _addToNextTickQueue(fn) {
     if(fn) _nextTickQueue.push(fn);
 }
@@ -44,13 +42,13 @@ export function _scheduleUpdate(update) {
 function _addSpacer(inEl, wrapper, wrapperHeight) {
     //Conserve parent size
     spacer = document.createElement("div");
-    let { paddingTop, paddingBottom } = window.getComputedStyle(wrapper);
+    let { paddingTop, paddingBottom } = wrapper instanceof Element ? window.getComputedStyle(wrapper) : { paddingTop: 0, paddingBottom: 0 };
 
     spacerHeight = spacer.style.height = `calc(${(Math.abs(wrapperHeight - (inEl?.clientHeight || 0)))}px - ${paddingTop} - ${paddingBottom})`;
     wrapper?.after(spacer);
 }
 
-function _adjustSizing(inEl, wrapper) {
+function _adjustSizing(inEl) {
     _scheduleUpdate(()=> {
         spacer?.remove();
         inEl?.animate?.([
@@ -62,15 +60,6 @@ function _adjustSizing(inEl, wrapper) {
 
 function _runUpdates() {
     cancelAnimationFrame = false;
-
-    // Update stores and cascade downstream
-    for(let [S] of _workOrder) {
-        // @ts-ignore
-        for(let [ref, sub] of S?._subscriptions || []) sub?.(S.value, ref);
-    }
-
-    // Clear work order and update derived stores
-    _workOrder.clear();
     
     /**
     * @type {DomWorkOrder[]}
@@ -99,7 +88,7 @@ function _runUpdates() {
                 // Transition incoming element and append
                 _applyTransition(order.in, "in", order.ops, ()=> {
                     if(order.in) order.out?.appendChild(order.in);
-                    _adjustSizing?.(order.in, order.out);
+                    _adjustSizing?.(order.in);
                 });
             }
             //Prepend
@@ -109,7 +98,7 @@ function _runUpdates() {
                 //Prepend
                 _applyTransition(order.in, "in", order.ops, ()=> {
                     if(order.in) order.out?.prepend(order.in);
-                    _adjustSizing?.(order.in, order.out);
+                    _adjustSizing?.(order.in);
                 });
             }
             //Insert after old element before removing
@@ -117,7 +106,7 @@ function _runUpdates() {
                 _applyTransition(order.in, "in", order.ops, ()=> {
                     order.out?.after(order.in);
                     _addSpacer?.(order.in, order.out, wrapperHeight);
-                    _adjustSizing?.(order.in, order.out);
+                    _adjustSizing?.(order.in);
                 });
                 _applyTransition(order.out, "out", order.ops);
             }

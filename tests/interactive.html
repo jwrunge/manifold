@@ -35,24 +35,34 @@
       </template>
 
       <!-- Default / fallback options (replaced if dynamic options work) -->
-      <mfdefault data-mftemplate="select-ops">
+      <mf-default data-mftemplate="select-ops">
         <option value="" default>Blank</option>
         <option value="My text">Initial Value</option>
         <option value="<span class='colorful'>Another update</span>">Show update text</option>
         <option value="We're at 4k">Show 4k text</option>
-      </mfdefault>
+      </mf-default>
 
       <!-- Always-present options -->
       <option value="Last one">Last one</option>
     </select>
 
     <label>Dyn div</label>
-    <mfdefault data-mfif="showDiv(store1)">
+    <!-- <mf-default data-mfif="showDiv(store1)">
       Div is shown.
-    </mfdefault>
+    </mf-default>
     <template data-mfelse-if="showDiv(store1)">Else if</template>
-    <template data-mfelse>Else</template>
+    <template data-mfelse>Else</template> -->
   </div>
+
+  <div data-mfif="(store1, store3)=> return store1 == 'Last one' || store3 == 'three' ">
+    ,/;mn bk,jbbkkjlbikujbuibbbbbbbb
+  </div>
+  <template data-mfelseif="">
+    <div>;lnk</div>
+  </template>
+  <template data-mfelse="">
+    <div>lknn,.mbkljn</div>
+  </template>
 
   <div class="special-insert">Default insert</div>
   <nav data-mfGet="on(click) /tests/header.html" data-mfSwapOuter="header -> h1">

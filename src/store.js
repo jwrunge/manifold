@@ -7,7 +7,7 @@
  * @typedef {import("./index.module.js").StoreOptions<T>} StoreOptions 
  */
 
-import { _scheduleUpdate, _workOrder } from "./updates.js";
+import { _scheduleUpdate } from "./updates.js";
 
 /**
  * @callback SubFunction
@@ -77,11 +77,12 @@ export class Store {
 
     /**
      * @param {(T)=> void} sub
-     * @param {string | undefined} ref
+     * @param {string | undefined} [ref]
+     * @param {boolean} [immediate]
      */
-    sub(sub, ref) {
+    sub(sub, ref, immediate = true) {
         this._subscriptions.set(ref || String(Date.now() + Math.random()), sub);
-        sub?.(this.value);
+        if(immediate) sub?.(this.value);
     }
 
     //Update (manual or automated -- cascades downstream on batch updates)
@@ -90,20 +91,24 @@ export class Store {
     * @param {T | ((T)=> T | Promise<T>)} value
     */
     async update(value) {
+        if(this.name === "(store1, store3)=> return store1 == 'Last one' || store3 == 'three' "){
+            console.log("UPDATING WITH VALUE", value);
+        }
         return new Promise(async (resolve)=> {
             //Apply new value   
             let newValue = (typeof value == "function" ? /** @type {Function} */(await value)?.(this.value) : value);
             let newHash = _hashAny(newValue);
+            
             if(newHash !== this._storedHash) {
                 this.value = newValue;
                 this._storedHash = newHash;
 
                 // Add this store to the work order
-                _workOrder.set(this, await value);
-                for(let ds of this._downstreamStores) _workOrder.set(ds, await ds._auto_update());
+                for(let ds of this._downstreamStores) await ds._auto_update();
 
                 // Wait for next animation frame to return the value
                 _scheduleUpdate(()=> {
+                    for(let [ref, sub] of this?._subscriptions || []) sub?.(this.value, ref);
                     resolve(this.value);
                 });
             }
@@ -112,12 +117,13 @@ export class Store {
     }
 
     async _auto_update() {
-        await this.update(
-            await this._updater?.(
-                Array.from(this._upstreamStores)?.map(S => S?.value) || [], 
-                /** @type {T} */(this?.value)
-            ) || this.value,
-        )
+        if(this.name === "(store1, store3)=> return store1 == 'Last one' || store3 == 'three' ") console.log("UPDATING AUTO")
+        let newVal = await this._updater?.(
+            Array.from(this._upstreamStores)?.map(S => S?.value) || [], 
+            /** @type {T} */(this?.value)
+        );
+
+        await this.update(newVal === undefined ? this.value : newVal);
     }
 }
 
