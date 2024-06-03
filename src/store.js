@@ -91,9 +91,6 @@ export class Store {
     * @param {T | ((T)=> T | Promise<T>)} value
     */
     async update(value) {
-        if(this.name === "(store1, store3)=> return store1 == 'Last one' || store3 == 'three' "){
-            console.log("UPDATING WITH VALUE", value);
-        }
         return new Promise(async (resolve)=> {
             //Apply new value   
             let newValue = (typeof value == "function" ? /** @type {Function} */(await value)?.(this.value) : value);
@@ -117,7 +114,6 @@ export class Store {
     }
 
     async _auto_update() {
-        if(this.name === "(store1, store3)=> return store1 == 'Last one' || store3 == 'three' ") console.log("UPDATING AUTO")
         let newVal = await this._updater?.(
             Array.from(this._upstreamStores)?.map(S => S?.value) || [], 
             /** @type {T} */(this?.value)

@@ -1,5 +1,5 @@
 declare module "mfld.mod" {
-    export { b as Mfld };
+    export { M as Mfld };
     /**
      * !
      */
@@ -137,7 +137,7 @@ declare module "mfld.mod" {
      * !
      */
     export type MfldFunc = Function;
-    namespace b {
+    namespace M {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*

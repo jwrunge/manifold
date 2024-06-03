@@ -73,10 +73,7 @@ export function _registerSubs(parent) {
                 // Register new store (to prevent excess evaluations)
                 let conditionStore = _store(el?.dataset?.[mode] || "", {
                     upstream: storeList,
-                    updater: (list, value)=> {
-                        console.log("Calling updater with value", execFunc(...list));
-                        return execFunc(...list);
-                    }
+                    updater: (list)=> execFunc(...list)
                 })
                 
                 if(mode == `${ATTR_PREFIX}if`) {
