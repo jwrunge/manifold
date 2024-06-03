@@ -1,44 +1,49 @@
-let t=globalThis.smartOutro,e=[],n=!1,o=[],i=globalThis?.requestAnimationFrame||(t=>setTimeout(t,0)),r=new Map
-function s(t){e.push(t),n||(n=!0,i(a))}function a(){n=!1
-for(let[t]of r)for(let[e,n]of t?.t||[])n?.(t.value,e)
-r.clear()
-for(let n of e)if("function"==typeof n)n()
-else{if(["swapinner","append"].includes(n.relation)){if("swapinner"==n.relation){let t=document?.createElement("div")
-for(let e of Array.from(n.out?.childNodes||[]))t.appendChild(e)
-n.out?.replaceChildren(t),l(t,"out",n.ops)}t?.space?.(n.in,n.out),l(n.in,"in",n.ops,(()=>{n.in&&n.out?.appendChild(n.in),t?.adjust?.(n.in,n.ops)}))}else"prepend"==n.relation?(t?.space?.(n.in,n.out),l(n.in,"in",n.ops,(()=>{n.in&&n.out?.prepend(n.in),t?.adjust?.(n.in,n.ops)}))):l(n.in,"in",n.ops,(()=>{n.out?.after(n.in),t?.space?.(n.in,n.out),t?.adjust?.(n.in,n.ops),"swapouter"==n.relation&&l(n.out,"out",n.ops)}))
-n.done?.(n.in)}o.forEach((t=>t())),o=[],e=[]}function l(e,n,o,i){if(console.log("Applying transition",e,n,o,i),e?.nodeType==Node.TEXT_NODE){let t=e.textContent,n=document?.createElement("div")
-n.textContent=t,e.replaceWith(n),e=n}if(e){let r=Array.isArray(o.trans?.dur)?o.trans?.dur["in"==n?0:1]||o.trans?.dur[0]:o.trans?.dur||0,a=o?.trans?.class||"mf-trans"
-e?.classList?.add(a),o.trans?.hooks?.[`${n}-start`]?.(e),"out"==n?s((()=>{t?.size?.(e),r&&(e.style.transitionDuration=`${r}ms`),e.classList?.add(n)})):setTimeout((()=>{s((()=>{r&&(e.style.transitionDuration=`${r}ms`),e?.classList?.add(n),i?.(),s((()=>{e?.classList?.remove(n)}))}))}),o.trans?.swap||0),setTimeout((()=>{s((()=>{"out"==n&&e?.remove(),e?.classList?.remove(a),e?.classList?.remove(n),o.trans?.hooks?.[`${n}-end`]?.(e)}))}),r+("in"==n&&o.trans?.swap||0))}}function f(t){if(!t)return 0
+let t,e=[],n=!1,i=[],o="",r=globalThis?.requestAnimationFrame||(t=>setTimeout(t,0)),s=new Map
+function a(t){e.push(t),n||(n=!0,r(u))}function f(e,n,i){t=document.createElement("div")
+let{paddingTop:r,paddingBottom:s}=window.getComputedStyle(n)
+o=t.style.height=`calc(${Math.abs(i-(e?.clientHeight||0))}px - ${r} - ${s})`,n?.after(t)}function l(e,n){a((()=>{t?.remove(),e?.animate?.([{height:o},{height:`${e.clientHeight||0}px`}],300)}))}function u(){n=!1
+for(let[t]of s)for(let[e,n]of t?.t||[])n?.(t.value,e)
+s.clear()
+for(let t of e)if("function"==typeof t)t()
+else{let e=t.out?t.out.clientHeight:0
+if(["swapinner","append"].includes(t.relation)){if("swapinner"==t.relation){let e=document?.createElement("div")
+for(let n of Array.from(t.out?.childNodes||[]))e.appendChild(n)
+t.out?.replaceChildren(e),p(e,"out",t.ops)}f?.(t.in,t.out,e),p(t.in,"in",t.ops,(()=>{t.in&&t.out?.appendChild(t.in),l?.(t.in,t.out)}))}else"prepend"==t.relation?(f?.(t.in,t.out,e),p(t.in,"in",t.ops,(()=>{t.in&&t.out?.prepend(t.in),l?.(t.in,t.out)}))):(p(t.in,"in",t.ops,(()=>{t.out?.after(t.in),f?.(t.in,t.out,e),l?.(t.in,t.out)})),p(t.out,"out",t.ops))
+t.done?.(t.in)}i.forEach((t=>t())),i=[],e=[]}function p(t,e,n,i){if(t?.nodeType==Node.TEXT_NODE){let e=t.textContent,n=document?.createElement("div")
+n.textContent=e,t.replaceWith(n),t=n}if(t){let o=Array.isArray(n.trans?.dur)?n.trans?.dur["in"==e?0:1]||n.trans?.dur[0]:n.trans?.dur||0,r=n?.trans?.class||"mf-trans"
+t?.classList?.add(r),n.trans?.hooks?.[`${e}-start`]?.(t),"out"==e?a((()=>{t.style.width=`${t.clientWidth}px`,t.style.height=`${t.clientHeight}px`,t.style.position="absolute",o&&(t.style.transitionDuration=`${o}ms`),t.classList?.add("out")})):(t?.classList?.add("in"),o&&(t.style.transitionDuration=`${o}ms`),i?.(),setTimeout((()=>{a((()=>{setTimeout((()=>a((()=>t?.classList?.remove(e)))),0)}))}),n.trans?.swap||0)),setTimeout((()=>{a((()=>{"out"==e&&t?.remove(),t?.classList?.remove(r),n.trans?.hooks?.[`${e}-end`]?.(t)}))}),o+("in"==e&&n.trans?.swap||0))}}function d(t){if(!t)return 0
 if("number"==typeof t)return t
 if(!0===t)return 1
-if(t instanceof Map)return f(Array.from(t.entries()))
-if(t instanceof Set)return f(Array.from(t))
+if(t instanceof Map)return d(Array.from(t.entries()))
+if(t instanceof Set)return d(Array.from(t))
 let e=0
 for(let n of(new TextEncoder).encode("string"==typeof t?t:t?.toString()||""))e=(e<<5)-e+n
 return e}globalThis.MfSt||(globalThis.MfSt=new Map),globalThis.MfFn||(globalThis.MfFn=new Map)
-class u{o=void 0
+class c{i=void 0
 t=new Map
-i=void 0
+o=void 0
 l
 u=new Set
-constructor(t,e){return this.p(t,e)}p(t,e){return this.name=t,MfSt.set(t,this),this.l=new Set(e?.upstream?.map((t=>p(t)))||[]),this.l.forEach((t=>t?.u?.add(this))),this.value=e?.value,this.o=e?.updater,this}sub(t,e){this.t.set(e||String(Date.now()+Math.random()),t),t?.(this.value)}async update(t){return new Promise((async e=>{let n="function"==typeof t?(await t)?.(this.value):t,o=f(n)
-if(o!==this.i){this.value=n,this.i=o,r.set(this,await t)
-for(let t of this.u)r.set(t,await t.h())
-s((()=>{e(this.value)}))}else e(this.value)}))}async h(){await this.update(await(this.o?.(Array.from(this.l)?.map((t=>t?.value))||[],this?.value))||this.value)}}function p(t,e){let n=MfSt.get(t)
-return e?n?n.p(t,e):new u(t,e):n||new u(t,e)}globalThis.DOMParser&&new DOMParser
-let c={},h="mf",d=/, {0,}/g,w=0
-function g(t,e,n){let o=t
-for(let t of e)null==o&&(o="number"==typeof t?[]:{}),null==n||e[e.length-1]!==t?o=o instanceof Map?o?.get(t):o?.[t]:o instanceof Map?o.set(t,n):o[t]=n
-return o}function y(t){if(t?.includes("(")){let e=t.match(/[^\(\)]{1,}/g)
-t=e?.[e.length-1]||""}return t?.split(d)?.map((t=>t.trim()))||[]}function $(t,e,n,o,i){let r=async e=>{e?.preventDefault(),e?.stopPropagation()
-let r=t.dataset[`${h}overrides`]||"{}",a=c.profiles?.[r]?.fetch||JSON.parse(r),l=a?{...c,...a}:c
-i||(i="string"==typeof o?structuredClone(o):(e?.target)?.href,o=l?.fetch?.request?.body),n||(n=(e?.target)?.method||"get"),l?.fetch?.externals?.find((t=>i?.startsWith(t.domain)))||!i.match(/^https?:\/\//)||i.includes(location.origin)
-let f=await fetch(i,{...l?.fetch?.request||{},method:n,body:"string"==typeof o?o:JSON.stringify(o)}).catch((t=>{l?.fetch?.err?.(t)})),u=f?.status
-if(u&&0==l?.fetch?.onCode?.(u,f))return
-let p=await(f?.[l?.fetch?.type||"text"]())
-l?.fetch?.cb?.(p)
-for(let e of["append","prepend","swapinner","swapouter"]){let[n,o]=t.dataset[`${h}${e}`]?.split("->").map((t=>t.trim()))||[],i=(new DOMParser)?.parseFromString?.(p,"text/html")
-i&&s({in:i.querySelector(n||"body"),out:o?document.querySelector(o):t,relation:e,ops:l,done:()=>!0})}t.dataset?.[`${h}resolve`]&&alert("RESOLVING")}
+constructor(t,e){return this.p(t,e)}p(t,e){return this.name=t,MfSt.set(t,this),this.l=new Set(e?.upstream?.map((t=>h(t)))||[]),this.l.forEach((t=>t?.u?.add(this))),this.value=e?.value,this.i=e?.updater,this}sub(t,e){this.t.set(e||String(Date.now()+Math.random()),t),t?.(this.value)}async update(t){return new Promise((async e=>{let n="function"==typeof t?(await t)?.(this.value):t,i=d(n)
+if(i!==this.o){this.value=n,this.o=i,s.set(this,await t)
+for(let t of this.u)s.set(t,await t.h())
+a((()=>{e(this.value)}))}else e(this.value)}))}async h(){await this.update(await(this.i?.(Array.from(this.l)?.map((t=>t?.value))||[],this?.value))||this.value)}}function h(t,e){let n=MfSt.get(t)
+return e?n?n.p(t,e):new c(t,e):n||new c(t,e)}globalThis.DOMParser&&new DOMParser
+let $={},w="mf",g=/, {0,}/g,m=0,y=["bind","sync","get","head","post","put","delete","patch"].map((t=>`${w}${t}`))
+function b(t,e,n){let i=t
+for(let t of e)null==i&&(i="number"==typeof t?[]:{}),null==n||e[e.length-1]!==t?i=i instanceof Map?i?.get(t):i?.[t]:i instanceof Map?i.set(t,n):i[t]=n
+return i}function v(t){if(t?.includes("(")){let e=t.match(/[^\(\)]{1,}/g)
+t=e?.[e.length-1]||""}return t?.split(g)?.map((t=>t.trim()))||[]}function M(t,e,n,i,o){let r=async e=>{e?.preventDefault(),e?.stopPropagation()
+let r=t.dataset[`${w}overrides`]||"{}",s=$.profiles?.[r]?.fetch||JSON.parse(r),f=s?{...$,...s}:$
+o||(o="string"==typeof i?structuredClone(i):(e?.target)?.href,i=f?.fetch?.request?.body),n||(n=(e?.target)?.method||"get"),f?.fetch?.externals?.find((t=>o?.startsWith(t.domain)))||!o.match(/^https?:\/\//)||o.includes(location.origin)
+let l=await fetch(o,{...f?.fetch?.request||{},method:n,body:"string"==typeof i?i:JSON.stringify(i)}).catch((t=>{f?.fetch?.err?.(t)})),u=l?.status
+if(u&&0==f?.fetch?.onCode?.(u,l))return
+let p=await(l?.[f?.fetch?.type||"text"]())
+f?.fetch?.cb?.(p)
+for(let e of["append","prepend","swapinner","swapouter"]){let n=t.dataset[`${w}${e}`]
+if(void 0===n)continue
+let[i,o]=n?.split("->").map((t=>t.trim()))||[],r=(new DOMParser)?.parseFromString?.(p,"text/html")
+r&&a({in:r.querySelector(i||"body"),out:o?document.querySelector(o):t,relation:e,ops:f,done:()=>!0})}t.dataset?.[`${w}resolve`]&&alert("RESOLVING")}
 "$mount"==e?r():t.addEventListener(e,r)}
 /**! @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey*/
 /**!
@@ -99,7 +104,7 @@ i&&s({in:i.querySelector(n||"body"),out:o?document.querySelector(o):t,relation:e
  */
 /**!
  * The global Manifold interface.
- */let m={store:
+ */let T={store:
 /**!
 * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`* 
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
@@ -108,7 +113,7 @@ i&&s({in:i.querySelector(n||"body"),out:o?document.querySelector(o):t,relation:e
 * @param {StoreOptions<T> | T} store_ops
 * @return {Store<T>}
 */
-(store_name,store_ops)=>(store_ops?.hasOwnProperty("value")||store_ops?.hasOwnProperty("updater")||(store_ops={value:store_ops}),p(store_name,store_ops)),ustore:
+(store_name,store_ops)=>(store_ops?.hasOwnProperty("value")||store_ops?.hasOwnProperty("updater")||(store_ops={value:store_ops}),h(store_name,store_ops)),ustore:
 /**!
 * - Create or overwrite an untyped global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<any\>`* 
 * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
@@ -116,13 +121,13 @@ i&&s({in:i.querySelector(n||"body"),out:o?document.querySelector(o):t,relation:e
 * @param {StoreOptions<any> | any} store_ops
 * @return {Store<any>}
 */
-(store_name,store_ops)=>p(store_name,store_ops),get:
+(store_name,store_ops)=>h(store_name,store_ops),get:
 /**!
  * - Retrieve a Manifold store by name. *returns `Store\<any\>`*
  * @param {string} store_name
  * @return {Store<any>}
  */
-store_name=>p(store_name),func:
+store_name=>h(store_name),func:
 /**!
  * - Retrieve a Manifold function by name. *val* refers to the store's current value; *el* refers to the element that triggered the update (if applicable). *returns `MfldFunc`*
  * - *Note:* Functions retrived using this method cannot infer the type of the store's value and is therefore **not** type-checked. It is preferable to keep a reference to the function if you need to preserve type information.
@@ -143,7 +148,7 @@ funcs=>{for(let t in funcs)MfFn.set(t,funcs[t])},config:
  * @param {MfldOps} new_ops
  * @param {string} [profile_name]
  */
-(new_ops,profile_name)=>{return t=new_ops,void((e=profile_name)?c.profiles={...c.profiles,[e]:t}:c={...c,...t})
+(new_ops,profile_name)=>{return t=new_ops,void((e=profile_name)?$.profiles={...$.profiles,[e]:t}:$={...$,...t})
 
 ;/**!
  * @param {Partial<MfldOps>} newops 
@@ -154,28 +159,29 @@ var t,e},onTick:
   * - Wait for the next Manifold data update cycle to complete before executing the callback function.
   * @param {()=> void} cb
   */
-t=>{var e;(e=t)&&o.push(e)},register:
+t=>{var e;(e=t)&&i.push(e)},register:
 /**!
  * - Register Manifold subscriptions on the DOM. *Optional:* Pass an `HTMLElement` or selector string to scope the registration to a specific element.
  * @param {HTMLElement | string | null} [parent]
  */
-t=>{"string"==typeof t&&(t=document.querySelector(t)),function(t){let e=(t||document.body).querySelectorAll(`[data-${h}${["bind","sync","get","head","post","put","delete","patch"].join(`],[data-${h}`)}]${0!=c.fetch?.auto?",a":""}`)||[]
-for(let t of e){t.id||(t.id=""+w++)
-for(let e in t.dataset){let n=e!=`${h}bind`,o=`(#${t.id} on ${e})`
-t.dataset?.[e]?.split(";").forEach((i=>{let r,a=i?.split(/(?:(?:\)|->) ?){1,}/g)||[],l=n?y(a.splice(0,1)[0]):[],f=a[0]?.includes("(")&&a[0]?.match(/^[^\(]{1,}/)?.[0]||"",u=y(a.splice(e==`${h}sync`?1:0,1)[0]),c=y(a[0])
-if(n&&!l?.length)throw`No trigger: ${o}.`
-if(f&&(r=globalThis[f]||MfFn?.get(f),r||console.warn(`"${f}" not registered: ${o}`),!n&&u.length>1||n&&c.length>1))throw`Multiple sources: ${o}`
+t=>{"string"==typeof t&&(t=document.querySelector(t)),function(t){let e=(t||document.body).querySelectorAll(`[data-${y.join("],[data-")}]${0!=$.fetch?.auto?",a":""}`)||[]
+for(let t of e){t.id||(t.id=""+m++)
+for(let e in t.dataset){if(!y.includes(e))continue
+let n=e!=`${w}bind`,i=`(#${t.id} on ${e})`
+t.dataset?.[e]?.split(";").forEach((o=>{let r,s=o?.split(/(?:(?:\)|->) ?){1,}/g)||[],f=n?v(s.splice(0,1)[0]):[],l=s[0]?.includes("(")&&s[0]?.match(/^[^\(]{1,}/)?.[0]||"",u=v(s.splice(e==`${w}sync`?1:0,1)[0]),p=v(s[0])
+if(n&&!f?.length)throw`No trigger: ${i}.`
+if(l&&(r=globalThis[l]||MfFn?.get(l),r||console.warn(`"${l}" not registered: ${i}`),!n&&u.length>1||n&&p.length>1))throw`Multiple sources: ${i}`
 let d=u.map((t=>{let[e,...n]=t.split(/[\.\[\]\?]{1,}/g)
 return{name:e,path:n.map((t=>isNaN(parseInt(t))?t:parseInt(t))).filter((t=>t))}}))
-l?.length||(l=[""])
-for(let n of l){if(!e.match(/bind|sync/)){if(c.length>1||u.length>1)throw`Multiple sources: ${o}`
-return void $(t,n,e.replace(h,""),c[0],u[0])}c?.length||(c=[""])
-for(let i=0;i<c.length;i++)if(e==`${h}bind`){let e=()=>{s((()=>{let e=r?.(...d.map((t=>g(p(t.name)?.value,t.path))),t)??g(p(d[0].name||"")?.value,d[0].path)
-void 0!==e&&(t[c[i]]=e),t.dispatchEvent(new CustomEvent(n))}))}
-for(let n of d)p(n.name)?.sub(e,t.id)}else if(e==`${h}sync`){if(d.length>1)throw`Only one store supported: ${o}`
-let e=()=>{let e=c[i].trim(),n=t[e]??t.getAttribute(e)??t.dataset[e]??void 0
+f?.length||(f=[""])
+for(let n of f){if(!e.match(/bind|sync/)){if(p.length>1||u.length>1)throw`Multiple sources: ${i}`
+return void M(t,n,e.replace(w,""),p[0],u[0])}p?.length||(p=[""])
+for(let o=0;o<p.length;o++)if(e==`${w}bind`){let e=()=>{a((()=>{let e=r?.(...d.map((t=>b(h(t.name)?.value,t.path))),t)??b(h(d[0].name||"")?.value,d[0].path)
+void 0!==e&&(t[p[o]]=e),t.dispatchEvent(new CustomEvent(n))}))}
+for(let n of d)h(n.name)?.sub(e,t.id)}else if(e==`${w}sync`){if(d.length>1)throw`Only one store supported: ${i}`
+let e=()=>{let e=p[o].trim(),n=t[e]??t.getAttribute(e)??t.dataset[e]??void 0
 r&&(n=r?.(n,t))
-let o=p(d[0]?.name)
-void 0!==n&&o?.update?.((t=>d[0]?.path?.length?g(t,d[0]?.path,n):n))}
+let i=h(d[0]?.name)
+void 0!==n&&i?.update?.((t=>d[0]?.path?.length?b(t,d[0]?.path,n):n))}
 "$mount"==n?e():t.addEventListener(n,e)}}}))}}}(t)}}
-exports.Mfld=m
+exports.Mfld=T

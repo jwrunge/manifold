@@ -5,7 +5,6 @@ console.log("Manifold", Mfld);
 Mfld.config({
     trans: {
         dur: 500,
-        swap: 500
     }
 });
 

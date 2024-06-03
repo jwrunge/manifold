@@ -55,7 +55,7 @@
   </div>
 
   <div class="special-insert">Default insert</div>
-  <nav data-mfGet="on($mount) /tests/header.html" data-mfAppend="header -> h1">
+  <nav data-mfGet="on($mount) /tests/header.html" data-mfSwapOuter="header -> h1">
     <p>This is some default nav content.</p>
   </nav>
 
@@ -80,17 +80,19 @@
 
   .mf-trans {
     transition-property: transform, opacity;
-    transform: translateX(0);
+    transform: scale(1);
     opacity: 1;
   }
 
   .mf-trans.out {
-    transform: translateX(-50%);
+    transform: scale(0);
+    /* transform: translateX(-50%); */
     opacity: 0;
   }
 
   .mf-trans.in {
-    transform: translateX(50%);
+    transform: scale(0);
+    /* transform: translateX(50%); */
     opacity: 0;
   }
 </style>

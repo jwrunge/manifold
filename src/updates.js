@@ -1,8 +1,5 @@
 /** @typedef {import("./index.module.js").MfldOps} MfldOps */
 
-/** @type {{ adjust?: Function, space?: Function, size?: Function } | undefined} */
-let smartOutro = globalThis.smartOutro;
-
 /**
  * @typedef {Object} DomWorkOrder
  * @property {HTMLElement} in - The input HTMLElement
@@ -22,6 +19,10 @@ let cancelAnimationFrame = false;
  */
 let _nextTickQueue = [];
 
+/** @type {HTMLElement | null} */
+let spacer;
+let spacerHeight = "";
+
 // Polyfill requestAnimationFrame
 let tick = globalThis?.requestAnimationFrame || ((fn)=> setTimeout(fn, 0));
 
@@ -38,6 +39,25 @@ export function _scheduleUpdate(update) {
         cancelAnimationFrame = true;
         tick(_runUpdates);
     }
+}
+
+function _addSpacer(inEl, wrapper, wrapperHeight) {
+    //Conserve parent size
+    spacer = document.createElement("div");
+    let { paddingTop, paddingBottom } = window.getComputedStyle(wrapper);
+
+    spacerHeight = spacer.style.height = `calc(${(Math.abs(wrapperHeight - (inEl?.clientHeight || 0)))}px - ${paddingTop} - ${paddingBottom})`;
+    wrapper?.after(spacer);
+}
+
+function _adjustSizing(inEl, wrapper) {
+    _scheduleUpdate(()=> {
+        spacer?.remove();
+        inEl?.animate?.([
+            { height: spacerHeight },
+            { height: `${inEl.clientHeight || 0}px` }
+        ], 300);
+    });
 }
 
 function _runUpdates() {
@@ -58,45 +78,49 @@ function _runUpdates() {
     for(let order of workArray) {
         if(typeof order == "function") (/** @type {Function} */ order)();
         else {
+            let wrapperHeight = order.out ? order.out.clientHeight : 0;
+
             // Remove old children
             if(["swapinner", "append"].includes(order.relation)) {
                 if(order.relation == "swapinner") {
-                    //Remove old children before appending
+                    //Remove old children before appending (if swapping children)
                     let container = document?.createElement("div");
                     for(let child of Array.from(order.out?.childNodes || [])) {
                         container.appendChild(child);
                     }
                     order.out?.replaceChildren(container);
+
+                    // Transition old children out
                     _applyTransition(container, "out", order.ops);
                 }
 
-                smartOutro?.space?.(order.in, order.out);
+                _addSpacer?.(order.in, order.out, wrapperHeight);
 
-                //Append
+                // Transition incoming element and append
                 _applyTransition(order.in, "in", order.ops, ()=> {
                     if(order.in) order.out?.appendChild(order.in);
-                    smartOutro?.adjust?.(order.in, order.ops);
+                    _adjustSizing?.(order.in, order.out);
                 });
             }
             //Prepend
             else if(order.relation == "prepend") {
-                smartOutro?.space?.(order.in, order.out);
+                _addSpacer?.(order.in, order.out, wrapperHeight);
 
                 //Prepend
                 _applyTransition(order.in, "in", order.ops, ()=> {
                     if(order.in) order.out?.prepend(order.in);
-                    smartOutro?.adjust?.(order.in, order.ops);
+                    _adjustSizing?.(order.in, order.out);
                 });
             }
             //Insert after old element before removing
-            else _applyTransition(order.in, "in", order.ops, ()=> {
-                order.out?.after(order.in);
-                smartOutro?.space?.(order.in, order.out);
-                smartOutro?.adjust?.(order.in, order.ops);
-
-                //Remove old element
-                if(order.relation == "swapouter") _applyTransition(order.out, "out", order.ops);
-            });
+            else {
+                _applyTransition(order.in, "in", order.ops, ()=> {
+                    order.out?.after(order.in);
+                    _addSpacer?.(order.in, order.out, wrapperHeight);
+                    _adjustSizing?.(order.in, order.out);
+                });
+                _applyTransition(order.out, "out", order.ops);
+            }
 
             order.done?.(order.in);
         }
@@ -116,7 +140,6 @@ function _runUpdates() {
  * @returns 
  */
 function _applyTransition(el, dir, ops, fn) {
-    console.log("Applying transition", el, dir, ops, fn)
     //Handle text nodes
     if(el?.nodeType == Node.TEXT_NODE) {
         let text = el.textContent;
@@ -137,23 +160,25 @@ function _applyTransition(el, dir, ops, fn) {
         //Wait to apply class
         if(dir == "out") {
             _scheduleUpdate(()=> {
-                smartOutro?.size?.(el);
+                if(true) {
+                    el.style.width = `${(el).clientWidth}px`;
+                    el.style.height = `${(el).clientHeight}px`;
+                    el.style.position = "absolute";
+                }
+
+                // smartOutro?.size?.(el);
                 if(dur) el.style.transitionDuration = `${dur}ms`;
-                el.classList?.add(dir);
+                el.classList?.add("out");
             })
         }
         //If dir == in
         else {
+            el?.classList?.add("in");
+            if(dur) el.style.transitionDuration = `${dur}ms`;
+            fn?.();
             setTimeout(()=> {
                 _scheduleUpdate(()=> {
-                    if(dur) el.style.transitionDuration = `${dur}ms`;
-                    el?.classList?.add(dir);
-                    fn?.();
-
-                    //Remove transition class
-                    _scheduleUpdate(()=> {
-                        el?.classList?.remove(dir);
-                    });
+                    setTimeout(()=> _scheduleUpdate(()=> el?.classList?.remove(dir)), 0);
                 });
             }, ops.trans?.swap || 0);
         }
@@ -163,7 +188,6 @@ function _applyTransition(el, dir, ops, fn) {
                 //Wrapup
                 if(dir == "out") el?.remove();
                 el?.classList?.remove(transClass);
-                el?.classList?.remove(dir);
                 ops.trans?.hooks?.[`${dir}-end`]?.(el);
             });
         }, 

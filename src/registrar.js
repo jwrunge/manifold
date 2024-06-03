@@ -7,9 +7,9 @@ import { _scheduleUpdate } from "./updates.js";
 let _ops = {};
 
 let ATTR_PREFIX = "mf";
-
 let _commaSepRx = /, {0,}/g;
 let _elIdx = 0;
+let _modes = ["bind", "sync", "get", "head", "post", "put", "delete", "patch"].map(m=> `${ATTR_PREFIX}${m}`);
 let pageScripts = new WeakMap();
 let pageStyles = new WeakMap();
 
@@ -42,7 +42,7 @@ export function _setOptions(newops, profileName) {
 export function _registerSubs(parent) {   
     /** @type {NodeListOf<HTMLElement> | []} */
     let els = (parent || document.body).querySelectorAll(
-        `[data-${ATTR_PREFIX}${["bind", "sync", "get", "head", "post", "put", "delete", "patch"].join(`],[data-${ATTR_PREFIX}`)}]${_ops.fetch?.auto != false ? ",a" : ""}`
+        `[data-${_modes.join(`],[data-`)}]${_ops.fetch?.auto != false ? ",a" : ""}`
     ) || [];
 
     for(let el of els) {
@@ -51,6 +51,7 @@ export function _registerSubs(parent) {
 
         //Loop over all data attributes (modes)
         for(let mode in el.dataset) {
+            if(!_modes.includes(mode)) continue;
             let shouldHaveTriggers = mode != `${ATTR_PREFIX}bind`;
             let err_detail = `(#${el.id} on ${mode})`;
 
@@ -262,7 +263,9 @@ function _handleFetch(el, trigger, method, input, href) {
 
         // Handle resolutions
         for(let instruction of ["append", "prepend", "swapinner", "swapouter"]) {
-            let [selector, toReplace] = el.dataset[`${ATTR_PREFIX}${instruction}`]?.split("->").map(s=> s.trim()) || [];
+            let ds = el.dataset[`${ATTR_PREFIX}${instruction}`];
+            if(ds === undefined) continue;
+            let [selector, toReplace] = ds?.split("->").map(s=> s.trim()) || [];
 
             //Extract content and schedule a DOM update
             let fullMarkup = (new DOMParser())?.parseFromString?.(resp, 'text/html');
