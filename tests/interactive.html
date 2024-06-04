@@ -12,11 +12,11 @@
   <p>This is an example of dynamic text! The current store value is: <span data-mfBind="store1->innerText">Here is a default value.</span></p>
   <p>Here is text that can be HTML: <span data-mfBind="store1->innerHTML">Here is a default value.</span></p>
   <p>Store 2 nested: <span data-mfBind="store2.values[1]->innerHTML">Here is a default value.</span></p>
-  <p>Checkbox set to checked? <span data-mfBind="store2.values[0]->innerText"></span></p>
+  <!-- <p>Checkbox set to checked? <span data-mfBind="store2.values[0]->innerText"></span></p>
   <p>Store 4 value: <span data-mfBind="store4->innerText"></span></p>
   <p>Checked store checked? <span data-mfBind="checkedStore-> innerText">Unknown</span></p>
   <p>Value of Mass Store 99: <span data-mfBind="mass_store99 -> innerText">Unknown</span></p>
-  <div data-secret="THIS IS A SECRET" data-mfSync="on($mount) sendAlert(data-secret) -> checkedStore"></div>
+  <div data-secret="THIS IS A SECRET" data-mfSync="on($mount) sendAlert(data-secret) -> checkedStore"></div> -->
 
   <!-- Content -->
   <div class="sync-grid">
@@ -57,15 +57,15 @@
   <div data-mfif="(store1, store3)=> return store1 == 'Last one' || store3 == 'three' ">
     ,/;mn bk,jbbkkjlbikujbuibbbbbbbb
   </div>
-  <template data-mfelseif="">
+  <template data-mfelseif='(store1)=> return store1 == "We&#39;re at 4k"'>
     <div>;lnk</div>
   </template>
-  <template data-mfelse="">
+  <template data-mfelse>
     <div>lknn,.mbkljn</div>
   </template>
 
-  <div class="special-insert">Default insert</div>
-  <nav data-mfGet="on(click) /tests/header.html" data-mfSwapOuter="header -> h1">
+  <div class="special-insert" data-mfGet="on(click) /tests/interactive.html" data-mfswapinner=".sync-grid -> header">Default insert</div>
+  <nav data-mfGet="on(click) /tests/header.html" data-mfswapinner="header -> .sync-grid">
     <p>This is some default nav content.</p>
   </nav>
 
@@ -90,20 +90,20 @@
 
   .mf-trans {
     transition-property: transform, opacity;
-    transform: scale(1);
-    /* transform: translateX(0); */
+    /* transform: scale(1); */
+    transform: translateX(0);
     opacity: 1;
   }
 
   .mf-trans.out {
-    transform: scale(2);
-    /* transform: translateX(-50%); */
+    /* transform: scale(2); */
+    transform: translateX(-50%);
     opacity: 0;
   }
 
   .mf-trans.in {
-    transform: scale(0);
-    /* transform: translateX(50%); */
+    /* transform: scale(0); */
+    transform: translateX(50%);
     opacity: 0;
   }
 </style>

@@ -1,48 +1,103 @@
-function getConditionalElement(el) {
-    for(let asType of [cc.attr.if, cc.attr.elseif]) {
-        let settings = el?.getAttribute(asType) || el?.getAttribute(`data-${asType}`);
-        if(settings) {
-            let { storeName, ingressFunc } = breakOutSettings(settings);
-            return { asType, storeName, ingressFunc };
-        }
+import { _store } from "./store";
+import { _scheduleUpdate } from "./updates";
+import { _getOpOverrides, ATTR_PREFIX } from "./util";
+
+function _getStoresAndFunc(el, mode) {
+    let condition = el?.dataset?.[mode];
+    let storeName = condition;
+
+    if(!condition && el?.dataset?.[`${ATTR_PREFIX}else`] !== undefined) {
+        condition = "return true";
+        storeName = `ELSE:${el?.dataset?.[mode] || ""}`;
     }
-    if(el?.hasAttribute(cc.attr.else)) {
-        return { asType: cc.attr.else };
+
+    if(!condition) return {};
+
+    let [stores, func] = condition?.split("=>")?.map(s=> s.trim()) || ["", ""];
+    if(!func) {
+        func = stores.slice();
+        stores = "";
     }
+
+    // Set up function to evaluate store values
+    let storeList = stores?.split(",")?.map(s=> s.replace(/[()]/g, "").trim());
+    // @ts-ignore
+    let execFunc = globalThis[func] || MfFn?.get(func) || new Function(...storeList, func);
+
+    return { storeList, execFunc, storeName };
 }
 
-//Handle data binding
 /**
- * @param {Element} el
+ * Handle conditional and loop elements
+ * @param {HTMLElement} el 
+ * @param {string} mode 
+ * @param {import("./index.module").MfldOps} _ops 
  */
-export function handleConditionals(el) {
-    while(el) {
-        let { asType, storeName, ingressFunc } = getConditionalElement(/** @type {HTMLElement} */ el) || {};
+export function _handleConditionals(el, mode, _ops) {
+    if(mode == `${ATTR_PREFIX}if`) {
+        let ops = _getOpOverrides(_ops, el);
+        let rootElement = document.createElement("div");
+        rootElement.classList.add("mfld-active-condition");
+        el.before(rootElement);
 
-        if(!asType) {
-            el = /** @type {HTMLElement} */ (el.nextElementSibling);
-        }
-        else {
-            //Promote all <template> tags to visible elements
-            if(el.tagName == "TEMPLATE") {
-                let innerHTML = el.innerHTML;
-                let promoteAttr = el.getAttribute("mf-promote") || el.getAttribute("data-mf-promote") || "div";
-                let newEl = globalThis.document?.t(promoteAttr);
-                newEl.innerHTML = innerHTML;                for(let attr of el.attributes) {
+        // Set up conditions
+        let siblingPtr = el;
+        let conditionChain = [];
+        while(siblingPtr) {
+            if(!siblingPtr) break;
+            let { storeList, execFunc, storeName } = _getStoresAndFunc(siblingPtr, conditionChain.length ? `${ATTR_PREFIX}elseif`: mode);
+            if(!storeList && !execFunc) break;
+
+            // Make sure this is a template
+            if(siblingPtr.tagName != "TEMPLATE") {
+                let newEl = document.createElement("template");
+                newEl.innerHTML = siblingPtr.innerHTML;                
+                for(let attr of siblingPtr.attributes) {
                     newEl.setAttribute(attr.name, attr.value);
                 }
-                el.replaceWith(newEl);
-                el = newEl;
+                siblingPtr.replaceWith(newEl);
+                siblingPtr = newEl;
+
+                // If not, it's default content
+                rootElement.innerHTML = siblingPtr.innerHTML;
             }
 
-            //Set callback to be called on store updates
-            let cb = ({val, el}: { val: boolean, el: HTMLElement })=> {
-                el.style.display = val ? "" : "none";
-            };
+            // Register new store (to prevent excess evaluations)
+            let upstreamConditionsLen = conditionChain.length;
+            let conditionStore = _store(storeName || "", {
+                upstream: [...storeList, ...conditionChain],
+                updater: (list)=> {
+                    if(upstreamConditionsLen) {
+                        for(let condition of list.slice(-upstreamConditionsLen) || []) {
+                            if(condition) return false;
+                        }
+                    }
+                    return execFunc(...list.slice(0, -1));
+                }
+            });
 
-            registerDomSubscription(el as HTMLElement, storeFromName(storeName), storeName || "", ingressFunc, null, null, cb);
+            conditionChain.push(conditionStore.name);
 
-            el = el.nextElementSibling as HTMLElement;
+            let siblingClone = /** @type {HTMLElement}*/(siblingPtr.cloneNode(true));
+            conditionStore?.sub(val=> {
+                if(!val) return;
+                let sib = document.createElement("div");
+                sib.innerHTML = siblingClone.innerHTML;
+                if(siblingClone?.tagName == "TEMPLATE") {
+                    _scheduleUpdate({
+                        in: sib,
+                        out: rootElement,
+                        relation: "swapinner",
+                        ops,
+                        done: ((el) => true),
+                    })
+                }
+            });
+
+            siblingPtr = /** @type {HTMLElement} */(siblingPtr?.nextElementSibling);
         }
+    }
+    else {
+        alert("Not set up for loops yet")
     }
 }

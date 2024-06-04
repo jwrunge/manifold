@@ -1,5 +1,7 @@
-import { ATTR_PREFIX } from "./exports";
+import { _getOpOverrides, ATTR_PREFIX } from "./util.js";
 import { _scheduleUpdate } from "./updates";
+
+/** @typedef {import("./index.module.js").MfldOps} MfldOps */
 
 /**
  * @param {HTMLElement} el 
@@ -17,14 +19,7 @@ export function _handleFetch(el, trigger, _ops, method, input, href) {
         e?.preventDefault();
         e?.stopPropagation();
 
-        let overrides = el.dataset[`${ATTR_PREFIX}overrides`] || "{}";
-        let overrideOps = _ops.profiles?.[overrides]?.fetch || JSON.parse(overrides);
-
-        /** @type {MfldOps} */
-        let fetchOps = overrideOps ? {
-            ..._ops,
-            ...overrideOps,
-        } : _ops;
+        let fetchOps = _getOpOverrides(_ops, el);
 
         // If no input data was provided, it's the href; use fetchOps.body if it exists (input overrides this)
         if(!href) {
