@@ -9,7 +9,7 @@
 <body>
   <h1>Reactivity test - IIFE</h1>
 
-  <p>This is an example of dynamic text! The current store value is: <span data-mfBind="store1->innerText">Here is a default value.</span></p>
+  <p>This is an example of dynamic text! The current store value is: <span data-mfBind="(store1)=>return store1->innerText">Here is a default value.</span></p>
   <p>Here is text that can be HTML: <span data-mfBind="store1->innerHTML">Here is a default value.</span></p>
   <p>Store 2 nested: <span data-mfBind="store2.values[1]->innerHTML">Here is a default value.</span></p>
   <!-- <p>Checkbox set to checked? <span data-mfBind="store2.values[0]->innerText"></span></p>
@@ -65,7 +65,7 @@
   </template>
 
   <div class="special-insert" data-mfGet="on(click) /tests/interactive.html" data-mfswapinner=".sync-grid -> header">Default insert</div>
-  <nav data-mfGet="on(click) /tests/header.html" data-mfswapinner="header -> .sync-grid">
+  <nav data-mfGet="on(click) /tests/header.html" data-mfswapinner="header -> h1">
     <p>This is some default nav content.</p>
   </nav>
 

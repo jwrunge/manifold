@@ -1,5 +1,6 @@
 import { _getOpOverrides, ATTR_PREFIX } from "./util.js";
 import { _scheduleUpdate } from "./updates";
+import { _registerSubs } from "./registrar.js";
 
 /** @typedef {import("./index.module.js").MfldOps} MfldOps */
 
@@ -77,7 +78,9 @@ export function _handleFetch(el, trigger, _ops, method, input, href) {
                     out: /** @type {HTMLElement} */ (toReplace ? document.querySelector(toReplace) : el),
                     relation: /** @type {"append" | "prepend" | "swapinner" | "swapouter"}*/(instruction),
                     ops: fetchOps,
-                    done: ()=> true,
+                    done: (el)=> {
+                        _registerSubs(el)
+                    },
                 })
             }
         }

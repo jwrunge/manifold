@@ -1,6 +1,6 @@
 import { _store } from "./store.js";
 import { _scheduleUpdate } from "./updates.js";
-import { ATTR_PREFIX } from "./util.js";
+import { _parseFunction, ATTR_PREFIX } from "./util.js";
 import { _handleFetch } from "./fetch.js";
 import { _handleBindSync } from "./bindsync.js";
 import { _handleConditionals } from "./conditionals.js";
@@ -40,7 +40,7 @@ export function _setOptions(newops, profileName) {
 /**
  * @param {HTMLElement | null} [parent] 
  */
-export function _registerSubs(parent) {   
+export function _registerSubs(parent) {
     /** @type {NodeListOf<HTMLElement> | []} */
     let els = (parent || document.body).querySelectorAll(
         `[data-${_modes.join(`],[data-`)}]${_ops.fetch?.auto != false ? ",a" : ""}`
@@ -67,24 +67,33 @@ export function _registerSubs(parent) {
             //Loop over provided settings
             el.dataset?.[mode]?.split(";").forEach(setting=> {
                 //Break out settings
+                let fnText = setting?.match(/\([\w ,]{0,}\)\s{0,}=>\s{0,}[\w ,]{0,}/)?.[0] || "";
+                if(fnText) setting = setting.replace(fnText, fnText.match(/\([\w ,]+\)/)?.[0] || "");
                 let _parts = setting?.split(/(?:(?:\)|->) ?){1,}/g) || []; 
+                console.log(_parts)
         
                 //Extract settings
                 let triggers = shouldHaveTriggers ? _paramsInParens(_parts.splice(0,1)[0]) : [];
-                let processFuncName = _parts[0]?.includes("(") ? _parts[0]?.match(/^[^\(]{1,}/)?.[0] || "" : "";
+                let processFuncName = fnText ? fnText : _parts[0]?.includes("(") ? _parts[0]?.match(/^[^\(]{1,}/)?.[0] || "" : "";
                 let output = _paramsInParens(_parts.splice(mode == `${ATTR_PREFIX}sync` ? 1 : 0, 1)[0]);
                 let input = _paramsInParens(_parts[0]);
 
                 //Handle errors
-                if(shouldHaveTriggers && !triggers?.length) throw(`No trigger: ${err_detail}.`)
+                if(shouldHaveTriggers && !triggers?.length) {
+                    console.error(`No trigger: ${err_detail}.`)
+                    return;
+                }
 
                 /** @type {Function | undefined} */
-                let processFunc;
+
+                let processFunc = _parseFunction(processFuncName)?.func;
                 if(processFuncName) {
                     // @ts-ignore
-                    processFunc = globalThis[processFuncName] || MfFn?.get(processFuncName);
                     if(!processFunc) console.warn(`"${processFuncName}" not registered: ${err_detail}`);
-                    if(((!shouldHaveTriggers && output.length > 1) || (shouldHaveTriggers && input.length > 1))) throw(`Multiple sources: ${err_detail}`);
+                    if(((!shouldHaveTriggers && output.length > 1))) {
+                        console.error(`Multiple sources: ${err_detail}`);
+                        return;
+                    }
                 }
 
                 //Map output names and paths
@@ -108,7 +117,6 @@ export function _registerSubs(parent) {
                     }
                     // HANDLE FETCH
                     else {
-                        if(input.length > 1 || output.length > 1) throw(`Multiple sources: ${err_detail}`);
                         _handleFetch(el, trigger, _ops, mode.replace(ATTR_PREFIX, ""), input[0], output[0]);
                     }
                 }

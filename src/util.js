@@ -38,3 +38,39 @@ export function _getOpOverrides(ops, el) {
         ...overrideOps,
     } : ops;
 }
+
+/**
+ * @param {{el: HTMLElement, datakey: string} | string} data 
+ * @returns {{ storeList?: string[], func?: Function, storeName?: string}}
+ */
+export function _parseFunction(data) {
+    let condition = "";
+    let storeName = "";
+    if(typeof data === "string") {
+        condition = data;
+    }
+    else {
+        condition = data?.el?.dataset?.[data?.datakey] || "";
+        storeName = condition;
+
+        if(!condition && data?.el?.dataset?.[`${ATTR_PREFIX}else`] !== undefined) {
+            condition = "return true";
+            storeName = `ELSE:${data?.el?.dataset?.[data?.datakey] || ""}`;
+        }
+    }
+
+    if(!condition) return {};
+
+    let [stores, fn] = condition?.split("=>")?.map(s=> s.trim()) || ["", ""];
+    if(!fn) {
+        fn = stores.slice();
+        stores = "";
+    }
+
+    // Set up function to evaluate store values
+    let storeList = stores?.split(",")?.map(s=> s.replace(/[()]/g, "").trim());
+    // @ts-ignore
+    let func = globalThis[fn] || MfFn?.get(fn) || new Function(...storeList, fn);
+
+    return { storeList, func, storeName };
+}

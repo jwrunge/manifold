@@ -12,6 +12,9 @@ export function _handleBindSync(el, input, outputData, trigger, mode, processFun
         if(mode == `${ATTR_PREFIX}bind`) {
             let domSubscription = ()=> {
                 _scheduleUpdate(()=> {
+                    // if(input.includes("store1")) {
+                        console.log("STORE1 FUNC", input, processFunc)
+                    // }
                     let val = processFunc?.(
                         ...outputData.map(
                             s=> _nestedValue(_store(s.name)?.value, s.path)
@@ -41,6 +44,7 @@ export function _handleBindSync(el, input, outputData, trigger, mode, processFun
                 let prop = input[i].trim();
                 let value = el[prop] ?? el.getAttribute(prop) ?? el.dataset[prop] ?? undefined;
                 
+                console.log("FUNC", processFunc, value)
                 if(processFunc) value = processFunc?.(value, el);
                 let store = _store(outputData[0]?.name);
                 

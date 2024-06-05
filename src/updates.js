@@ -39,7 +39,8 @@ export function _scheduleUpdate(update) {
     }
 }
 
-function _addSpacer(inEl, wrapper, wrapperHeight, replaceWholeObject = false) {
+function _addSpacer(inEl, wrapper, wrapperHeight, replaceWholeObject = false, ops) {
+    if(!ops.trans?.smartTransition ?? true) return;
     //Conserve parent size
     spacer = document.createElement("div");
     
@@ -50,6 +51,7 @@ function _addSpacer(inEl, wrapper, wrapperHeight, replaceWholeObject = false) {
 }
 
 function _adjustSizing(inEl, ops) {
+    if(!ops.trans?.smartTransition ?? true) return;
     let dur = (ops?.trans?.dur?.[0] || ops?.trans?.dur || 600)/2
 
     _scheduleUpdate(()=> {
@@ -74,7 +76,7 @@ function _runUpdates() {
 
             // Prepend
             if(order.relation == "prepend") {
-                _addSpacer?.(order.in, order.out, wrapperHeight);
+                _addSpacer?.(order.in, order.out, wrapperHeight, false, order.ops);
 
                 //Prepend
                 _applyTransition(order.in, "in", order.ops, ()=> {
@@ -100,7 +102,7 @@ function _runUpdates() {
                     _applyTransition(container, "out", order.ops, undefined, order.out, getDimensionsAfterUpdate);
                 }
 
-                _addSpacer?.(order.in, order.out, wrapperHeight);
+                _addSpacer?.(order.in, order.out, wrapperHeight, false, order.ops);
 
                 // Transition incoming element and append
                 _applyTransition(order.in, "in", order.ops, ()=> {
@@ -155,7 +157,7 @@ function _applyTransition(el, dir, ops, fn, refElement, getDimensionsAfterUpdate
             if(!refElement) refElement = el;
             if(!refElement) return;
             let dimensions = {};
-            if(true && getDimensionsAfterUpdate == false) {
+            if((ops.trans?.smartTransition ?? true) && getDimensionsAfterUpdate == false) {
                 let style = getComputedStyle(refElement);
                 dimensions.w = `calc(${(refElement).clientWidth}px - ${style.paddingLeft} - ${style.paddingRight})`;
                 dimensions.left = `calc(${refElement.getBoundingClientRect().left}px + ${window.scrollX}px)`;
@@ -163,7 +165,7 @@ function _applyTransition(el, dir, ops, fn, refElement, getDimensionsAfterUpdate
             }
 
             _scheduleUpdate(()=> {
-                if(true) {
+                if(ops.trans?.smartTransition ?? true) {
                     if(getDimensionsAfterUpdate && refElement) {
                         let style = getComputedStyle(refElement);
                         dimensions.w = `calc(${(refElement).clientWidth}px - ${style.paddingLeft} - ${style.paddingRight})`;
@@ -178,7 +180,6 @@ function _applyTransition(el, dir, ops, fn, refElement, getDimensionsAfterUpdate
                     el.style.margin = "0";
                 }
 
-                // smartOutro?.size?.(el);
                 if(dur) el.style.transitionDuration = `${dur}ms`;
                 el.classList?.add("out");
             })

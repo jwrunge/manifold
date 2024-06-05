@@ -54,13 +54,13 @@ export default [
         { subfolder: "dev", suffix: "mod", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: true },
         { subfolder: "dev", suffix: "mod", mod: "es", module: true, sourceMaps: true, jsdocTypes: true }
     ]),
-    {
-        input: "src/extras/smartOutro.js",
-        output: {
-            file: "dist/extras/smartOutro.js",
-            format: "es",
-            name: "smartOutro"
-        },
-        plugins: [ terser(terserOps) ]
-    }
+    // {
+    //     input: "src/extras/smartOutro.js",
+    //     output: {
+    //         file: "dist/extras/smartOutro.js",
+    //         format: "es",
+    //         name: "smartOutro"
+    //     },
+    //     plugins: [ terser(terserOps) ]
+    // }
 ];
