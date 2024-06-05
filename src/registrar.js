@@ -10,7 +10,7 @@ import { _handleConditionals } from "./conditionals.js";
 let _ops = {};
 let _commaSepRx = /, {0,}/g;
 let _elIdx = 0;
-let _modes = ["bind", "sync", "if", "get", "head", "post", "put", "delete", "patch"].map(m=> `${ATTR_PREFIX}${m}`);
+let _modes = ["bind", "sync", "if","each", "get", "head", "post", "put", "delete", "patch"].map(m=> `${ATTR_PREFIX}${m}`);
 let pageScripts = new WeakMap();
 let pageStyles = new WeakMap();
 
@@ -52,10 +52,9 @@ export function _registerSubs(parent) {
 
         //Loop over all data attributes (modes)
         for(let mode in el.dataset) {
-            /**
-             * HANDLE CONDITIONALS AND LOOPS
-             */
+            //HANDLE CONDITIONALS AND LOOPS
             if([`${ATTR_PREFIX}if`, `${ATTR_PREFIX}each`].includes(mode)) {
+                console.log("Handling conditionals", mode)
                 _handleConditionals(el, mode, _ops);
                 continue;
             }
@@ -73,6 +72,7 @@ export function _registerSubs(parent) {
                 let processFuncName = funcAndInput.includes("=>") ? funcAndInput : funcAndInput.includes("(") ? funcAndInput.match(/^[^\(]{1,}/)?.[0] || "" : "";
                 let input = processFuncName ? _paramsInParens(funcAndInput.slice(0, (funcAndInput.indexOf(")") || -2) + 1)) : funcAndInput.split(_commaSepRx)?.map(s=> s.trim());
 
+                console.log(setting, processFuncName)
                 //Handle errors
                 if(shouldHaveTriggers && !triggers?.length) return console.error(`No trigger: ${err_detail}.`);
 

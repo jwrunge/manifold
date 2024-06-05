@@ -4,17 +4,79 @@ import { _scheduleUpdate } from "./updates";
 import { _getOpOverrides, _parseFunction, ATTR_PREFIX } from "./util";
 
 /**
+ * @param {HTMLElement} el
+ * @param {HTMLElement} rootElement 
+ * @returns {HTMLElement}
+ */
+function _ensureTemplate(el, rootElement) {
+    // Make sure this is a template
+    if(el.tagName != "TEMPLATE") {
+        let newEl = document.createElement("template");
+        newEl.innerHTML = el.innerHTML;                
+        for(let attr of el.attributes) {
+            newEl.setAttribute(attr.name, attr.value);
+        }
+        el.replaceWith(newEl);
+
+        // If not, it's default content
+        rootElement.innerHTML = el.innerHTML;
+        return newEl;
+    }
+    return el;
+}
+
+/**
+ * @param {any} obj 
+ * @param {(value: any, index: any, array?: any)=> void} cb 
+ */
+function _iterable(obj, cb) {
+    if(obj instanceof Map) for(const [key, value] of obj.entries()) cb(key, value);
+    else {
+        try { 
+            let arr = Array.from(obj);
+            if(arr?.length) arr.forEach(cb);
+            else for(let key in obj) cb(key, obj[key]);
+        }
+        catch(e) { console.error(`${obj} is not iterable`); }
+    }
+  }
+
+/**
+ * @param {string} [storeName] 
+ * @param {string[]} [storeList] 
+ * @param {any[]} [conditionChain] 
+ * @param {number} [upstreamConditionsLen] 
+ * @param {Function} [func] 
+ * @returns 
+ */
+function _registerConditionStore(storeName, storeList, conditionChain, upstreamConditionsLen, func) {
+    // Register new store (to prevent excess evaluations)
+    return _store(storeName || "", {
+        upstream: [...storeList || [], ...conditionChain || []],
+        updater: (list)=> {
+            if(upstreamConditionsLen) {
+                for(let condition of list.slice(-upstreamConditionsLen) || []) {
+                    if(condition) return false;
+                }
+            }
+            return func?.(...list);
+        }
+    });
+}
+
+/**
  * Handle conditional and loop elements
  * @param {HTMLElement} el 
  * @param {string} mode 
  * @param {import("./index.module").MfldOps} _ops 
  */
 export function _handleConditionals(el, mode, _ops) {
+    let ops = _getOpOverrides(_ops, el);
+    let rootElement = document.createElement("div");
+    el.before(rootElement);
+
     if(mode == `${ATTR_PREFIX}if`) {
-        let ops = _getOpOverrides(_ops, el);
-        let rootElement = document.createElement("div");
         rootElement.classList.add("mfld-active-condition");
-        el.before(rootElement);
 
         // Set up conditions
         let siblingPtr = el;
@@ -27,36 +89,15 @@ export function _handleConditionals(el, mode, _ops) {
         });
             if(!storeList && !func) break;
 
-            // Make sure this is a template
-            if(siblingPtr.tagName != "TEMPLATE") {
-                let newEl = document.createElement("template");
-                newEl.innerHTML = siblingPtr.innerHTML;                
-                for(let attr of siblingPtr.attributes) {
-                    newEl.setAttribute(attr.name, attr.value);
-                }
-                siblingPtr.replaceWith(newEl);
-                siblingPtr = newEl;
+            // Ensure template
+            siblingPtr = _ensureTemplate(siblingPtr, rootElement);
 
-                // If not, it's default content
-                rootElement.innerHTML = siblingPtr.innerHTML;
-            }
-
-            // Register new store (to prevent excess evaluations)
+            // Register condition store
             let upstreamConditionsLen = conditionChain.length;
-            let conditionStore = _store(storeName || "", {
-                upstream: [...storeList || [], ...conditionChain],
-                updater: (list)=> {
-                    if(upstreamConditionsLen) {
-                        for(let condition of list.slice(-upstreamConditionsLen) || []) {
-                            if(condition) return false;
-                        }
-                    }
-                    return func?.(...list.slice(0, -1));
-                }
-            });
-
+            let conditionStore = _registerConditionStore(storeName, storeList, conditionChain, upstreamConditionsLen, func);
             conditionChain.push(conditionStore.name);
 
+            // Subscribe
             let siblingClone = /** @type {HTMLElement}*/(siblingPtr.cloneNode(true));
             conditionStore?.sub(val=> {
                 if(!val) return;
@@ -76,7 +117,33 @@ export function _handleConditionals(el, mode, _ops) {
             siblingPtr = /** @type {HTMLElement} */(siblingPtr?.nextElementSibling);
         }
     }
-    else {
-        alert("Not set up for loops yet")
+
+    if(mode == `${ATTR_PREFIX}each`) {
+        rootElement.classList.add("mfld-loop-result");
+
+        let [ funcStr, aliases ] = el.dataset[`${ATTR_PREFIX}each`]?.split("as")?.map(s=> s.trim()) || [];
+        let [ valueName, keyName ] = aliases.split(/\s{0,},\s{0,}/)?.map(s=> s.trim()) || ["value", "key"];
+        let { storeList, func, storeName } = _parseFunction(funcStr);
+
+        // Ensure template
+        el = _ensureTemplate(el, rootElement);
+
+        // Register condition store
+        let conditionStore = _registerConditionStore(`LOOP:${storeName}`, storeList, [], 0, func);
+        conditionStore?.sub(val=> {
+            rootElement.replaceChildren();
+            _iterable(val || [], (key, value)=> {
+                let item = document.createElement("div");
+                item.innerHTML = el.innerHTML.replace(`\${${keyName}}`, key).replace(`\${${valueName}}`, value);
+                
+                _scheduleUpdate({
+                    in: item,
+                    out: rootElement,
+                    relation: "append",
+                    ops,
+                    done: ((el) => _registerSubs(el))
+                });
+            });
+        })
     }
 }

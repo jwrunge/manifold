@@ -35,14 +35,32 @@ export function _getStorePathFromKey(s) {
  * @returns {import("./index.module").MfldOps}
  */
 export function _getOpOverrides(ops, el) {
-    let overrides = el.dataset[`${ATTR_PREFIX}overrides`] || "{}";
-    let overrideOps = ops.profiles?.[overrides]?.fetch || JSON.parse(overrides);
+    let overrides = ["overrides", "fetch", "trans", "transdur", "transswap", "transclass", "responseType"].map(o=> {
+        if(o == "overrides") return ops.profiles?.[overrides]?.fetch || JSON.parse(overrides);
+        return JSON.parse(el.dataset[`${ATTR_PREFIX}${o}`] || "{}")
+    })
 
-    /** @type {import("./index.module").MfldOps} */
-    return overrideOps ? {
-        ...ops,
-        ...overrideOps,
-    } : ops;
+    return {
+        profiles: ops.profiles,
+        fetch: {
+            ...ops.fetch,
+            ...{
+                responseType: overrides?.[6]
+            },
+            ...(overrides?.[0]?.fetch || {}),
+            ...(overrides?.[1] || {}),
+        },
+        trans: {
+            ...ops.trans,
+            ...{
+                duration: overrides?.[3],
+                swap: overrides?.[4],
+                class: overrides?.[5],
+            },
+            ...(overrides?.[0]?.trans || {}),
+            ...(overrides?.[2] || {}),
+        },
+    }
 }
 
 /**
@@ -54,6 +72,7 @@ export function _parseFunction(data) {
     let storeName = "";
     if(typeof data === "string") {
         condition = data;
+        storeName = data;
     }
     else {
         condition = data?.el?.dataset?.[data?.datakey] || "";
@@ -76,7 +95,15 @@ export function _parseFunction(data) {
     // Set up function to evaluate store values
     let storeList = stores?.split(",")?.map(s=> s.replace(/[()]/g, "").trim());
     // @ts-ignore
-    let func = globalThis[fn] || MfFn?.get(fn) || new Function(...storeList, fn);
+    let func = globalThis[fn] || MfFn?.get(fn);
+
+    // If function is not found, try to create it; account for implicit returns
+    if(!func) {
+        if(!fn.match(/^\s{0,}\{/) && !fn.includes("return")) fn = fn.replace(/^\s{0,}/, "return ");
+        func = new Function(...storeList, fn);
+    }
+
+    console.log(func)
 
     return { storeList, func, storeName };
 }

@@ -1,24 +1,24 @@
 let t,e=[],n=!1,i=[],o="",r=globalThis?.requestAnimationFrame||(t=>setTimeout(t,0))
-function l(t){e.push(t),n||(n=!0,r(a))}function s(e,n,i,r=!1,l){if(!l.trans?.smartTransition??1)return
+function s(t){e.push(t),n||(n=!0,r(f))}function l(e,n,i,r=!1,s){if(!s.trans?.smartTransition??1)return
 t=document.createElement("div")
-let{paddingTop:s,paddingBottom:f}=n instanceof Element?window.getComputedStyle(n):{paddingTop:0,paddingBottom:0}
-o=t.style.height=`calc(${Math.abs(i-(e?.clientHeight||0))}px - ${s} - ${f})`,n?.after(t)}function f(e,n){if(!n.trans?.smartTransition??1)return
+let{paddingTop:l,paddingBottom:a}=n instanceof Element?window.getComputedStyle(n):{paddingTop:0,paddingBottom:0}
+o=t.style.height=`calc(${Math.abs(i-(e?.clientHeight||0))}px - ${l} - ${a})`,n?.after(t)}function a(e,n){if(!n.trans?.smartTransition??1)return
 let i=(n?.trans?.dur?.[0]||n?.trans?.dur||600)/2
-l((()=>{t?.remove(),e?.animate?.([{height:o},{height:`${e.clientHeight||0}px`}],i)}))}function a(){n=!1
+s((()=>{t?.remove(),e?.animate?.([{height:o},{height:`${e.clientHeight||0}px`}],i)}))}function f(){n=!1
 for(let t of e)if("function"==typeof t)t()
 else{let e=t.out?t.out.clientHeight:0
-if("prepend"==t.relation)s?.(t.in,t.out,e,!1,t.ops),u(t.in,"in",t.ops,(()=>{t.in&&t.out?.prepend(t.in),f?.(t.in,t.ops)}))
+if("prepend"==t.relation)l?.(t.in,t.out,e,!1,t.ops),u(t.in,"in",t.ops,(()=>{t.in&&t.out?.prepend(t.in),a?.(t.in,t.ops)}))
 else{if(["swapinner","swapouter"].includes(t.relation)){let e=t.out?.cloneNode(!0)
 t.out?.after(e)
 let n="swapinner"==t.relation
-"swapinner"==t.relation&&(e.style.border="none",t.out.replaceChildren()),u(e,"out",t.ops,void 0,t.out,n)}s?.(t.in,t.out,e,!1,t.ops),u(t.in,"in",t.ops,(()=>{t.in&&("swapouter"==t.relation?t.out?.replaceWith(t.in):t.out?.appendChild(t.in)),f?.(t.in,t.ops)}))}t.done?.(t.in)}i.forEach((t=>t())),i=[],e=[]}function u(t,e,n,i,o,r=!1){if(t?.nodeType==Node.TEXT_NODE){let e=t.textContent,n=document?.createElement("div")
-n.textContent=e,t.replaceWith(n),t=n}if(t){let s=Array.isArray(n.trans?.dur)?n.trans?.dur["in"==e?0:1]||n.trans?.dur[0]:n.trans?.dur||0,f=n?.trans?.class||"mf-trans"
-if(t?.classList?.add(f),n.trans?.hooks?.[`${e}-start`]?.(t),"out"==e){if(o||(o=t),!o)return
+"swapinner"==t.relation&&(e.style.border="none",t.out.replaceChildren()),u(e,"out",t.ops,void 0,t.out,n)}l?.(t.in,t.out,e,!1,t.ops),u(t.in,"in",t.ops,(()=>{t.in&&("swapouter"==t.relation?t.out?.replaceWith(t.in):t.out?.appendChild(t.in)),a?.(t.in,t.ops)}))}t.done?.(t.in)}i.forEach((t=>t())),i=[],e=[]}function u(t,e,n,i,o,r=!1){if(t?.nodeType==Node.TEXT_NODE){let e=t.textContent,n=document?.createElement("div")
+n.textContent=e,t.replaceWith(n),t=n}if(t){let l=Array.isArray(n.trans?.dur)?n.trans?.dur["in"==e?0:1]||n.trans?.dur[0]:n.trans?.dur||0,a=n?.trans?.class||"mf-trans"
+if(t?.classList?.add(a),n.trans?.hooks?.[`${e}-start`]?.(t),"out"==e){if(o||(o=t),!o)return
 let e={}
 if((n.trans?.smartTransition??1)&&0==r){let t=getComputedStyle(o)
-e.w=`calc(${o.clientWidth}px - ${t.paddingLeft} - ${t.paddingRight})`,e.left=`calc(${o.getBoundingClientRect().left}px + ${window.scrollX}px)`,e.top=`calc(${o.getBoundingClientRect().top}px + ${window.scrollY}px)`}l((()=>{if(n.trans?.smartTransition??1){if(r&&o){let t=getComputedStyle(o)
-e.w=`calc(${o.clientWidth}px - ${t.paddingLeft} - ${t.paddingRight})`,e.left=`calc(${o.getBoundingClientRect().left}px + ${window.scrollX}px)`,e.top=`calc(${o.getBoundingClientRect().top}px + ${window.scrollY}px)`}t.style.position="fixed",t.style.width=e.w,t.style.left=e.left,t.style.top=e.top,t.style.margin="0"}s&&(t.style.transitionDuration=`${s}ms`),t.classList?.add("out")}))}else t?.classList?.add("in"),s&&(t.style.transitionDuration=`${s}ms`),i?.(),setTimeout((()=>{l((()=>{setTimeout((()=>l((()=>t?.classList?.remove(e)))),0)}))}),n.trans?.swap||0)
-setTimeout((()=>{l((()=>{"out"==e&&t?.remove(),t?.classList?.remove(f),n.trans?.hooks?.[`${e}-end`]?.(t)}))}),s+("in"==e&&n.trans?.swap||0))}}function c(t){if(!t)return 0
+e.w=`calc(${o.clientWidth}px - ${t.paddingLeft} - ${t.paddingRight})`,e.left=`calc(${o.getBoundingClientRect().left}px + ${window.scrollX}px)`,e.top=`calc(${o.getBoundingClientRect().top}px + ${window.scrollY}px)`}s((()=>{if(n.trans?.smartTransition??1){if(r&&o){let t=getComputedStyle(o)
+e.w=`calc(${o.clientWidth}px - ${t.paddingLeft} - ${t.paddingRight})`,e.left=`calc(${o.getBoundingClientRect().left}px + ${window.scrollX}px)`,e.top=`calc(${o.getBoundingClientRect().top}px + ${window.scrollY}px)`}t.style.position="fixed",t.style.width=e.w,t.style.left=e.left,t.style.top=e.top,t.style.margin="0"}l&&(t.style.transitionDuration=`${l}ms`),t.classList?.add("out")}))}else t?.classList?.add("in"),l&&(t.style.transitionDuration=`${l}ms`),i?.(),setTimeout((()=>{s((()=>{setTimeout((()=>s((()=>t?.classList?.remove(e)))),0)}))}),n.trans?.swap||0)
+setTimeout((()=>{s((()=>{"out"==e&&t?.remove(),t?.classList?.remove(a),n.trans?.hooks?.[`${e}-end`]?.(t)}))}),l+("in"==e&&n.trans?.swap||0))}}function c(t){if(!t)return 0
 if("number"==typeof t)return t
 if(!0===t)return 1
 if(t instanceof Map)return c(Array.from(t.entries()))
@@ -33,61 +33,70 @@ l
 u=new Set
 constructor(t,e){return this.p(t,e)}p(t,e){return this.name=t,MfSt.set(t,this),this.l=new Set(e?.upstream?.map((t=>p(t)))||[]),this.l.forEach((t=>t?.u?.add(this))),this.value=e?.value,this.t=e?.updater,this}sub(t,e,n=!0){this.i.set(e||String(Date.now()+Math.random()),t),n&&t?.(this.value)}async update(t){return new Promise((async e=>{let n="function"==typeof t?(await t)?.(this.value):t,i=c(n)
 if(i!==this.o){this.value=n,this.o=i
-for(let t of this.u)await t.h()
-l((()=>{for(let[t,e]of this?.i||[])e?.(this.value,t)
-e(this.value)}))}else e(this.value)}))}async h(){let t=await(this.t?.(Array.from(this.l)?.map((t=>t?.value))||[],this?.value))
+for(let t of this.u)await t.$()
+s((()=>{for(let[t,e]of this?.i||[])e?.(this.value,t)
+e(this.value)}))}else e(this.value)}))}async $(){let t=await(this.t?.(Array.from(this.l)?.map((t=>t?.value))||[],this?.value))
 await this.update(void 0===t?this.value:t)}}function p(t,e){let n=MfSt.get(t)
-return e?n?n.p(t,e):new d(t,e):n||new d(t,e)}let h="mf",$=/[\.\[\]\?]{1,}/g
+return e?n?n.p(t,e):new d(t,e):n||new d(t,e)}let $="mf",h=/[\.\[\]\?]{1,}/g
 function m(t,e,n){let i=t
 for(let t of e)null==i&&(i="number"==typeof t?[]:{}),null==n||e[e.length-1]!==t?i=i instanceof Map?i?.get(t):i?.[t]:i instanceof Map?i.set(t,n):i[t]=n
-return i}function w(t){let[e,...n]=t?.split($)
-return[e,n?.map((t=>isNaN(parseInt(t))?t:parseInt(t))).filter((t=>t))||[]]}function g(t,e){let n=e.dataset[`${h}overrides`]||"{}",i=t.profiles?.[n]?.fetch||JSON.parse(n)
-return i?{...t,...i}:t}function y(t){let e="",n=""
-if("string"==typeof t?e=t:(e=t?.el?.dataset?.[t?.datakey]||"",n=e,e||void 0===t?.el?.dataset?.[`${h}else`]||(e="return true",n=`ELSE:${t?.el?.dataset?.[t?.datakey]||""}`)),!e)return{}
+return i}function w(t){let[e,...n]=t?.split(h)
+return[e,n?.map((t=>isNaN(parseInt(t))?t:parseInt(t))).filter((t=>t))||[]]}function g(t,e){let n=["overrides","fetch","trans","transdur","transswap","transclass","responseType"].map((i=>"overrides"==i?t.profiles?.[n]?.fetch||JSON.parse(n):JSON.parse(e.dataset[`${$}${i}`]||"{}")))
+return{profiles:t.profiles,fetch:{...t.fetch,responseType:n?.[6],...n?.[0]?.fetch||{},...n?.[1]||{}},trans:{...t.trans,duration:n?.[3],swap:n?.[4],class:n?.[5],...n?.[0]?.trans||{},...n?.[2]||{}}}}function y(t){let e="",n=""
+if("string"==typeof t?(e=t,n=t):(e=t?.el?.dataset?.[t?.datakey]||"",n=e,e||void 0===t?.el?.dataset?.[`${$}else`]||(e="return true",n=`ELSE:${t?.el?.dataset?.[t?.datakey]||""}`)),!e)return{}
 let[i,o]=e?.split("=>")?.map((t=>t.trim()))||["",""]
 o||(o=i.slice(),i="")
-let r=i?.split(",")?.map((t=>t.replace(/[()]/g,"").trim()))
-return{storeList:r,func:globalThis[o]||MfFn?.get(o)||new Function(...r,o),storeName:n}}function v(t,e,n,i,o,r){let s=async e=>{e?.preventDefault(),e?.stopPropagation()
-let s=g(n,t)
-o||(o=(e?.target)?.method||"get"),s?.fetch?.externals?.find((t=>i?.startsWith(t.domain)))||!i.match(/^https?:\/\//)||i.includes(location.origin)
-let f=await fetch(i,{...s?.fetch?.request||{},method:o,body:"string"==typeof r?r:JSON.stringify(r)}).catch((t=>{s?.fetch?.err?.(t)})),a=f?.status
-if(a&&0==s?.fetch?.onCode?.(a,f))return
-let u=await(f?.[s?.fetch?.type||"text"]())
-s?.fetch?.cb?.(u)
-for(let e of["append","prepend","swapinner","swapouter"]){let n=t.dataset[`${h}${e}`]
+let r=i?.split(",")?.map((t=>t.replace(/[()]/g,"").trim())),s=globalThis[o]||MfFn?.get(o)
+return s||(o.match(/^\s{0,}\{/)||o.includes("return")||(o=o.replace(/^\s{0,}/,"return ")),s=new Function(...r,o)),console.log(s),{storeList:r,func:s,storeName:n}}function v(t,e,n,i,o,r){let l=async e=>{e?.preventDefault(),e?.stopPropagation()
+let l=g(n,t)
+o||(o=(e?.target)?.method||"get"),l?.fetch?.externals?.find((t=>i?.startsWith(t.domain)))||!i.match(/^https?:\/\//)||i.includes(location.origin)
+let a=await fetch(i,{...l?.fetch?.request||{},method:o,body:"string"==typeof r?r:JSON.stringify(r)}).catch((t=>{l?.fetch?.err?.(t)})),f=a?.status
+if(f&&0==l?.fetch?.onCode?.(f,a))return
+let u=await(a?.[l?.fetch?.responseType||"text"]())
+l?.fetch?.cb?.(u)
+for(let e of["append","prepend","swapinner","swapouter"]){let n=t.dataset[`${$}${e}`]
 if(void 0===n)continue
 let[i,o]=n?.split("->").map((t=>t.trim()))||[],r=(new DOMParser)?.parseFromString?.(u,"text/html")
-r&&l({in:r.querySelector(i||"body"),out:o?document.querySelector(o):t,relation:e,ops:s,done:t=>{_(t)}})}t.dataset?.[`${h}resolve`]&&alert("RESOLVING")}
-"$mount"==e?s():t.addEventListener(e,s)}function T(t,e,n,i,o,r){if(o==`${h}bind`){let o=e.map(w),s=()=>{l((()=>{let e=o.map((t=>m(p(t[0])?.value,t[1]))),l=r?.(...e,t)??e[0]
-n&&void 0!==l&&(t[n]=l),t.dispatchEvent(new CustomEvent(i))}))}
-for(let e of o)p(e?.[0]||"")?.sub(s,t.id)}else if(o==`${h}sync`){let[o,l]=w(n||""),s=()=>{let n=e.map((e=>(e=e.trim(),t[e]??t.getAttribute(e)??t.dataset[e]??void 0))),i=r?.(...n)??n[0]
-o&&void 0!==i&&p(o)?.update?.((t=>l?.length?m(t,l,i):i))}
-"$mount"==i?s():t.addEventListener(i,s)}}function b(t,e,n){if(e==`${h}if`){let i=g(n,t),o=document.createElement("div")
-o.classList.add("mfld-active-condition"),t.before(o)
-let r=t,s=[]
-for(;r&&r;){let{storeList:t,func:n,storeName:f}=y({el:r,datakey:s.length?`${h}elseif`:e})
-if(!t&&!n)break
-if("TEMPLATE"!=r.tagName){let t=document.createElement("template")
-t.innerHTML=r.innerHTML
-for(let e of r.attributes)t.setAttribute(e.name,e.value)
-r.replaceWith(t),r=t,o.innerHTML=r.innerHTML}let a=s.length,u=p(f||"",{upstream:[...t||[],...s],updater:t=>{if(a)for(let e of t.slice(-a)||[])if(e)return!1
-return n?.(...t.slice(0,-1))}})
-s.push(u.name)
-let c=r.cloneNode(!0)
-u?.sub((t=>{if(!t)return
+r&&s({in:r.querySelector(i||"body"),out:o?document.querySelector(o):t,relation:e,ops:l,done:t=>{_(t)}})}t.dataset?.[`${$}resolve`]&&alert("RESOLVING")}
+"$mount"==e?l():t.addEventListener(e,l)}function T(t,e,n,i,o,r){if(o==`${$}bind`){let o=e.map(w),l=()=>{s((()=>{let e=o.map((t=>m(p(t[0])?.value,t[1]))),s=r?.(...e,t)??e[0]
+n&&void 0!==s&&(t[n]=s),t.dispatchEvent(new CustomEvent(i))}))}
+for(let e of o)p(e?.[0]||"")?.sub(l,t.id)}else if(o==`${$}sync`){let[o,s]=w(n||""),l=()=>{let n=e.map((e=>(e=e.trim(),t[e]??t.getAttribute(e)??t.dataset[e]??void 0))),i=r?.(...n)??n[0]
+o&&void 0!==i&&p(o)?.update?.((t=>s?.length?m(t,s,i):i))}
+"$mount"==i?l():t.addEventListener(i,l)}}function b(t,e){if("TEMPLATE"!=t.tagName){let n=document.createElement("template")
+n.innerHTML=t.innerHTML
+for(let e of t.attributes)n.setAttribute(e.name,e.value)
+return t.replaceWith(n),e.innerHTML=t.innerHTML,n}return t}function M(t,e,n,i,o){return p(t||"",{upstream:[...e||[],...n||[]],updater:t=>{if(i)for(let e of t.slice(-i)||[])if(e)return!1
+return o?.(...t)}})}function x(t,e,n){let i=g(n,t),o=document.createElement("div")
+if(t.before(o),e==`${$}if`){o.classList.add("mfld-active-condition")
+let n=t,r=[]
+for(;n&&n;){let{storeList:t,func:l,storeName:a}=y({el:n,datakey:r.length?`${$}elseif`:e})
+if(!t&&!l)break
+n=b(n,o)
+let f=M(a,t,r,r.length,l)
+r.push(f.name)
+let u=n.cloneNode(!0)
+f?.sub((t=>{if(!t)return
 let e=document.createElement("div")
-e.innerHTML=c.innerHTML,"TEMPLATE"==c?.tagName&&l({in:e,out:o,relation:"swapinner",ops:i,done:t=>_(t)})})),r=r?.nextElementSibling}}else alert("Not set up for loops yet")}let M={},x=/, {0,}/g,S=0,N=["bind","sync","if","get","head","post","put","delete","patch"].map((t=>`${h}${t}`))
-function E(t,e){e?M.profiles={...M.profiles,[e]:t}:M={...M,...t}}function _(t){let e=(t||document.body).querySelectorAll(`[data-${N.join("],[data-")}]${0!=M.fetch?.auto?",a":""}`)||[]
-for(let t of e){t.id||(t.id=""+S++)
-for(let e in t.dataset){if([`${h}if`,`${h}each`].includes(e)){b(t,e,M)
-continue}if(!N.includes(e))continue
-let n=![`${h}bind`].includes(e),i=`(#${t.id} on ${e})`
-t.dataset?.[e]?.split(";").forEach((o=>{let[r,l]=o?.split("->")?.map((t=>t.trim()))||[],s=n?A(r.slice(0,r.indexOf(")"))):[],f=n?r.slice(r.indexOf(")")+1):r,a=f.includes("=>")?f:f.includes("(")&&f.match(/^[^\(]{1,}/)?.[0]||"",u=a?A(f.slice(0,(f.indexOf(")")||-2)+1)):f.split(x)?.map((t=>t.trim()))
-if(n&&!s?.length)return console.error(`No trigger: ${i}.`)
-let c=y(a)?.func
-a?c||console.warn(`"${a}" not registered: ${i}`):u.length>1&&console.warn(`Multiple inputs without function: ${i}`),s?.length||(s=[""])
-for(let n of s)e.match(/bind|sync/)?T(t,u,l,n,e,c):v(t,n,M,u[0],e.replace(h,""),l)}))}}}function A(t){if(t?.includes("(")){let e=t.match(/[^\(\)]{1,}/g)
-t=e?.[e.length-1]||""}return t?.split(x)?.map((t=>t.trim()))||[]}let L={store:(store_name,store_ops)=>(store_ops?.hasOwnProperty("value")||store_ops?.hasOwnProperty("updater")||(store_ops={value:store_ops}),p(store_name,store_ops)),ustore:(store_name,store_ops)=>p(store_name,store_ops),get:store_name=>p(store_name),func:func_name=>MfFn?.get(func_name),funcs:funcs=>{for(let t in funcs)MfFn.set(t,funcs[t])},config:(new_ops,profile_name)=>E(new_ops,profile_name),onTick:t=>{var e;(e=t)&&i.push(e)},register:t=>{"string"==typeof t&&(t=document.querySelector(t)),_(t)}}
-globalThis.Mfld=L
-let O=globalThis.document?.currentScript?.dataset||{}
-if(O?.config)try{E(JSON.parse(O?.config))}catch(t){console.warn("Invalid Mfld params",t)}O?.init&&_(document.querySelector(O.init))
+e.innerHTML=u.innerHTML,"TEMPLATE"==u?.tagName&&s({in:e,out:o,relation:"swapinner",ops:i,done:t=>_(t)})})),n=n?.nextElementSibling}}if(e==`${$}each`){o.classList.add("mfld-loop-result")
+let[e,n]=t.dataset[`${$}each`]?.split("as")?.map((t=>t.trim()))||[],[r,l]=n.split(/\s{0,},\s{0,}/)?.map((t=>t.trim()))||["value","key"],{storeList:a,func:f,storeName:u}=y(e)
+t=b(t,o)
+let c=M(`LOOP:${u}`,a,[],0,f)
+c?.sub((e=>{o.replaceChildren(),function(t,e){if(t instanceof Map)for(const[n,i]of t.entries())e(n,i)
+else try{let n=Array.from(t)
+if(n?.length)n.forEach(e)
+else for(let n in t)e(n,t[n])}catch(e){console.error(`${t} is not iterable`)}}(e||[],((e,n)=>{let a=document.createElement("div")
+a.innerHTML=t.innerHTML.replace(`\${${l}}`,e).replace(`\${${r}}`,n),s({in:a,out:o,relation:"append",ops:i,done:t=>_(t)})}))}))}}let S={},N=/, {0,}/g,E=0,L=["bind","sync","if","each","get","head","post","put","delete","patch"].map((t=>`${$}${t}`))
+function O(t,e){e?S.profiles={...S.profiles,[e]:t}:S={...S,...t}}function _(t){let e=(t||document.body).querySelectorAll(`[data-${L.join("],[data-")}]${0!=S.fetch?.auto?",a":""}`)||[]
+for(let t of e){t.id||(t.id=""+E++)
+for(let e in t.dataset){if([`${$}if`,`${$}each`].includes(e)){console.log("Handling conditionals",e),x(t,e,S)
+continue}if(!L.includes(e))continue
+let n=![`${$}bind`].includes(e),i=`(#${t.id} on ${e})`
+t.dataset?.[e]?.split(";").forEach((o=>{let[r,s]=o?.split("->")?.map((t=>t.trim()))||[],l=n?A(r.slice(0,r.indexOf(")"))):[],a=n?r.slice(r.indexOf(")")+1):r,f=a.includes("=>")?a:a.includes("(")&&a.match(/^[^\(]{1,}/)?.[0]||"",u=f?A(a.slice(0,(a.indexOf(")")||-2)+1)):a.split(N)?.map((t=>t.trim()))
+if(console.log(o,f),n&&!l?.length)return console.error(`No trigger: ${i}.`)
+let c=y(f)?.func
+f?c||console.warn(`"${f}" not registered: ${i}`):u.length>1&&console.warn(`Multiple inputs without function: ${i}`),l?.length||(l=[""])
+for(let n of l)e.match(/bind|sync/)?T(t,u,s,n,e,c):v(t,n,S,u[0],e.replace($,""),s)}))}}}function A(t){if(t?.includes("(")){let e=t.match(/[^\(\)]{1,}/g)
+t=e?.[e.length-1]||""}return t?.split(N)?.map((t=>t.trim()))||[]}let P={store:(store_name,store_ops)=>(store_ops?.hasOwnProperty("value")||store_ops?.hasOwnProperty("updater")||(store_ops={value:store_ops}),p(store_name,store_ops)),ustore:(store_name,store_ops)=>p(store_name,store_ops),get:store_name=>p(store_name),func:func_name=>MfFn?.get(func_name),funcs:funcs=>{for(let t in funcs)MfFn.set(t,funcs[t])},config:(new_ops,profile_name)=>O(new_ops,profile_name),onTick:t=>{var e;(e=t)&&i.push(e)},register:t=>{"string"==typeof t&&(t=document.querySelector(t)),_(t)}}
+globalThis.Mfld=P
+let k=globalThis.document?.currentScript?.dataset||{}
+if(k?.config)try{O(JSON.parse(k?.config))}catch(t){console.warn("Invalid Mfld params",t)}k?.init&&_(document.querySelector(k.init))

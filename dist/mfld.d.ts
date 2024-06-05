@@ -1,5 +1,5 @@
 declare module "mfld.mod" {
-    export { A as Mfld };
+    export { O as Mfld };
     /**
      * !
      */
@@ -32,7 +32,7 @@ declare module "mfld.mod" {
         /**
          * - Response type (default: "text")
          */
-        type?: "json" | "text";
+        responseType?: "json" | "text";
         /**
          * - Callback function - run on successful fetch; *val* is the un-parsed response body
          */
@@ -137,7 +137,7 @@ declare module "mfld.mod" {
      * !
      */
     export type MfldFunc = Function;
-    namespace A {
+    namespace O {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*

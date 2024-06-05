@@ -55,7 +55,7 @@ export function _handleFetch(el, trigger, _ops, href, method, input) {
         if(code && fetchOps?.fetch?.onCode?.(code, data) == false) return;
 
         //Return JSON or text in callback
-        let resp = await data?.[fetchOps?.fetch?.type || "text"]();
+        let resp = await data?.[fetchOps?.fetch?.responseType || "text"]();
         fetchOps?.fetch?.cb?.(resp);
 
         // Handle resolutions

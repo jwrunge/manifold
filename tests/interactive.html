@@ -9,7 +9,7 @@
 <body>
   <h1>Reactivity test - IIFE</h1>
 
-  <p>This is an example of dynamic text! The current store value is: <span data-mfBind="(store1)=>return store1->innerText">Here is a default value.</span></p>
+  <p>This is an example of dynamic text! The current store value is: <span data-mfBind="(store1)=> store1.toUpperCase()->innerText">Here is a default value.</span></p>
   <p>Here is text that can be HTML: <span data-mfBind="store1->innerHTML">Here is a default value.</span></p>
   <p>Store 2 nested: <span data-mfBind="store2.values[1]->innerHTML">Here is a default value.</span></p>
   <!-- <p>Checkbox set to checked? <span data-mfBind="store2.values[0]->innerText"></span></p>
@@ -24,17 +24,17 @@
     <label>Bind only:</label> <input data-mfBind="store1->value">
     <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-mfBind="store1->checked" data-mfSync="on(change) checked->checkedStore">
     <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-mfBind="isChecked(store1)->checked">
-
-    <!-- Select (with dynamic options) -->
+    
+    <!-- Select (with dynamic options) ->
     <label>Dyn select</label>
     <select data-mfBind="store1->value" data-mfSync="on(change) value->store1">
-      <!-- Dynamic frontend replace -->
-      <template id="select-ops" data-mfeach="store1 as letter, index">
-        <!-- Dynamic options -->
+      <!- Dynamic frontend replace ->
+      <template id="select-ops" data-mfeach="(store1)=> store1 as letter, index">
+        <!- Dynamic options ->
         <option value="${letter}">${index}: ${letter}</option>
       </template>
 
-      <!-- Default / fallback options (replaced if dynamic options work) -->
+      <!- Default / fallback options (replaced if dynamic options work) ->
       <mf-default data-mftemplate="select-ops">
         <option value="" default>Blank</option>
         <option value="My text">Initial Value</option>
@@ -42,19 +42,23 @@
         <option value="We're at 4k">Show 4k text</option>
       </mf-default>
 
-      <!-- Always-present options -->
+      <!- Always-present options ->
       <option value="Last one">Last one</option>
     </select>
 
     <label>Dyn div</label>
-    <!-- <mf-default data-mfif="showDiv(store1)">
+    <!- <mf-default data-mfif="showDiv(store1)">
       Div is shown.
     </mf-default>
     <template data-mfelse-if="showDiv(store1)">Else if</template>
     <template data-mfelse>Else</template> -->
   </div>
 
-  <div data-mfif="(store1, store3)=> return store1 == 'Last one' || store3 == 'three' ">
+  <template data-mfEach="(store1)=> store1 as letter, index">
+    <div>This is letter ${index}: ${letter}</div>
+  </template>
+
+  <div data-mfif="(store1, store3)=> return store1 == 'Last one' || store3 == 'three'">
     ,/;mn bk,jbbkkjlbikujbuibbbbbbbb
   </div>
   <template data-mfelseif='(store1)=> return store1 == "We&#39;re at 4k"'>
