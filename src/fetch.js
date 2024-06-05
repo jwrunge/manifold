@@ -8,11 +8,11 @@ import { _registerSubs } from "./registrar.js";
  * @param {HTMLElement} el 
  * @param {string} trigger 
  * @param {MfldOps} _ops
+ * @param {string} href
  * @param {string} [method] 
  * @param {BodyInit | null} [input]
- * @param {string} [href]
  */
-export function _handleFetch(el, trigger, _ops, method, input, href) {
+export function _handleFetch(el, trigger, _ops, href, method, input) {
     /**
      * @param {Event} [e]
      */
@@ -21,12 +21,6 @@ export function _handleFetch(el, trigger, _ops, method, input, href) {
         e?.stopPropagation();
 
         let fetchOps = _getOpOverrides(_ops, el);
-
-        // If no input data was provided, it's the href; use fetchOps.body if it exists (input overrides this)
-        if(!href) {
-            href = typeof input == "string" ? structuredClone(input) : null || /** @type {string} */(/** @type {any}*/(e?.target)?.href);
-            input = fetchOps?.fetch?.request?.body;
-        }
 
         // Set from target element if relevant; fall back to "get"
         if(!method) method = /** @type {any}*/(e?.target)?.method || "get";

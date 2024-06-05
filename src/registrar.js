@@ -67,58 +67,27 @@ export function _registerSubs(parent) {
             //Loop over provided settings
             el.dataset?.[mode]?.split(";").forEach(setting=> {
                 //Break out settings
-                let fnText = setting?.match(/\([\w ,]{0,}\)\s{0,}=>\s{0,}[\w ,]{0,}/)?.[0] || "";
-                if(fnText) setting = setting.replace(fnText, fnText.match(/\([\w ,]+\)/)?.[0] || "");
-                let _parts = setting?.split(/(?:(?:\)|->) ?){1,}/g) || []; 
-                console.log(_parts)
-        
-                //Extract settings
-                let triggers = shouldHaveTriggers ? _paramsInParens(_parts.splice(0,1)[0]) : [];
-                let processFuncName = fnText ? fnText : _parts[0]?.includes("(") ? _parts[0]?.match(/^[^\(]{1,}/)?.[0] || "" : "";
-                let output = _paramsInParens(_parts.splice(mode == `${ATTR_PREFIX}sync` ? 1 : 0, 1)[0]);
-                let input = _paramsInParens(_parts[0]);
+                let [sourceParts, output] = setting?.split("->")?.map(s=> s.trim()) || [];
+                let triggers = shouldHaveTriggers ? _paramsInParens(sourceParts.slice(0, sourceParts.indexOf(")"))) : [];
+                let funcAndInput = shouldHaveTriggers ? sourceParts.slice(sourceParts.indexOf(")") + 1) : sourceParts;
+                let processFuncName = funcAndInput.includes("=>") ? funcAndInput : funcAndInput.includes("(") ? funcAndInput.match(/^[^\(]{1,}/)?.[0] || "" : "";
+                let input = processFuncName ? _paramsInParens(funcAndInput.slice(0, (funcAndInput.indexOf(")") || -2) + 1)) : funcAndInput.split(_commaSepRx)?.map(s=> s.trim());
 
                 //Handle errors
-                if(shouldHaveTriggers && !triggers?.length) {
-                    console.error(`No trigger: ${err_detail}.`)
-                    return;
-                }
+                if(shouldHaveTriggers && !triggers?.length) return console.error(`No trigger: ${err_detail}.`);
 
                 /** @type {Function | undefined} */
-
                 let processFunc = _parseFunction(processFuncName)?.func;
                 if(processFuncName) {
-                    // @ts-ignore
                     if(!processFunc) console.warn(`"${processFuncName}" not registered: ${err_detail}`);
-                    if(((!shouldHaveTriggers && output.length > 1))) {
-                        console.error(`Multiple sources: ${err_detail}`);
-                        return;
-                    }
                 }
-
-                //Map output names and paths
-                let outputData = output.map((ext)=> {
-                    let [ name, ...sourcePathArr ] = ext.split(/[\.\[\]\?]{1,}/g);
-                    return {
-                        name,
-                        path: sourcePathArr.map(sp=> !isNaN(parseInt(sp)) 
-                            ? parseInt(sp) 
-                            : sp)
-                            .filter(sp=> sp) /** @type {(string | number)[]} */
-                    }
-                });
+                else if(input.length > 1) console.warn(`Multiple inputs without function: ${err_detail}`);
 
                 //Loop over triggers
                 if(!triggers?.length) triggers = [""]
                 for(let trigger of triggers) {
-                    // HANDLE BIND AND SYNC
-                    if(mode.match(/bind|sync/)) {
-                        _handleBindSync(el, input, outputData, trigger, mode, processFunc, err_detail);
-                    }
-                    // HANDLE FETCH
-                    else {
-                        _handleFetch(el, trigger, _ops, mode.replace(ATTR_PREFIX, ""), input[0], output[0]);
-                    }
+                    if(mode.match(/bind|sync/)) _handleBindSync(el, input, output, trigger, mode, processFunc);
+                    else _handleFetch(el, trigger, _ops, input[0], mode.replace(ATTR_PREFIX, ""), output);
                 }
             }); //End loop settings
         }   //End loop dataset modes

@@ -18,7 +18,7 @@ let val = Mfld.store("value", {
 })
 let s1 = Mfld.store("store1", { value: "My text" });
 
-// let store1 = Mfld.store("store1", { value: "My text" });
+let store1 = Mfld.store("store1", { value: "My text" });
 const store3 = Mfld.store("store3", { value: "one" });
 const store2 = Mfld.store("store2", { 
     value: { values: ["one", "two"]},

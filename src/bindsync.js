@@ -1,61 +1,50 @@
 import { _store } from "./store";
 import { _scheduleUpdate } from "./updates";
-import { _nestedValue, ATTR_PREFIX } from "./util";
+import { _getStorePathFromKey, _inputNestSplitRx, _nestedValue, ATTR_PREFIX } from "./util";
 
-export function _handleBindSync(el, input, outputData, trigger, mode, processFunc, err_detail) {
-    //Loop over input
-    if(!input?.length) input = [ "" ];
-    for(let i=0; i < input.length; i++) {
-        /**
-         * HANDLE MF-BIND
-         */
-        if(mode == `${ATTR_PREFIX}bind`) {
-            let domSubscription = ()=> {
-                _scheduleUpdate(()=> {
-                    // if(input.includes("store1")) {
-                        console.log("STORE1 FUNC", input, processFunc)
-                    // }
-                    let val = processFunc?.(
-                        ...outputData.map(
-                            s=> _nestedValue(_store(s.name)?.value, s.path)
-                        ), el
-                    ) ??
-                    _nestedValue(
-                        _store(outputData[0].name || "")?.value, outputData[0].path
-                    );
+export function _handleBindSync(el, input, output, trigger, mode, processFunc) {
+    /**
+     * HANDLE MF-BIND - inputs are stores, output is element property
+     */
+    if(mode == `${ATTR_PREFIX}bind`) {
+        let stores = input.map(_getStorePathFromKey);
+        let domSubscription = ()=> {
+            _scheduleUpdate(()=> {
+                let storeValues = stores.map(s=> _nestedValue(_store(s[0])?.value, s[1]));
+                let val = processFunc?.(...storeValues, el) ?? storeValues[0];
+                if(output && val !== undefined) el[output] = val;
 
-                    if(val !== undefined) el[input[i]] = val;
-
-                    //Make sure to update dependent stores on value update
-                    el.dispatchEvent(new CustomEvent(trigger))
-                });
-            }
-        
-            //Add subscription - run whenever store updates
-            for(let store of outputData) _store(store.name)?.sub(domSubscription, el.id);
+                //Make sure to update dependent stores on value update
+                el.dispatchEvent(new CustomEvent(trigger));
+            });
         }
+    
+        //Add subscription - run whenever store updates
+        for(let s of stores) _store(s?.[0]|| "")?.sub(domSubscription, el.id);
+    }
 
+    else {
         /**
-         * HANDLE MF-SYNC
+         * HANDLE MF-SYNC - inputs are element properties, output is a store
          */
-        else if(mode == `${ATTR_PREFIX}sync`) {
-            if(outputData.length > 1) throw(`Only one store supported: ${err_detail}`)
+        if(mode == `${ATTR_PREFIX}sync`) {
+            let [storeName, path] = _getStorePathFromKey(output || "");
             let ev = ()=> {
-                let prop = input[i].trim();
-                let value = el[prop] ?? el.getAttribute(prop) ?? el.dataset[prop] ?? undefined;
+                let propValues = input.map(prop=> {
+                    prop = prop.trim();
+                    return el[prop] ?? el.getAttribute(prop) ?? el.dataset[prop] ?? undefined;
+                });
+
+                let value = processFunc?.(...propValues) ?? propValues[0];
                 
-                console.log("FUNC", processFunc, value)
-                if(processFunc) value = processFunc?.(value, el);
-                let store = _store(outputData[0]?.name);
-                
-                if(value !== undefined) {
-                    store?.update?.(curVal=> {
-                        return outputData[0]?.path?.length ? _nestedValue(curVal, outputData[0]?.path, value) : value
+                if(storeName && value !== undefined) {
+                    _store(storeName)?.update?.(curVal=> {
+                        return path?.length ? _nestedValue(curVal, path, value) : value
                     });
                 }
             }
             if(trigger == "$mount") ev();
             else el.addEventListener(trigger, ev);
         }
-    }   //End loop input
+    }
 }

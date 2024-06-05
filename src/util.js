@@ -1,4 +1,5 @@
 export let ATTR_PREFIX = "mf";
+export let _inputNestSplitRx = /[\.\[\]\?]{1,}/g;
 
 /**
  * Get or set nested store values
@@ -20,6 +21,11 @@ export function _nestedValue(obj, path, newval) {
     }
 
     return ptr;
+}
+
+export function _getStorePathFromKey(s) {
+    let [storeName, ...path] = (s)?.split(_inputNestSplitRx);
+    return [storeName, path?.map(sp=> !isNaN(parseInt(sp)) ? parseInt(sp) : sp).filter(sp=> sp) || []];
 }
 
 /**
