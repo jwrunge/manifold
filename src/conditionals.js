@@ -1,7 +1,7 @@
 import { _registerSubs } from "./registrar";
 import { _store } from "./store";
 import { _scheduleUpdate } from "./updates";
-import { _getOpOverrides, _getStorePathFromKey, _parseFunction, ATTR_PREFIX } from "./util";
+import { _getStorePathFromKey, _parseFunction, ATTR_PREFIX } from "./util";
 
 /**
  * @param {HTMLElement} el
@@ -68,10 +68,9 @@ function _registerConditionStore(storeName, storeList, conditionChain, upstreamC
  * Handle conditional and loop elements
  * @param {HTMLElement} el 
  * @param {string} mode 
- * @param {import("./index.module").MfldOps} _ops 
+ * @param {import("./index.module").MfldOps} ops 
  */
-export function _handleConditionals(el, mode, _ops) {
-    let ops = _getOpOverrides(_ops, el);
+export function _handleConditionals(el, mode, ops) {
     let rootElement = document.createElement("div");
     el.before(rootElement);
 

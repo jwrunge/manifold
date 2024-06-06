@@ -11,36 +11,36 @@
 
   <p>This is an example of dynamic text! The current store value is: 
     <span 
-      data-mfBind=" (store1)=> store1.toUpperCase()->innerText; 
+      data-mf_Bind=" (store1)=> store1.toUpperCase()->innerText; 
                     (store1)=> store1 === 'My text' ? 'green' : 'blue' -> style:backgroundColor"
     >Here is a default value.</span>
   </p>
-  <p>Here is text that can be HTML: <span data-mfBind="store1->innerHTML">Here is a default value.</span></p>
-  <p>Store 2 nested: <span data-mfBind="store2.values[1]->innerHTML">Here is a default value.</span></p>
-  <!-- <p>Checkbox set to checked? <span data-mfBind="store2.values[0]->innerText"></span></p>
-  <p>Store 4 value: <span data-mfBind="store4->innerText"></span></p>
-  <p>Checked store checked? <span data-mfBind="checkedStore-> innerText">Unknown</span></p>
-  <p>Value of Mass Store 99: <span data-mfBind="mass_store99 -> innerText">Unknown</span></p>
-  <div data-secret="THIS IS A SECRET" data-mfSync="on($mount) sendAlert(data-secret) -> checkedStore"></div> -->
+  <p>Here is text that can be HTML: <span data-mf_Bind="store1->innerHTML">Here is a default value.</span></p>
+  <p>Store 2 nested: <span data-mf_Bind="store2.values[1]->innerHTML">Here is a default value.</span></p>
+  <!-- <p>Checkbox set to checked? <span data-mf_Bind="store2.values[0]->innerText"></span></p>
+  <p>Store 4 value: <span data-mf_Bind="store4->innerText"></span></p>
+  <p>Checked store checked? <span data-mf_Bind="checkedStore-> innerText">Unknown</span></p>
+  <p>Value of Mass Store 99: <span data-mf_Bind="mass_store99 -> innerText">Unknown</span></p>
+  <div data-secret="THIS IS A SECRET" data-mf_Sync="on($mount) sendAlert(data-secret) -> checkedStore"></div> -->
 
   <!-- Content -->
   <div class="sync-grid">
-    <label>On keyup:</label> <input data-mfBind="store1->value" data-mfSync="on(keyup, change) value -> store1">
-    <label>Bind only:</label> <input data-mfBind="store1->value">
-    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-mfBind="store1->checked" data-mfSync="on(change) checked->checkedStore">
-    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-mfBind="isChecked(store1)->checked">
+    <label>On keyup:</label> <input data-mf_Bind="store1->value" data-mf_Sync="on(keyup, change) value -> store1">
+    <label>Bind only:</label> <input data-mf_Bind="store1->value">
+    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-mf_Bind="store1->checked" data-mf_Sync="on(change) checked->checkedStore">
+    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-mf_Bind="isChecked(store1)->checked">
     
     <!-- Select (with dynamic options) ->
     <label>Dyn select</label>
-    <select data-mfBind="store1->value" data-mfSync="on(change) value->store1">
+    <select data-mf_Bind="store1->value" data-mf_Sync="on(change) value->store1">
       <!- Dynamic frontend replace ->
-      <template id="select-ops" data-mfeach="(store1)=> store1 as letter, index">
+      <template id="select-ops" data-mf_each="(store1)=> store1 as letter, index">
         <!- Dynamic options ->
         <option value="${letter}">${index}: ${letter}</option>
       </template>
 
       <!- Default / fallback options (replaced if dynamic options work) ->
-      <mf-default data-mftemplate="select-ops">
+      <mf-default data-mf_template="select-ops">
         <option value="" default>Blank</option>
         <option value="My text">Initial Value</option>
         <option value="<span class='colorful'>Another update</span>">Show update text</option>
@@ -52,33 +52,41 @@
     </select>
 
     <label>Dyn div</label>
-    <!- <mf-default data-mfif="showDiv(store1)">
+    <!- <mf-default data-mf_if="showDiv(store1)">
       Div is shown.
     </mf-default>
-    <template data-mfelse-if="showDiv(store1)">Else if</template>
-    <template data-mfelse>Else</template> -->
+    <template data-mf_else-if="showDiv(store1)">Else if</template>
+    <template data-mf_else>Else</template> -->
   </div>
 
-  <template data-mfEach="(store1)=> store1 as letter, index">
+  <button data-mf_Post="on(click) ()=> {return {name: 'Jake', age: 36}} -> /tests/header.html">JSON Sender</button>
+
+  <form action="/tests/header.html" method="post" data-mf_swapinner="h2->h1">
+    <label>Name: <input type="text" name="name" autocomplete="name"></label>
+    <label>Age: <input type="number" name="age"></label>
+    <button type="submit">SUBMIT</button>
+  </form>
+
+  <template data-mf_each="(store1)=> store1 as letter, index">
     <div>This is letter ${index + 30}: ${letter.toLowerCase()}</div>
   </template>
 
-  <div data-mfif="(store1, store3)=> return store1 == 'Last one' || store3 == 'three'">
+  <div data-mf_if="(store1, store3)=> return store1 == 'Last one' || store3 == 'three'">
     ,/;mn bk,jbbkkjlbikujbuibbbbbbbb
   </div>
-  <template data-mfelseif='(store1)=> return store1 == "We&#39;re at 4k"'>
+  <template data-mf_elseif='(store1)=> return store1 == "We&#39;re at 4k"'>
     <div>;lnk</div>
   </template>
-  <template data-mfelse>
+  <template data-mf_else>
     <div>lknn,.mbkljn</div>
   </template>
 
-  <div class="special-insert" data-mfGet="on(click) /tests/interactive.html" data-mfswapinner=".sync-grid -> header">Default insert</div>
-  <nav data-mfPost="on(click) (store1, store2)=> store1.toUpperCase() + JSON.stringify(store2) -> /tests/header.html" data-mfswapinner="header -> h1" data-mftranssmart="true" data-mftransdur="[5000, 300]" data-mfresolve="(data)=>alert('DATA'+data)">
+  <div class="special-insert" data-mf_Get="on(click) /tests/interactive.html" data-mf_swapinner=".sync-grid -> header">Default insert</div>
+  <nav data-mf_Post="on(click) (store1, store2)=> store1.toUpperCase() + JSON.stringify(store2) -> /tests/header.html" data-mf_swapinner="header -> h1" data-mf_transsmart="true" data-mf_transdur="[5000, 300]" data-mf_resolve="(data)=>alert('DATA'+data)">
     <p>This is some default nav content.</p>
   </nav>
 
-  <div class="trans" data-mfBind="specialStyling(store1)"></div>
+  <div class="trans" data-mf_Bind="specialStyling(store1)"></div>
 
   <!-- Store script -->
   <script src="../dist/mfld.js" type="module"></script>

@@ -1,4 +1,4 @@
-import { _getOpOverrides, _parseFunction, ATTR_PREFIX } from "./util.js";
+import { _parseFunction, ATTR_PREFIX } from "./util.js";
 import { _scheduleUpdate } from "./updates";
 import { _registerSubs } from "./registrar.js";
 import { _store } from "./store.js";
@@ -8,13 +8,13 @@ import { _store } from "./store.js";
 /**
  * @param {HTMLElement} el 
  * @param {string} trigger 
- * @param {MfldOps} _ops
+ * @param {MfldOps} fetchOps
  * @param {string} href
  * @param {string} [method] 
- * @param {string[]} [input]
+ * @param {any} [input]
  * @param {Function} [processFunc]
  */
-export function _handleFetch(el, trigger, _ops, href, method, input, processFunc) {
+export function _handleFetch(el, trigger, fetchOps, href, method, input, processFunc) {
     /**
      * @param {Event} [e]
      */
@@ -22,18 +22,8 @@ export function _handleFetch(el, trigger, _ops, href, method, input, processFunc
         e?.preventDefault();
         e?.stopPropagation();
 
-        let fetchOps = _getOpOverrides(_ops, el);
-
         // Set from target element if relevant; fall back to "get"
         if(!method) method = /** @type {any}*/(e?.target)?.method || "get";
-
-        // if(["click", "submit"].includes(trigger) || ["A", "FORM"].includes(target?.nodeName)) {
-        //     history.pushState(
-        //         {fetchData, elId: el.id}, 
-        //         "", 
-        //         target?.href || target?.action || ""
-        //     );
-        // }
     
         //Make sure we're allowed to fetch
         let externalPermissions = fetchOps?.fetch?.externals?.find(allowed=> href?.startsWith(allowed.domain)) || 
@@ -43,11 +33,10 @@ export function _handleFetch(el, trigger, _ops, href, method, input, processFunc
         } : undefined;
 
         // Parse input
-        let body = input;
+        let body = Array.isArray(input) ? input[0] : input == "$form" ? new FormData(/** @type {HTMLFormElement}*/(el)) : input;
         if(processFunc) {
-            body = processFunc?.(
-                ...(input?.map(s=> _store(s).value) || [])
-            )
+            let toFunc = Array.isArray(input) ? (input?.map(s=> _store(s).value) || []) : [body];
+            body = processFunc?.(...toFunc)
         }
 
         //Fetch data
@@ -58,7 +47,7 @@ export function _handleFetch(el, trigger, _ops, href, method, input, processFunc
                 "Manifold-App-Fetch": "true",
             },
             method,
-            body: typeof body == "string" ? body : JSON.stringify(body),
+            body: input == "$form" || typeof body == "string" ? body : JSON.stringify(body),
         })
         .catch(error=> {
             fetchOps?.fetch?.err?.(error) || console.error("FETCH ERROR", error);

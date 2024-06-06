@@ -1,6 +1,6 @@
 import { _store } from "./store.js";
 import { _scheduleUpdate } from "./updates.js";
-import { _parseFunction, ATTR_PREFIX } from "./util.js";
+import { _getOpOverrides, _parseFunction, ATTR_PREFIX } from "./util.js";
 import { _handleFetch } from "./fetch.js";
 import { _handleBindSync } from "./bindsync.js";
 import { _handleConditionals } from "./conditionals.js";
@@ -11,21 +11,6 @@ let _ops = {};
 let _commaSepRx = /, {0,}/g;
 let _elIdx = 0;
 let _modes = ["bind", "sync", "if", "each", "get", "head", "post", "put", "delete", "patch"].map(m=> `${ATTR_PREFIX}${m}`);
-let pageScripts = new WeakMap();
-let pageStyles = new WeakMap();
-
-// globalThis.addEventListener("popstate", (e)=> {
-//     let el = document?.getElementById(e.state?.elId);
-//     if(e?.state?.fetchData) {
-//         _fetchHttp(
-//             "get", 
-//             "",
-//             e.state.fetchData,
-//             el,
-//             el=> {if(el) _registerSubs(el)}
-//         );
-//     }
-// });
 
 /**!
  * @param {Partial<MfldOps>} newops 
@@ -43,18 +28,30 @@ export function _setOptions(newops, profileName) {
 export function _registerSubs(parent) {
     /** @type {NodeListOf<HTMLElement> | []} */
     let els = (parent || document.body).querySelectorAll(
-        `[data-${_modes.join(`],[data-`)}]${_ops.fetch?.auto != false ? ",a" : ""}`
+        `[data-${_modes.join(`],[data-`)}]${_ops.fetch?.auto != false ? ",a,form" : ""}`
     ) || [];
 
     for(let el of els) {
         /** @type {HTMLElement} */
         if(!el.id) el.id = `${_elIdx++}`;
 
+        let _op_overrides = _getOpOverrides(_ops, el);
+
+        //Check for <a> and <form> elements
+        if(el.dataset?.[`${ATTR_PREFIX}boost`] !== undefined && (el.tagName == "A" || el.tagName == "FORM")) {
+            let [mode, href, input, trigger] = el.tagName == "A" ?
+                ["get", /** @type {HTMLAnchorElement}*/(el).href, "", "click"] : 
+                [/** @type {HTMLFormElement}*/(el).method.toLowerCase(), /** @type {HTMLFormElement}*/(el).action, "$form", "submit"];
+
+            _handleFetch(el, trigger, _op_overrides, href, mode, input);
+            continue;
+        }
+
         //Loop over all data attributes (modes)
         for(let mode in el.dataset) {
             //HANDLE CONDITIONALS AND LOOPS
             if([`${ATTR_PREFIX}if`, `${ATTR_PREFIX}each`].includes(mode)) {
-                _handleConditionals(el, mode, _ops);
+                _handleConditionals(el, mode, _op_overrides);
                 continue;
             }
 
@@ -90,7 +87,7 @@ export function _registerSubs(parent) {
                             output = input[0];
                             input = [];
                         }
-                        _handleFetch(el, trigger, _ops, output, mode.replace(ATTR_PREFIX, ""), input, processFunc);
+                        _handleFetch(el, trigger, _op_overrides, output, mode.replace(ATTR_PREFIX, ""), input, processFunc);
                     }
                 }
             }; //End loop settings

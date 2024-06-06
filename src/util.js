@@ -1,4 +1,4 @@
-export let ATTR_PREFIX = "mf";
+export let ATTR_PREFIX = "mf_";
 export let _inputNestSplitRx = /[\.\[\]\?]{1,}/g;
 
 /**

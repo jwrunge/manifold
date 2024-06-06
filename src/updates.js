@@ -1,5 +1,7 @@
 /** @typedef {import("./index.module.js").MfldOps} MfldOps */
 
+import { ATTR_PREFIX } from "./util.js";
+
 /**
  * @typedef {Object} DomWorkOrder
  * @property {HTMLElement} in - The input HTMLElement
@@ -147,7 +149,7 @@ function _applyTransition(el, dir, ops, fn, refElement, getDimensionsAfterUpdate
         let dur = Array.isArray(ops.trans?.dur) ? ops.trans?.dur[dir == "in" ? 0 : 1] || ops.trans?.dur[0] : ops.trans?.dur || 0;
 
         //Initiate transition
-        let transClass = ops?.trans?.class || "mf-trans";
+        let transClass = ops?.trans?.class || `${ATTR_PREFIX}trans`;
         el?.classList?.add(transClass);
         ops.trans?.hooks?.[`${dir}-start`]?.(el);
 
