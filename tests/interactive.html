@@ -55,7 +55,7 @@
   </div>
 
   <template data-mfEach="(store1)=> store1 as letter, index">
-    <div>This is letter ${index}: ${letter}</div>
+    <div>This is letter ${index + 30}: ${letter.toLowerCase()}</div>
   </template>
 
   <div data-mfif="(store1, store3)=> return store1 == 'Last one' || store3 == 'three'">

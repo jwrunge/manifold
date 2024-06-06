@@ -148,7 +148,6 @@ function _applyTransition(el, dir, ops, fn, refElement, getDimensionsAfterUpdate
 
         //Initiate transition
         let transClass = ops?.trans?.class || "mf-trans";
-        console.log("CLASS", transClass)
         el?.classList?.add(transClass);
         ops.trans?.hooks?.[`${dir}-start`]?.(el);
 

@@ -1,7 +1,7 @@
 import { _registerSubs } from "./registrar";
 import { _store } from "./store";
 import { _scheduleUpdate } from "./updates";
-import { _getOpOverrides, _parseFunction, ATTR_PREFIX } from "./util";
+import { _getOpOverrides, _getStorePathFromKey, _parseFunction, ATTR_PREFIX } from "./util";
 
 /**
  * @param {HTMLElement} el
@@ -123,8 +123,8 @@ export function _handleConditionals(el, mode, _ops) {
 
         let [ funcStr, aliases ] = el.dataset[`${ATTR_PREFIX}each`]?.split("as")?.map(s=> s.trim()) || [];
         let [ valueName, keyName ] = aliases.split(/\s{0,},\s{0,}/)?.map(s=> s.trim()) || ["value", "key"];
-        let { storeList, func, storeName } = _parseFunction(funcStr);
-
+        let { storeList, func, storeName } = _parseFunction(funcStr);  
+        
         // Ensure template
         el = _ensureTemplate(el, rootElement);
 
@@ -133,8 +133,25 @@ export function _handleConditionals(el, mode, _ops) {
         conditionStore?.sub(val=> {
             rootElement.replaceChildren();
             _iterable(val || [], (key, value)=> {
+                let html = el.innerHTML;
+
+                // Get all logical bindings and replace values
+                let replacements = el.innerHTML.match(/\${[^}]*}/g) || [];
+                for(let rep of replacements) {
+                    let repClean = rep.replace(/^\$\{|\}$/g, "");
+
+                    try {
+                        let fn = _parseFunction(`(${keyName}, ${valueName})=> ${repClean}`)?.func;
+                        html = html.replace(rep, fn?.(value, key) || "");
+                    }
+                    catch(e) {
+                        console.error("Syntax error in loop function", e);
+                    }
+                }
+
+                // Replace values
                 let item = document.createElement("div");
-                item.innerHTML = el.innerHTML.replace(`\${${keyName}}`, key).replace(`\${${valueName}}`, value);
+                item.innerHTML = html;
                 
                 _scheduleUpdate({
                     in: item,

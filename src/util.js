@@ -70,7 +70,6 @@ export function _getOpOverrides(ops, el) {
         },
     }
 
-    console.log("New ops", newops);
     return newops;
 }
 
