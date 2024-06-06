@@ -69,7 +69,7 @@
   </template>
 
   <div class="special-insert" data-mfGet="on(click) /tests/interactive.html" data-mfswapinner=".sync-grid -> header">Default insert</div>
-  <nav data-mfGet="on(click) /tests/header.html" data-mfswapinner="header -> h1" data-mftranssmart="true" data-mftransdur="[5000, 300]">
+  <nav data-mfPost="on(click) (store1, store2)=> store1.toUpperCase() + JSON.stringify(store2) -> /tests/header.html" data-mfswapinner="header -> h1" data-mftranssmart="true" data-mftransdur="[5000, 300]" data-mfresolve="(data)=>alert('DATA'+data)">
     <p>This is some default nav content.</p>
   </nav>
 

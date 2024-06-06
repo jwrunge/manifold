@@ -10,7 +10,7 @@ import { _handleConditionals } from "./conditionals.js";
 let _ops = {};
 let _commaSepRx = /, {0,}/g;
 let _elIdx = 0;
-let _modes = ["bind", "sync", "if","each", "get", "head", "post", "put", "delete", "patch"].map(m=> `${ATTR_PREFIX}${m}`);
+let _modes = ["bind", "sync", "if", "each", "get", "head", "post", "put", "delete", "patch"].map(m=> `${ATTR_PREFIX}${m}`);
 let pageScripts = new WeakMap();
 let pageStyles = new WeakMap();
 
@@ -85,7 +85,14 @@ export function _registerSubs(parent) {
                 if(!triggers?.length) triggers = [""]
                 for(let trigger of triggers) {
                     if(mode.match(/bind|sync/)) _handleBindSync(el, input, output, trigger, mode, processFunc);
-                    else _handleFetch(el, trigger, _ops, input[0], mode.replace(ATTR_PREFIX, ""), output);
+                    else {
+                        if(!output) {
+                            output = input[0];
+                            input = [];
+                        }
+                        console.log("Sending func", processFunc)
+                        _handleFetch(el, trigger, _ops, output, mode.replace(ATTR_PREFIX, ""), input, processFunc);
+                    }
                 }
             }); //End loop settings
         }   //End loop dataset modes

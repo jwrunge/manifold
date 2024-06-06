@@ -15,7 +15,6 @@ import { _registerSubs, _setOptions } from "./registrar.js";
  * @typedef {object} FetchOptions
  * @property {RequestInit} [request] - Fetch request options
  * @property {"json"|"text"} [responseType] - Response type (default: "text")
- * @property {(val: any)=> void} [cb] - Callback function - run on successful fetch; *val* is the un-parsed response body
  * @property {(err: Error)=> void} [err] - Error callback - run on fetch error
  * @property {(code: number, data: void | Response)=> boolean | void} [onCode] - Callback function - run on fetch response code; return `false` to prevent further processing
  * @property {boolean} [auto] - Automatically fetch content on page load

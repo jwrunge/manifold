@@ -1,6 +1,7 @@
-import { _getOpOverrides, ATTR_PREFIX } from "./util.js";
+import { _getOpOverrides, _parseFunction, ATTR_PREFIX } from "./util.js";
 import { _scheduleUpdate } from "./updates";
 import { _registerSubs } from "./registrar.js";
+import { _store } from "./store.js";
 
 /** @typedef {import("./index.module.js").MfldOps} MfldOps */
 
@@ -10,9 +11,10 @@ import { _registerSubs } from "./registrar.js";
  * @param {MfldOps} _ops
  * @param {string} href
  * @param {string} [method] 
- * @param {BodyInit | null} [input]
+ * @param {string[]} [input]
+ * @param {Function} [processFunc]
  */
-export function _handleFetch(el, trigger, _ops, href, method, input) {
+export function _handleFetch(el, trigger, _ops, href, method, input, processFunc) {
     /**
      * @param {Event} [e]
      */
@@ -40,14 +42,29 @@ export function _handleFetch(el, trigger, _ops, href, method, input) {
                 styles: true,
         } : undefined;
 
+        // Parse input
+        let body = input;
+        console.log("FETCH PROCESS FUNC", processFunc)
+        if(processFunc) {
+            // let { storeList, func } = _parseFunction(input || "");
+            // console.log(func);
+            body = processFunc?.(
+                ...(input?.map(s=> _store(s).value) || [])
+            )
+        }
+
         //Fetch data
         let data = await fetch(href, {
             ...(fetchOps?.fetch?.request || {}),
+            headers: {
+                ...fetchOps?.fetch?.request?.headers,
+                "Manifold-App-Fetch": "true",
+            },
             method,
-            body: typeof input == "string" ? input : JSON.stringify(input),
+            body: typeof body == "string" ? body : JSON.stringify(body),
         })
         .catch(error=> {
-            fetchOps?.fetch?.err?.(error);
+            fetchOps?.fetch?.err?.(error) || console.error("FETCH ERROR", error);
         });
 
         //Handle onCode callback
@@ -56,7 +73,7 @@ export function _handleFetch(el, trigger, _ops, href, method, input) {
 
         //Return JSON or text in callback
         let resp = await data?.[fetchOps?.fetch?.responseType || "text"]();
-        fetchOps?.fetch?.cb?.(resp);
+        console.log("RESP", data, resp, fetchOps?.fetch?.responseType || "text")
 
         // Handle resolutions
         for(let instruction of ["append", "prepend", "swapinner", "swapouter"]) {
@@ -79,9 +96,9 @@ export function _handleFetch(el, trigger, _ops, href, method, input) {
             }
         }
 
-        if(el.dataset?.[`${ATTR_PREFIX}resolve`]) {
-            alert("RESOLVING")
-        }
+        let resolveTxt = el.dataset?.[`${ATTR_PREFIX}resolve`];
+        let resolveFunc = _parseFunction(resolveTxt || "")?.func;
+        resolveFunc?.(resp);
 
             // //Clear existing scripts/styles
             // for(let s of [pageScripts, pageStyles]) {
