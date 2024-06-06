@@ -4,3 +4,4 @@
 - Scoping
 - Handle fetch scripts, styles
 - Fetch components
+- Eval within loop variables

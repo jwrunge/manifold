@@ -28,6 +28,16 @@ export function _getStorePathFromKey(s) {
     return [storeName, path?.map(sp=> !isNaN(parseInt(sp)) ? parseInt(sp) : sp).filter(sp=> sp) || []];
 }
 
+function _getOverride(name, el, ops, parse = true, def = "{}", as) {
+    let override = el.dataset[`${ATTR_PREFIX}${name}`];
+    if(!override) return undefined;
+    if(name == "overrides") return ops.profiles?.[override || ""]?.fetch || JSON.parse(override || "{}");
+    if(parse) return JSON.parse(override || def);
+    if(as == "num") return parseInt(override) || undefined;
+    if(as == "bool") return override == "true" ? true : override == "false" ? false : undefined;
+    return override;
+}
+
 /**
  * Get or set nested store values
  * @param {import("./index.module").MfldOps} ops
@@ -35,32 +45,33 @@ export function _getStorePathFromKey(s) {
  * @returns {import("./index.module").MfldOps}
  */
 export function _getOpOverrides(ops, el) {
-    let overrides = ["overrides", "fetch", "trans", "transdur", "transswap", "transclass", "responseType"].map(o=> {
-        if(o == "overrides") return ops.profiles?.[overrides]?.fetch || JSON.parse(overrides);
-        return JSON.parse(el.dataset[`${ATTR_PREFIX}${o}`] || "{}")
-    })
+    let overrides = _getOverride("overrides", el, ops);
 
-    return {
+    let newops = {
         profiles: ops.profiles,
         fetch: {
             ...ops.fetch,
             ...{
-                responseType: overrides?.[6]
+                responseType: _getOverride("responsetype", el, ops, false) || ops.fetch?.responseType
             },
-            ...(overrides?.[0]?.fetch || {}),
-            ...(overrides?.[1] || {}),
+            ...(overrides?.fetch || {}),
+            ...(_getOverride("fetch", el, ops) || {}),
         },
         trans: {
             ...ops.trans,
             ...{
-                duration: overrides?.[3],
-                swap: overrides?.[4],
-                class: overrides?.[5],
+                dur: _getOverride("transdur", el, ops, true, "[]", "num") || ops.trans?.dur,
+                swap: _getOverride("transswap", el, ops, false, "", "num") || ops.trans?.swap,
+                class: _getOverride("transclass", el, ops, false) || ops.trans?.class,
+                smartTransition: _getOverride("transsmart", el, ops, false, undefined, "bool") || ops.trans?.smartTransition,
             },
-            ...(overrides?.[0]?.trans || {}),
-            ...(overrides?.[2] || {}),
+            ...(overrides?.trans || {}),
+            ...(_getOverride("trans", el, ops) || {}),
         },
     }
+
+    console.log("New ops", newops);
+    return newops;
 }
 
 /**
@@ -102,8 +113,6 @@ export function _parseFunction(data) {
         if(!fn.match(/^\s{0,}\{/) && !fn.includes("return")) fn = fn.replace(/^\s{0,}/, "return ");
         func = new Function(...storeList, fn);
     }
-
-    console.log(func)
 
     return { storeList, func, storeName };
 }
