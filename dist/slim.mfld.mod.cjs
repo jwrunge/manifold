@@ -95,7 +95,7 @@ e.innerHTML=u.innerHTML,"TEMPLATE"==u?.tagName&&s({in:e,out:i,relation:"swapinne
 let[e,n]=t.dataset[`${$}each`]?.split("as")?.map((t=>t.trim()))||[],[r,l]=n.split(/\s{0,},\s{0,}/)?.map((t=>t.trim()))||["value","key"],{storeList:a,func:f,storeName:u}=v(e)
 t=M(t,i)
 let c=x(`LOOP:${u}`,a,[],0,f)
-c?.sub((e=>{i.replaceChildren(),function(t,e){if(t instanceof Map)for(const[n,o]of t.entries())e(n,o)
+c?.sub((e=>{s((()=>i.replaceChildren())),function(t,e){if(t instanceof Map)for(const[n,o]of t.entries())e(n,o)
 else try{let n=Array.from(t)
 if(n?.length)n.forEach(e)
 else for(let n in t)e(n,t[n])}catch(e){console.error(`${t} is not iterable`)}}(e||[],((e,n)=>{let a=t.innerHTML,f=t.innerHTML.match(/\${[^}]*}/g)||[]
@@ -108,9 +108,7 @@ for(let t of e){t.id||(t.id=""+A++)
 for(let e in t.dataset){if([`${$}if`,`${$}each`].includes(e)){S(t,e,E)
 continue}if(!_.includes(e))continue
 let n=![`${$}bind`].includes(e),o=`(#${t.id} on ${e})`
-console.log(t.dataset?.[e])
-for(let i of t.dataset?.[e]?.split(";")||[]){console.log("SETTING",i)
-let[r,s]=i?.split("->")?.map((t=>t.trim()))||[],l=n?L(r.slice(0,r.indexOf(")"))):[],a=n?r.slice(r.indexOf(")")+1):r,f=a.includes("=>")?a:a.includes("(")&&a.match(/^[^\(]{1,}/)?.[0]||"",u=f?L(a.slice(0,(a.indexOf(")")||-2)+1)):a.split(N)?.map((t=>t.trim()))
+for(let i of t.dataset?.[e]?.split(";")||[]){let[r,s]=i?.split("->")?.map((t=>t.trim()))||[],l=n?L(r.slice(0,r.indexOf(")"))):[],a=n?r.slice(r.indexOf(")")+1):r,f=a.includes("=>")?a:a.includes("(")&&a.match(/^[^\(]{1,}/)?.[0]||"",u=f?L(a.slice(0,(a.indexOf(")")||-2)+1)):a.split(N)?.map((t=>t.trim()))
 if(n&&!l?.length){console.error(`No trigger: ${o}.`)
 break}let c=v(f)?.func
 f?c||console.warn(`"${f}" not registered: ${o}`):u.length>1&&console.warn(`Multiple inputs without function: ${o}`),l?.length||(l=[""])

@@ -63,9 +63,7 @@ export function _registerSubs(parent) {
             let err_detail = `(#${el.id} on ${mode})`;
 
             //Loop over provided settings
-            console.log(el.dataset?.[mode]);
             for(let setting of el.dataset?.[mode]?.split(";") || []) {
-                console.log("SETTING", setting)
                 //Break out settings
                 let [sourceParts, output] = setting?.split("->")?.map(s=> s.trim()) || [];
                 let triggers = shouldHaveTriggers ? _paramsInParens(sourceParts.slice(0, sourceParts.indexOf(")"))) : [];

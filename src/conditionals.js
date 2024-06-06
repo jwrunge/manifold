@@ -131,7 +131,7 @@ export function _handleConditionals(el, mode, _ops) {
         // Register condition store
         let conditionStore = _registerConditionStore(`LOOP:${storeName}`, storeList, [], 0, func);
         conditionStore?.sub(val=> {
-            rootElement.replaceChildren();
+            _scheduleUpdate(()=> rootElement.replaceChildren());
             _iterable(val || [], (key, value)=> {
                 let html = el.innerHTML;
 
