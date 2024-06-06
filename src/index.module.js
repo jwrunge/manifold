@@ -46,6 +46,20 @@ import { _registerSubs, _setOptions } from "./registrar.js";
  * @returns {T | Promise<T>}
  */
 
+/**
+ * @template T
+ * @callback ValueDeterminer
+ * @param {T} [currentValue]
+ * @returns {T | Promise<T> | undefined}
+ */
+
+/**!
+ * @template T
+ * @callback UpdateFunction
+ * @param {T | ValueDeterminer<T>} value
+ * @returns {T | Promise<T> | undefined}
+ */
+
 /**!
  * @template T
  * @typedef {Object} StoreOptions
@@ -56,10 +70,17 @@ import { _registerSubs, _setOptions } from "./registrar.js";
 
 /**!
  * @template T
+ * @typedef {Function} SubFunction
+ * @param {T} value
+ * @returns {void}
+ */
+
+/**!
+ * @template T
  * @typedef Store
  * @prop {T} value - The store's current value (read only)
- * @prop {function(T | function(T):T|Promise<T>|undefined):T|Promise<T>|undefined} update - Update the store's current value
- * @prop {function(function(T):void,string):void} sub - Add a subscription function to the store
+ * @prop {UpdateFunction<T>} update - Update the store's current value
+ * @prop {SubFunction<T>} sub - Add a subscription function to the store
  */
 
 /**!

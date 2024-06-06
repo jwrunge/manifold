@@ -9,7 +9,12 @@
 <body>
   <h1>Reactivity test - IIFE</h1>
 
-  <p>This is an example of dynamic text! The current store value is: <span data-mfBind="(store1)=> store1.toUpperCase()->innerText">Here is a default value.</span></p>
+  <p>This is an example of dynamic text! The current store value is: 
+    <span 
+      data-mfBind=" (store1)=> store1.toUpperCase()->innerText; 
+                    (store1)=> store1 === 'My text' ? 'green' : 'blue' -> style:backgroundColor"
+    >Here is a default value.</span>
+  </p>
   <p>Here is text that can be HTML: <span data-mfBind="store1->innerHTML">Here is a default value.</span></p>
   <p>Store 2 nested: <span data-mfBind="store2.values[1]->innerHTML">Here is a default value.</span></p>
   <!-- <p>Checkbox set to checked? <span data-mfBind="store2.values[0]->innerText"></span></p>

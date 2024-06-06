@@ -63,7 +63,9 @@ export function _registerSubs(parent) {
             let err_detail = `(#${el.id} on ${mode})`;
 
             //Loop over provided settings
-            el.dataset?.[mode]?.split(";").forEach(setting=> {
+            console.log(el.dataset?.[mode]);
+            for(let setting of el.dataset?.[mode]?.split(";") || []) {
+                console.log("SETTING", setting)
                 //Break out settings
                 let [sourceParts, output] = setting?.split("->")?.map(s=> s.trim()) || [];
                 let triggers = shouldHaveTriggers ? _paramsInParens(sourceParts.slice(0, sourceParts.indexOf(")"))) : [];
@@ -72,7 +74,7 @@ export function _registerSubs(parent) {
                 let input = processFuncName ? _paramsInParens(funcAndInput.slice(0, (funcAndInput.indexOf(")") || -2) + 1)) : funcAndInput.split(_commaSepRx)?.map(s=> s.trim());
 
                 //Handle errors
-                if(shouldHaveTriggers && !triggers?.length) return console.error(`No trigger: ${err_detail}.`);
+                if(shouldHaveTriggers && !triggers?.length) { console.error(`No trigger: ${err_detail}.`); break; }
 
                 /** @type {Function | undefined} */
                 let processFunc = _parseFunction(processFuncName)?.func;
@@ -90,11 +92,10 @@ export function _registerSubs(parent) {
                             output = input[0];
                             input = [];
                         }
-                        console.log("Sending func", processFunc)
                         _handleFetch(el, trigger, _ops, output, mode.replace(ATTR_PREFIX, ""), input, processFunc);
                     }
                 }
-            }); //End loop settings
+            }; //End loop settings
         }   //End loop dataset modes
     };  //End loop elements
 }

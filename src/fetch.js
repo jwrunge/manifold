@@ -44,10 +44,7 @@ export function _handleFetch(el, trigger, _ops, href, method, input, processFunc
 
         // Parse input
         let body = input;
-        console.log("FETCH PROCESS FUNC", processFunc)
         if(processFunc) {
-            // let { storeList, func } = _parseFunction(input || "");
-            // console.log(func);
             body = processFunc?.(
                 ...(input?.map(s=> _store(s).value) || [])
             )
@@ -73,7 +70,6 @@ export function _handleFetch(el, trigger, _ops, href, method, input, processFunc
 
         //Return JSON or text in callback
         let resp = await data?.[fetchOps?.fetch?.responseType || "text"]();
-        console.log("RESP", data, resp, fetchOps?.fetch?.responseType || "text")
 
         // Handle resolutions
         for(let instruction of ["append", "prepend", "swapinner", "swapouter"]) {

@@ -12,7 +12,17 @@ export function _handleBindSync(el, input, output, trigger, mode, processFunc) {
             _scheduleUpdate(()=> {
                 let storeValues = stores.map(s=> _nestedValue(_store(s[0])?.value, s[1]));
                 let val = processFunc?.(...storeValues, el) ?? storeValues[0];
-                if(output && val !== undefined) el[output] = val;
+                if(output && val !== undefined) {
+                    let parts = output.split(":");
+                    if(parts.length > 1) {
+                        switch(parts[0]) {
+                            case "style": el.style[parts[1]] = val; break;
+                            case "attr": el.setAttribute(parts[1], val); break;
+                            default: el[output] = val;
+                        }
+                    }
+                    else el[output] = val;
+                }
 
                 //Make sure to update dependent stores on value update
                 el.dispatchEvent(new CustomEvent(trigger));
@@ -20,7 +30,7 @@ export function _handleBindSync(el, input, output, trigger, mode, processFunc) {
         }
     
         //Add subscription - run whenever store updates
-        for(let s of stores) _store(s?.[0]|| "")?.sub(domSubscription, el.id);
+        for(let s of stores) _store(s?.[0]|| "")?.sub(domSubscription);
     }
 
     else {
@@ -32,7 +42,15 @@ export function _handleBindSync(el, input, output, trigger, mode, processFunc) {
             let ev = ()=> {
                 let propValues = input.map(prop=> {
                     prop = prop.trim();
-                    return el[prop] ?? el.getAttribute(prop) ?? el.dataset[prop] ?? undefined;
+                    let parts = prop.split(":");
+                    if(parts.length > 1) {
+                        switch(parts[0]) {
+                            case "style": return el.style[prop] ?? undefined;
+                            case "attr": return el.getAttribute(prop) ?? undefined;
+                            default: return el[prop] ?? undefined;
+                        }
+                    }
+                    else return el[prop] ?? undefined;
                 });
 
                 let value = processFunc?.(...propValues) ?? propValues[0];

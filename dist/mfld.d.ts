@@ -1,5 +1,5 @@
 declare module "mfld.mod" {
-    export { C as Mfld };
+    export { O as Mfld };
     /**
      * !
      */
@@ -107,11 +107,19 @@ declare module "mfld.mod" {
     /**
      * !
      */
+    export type UpdateFunction<T> = (value: T | ValueDeterminer<T>) => T | Promise<T> | undefined;
+    /**
+     * !
+     */
     export type StoreOptions<T> = {
         value?: T;
         upstream?: Array<string>;
         updater?: UpdaterFunction<T>;
     };
+    /**
+     * !
+     */
+    export type SubFunction<T> = Function;
     /**
      * !
      */
@@ -123,17 +131,17 @@ declare module "mfld.mod" {
         /**
          * - Update the store's current value
          */
-        update: (arg0: T | ((arg0: T) => T | Promise<T> | undefined)) => T | Promise<T> | undefined;
+        update: UpdateFunction<T>;
         /**
          * - Add a subscription function to the store
          */
-        sub: (arg0: (arg0: T) => void, arg1: string) => void;
+        sub: SubFunction<T>;
     };
     /**
      * !
      */
     export type MfldFunc = Function;
-    namespace C {
+    namespace O {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*

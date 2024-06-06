@@ -119,7 +119,7 @@ function _runUpdates() {
     }
 
     //Handle queued nextTick functions
-    _nextTickQueue.forEach(fn=> fn());
+    for(let fn of _nextTickQueue) fn();
     _nextTickQueue = [];
     workArray = [];
 }

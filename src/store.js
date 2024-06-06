@@ -47,7 +47,7 @@ export class Store {
     /** @type {UpdaterFunction<T> | undefined} */ _updater = undefined;
     /** @type {Map<string, SubFunction>} */ _subscriptions = new Map();
     /** @type {string | undefined} */ _storedHash = undefined;
-    /** @type {Set<Store<any>>} */ _upstreamStores;
+    /** @type {Set<Store<any>>} */ _upstreamStores = new Set();
     /** @type {Set<Store<any>>} */ _downstreamStores = new Set();
 
     /**
@@ -67,11 +67,16 @@ export class Store {
         // @ts-ignore
         MfSt.set(name, this);
         
-        this._upstreamStores = new Set(ops?.upstream?.map(s=> _store(s)) || []);
-        this._upstreamStores.forEach(s=> s?._downstreamStores?.add(this));
+        (ops?.upstream?.map(s=> {
+            let S = _store(s);
+            this._upstreamStores.add(S);
+            S._downstreamStores.add(this);
+            return S;
+        }) || []);
+
         this.value = ops?.value;
         this._updater = ops?.updater;
-
+        this._auto_update();
         return this;
     }
 
