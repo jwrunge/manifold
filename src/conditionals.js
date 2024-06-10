@@ -39,10 +39,17 @@ function _iterable(obj, cb) {
     }
 }
 
+// Returns the sibling that fails the condition
+/**
+ * @param {HTMLElement | null} [sib] 
+ * @param {Function} [breakFn] 
+ * @param {Function} [cb] 
+ * @returns {HTMLElement | null}
+ */
 function _iterateSiblings(sib, breakFn, cb) {
-    if(breakFn(sib)) return;
-    sib = cb(sib) || sib;
-    _iterateSiblings(sib?.nextElementSibling, breakFn, cb);
+    if(breakFn(sib)) return sib;
+    sib = cb?.(sib) || sib;
+    return _iterateSiblings(sib?.nextElementSibling, breakFn, cb);
 }
 
 /**
@@ -63,8 +70,12 @@ function _registerConditionStore(storeName, storeList, conditionChain, upstreamC
                     if(condition) return false;
                 }
             }
-            console.log("UPDATING ", storeName, list, func?.(...list))
-            return func?.(...list);
+            let res = func?.(...list);
+            if(res) for(let condition of conditionChain || []) {
+                console.log("Clearing condition for", condition)
+                _store(condition)?.clearHash?.();
+            }
+            return res;
         }
     });
 }
@@ -88,23 +99,18 @@ export function _handleConditionals(el, mode, ops) {
         let upstreamConditionsLen = conditionChain.length;
 
         // Iterate siblings to add implicit else
-        let hasElse = false;
-        _iterateSiblings(
+        let breakSibling = _iterateSiblings(
             startElement?.nextElementSibling,
             (sib)=> sib?.dataset[`${ATTR_PREFIX}if`] == undefined && sib?.dataset[`${ATTR_PREFIX}elseif`] == undefined && sib?.dataset[`${ATTR_PREFIX}else`] == undefined,
-            (sib)=> {
-                if(sib?.dataset[`${ATTR_PREFIX}else`] == undefined && sib.nextElementSibling?.dataset[`${ATTR_PREFIX}else`] == undefined && !hasElse) {
-                    console.log("ADDING IMPLICIT ELSE")
-                    // Register implicit else
-                    hasElse = true;
-                    let implElse = document.createElement("template");
-                    implElse.dataset[`${ATTR_PREFIX}else`] = "()=> true";
-                    implElse.innerHTML = "<div>VISIBLE IF NO CONDITIONS</div>"
-                    sib.after(implElse);
-                }
-                else hasElse = true;
-            }
         );
+
+        if(breakSibling?.previousElementSibling?.dataset[`${ATTR_PREFIX}else`] == undefined) {
+            // Register implicit else
+            let implElse = document.createElement("template");
+            implElse.dataset[`${ATTR_PREFIX}else`] = "()=> true";
+            implElse.innerHTML = "<div>VISIBLE IF NO CONDITIONS</div>"
+            sib.after(implElse);
+        }
         
         // Iterate siblings to get condition branches
         _iterateSiblings(
@@ -117,12 +123,14 @@ export function _handleConditionals(el, mode, ops) {
                 return true;
             },
             (sib)=> {
-                console.log("Handling sibling", sib);
                 let { storeList, func, storeName } = _parseFunction({
                     el: sib, 
-                    datakey: conditionChain.length ? el.dataset?.[`${ATTR_PREFIX}elseif`] ? `${ATTR_PREFIX}elseif` : `${ATTR_PREFIX}else` : mode
+                    datakey: conditionChain.length ? sib.dataset?.[`${ATTR_PREFIX}elseif`] ? `${ATTR_PREFIX}elseif` : `${ATTR_PREFIX}else` : mode
                 });
-                if(!storeList && !func) return;
+                if(!storeList && !func) {
+                    console.error("Early condition abort on", storeName, sib);
+                    return;
+                }
     
                 // Ensure template
                 sib = _ensureTemplate(sib);

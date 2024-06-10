@@ -118,6 +118,10 @@ export class Store {
         });
     }
 
+    async clearHash() {
+        this._storedHash = undefined;
+    }
+
     async _auto_update() {
         let newVal = await this._updater?.(
             Array.from(this._upstreamStores)?.map(S => S?.value) || [], 

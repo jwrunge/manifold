@@ -94,6 +94,8 @@ export function _parseFunction(data) {
         }
     }
 
+    console.log("PARSED FUNCTION", data, condition, storeName)
+
     if(!condition) return {};
 
     let [stores, fn] = condition?.split("=>")?.map(s=> s.trim()) || ["", ""];
