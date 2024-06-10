@@ -1,5 +1,5 @@
-declare module "mfld.mod" {
-    export { O as Mfld };
+declare module "mfld" {
+    export { _ as Mfld };
     /**
      * !
      */
@@ -41,10 +41,6 @@ declare module "mfld.mod" {
          * - Callback function - run on fetch response code; return `false` to prevent further processing
          */
         onCode?: (code: number, data: void | Response) => boolean | void;
-        /**
-         * - Automatically fetch content on page load
-         */
-        auto?: boolean;
         /**
          * - External domain fetch settings
          */
@@ -107,7 +103,19 @@ declare module "mfld.mod" {
     /**
      * !
      */
+    export type ValueDeterminer<T> = (currentValue?: T) => T | Promise<T> | undefined;
+    /**
+     * !
+     */
     export type UpdateFunction<T> = (value: T | ValueDeterminer<T>) => T | Promise<T> | undefined;
+    /**
+     * !
+     */
+    export type SubDeterminer<T> = (value: T) => void;
+    /**
+     * !
+     */
+    export type SubFunction<T> = (value: SubDeterminer<T>) => any;
     /**
      * !
      */
@@ -116,10 +124,6 @@ declare module "mfld.mod" {
         upstream?: Array<string>;
         updater?: UpdaterFunction<T>;
     };
-    /**
-     * !
-     */
-    export type SubFunction<T> = Function;
     /**
      * !
      */
@@ -141,7 +145,7 @@ declare module "mfld.mod" {
      * !
      */
     export type MfldFunc = Function;
-    namespace O {
+    namespace _ {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*

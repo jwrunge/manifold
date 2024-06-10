@@ -17,7 +17,6 @@ import { _registerSubs, _setOptions } from "./registrar.js";
  * @property {"json"|"text"} [responseType] - Response type (default: "text")
  * @property {(err: Error)=> void} [err] - Error callback - run on fetch error
  * @property {(code: number, data: void | Response)=> boolean | void} [onCode] - Callback function - run on fetch response code; return `false` to prevent further processing
- * @property {boolean} [auto] - Automatically fetch content on page load
  * @property {ExternalOptions[]} [externals] - External domain fetch settings
  */
 
@@ -46,7 +45,7 @@ import { _registerSubs, _setOptions } from "./registrar.js";
  * @returns {T | Promise<T>}
  */
 
-/**
+/**!
  * @template T
  * @callback ValueDeterminer
  * @param {T} [currentValue]
@@ -62,17 +61,24 @@ import { _registerSubs, _setOptions } from "./registrar.js";
 
 /**!
  * @template T
- * @typedef {Object} StoreOptions
- * @property {T} [value]
- * @property {Array<string>} [upstream]
- * @property {UpdaterFunction<T>} [updater]
+ * @callback SubDeterminer
+ * @param {T} value
+ * @returns {void}
  */
 
 /**!
  * @template T
- * @typedef {Function} SubFunction
- * @param {T} value
- * @returns {void}
+ * @callback SubFunction
+ * @param {SubDeterminer<T>} value The store's current value
+ * @returns void
+ */
+
+/**!
+ * @template T
+ * @typedef {Object} StoreOptions
+ * @property {T} [value]
+ * @property {Array<string>} [upstream]
+ * @property {UpdaterFunction<T>} [updater]
  */
 
 /**!

@@ -17,11 +17,11 @@
   </p>
   <p>Here is text that can be HTML: <span data-mf_Bind="store1->innerHTML">Here is a default value.</span></p>
   <p>Store 2 nested: <span data-mf_Bind="store2.values[1]->innerHTML">Here is a default value.</span></p>
-  <!-- <p>Checkbox set to checked? <span data-mf_Bind="store2.values[0]->innerText"></span></p>
+  <p>Checkbox set to checked? <span data-mf_Bind="store2.values[0]->innerText"></span></p>
   <p>Store 4 value: <span data-mf_Bind="store4->innerText"></span></p>
   <p>Checked store checked? <span data-mf_Bind="checkedStore-> innerText">Unknown</span></p>
   <p>Value of Mass Store 99: <span data-mf_Bind="mass_store99 -> innerText">Unknown</span></p>
-  <div data-secret="THIS IS A SECRET" data-mf_Sync="on($mount) sendAlert(data-secret) -> checkedStore"></div> -->
+  <div data-secret="THIS IS A SECRET" data-mf_Sync="on($mount) sendAlert(data-secret) -> checkedStore"></div>
 
   <!-- Content -->
   <div class="sync-grid">
@@ -30,16 +30,16 @@
     <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-mf_Bind="store1->checked" data-mf_Sync="on(change) checked->checkedStore">
     <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-mf_Bind="isChecked(store1)->checked">
     
-    <!-- Select (with dynamic options) ->
+    <!-- Select (with dynamic options) -->
     <label>Dyn select</label>
     <select data-mf_Bind="store1->value" data-mf_Sync="on(change) value->store1">
-      <!- Dynamic frontend replace ->
+      <!-- Dynamic frontend replace -->
       <template id="select-ops" data-mf_each="(store1)=> store1 as letter, index">
-        <!- Dynamic options ->
+        <!-- Dynamic options -->
         <option value="${letter}">${index}: ${letter}</option>
       </template>
 
-      <!- Default / fallback options (replaced if dynamic options work) ->
+      <!-- Default / fallback options (replaced if dynamic options work) -->
       <mf-default data-mf_template="select-ops">
         <option value="" default>Blank</option>
         <option value="My text">Initial Value</option>
@@ -47,22 +47,31 @@
         <option value="We're at 4k">Show 4k text</option>
       </mf-default>
 
-      <!- Always-present options ->
+      <!-- Always-present options -->
       <option value="Last one">Last one</option>
     </select>
 
-    <label>Dyn div</label>
-    <!- <mf-default data-mf_if="showDiv(store1)">
+    <!-- <label>Dyn div</label> -->
+    <!-- <mf-default data-mf_if="showDiv(store1)">
       Div is shown.
     </mf-default>
     <template data-mf_else-if="showDiv(store1)">Else if</template>
     <template data-mf_else>Else</template> -->
   </div>
 
+  <select data-mf_bind="()=> 2 -> value">
+    <option value="1">One</option>
+    <option value="2">Two</option>
+    <option value="3">Three</option>
+    <template data-mf_each="(store1)=> store1 as letter, index">
+      <option value="${index}">${index}: ${letter}</option>
+    </template>
+  </select>
+
   <button data-mf_Post="on(click) ()=> {return {name: 'Jake', age: 36}} -> /tests/header.html">JSON Sender</button>
 
-  <form action="/tests/header.html" method="post" data-mf_swapinner="h2->h1">
-    <label>Name: <input type="text" name="name" autocomplete="name"></label>
+  <form action="/tests/header.html" method="post" data-mf_swapinner="h2->h1" data-mf_promote data-mf_pushstate>
+    <label>Name: <input type="text" name="name" autocomplete="name" required></label>
     <label>Age: <input type="number" name="age"></label>
     <button type="submit">SUBMIT</button>
   </form>
@@ -72,17 +81,17 @@
   </template>
 
   <div data-mf_if="(store1, store3)=> return store1 == 'Last one' || store3 == 'three'">
-    ,/;mn bk,jbbkkjlbikujbuibbbbbbbb
+    <div>,/;mn bk,jbbkkjlbikujbuibbbbbbbb</div>
   </div>
   <template data-mf_elseif='(store1)=> return store1 == "We&#39;re at 4k"'>
-    <div>;lnk</div>
+    <div>elif</div>
   </template>
   <template data-mf_else>
-    <div>lknn,.mbkljn</div>
+    <div>ELSE</div>
   </template>
 
   <div class="special-insert" data-mf_Get="on(click) /tests/interactive.html" data-mf_swapinner=".sync-grid -> header">Default insert</div>
-  <nav data-mf_Post="on(click) (store1, store2)=> store1.toUpperCase() + JSON.stringify(store2) -> /tests/header.html" data-mf_swapinner="header -> h1" data-mf_transsmart="true" data-mf_transdur="[5000, 300]" data-mf_resolve="(data)=>alert('DATA'+data)">
+  <nav data-mf_Post="on(click) (store1, store2)=> store1.toUpperCase() + JSON.stringify(store2) -> /tests/header.html" data-mf_swapinner="header -> h1" data-mf_transsmart="true" data-mf_transdur="[5000, 300]">
     <p>This is some default nav content.</p>
   </nav>
 
@@ -105,20 +114,20 @@
     padding: 1rem;
   }
 
-  .mf-trans {
+  .mf_trans {
     transition-property: transform, opacity;
     /* transform: scale(1); */
     transform: translateX(0);
     opacity: 1;
   }
 
-  .mf-trans.out {
+  .mf_trans.out {
     /* transform: scale(2); */
     transform: translateX(-50%);
     opacity: 0;
   }
 
-  .mf-trans.in {
+  .mf_trans.in {
     /* transform: scale(0); */
     transform: translateX(50%);
     opacity: 0;

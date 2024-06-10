@@ -167,8 +167,14 @@ nav + section {
 input, select {
   min-width: 0;
   max-width: 100%;
-  background: gray;
+  background: black;
   color: white;
+  border: none;
+}
+
+button {
+  background: black;
+  border: none;
 }
 
 label {

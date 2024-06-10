@@ -77,8 +77,13 @@ export function _handleFetch(el, trigger, fetchOps, href, method, input, process
                     done: (el)=> {
                         _registerSubs(el)
                     },
-                })
+                });
             }
+        }
+
+        //Push to history if requested
+        if(el.dataset?.[`${ATTR_PREFIX}pushstate`] !== undefined) {
+            history.pushState({}, "", href);
         }
 
         let resolveTxt = el.dataset?.[`${ATTR_PREFIX}resolve`];

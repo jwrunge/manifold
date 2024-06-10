@@ -9,7 +9,6 @@ import { _handleConditionals } from "./conditionals.js";
 /** @type {Partial<MfldOps>} */
 let _ops = {};
 let _commaSepRx = /, {0,}/g;
-let _elIdx = 0;
 let _modes = ["bind", "sync", "if", "each", "get", "head", "post", "put", "delete", "patch"].map(m=> `${ATTR_PREFIX}${m}`);
 
 /**!
@@ -21,30 +20,38 @@ export function _setOptions(newops, profileName) {
     else _ops = { ..._ops, ...newops };
 }
 
+// Handle location state changes
+globalThis.addEventListener("popstate", (e)=> {
+    // for(let update of e.state) {
+    //     _scheduleUpdate(update);
+    // }
+});
+
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 /**
  * @param {HTMLElement | null} [parent] 
  */
 export function _registerSubs(parent) {
+    if(parent && parent.nodeType == Node.TEXT_NODE) return;
+    
     /** @type {NodeListOf<HTMLElement> | []} */
     let els = (parent || document.body).querySelectorAll(
-        `[data-${_modes.join(`],[data-`)}]${_ops.fetch?.auto != false ? ",a,form" : ""}`
+        `[data-${_modes.join(`],[data-`)}],a,form`
     ) || [];
 
     for(let el of els) {
-        /** @type {HTMLElement} */
-        if(!el.id) el.id = `${_elIdx++}`;
-
         let _op_overrides = _getOpOverrides(_ops, el);
 
         //Check for <a> and <form> elements
-        if(el.dataset?.[`${ATTR_PREFIX}boost`] !== undefined && (el.tagName == "A" || el.tagName == "FORM")) {
+        if(el.dataset?.[`${ATTR_PREFIX}promote`] !== undefined) {
             let [mode, href, input, trigger] = el.tagName == "A" ?
                 ["get", /** @type {HTMLAnchorElement}*/(el).href, "", "click"] : 
                 [/** @type {HTMLFormElement}*/(el).method.toLowerCase(), /** @type {HTMLFormElement}*/(el).action, "$form", "submit"];
 
-            _handleFetch(el, trigger, _op_overrides, href, mode, input);
-            continue;
+            if(href) {
+                _handleFetch(el, trigger, _op_overrides, href, mode, input);
+                continue;
+            }
         }
 
         //Loop over all data attributes (modes)
@@ -57,7 +64,6 @@ export function _registerSubs(parent) {
 
             if(!_modes.includes(mode)) continue;
             let shouldHaveTriggers = ![`${ATTR_PREFIX}bind`].includes(mode);
-            let err_detail = `(#${el.id} on ${mode})`;
 
             //Loop over provided settings
             for(let setting of el.dataset?.[mode]?.split(";") || []) {
@@ -69,14 +75,14 @@ export function _registerSubs(parent) {
                 let input = processFuncName ? _paramsInParens(funcAndInput.slice(0, (funcAndInput.indexOf(")") || -2) + 1)) : funcAndInput.split(_commaSepRx)?.map(s=> s.trim());
 
                 //Handle errors
-                if(shouldHaveTriggers && !triggers?.length) { console.error(`No trigger: ${err_detail}.`); break; }
+                if(shouldHaveTriggers && !triggers?.length) { console.error("No trigger", el); break; }
 
                 /** @type {Function | undefined} */
                 let processFunc = _parseFunction(processFuncName)?.func;
                 if(processFuncName) {
-                    if(!processFunc) console.warn(`"${processFuncName}" not registered: ${err_detail}`);
+                    if(!processFunc) console.warn(`"${processFuncName}" not registered`, el);
                 }
-                else if(input.length > 1) console.warn(`Multiple inputs without function: ${err_detail}`);
+                else if(input.length > 1) console.warn("Multiple inputs without function", el);
 
                 //Loop over triggers
                 if(!triggers?.length) triggers = [""]

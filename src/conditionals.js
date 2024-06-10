@@ -1,14 +1,13 @@
 import { _registerSubs } from "./registrar";
 import { _store } from "./store";
-import { _scheduleUpdate } from "./updates";
+import { _applyTransition, _scheduleUpdate } from "./updates";
 import { _getStorePathFromKey, _parseFunction, ATTR_PREFIX } from "./util";
 
 /**
  * @param {HTMLElement} el
- * @param {HTMLElement} rootElement 
  * @returns {HTMLElement}
  */
-function _ensureTemplate(el, rootElement) {
+function _ensureTemplate(el) {
     // Make sure this is a template
     if(el.tagName != "TEMPLATE") {
         let newEl = document.createElement("template");
@@ -19,7 +18,6 @@ function _ensureTemplate(el, rootElement) {
         el.replaceWith(newEl);
 
         // If not, it's default content
-        rootElement.innerHTML = el.innerHTML;
         return newEl;
     }
     return el;
@@ -39,7 +37,13 @@ function _iterable(obj, cb) {
         }
         catch(e) { console.error(`${obj} is not iterable`); }
     }
-  }
+}
+
+function _iterateSiblings(sib, breakFn, cb) {
+    if(breakFn(sib)) return;
+    sib = cb(sib) || sib;
+    _iterateSiblings(sib?.nextElementSibling, breakFn, cb);
+}
 
 /**
  * @param {string} [storeName] 
@@ -55,10 +59,11 @@ function _registerConditionStore(storeName, storeList, conditionChain, upstreamC
         upstream: [...storeList || [], ...conditionChain || []],
         updater: (list)=> {
             if(upstreamConditionsLen) {
-                for(let condition of list.slice(-upstreamConditionsLen) || []) {
+                for(let condition of list.slice(storeList?.length || 0) || []) {
                     if(condition) return false;
                 }
             }
+            console.log("UPDATING ", storeName, list, func?.(...list))
             return func?.(...list);
         }
     });
@@ -71,93 +76,138 @@ function _registerConditionStore(storeName, storeList, conditionChain, upstreamC
  * @param {import("./index.module").MfldOps} ops 
  */
 export function _handleConditionals(el, mode, ops) {
-    let rootElement = document.createElement("div");
-    el.before(rootElement);
+    let startElement = document.createElement("template");
+    let endElement = document.createElement("template");
+    startElement.classList.add("mfld-start");
+    endElement.classList.add("mfld-end");
+    el.before(startElement);
 
     if(mode == `${ATTR_PREFIX}if`) {
-        rootElement.classList.add("mfld-active-condition");
-
         // Set up conditions
-        let siblingPtr = el;
         let conditionChain = [];
-        while(siblingPtr) {
-            if(!siblingPtr) break;
-            let { storeList, func, storeName } = _parseFunction({
-                el: siblingPtr, 
-                datakey: conditionChain.length ? `${ATTR_PREFIX}elseif`: mode
-        });
-            if(!storeList && !func) break;
+        let upstreamConditionsLen = conditionChain.length;
 
-            // Ensure template
-            siblingPtr = _ensureTemplate(siblingPtr, rootElement);
-
-            // Register condition store
-            let upstreamConditionsLen = conditionChain.length;
-            let conditionStore = _registerConditionStore(storeName, storeList, conditionChain, upstreamConditionsLen, func);
-            conditionChain.push(conditionStore.name);
-
-            // Subscribe
-            let siblingClone = /** @type {HTMLElement}*/(siblingPtr.cloneNode(true));
-            conditionStore?.sub(val=> {
-                if(!val) return;
-                let sib = document.createElement("div");
-                sib.innerHTML = siblingClone.innerHTML;
-                if(siblingClone?.tagName == "TEMPLATE") {
-                    _scheduleUpdate({
-                        in: sib,
-                        out: rootElement,
-                        relation: "swapinner",
-                        ops,
-                        done: ((el) => _registerSubs(el)),
-                    })
+        // Iterate siblings to add implicit else
+        let hasElse = false;
+        _iterateSiblings(
+            startElement?.nextElementSibling,
+            (sib)=> sib?.dataset[`${ATTR_PREFIX}if`] == undefined && sib?.dataset[`${ATTR_PREFIX}elseif`] == undefined && sib?.dataset[`${ATTR_PREFIX}else`] == undefined,
+            (sib)=> {
+                if(sib?.dataset[`${ATTR_PREFIX}else`] == undefined && sib.nextElementSibling?.dataset[`${ATTR_PREFIX}else`] == undefined && !hasElse) {
+                    console.log("ADDING IMPLICIT ELSE")
+                    // Register implicit else
+                    hasElse = true;
+                    let implElse = document.createElement("template");
+                    implElse.dataset[`${ATTR_PREFIX}else`] = "()=> true";
+                    implElse.innerHTML = "<div>VISIBLE IF NO CONDITIONS</div>"
+                    sib.after(implElse);
                 }
-            });
-
-            siblingPtr = /** @type {HTMLElement} */(siblingPtr?.nextElementSibling);
-        }
+                else hasElse = true;
+            }
+        );
+        
+        // Iterate siblings to get condition branches
+        _iterateSiblings(
+            startElement?.nextElementSibling,
+            (sib)=> {
+                let end = 0;
+                for(let i of ["if", "elseif", "else"]) if(sib?.dataset[`${ATTR_PREFIX}${i}`] == undefined) end++;
+                if(end < 3) return false;
+                sib?.before(endElement);
+                return true;
+            },
+            (sib)=> {
+                console.log("Handling sibling", sib);
+                let { storeList, func, storeName } = _parseFunction({
+                    el: sib, 
+                    datakey: conditionChain.length ? el.dataset?.[`${ATTR_PREFIX}elseif`] ? `${ATTR_PREFIX}elseif` : `${ATTR_PREFIX}else` : mode
+                });
+                if(!storeList && !func) return;
+    
+                // Ensure template
+                sib = _ensureTemplate(sib);
+    
+                // Register condition store
+                let conditionStore = _registerConditionStore(storeName, storeList, conditionChain, upstreamConditionsLen, func);
+                conditionChain.push(conditionStore.name);
+    
+                // Subscribe
+                conditionStore?.sub(val=> {
+                    if(!val) {
+                        return;
+                    }
+    
+                    _scheduleUpdate(()=> {
+                        _iterateSiblings(
+                            startElement?.nextElementSibling, 
+                            (sib)=> sib?.classList?.contains("mfld-end"),
+                            (sib)=> { 
+                                if(sib?.nodeName != "TEMPLATE") _applyTransition(/** @type {HTMLElement}*/(sib), "out", ops, ()=> sib?.remove()); 
+                            }
+                        );
+                    });
+    
+                    // Replace values
+                    _scheduleUpdate(()=> {
+                        let sibClone = sib.cloneNode(true);
+                        for(let element of /** @type {HTMLTemplateElement}*/(sibClone).content.children) {
+                            endElement.before(element);
+                            _applyTransition(/** @type {HTMLElement}*/(element), "in", ops, ()=> _registerSubs(/** @type {HTMLElement}*/(element)));
+                        }
+                    });
+                });  
+                
+                return sib;
+            },
+        );
     }
 
     if(mode == `${ATTR_PREFIX}each`) {
-        rootElement.classList.add("mfld-loop-result");
+        el.before(endElement);
 
         let [ funcStr, aliases ] = el.dataset[`${ATTR_PREFIX}each`]?.split("as")?.map(s=> s.trim()) || [];
         let [ valueName, keyName ] = aliases.split(/\s{0,},\s{0,}/)?.map(s=> s.trim()) || ["value", "key"];
         let { storeList, func, storeName } = _parseFunction(funcStr);  
         
         // Ensure template
-        el = _ensureTemplate(el, rootElement);
+        el = _ensureTemplate(el);
 
         // Register condition store
         let conditionStore = _registerConditionStore(`LOOP:${storeName}`, storeList, [], 0, func);
         conditionStore?.sub(val=> {
-            _scheduleUpdate(()=> rootElement.replaceChildren());
-            _iterable(val || [], (key, value)=> {
-                let html = el.innerHTML;
+            _scheduleUpdate(()=> {
+                _iterateSiblings(
+                    startElement?.nextElementSibling, 
+                    (sib)=> sib?.classList?.contains("mfld-end"),
+                    (sib)=> _applyTransition(/** @type {HTMLElement}*/(sib), "out", ops, ()=> sib?.remove()), 
+                );
+            });
+            _scheduleUpdate(()=> {
+                _iterable(val || [], (key, value)=> {
+                    let html = el.innerHTML;
 
-                // Get all logical bindings and replace values
-                let replacements = el.innerHTML.match(/\${[^}]*}/g) || [];
-                for(let rep of replacements) {
-                    let repClean = rep.replace(/^\$\{|\}$/g, "");
+                    // Get all logical bindings and replace values
+                    let replacements = el.innerHTML.match(/\${[^}]*}/g) || [];
+                    for(let rep of replacements) {
+                        let repClean = rep.replace(/^\$\{|\}$/g, "");
 
-                    try {
-                        let fn = _parseFunction(`(${keyName}, ${valueName})=> ${repClean}`)?.func;
-                        html = html.replace(rep, fn?.(value, key) || "");
+                        try {
+                            let fn = _parseFunction(`(${keyName}, ${valueName})=> ${repClean}`)?.func;
+                            html = html.replace(rep, fn?.(value, key) || "");
+                        }
+                        catch(e) {
+                            console.error("Syntax error in loop function", e);
+                        }
                     }
-                    catch(e) {
-                        console.error("Syntax error in loop function", e);
-                    }
-                }
 
-                // Replace values
-                let item = document.createElement("div");
-                item.innerHTML = html;
-                
-                _scheduleUpdate({
-                    in: item,
-                    out: rootElement,
-                    relation: "append",
-                    ops,
-                    done: ((el) => _registerSubs(el))
+                    let item = /** @type {HTMLTemplateElement}*/(el.cloneNode(true));
+                    item.innerHTML = html;
+
+                    // Replace values
+                    for(let element of item.content.children) {
+                        endElement.before(element);
+                        _applyTransition(/** @type {HTMLElement}*/(element), "in", ops, ()=> _registerSubs(/** @type {HTMLElement}*/(element)));
+                    }
                 });
             });
         })

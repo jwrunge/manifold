@@ -90,18 +90,20 @@ function _runUpdates() {
             else {
                 if(["swapinner", "swapouter"].includes(order.relation)) {
                     //Remove old children before appending (if swapping children)
-                    let container = /** @type {HTMLElement}*/(order.out?.cloneNode(true));
+                    let container = /** @type {HTMLElement | null}*/(order.out?.cloneNode(true));
 
-                    order.out?.after(container);
-                    let getDimensionsAfterUpdate = order.relation == "swapinner" ? true : false;
+                    if(container) {
+                        order.out?.after(container);
+                        let getDimensionsAfterUpdate = order.relation == "swapinner" ? true : false;
 
-                    if(order.relation == "swapinner") {
-                        container.style.border = "none";
-                        order.out.replaceChildren();
+                        if(order.relation == "swapinner") {
+                            container.style.border = "none";
+                            order.out.replaceChildren();
+                        }
+
+                        // Transition old children out
+                        _applyTransition(container, "out", order.ops, undefined, order.out, getDimensionsAfterUpdate);
                     }
-
-                    // Transition old children out
-                    _applyTransition(container, "out", order.ops, undefined, order.out, getDimensionsAfterUpdate);
                 }
 
                 _addSpacer?.(order.in, order.out, wrapperHeight, false, order.ops);
@@ -135,7 +137,7 @@ function _runUpdates() {
  * @param {boolean} [getDimensionsAfterUpdate]
  * @returns 
  */
-function _applyTransition(el, dir, ops, fn, refElement, getDimensionsAfterUpdate = false) {
+export function _applyTransition(el, dir, ops, fn, refElement, getDimensionsAfterUpdate = false) {
     //Handle text nodes
     if(el?.nodeType == Node.TEXT_NODE) {
         let text = el.textContent;
