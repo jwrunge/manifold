@@ -1,6 +1,10 @@
 export let ATTR_PREFIX = "mf_";
 export let _inputNestSplitRx = /[\.\[\]\?]{1,}/g;
 
+export function _randomEnoughId() {
+    return `${Date.now()}.${Math.floor(Math.random() * 100_000)}`;
+}
+
 /**
  * Get or set nested store values
  * @param {any} obj 
@@ -73,47 +77,43 @@ export function _getOpOverrides(ops, el) {
     return newops;
 }
 
+function _parseValues(values) {
+    if(typeof values == "string") values = values.split(/\s{0,},\s{0,}/);
+    return values.map(v=> v.split(_inputNestSplitRx)?.[0]) || [];
+}
+
 /**
- * @param {{el: HTMLElement, datakey: string} | string} data 
- * @returns {{ storeList?: string[], func?: Function, storeName?: string}}
+ * @param {{el: HTMLElement, datakey: string} | string} condition 
+ * @returns {{ valueList?: string[], func?: Function }}
  */
-export function _parseFunction(data) {
-    let condition = "";
-    let storeName = "";
-    if(typeof data === "string") {
-        condition = data;
-        storeName = data;
-    }
-    else {
-        condition = data?.el?.dataset?.[data?.datakey] || "";
-        storeName = condition;
-
-        if(!condition && data?.el?.dataset?.[`${ATTR_PREFIX}else`] !== undefined) {
-            condition = "return true";
-            storeName = `ELSE:${data?.el?.dataset?.[data?.datakey] || ""}`;
-        }
+export function _parseFunction(condition) {
+    if(typeof condition != "string") {
+        condition = condition?.el?.dataset?.[condition?.datakey] || "";
+        if(!condition && /** @type {any}*/(condition)?.el?.dataset?.[`${ATTR_PREFIX}else`] != undefined) condition = "return true";
     }
 
-    console.log("PARSED FUNCTION", data, condition, storeName)
-
-    if(!condition) return {};
-
-    let [stores, fn] = condition?.split("=>")?.map(s=> s.trim()) || ["", ""];
-    if(!fn) {
-        fn = stores.slice();
-        stores = "";
-    }
+    let [fn, values] = condition?.split("=>")?.map(s=> s.trim())?.reverse() || ["", ""];
 
     // Set up function to evaluate store values
-    let storeList = stores?.split(",")?.map(s=> s.replace(/[()]/g, "").trim());
+    let valueList = values?.split(",")?.map(s=> s.replace(/[()]/g, "").trim()) || [];
     // @ts-ignore
     let func = globalThis[fn] || MfFn?.get(fn);
-
-    // If function is not found, try to create it; account for implicit returns
     if(!func) {
+        // If function is not found, try to create it; account for implicit returns
+        if(!valueList?.length && !fn.includes("=>")) {
+            if(!fn.match(/\(|\)/)) {
+                valueList = [fn];
+                fn = `return ${fn}`;
+            }
+            else {
+                valueList = fn.match(/\([^\)]{1,}\)/)?.[0]?.replace(/[\(\) ]/g, "").split(",").filter(s=> !s.match(/[\"\'\`]/)) || [];
+            }
+        }
+
+        valueList = _parseValues(valueList);
         if(!fn.match(/^\s{0,}\{/) && !fn.includes("return")) fn = fn.replace(/^\s{0,}/, "return ");
-        func = new Function(...storeList, fn);
+        func = new Function(...valueList, fn);
     }
 
-    return { storeList, func, storeName };
+    return { valueList, func };
 }

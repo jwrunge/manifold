@@ -1,5 +1,5 @@
 declare module "mfld" {
-    export { _ as Mfld };
+    export { O as Mfld };
     /**
      * !
      */
@@ -123,6 +123,7 @@ declare module "mfld" {
         value?: T;
         upstream?: Array<string>;
         updater?: UpdaterFunction<T>;
+        scope?: HTMLElement | SVGScriptElement | "global";
     };
     /**
      * !
@@ -145,7 +146,7 @@ declare module "mfld" {
      * !
      */
     export type MfldFunc = Function;
-    namespace _ {
+    namespace O {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*

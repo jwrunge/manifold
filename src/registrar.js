@@ -9,7 +9,7 @@ import { _handleConditionals } from "./conditionals.js";
 /** @type {Partial<MfldOps>} */
 let _ops = {};
 let _commaSepRx = /, {0,}/g;
-let _modes = ["bind", "sync", "if", "each", "get", "head", "post", "put", "delete", "patch"].map(m=> `${ATTR_PREFIX}${m}`);
+let _modes = ["bind", "sync", "templ", "if", "each", "get", "head", "post", "put", "delete", "patch"].map(m=> `${ATTR_PREFIX}${m}`);
 
 /**!
  * @param {Partial<MfldOps>} newops 
@@ -33,7 +33,7 @@ globalThis.addEventListener("popstate", (e)=> {
  */
 export function _registerSubs(parent) {
     if(parent && parent.nodeType == Node.TEXT_NODE) return;
-    
+
     /** @type {NodeListOf<HTMLElement> | []} */
     let els = (parent || document.body).querySelectorAll(
         `[data-${_modes.join(`],[data-`)}],a,form`
@@ -57,10 +57,10 @@ export function _registerSubs(parent) {
         //Loop over all data attributes (modes)
         for(let mode in el.dataset) {
             //HANDLE CONDITIONALS AND LOOPS
-            if([`${ATTR_PREFIX}if`, `${ATTR_PREFIX}each`].includes(mode)) {
-                _handleConditionals(el, mode, _op_overrides);
-                continue;
-            }
+            // if([`${ATTR_PREFIX}templ`, `${ATTR_PREFIX}if`, `${ATTR_PREFIX}each`].includes(mode)) {
+            //     _handleConditionals(el, mode, _op_overrides);
+            //     continue;
+            // }
 
             if(!_modes.includes(mode)) continue;
             let shouldHaveTriggers = ![`${ATTR_PREFIX}bind`].includes(mode);
@@ -70,31 +70,27 @@ export function _registerSubs(parent) {
                 //Break out settings
                 let [sourceParts, output] = setting?.split("->")?.map(s=> s.trim()) || [];
                 let triggers = shouldHaveTriggers ? _paramsInParens(sourceParts.slice(0, sourceParts.indexOf(")"))) : [];
-                let funcAndInput = shouldHaveTriggers ? sourceParts.slice(sourceParts.indexOf(")") + 1) : sourceParts;
-                let processFuncName = funcAndInput.includes("=>") ? funcAndInput : funcAndInput.includes("(") ? funcAndInput.match(/^[^\(]{1,}/)?.[0] || "" : "";
-                let input = processFuncName ? _paramsInParens(funcAndInput.slice(0, (funcAndInput.indexOf(")") || -2) + 1)) : funcAndInput.split(_commaSepRx)?.map(s=> s.trim());
+                let processFuncStr = shouldHaveTriggers ? sourceParts.slice(sourceParts.indexOf(")") + 1) : sourceParts;
 
                 //Handle errors
                 if(shouldHaveTriggers && !triggers?.length) { console.error("No trigger", el); break; }
 
-                /** @type {Function | undefined} */
-                let processFunc = _parseFunction(processFuncName)?.func;
-                if(processFuncName) {
-                    if(!processFunc) console.warn(`"${processFuncName}" not registered`, el);
+                let { func, valueList } = _parseFunction(processFuncStr);
+                if(processFuncStr) {
+                    if(!func) console.warn(`"${processFuncStr}" not registered`, el);
                 }
-                else if(input.length > 1) console.warn("Multiple inputs without function", el);
 
                 //Loop over triggers
                 if(!triggers?.length) triggers = [""]
                 for(let trigger of triggers) {
-                    if(mode.match(/bind|sync/)) _handleBindSync(el, input, output, trigger, mode, processFunc);
-                    else {
-                        if(!output) {
-                            output = input[0];
-                            input = [];
-                        }
-                        _handleFetch(el, trigger, _op_overrides, output, mode.replace(ATTR_PREFIX, ""), input, processFunc);
-                    }
+                    if(mode.match(/bind|sync/)) _handleBindSync(el, valueList, output, trigger, mode, func);
+                    // else {
+                    //     if(!output) {
+                    //         output = input[0];
+                    //         input = [];
+                    //     }
+                    //     _handleFetch(el, trigger, _op_overrides, output, mode.replace(ATTR_PREFIX, ""), input, processFunc);
+                    // }
                 }
             }; //End loop settings
         }   //End loop dataset modes

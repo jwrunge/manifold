@@ -79,6 +79,7 @@ import { _registerSubs, _setOptions } from "./registrar.js";
  * @property {T} [value]
  * @property {Array<string>} [upstream]
  * @property {UpdaterFunction<T>} [updater]
+ * @property {HTMLElement | SVGScriptElement | "global"} [scope]
  */
 
 /**!
