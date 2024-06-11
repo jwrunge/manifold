@@ -53,7 +53,8 @@ export function _handleTemplates(el, mode, as, func, valueList, ops) {
                         html = html.replace(rep, fn?.(val, key) || "");
                     }
                     catch(e) {
-                        throw(e);
+                        html = "Error in template. Check console for details."
+                        console.error(e);
                     }
                 }
 
