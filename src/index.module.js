@@ -136,16 +136,18 @@ func:
  * @return {MfldFunc}
  */ (func_name)=> /** @type {(val: any, el?: HTMLElement)=> void}*/(
 // @ts-ignore
- MfFn?.get(func_name)),
+ MfFn[func_name]),
 funcs: 
 /**!
  * - Add functions to the Manifold function registry in key-value pairs.
  * - Functions must be registered in order to be accessible to HTML elements via `mfBind`, `mfSync`, and `mfResolve`. 
  * - It may still be beneficial to keep a reference to the original function if you need to preserve type information.
  * @param {{ [key: string]: MfldFunc }} funcs
- */ funcs=> {for(let key in funcs) 
-// @ts-ignore
- MfFn.set(key, funcs[key])},
+ */ funcs=> {
+    for(let key in funcs) {
+    // @ts-ignore
+    MfFn[key] = funcs[key];
+ }},
 config:
 /**!
  * - Set Manifold configuration options, including `trans` (DOM transition settings), `fetch` (fetch options), and `profiles` (configuration option overrides that can be set on elements ad-hoc via `mfOverrides`).

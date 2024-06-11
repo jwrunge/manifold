@@ -1,5 +1,12 @@
 /// <reference path="../dist/Mfld.js" />
 
+import { Mfld } from "../dist/dev/mfld.mod.js";
+
+function sendAlert(val) {
+    return val
+}
+Mfld.funcs({sendAlert});
+
 console.log("Manifold", Mfld);
 
 Mfld.config({
@@ -55,10 +62,6 @@ const DESCENDANT = Mfld.store("descendant", {
         return `"VALUE OF STORE 3: ${stores[0]}"`;
     }
 })
-
-function sendAlert(val) {
-    return val
-}
 
 // // Sequence test - Even though later stores depend on multiple earlier stores, updates to the earlier stores SHOULD NOT result in multiple updates to the later stores
 // for(let i=0; i<5; i++) {
@@ -198,8 +201,8 @@ function syncChecked(store1, store2) {
     // console.log("SYNCING CHECKED")
     // console.log("STORE 1 VAL", store1);
     // console.log("STORE 2 VAL", store2);
-    // if(store1 === false) return "We're at 4k";
-    // Mfld.store("store1").update(store1 === false ? "We're at 4k" : store1);
+    if(store1 === false) return "We're at 4k";
+    Mfld.store("store1").update(store1 === false ? "We're at 4k" : store1);
 }
 
 Mfld.funcs({"isChecked": isChecked});

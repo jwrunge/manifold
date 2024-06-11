@@ -10,7 +10,6 @@ export function _ensureNodeName(el, nodeName, skipAttributes = []) {
         let newEl = document.createElement(nodeName);
         newEl.innerHTML = el.innerHTML;                
         for(let attr of el.attributes) {
-            console.log(skipAttributes, attr.name, skipAttributes.includes(attr.name))
             if(!skipAttributes.includes(attr.name)) newEl.setAttribute(attr.name, attr.value);
         }
         el.replaceWith(newEl);
@@ -54,6 +53,7 @@ export function _iterateSiblings(sib, breakFn, cb) {
  * @typedef InternalStoreOptions
  * @property {Function} [func]
  * @property {HTMLElement} [observeEl]
+ * @property {boolean} [allowFalse]
  */
 
 /**
@@ -67,12 +67,10 @@ export function _registerInternalStore(storeName, storeList, options) {
     return _store(storeName || "", {
         upstream: [...storeList || []],
         updater: (list)=> {
-            if(storeName?.startsWith("TEMPL")) console.log("RUNNING UPDATE", storeName, _store(storeName || "")?.value)
             try {
                 return options?.func?.(...list) || list[0];
             }
             catch(_) {
-                if(storeName?.startsWith("TEMPL")) console.log("Returning failure", storeName)
                 return;
             }
         },

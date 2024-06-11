@@ -39,7 +39,7 @@ function _hashAny(input) {
 
 //Static
 /** @type {Map<string, Store<any>>} */ if(!globalThis.MfSt) globalThis.MfSt = new Map();
-/** @type {Map<string, Function>} */ if(!globalThis.MfFn) globalThis.MfFn = new Map();
+/** @type {{[key: string]: Function}} */ if(!globalThis.MfFn) globalThis.MfFn = {};
 /** @type {Map<Element, {toDestroy: Set<Store<any>>, observer: MutationObserver}>} */ if(!globalThis.MfMutOb) globalThis.MfMutOb = new Map();
 
 /**

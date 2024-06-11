@@ -1,36 +1,37 @@
 export let ATTR_PREFIX = "mf_";
 export let _inputNestSplitRx = /[\.\[\]\?]{1,}/g;
+export let _commaSepRx = /, {0,}/g;
 
 export function _randomEnoughId() {
     return `${Date.now()}.${Math.floor(Math.random() * 100_000)}`;
 }
 
-/**
- * Get or set nested store values
- * @param {any} obj 
- * @param {(string | number)[]} path 
- * @param {any} [newval] 
- * @returns 
- */
-export function _nestedValue(obj, path, newval) {
-    let ptr = obj;
+// /**
+//  * Get or set nested store values
+//  * @param {any} obj 
+//  * @param {(string | number)[]} path 
+//  * @param {any} [newval] 
+//  * @returns 
+//  */
+// export function _nestedValue(obj, path, newval) {
+//     let ptr = obj;
 
-    for(let key of path) {
-        //Dynamically letruct object if it doesn't exist
-        if(ptr == undefined) ptr = typeof key == "number" ? [] : {};
+//     for(let key of path) {
+//         //Dynamically letruct object if it doesn't exist
+//         if(ptr == undefined) ptr = typeof key == "number" ? [] : {};
 
-        //Set or get value
-        if(newval == undefined || path[path.length - 1] !== key) ptr = ptr instanceof Map ? ptr?.get(key) : ptr?.[key];
-        else ptr instanceof Map ? ptr.set(key, newval) : ptr[key] = newval;
-    }
+//         //Set or get value
+//         if(newval == undefined || path[path.length - 1] !== key) ptr = ptr instanceof Map ? ptr?.get(key) : ptr?.[key];
+//         else ptr instanceof Map ? ptr.set(key, newval) : ptr[key] = newval;
+//     }
 
-    return ptr;
-}
+//     return ptr;
+// }
 
-export function _getStorePathFromKey(s) {
-    let [storeName, ...path] = (s)?.split(_inputNestSplitRx);
-    return [storeName, path?.map(sp=> !isNaN(parseInt(sp)) ? parseInt(sp) : sp).filter(sp=> sp) || []];
-}
+// export function _getStorePathFromKey(s) {
+//     let [storeName, ...path] = (s)?.split(_inputNestSplitRx);
+//     return [storeName, path?.map(sp=> !isNaN(parseInt(sp)) ? parseInt(sp) : sp).filter(sp=> sp) || []];
+// }
 
 function _getOverride(name, el, ops, parse = true, def = "{}", as) {
     let override = el.dataset[`${ATTR_PREFIX}${name}`];
@@ -84,7 +85,7 @@ function _parseValues(values) {
 
 /**
  * @param {{el: HTMLElement, datakey: string} | string} condition 
- * @returns {{ valueList?: string[], func?: Function }}
+ * @returns {{ valueList?: string[], func?: Function, as?: string[] }}
  */
 export function _parseFunction(condition) {
     if(typeof condition != "string") {
@@ -92,12 +93,14 @@ export function _parseFunction(condition) {
         if(!condition && /** @type {any}*/(condition)?.el?.dataset?.[`${ATTR_PREFIX}else`] != undefined) condition = "return true";
     }
 
-    let [fn, values] = condition?.split("=>")?.map(s=> s.trim())?.reverse() || ["", ""];
+    let [fstr, values] = condition?.split("=>")?.map(s=> s.trim())?.reverse() || ["", ""];
+    let [fn, asStr] = fstr?.split(/\s{1,}as\s{1,}/) || [fn, "value"];
+    let as = asStr?.slice?.(_commaSepRx)?.map?.(s=> s.trim())?.[0] || ["value"];
 
     // Set up function to evaluate store values
     let valueList = values?.split(",")?.map(s=> s.replace(/[()]/g, "").trim()) || [];
     // @ts-ignore
-    let func = globalThis[fn] || MfFn?.get(fn);
+    let func = globalThis[fn] || MfFn[fn];
     if(!func) {
         // If function is not found, try to create it; account for implicit returns
         if(!valueList?.length && !fn.includes("=>")) {
@@ -112,8 +115,25 @@ export function _parseFunction(condition) {
 
         valueList = _parseValues(valueList);
         if(!fn.match(/^\s{0,}\{/) && !fn.includes("return")) fn = fn.replace(/^\s{0,}/, "return ");
-        func = new Function(...valueList, fn);
+        try {
+            func = new Function(...valueList, fn);
+        }
+        catch(e) {
+            console.error(e);
+            console.log(valueList, fn)
+        }
     }
 
-    return { valueList, func };
+    return { valueList, func, as };
+}
+
+window.parse = _parseFunction;
+
+export function _evalInputs(inputs) {
+    let values = [];
+    for(let input of inputs) {
+        let S = MfSt.get(input);
+        values.push(S.value || globalThis.value);
+    }
+    return values;
 }

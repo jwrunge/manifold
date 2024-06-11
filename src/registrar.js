@@ -1,6 +1,6 @@
 import { _store } from "./store.js";
 import { _scheduleUpdate } from "./updates.js";
-import { _getOpOverrides, _parseFunction, ATTR_PREFIX } from "./util.js";
+import { _commaSepRx, _getOpOverrides, _parseFunction, ATTR_PREFIX } from "./util.js";
 import { _handleFetch } from "./fetch.js";
 import { _handleBindSync } from "./bindsync.js";
 import { _handleConditionals } from "./conditionals.js";
@@ -8,7 +8,6 @@ import { _handleConditionals } from "./conditionals.js";
 
 /** @type {Partial<MfldOps>} */
 let _ops = {};
-let _commaSepRx = /, {0,}/g;
 let _modes = ["bind", "sync", "templ", "if", "each", "get", "head", "post", "put", "delete", "patch"].map(m=> `${ATTR_PREFIX}${m}`);
 
 /**!
@@ -66,34 +65,31 @@ export function _registerSubs(parent) {
             let shouldHaveTriggers = ![`${ATTR_PREFIX}bind`].includes(mode);
 
             //Loop over provided settings
-            for(let setting of el.dataset?.[mode]?.split(";") || []) {
-                //Break out settings
-                let [sourceParts, output] = setting?.split("->")?.map(s=> s.trim()) || [];
-                let triggers = shouldHaveTriggers ? _paramsInParens(sourceParts.slice(0, sourceParts.indexOf(")"))) : [];
-                let processFuncStr = shouldHaveTriggers ? sourceParts.slice(sourceParts.indexOf(")") + 1) : sourceParts;
+            let setting = el.dataset?.[mode];
+            //Break out settings
+            let [sourceParts, output] = setting?.split("->")?.map(s=> s.trim()) || [];
+            let triggers = shouldHaveTriggers ? _paramsInParens(sourceParts.slice(0, sourceParts.indexOf(")"))) : [];
+            let processFuncStr = shouldHaveTriggers ? sourceParts.slice(sourceParts.indexOf(")") + 1) : sourceParts;
 
-                //Handle errors
-                if(shouldHaveTriggers && !triggers?.length) { console.error("No trigger", el); break; }
+            //Handle errors
+            if(shouldHaveTriggers && !triggers?.length) { console.error("No trigger", el); break; }
 
-                let { func, valueList } = _parseFunction(processFuncStr);
-                if(processFuncStr) {
-                    if(!func) console.warn(`"${processFuncStr}" not registered`, el);
-                }
+            let { func, valueList, as } = _parseFunction(processFuncStr);
+            if(processFuncStr && !func) console.warn(`"${processFuncStr}" not registered`, el);
 
-                //Loop over triggers
-                if(!triggers?.length) triggers = [""]
-                for(let trigger of triggers) {
-                    if(mode.match(/bind|sync/)) _handleBindSync(el, valueList, output, trigger, mode, func);
-                    // else {
-                    //     if(!output) {
-                    //         output = input[0];
-                    //         input = [];
-                    //     }
-                    //     _handleFetch(el, trigger, _op_overrides, output, mode.replace(ATTR_PREFIX, ""), input, processFunc);
-                    // }
-                }
-            }; //End loop settings
-        }   //End loop dataset modes
+            //Loop over triggers
+            if(!triggers?.length) triggers = [""]
+            for(let trigger of triggers) {
+                if(mode.match(/bind|sync/)) _handleBindSync(el, valueList, output, trigger, mode, func);
+                // else {
+                //     if(!output) {
+                //         output = input[0];
+                //         input = [];
+                //     }
+                //     _handleFetch(el, trigger, _op_overrides, output, mode.replace(ATTR_PREFIX, ""), input, processFunc);
+                // }
+            }
+        }; //End loop settings
     };  //End loop elements
 }
 

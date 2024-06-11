@@ -3,6 +3,8 @@
 - Handle fetch scripts, styles
 - History API - set up map of states to reference on popstate
 - Check - what if if fails and there is no fallback?
+- Checkbox not responding on false -- preventing update?
+- Components
+- Fix conditionals, loops, fetch
 
-- Prevent updates from running on subscriptions to subprops
 - Fix transition spacer

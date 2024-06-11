@@ -32,7 +32,6 @@ export function _handleConditionals(el, mode, ops) {
         });
 
         templStore?.sub(val=> {
-            console.log("SUB VAL", val)
             let out = /** @type {HTMLElement}*/(startElement.nextElementSibling);
             let newEl = /** @type {HTMLElement}*/(_ensureNodeName(/** @type {HTMLElement}*/(templ.cloneNode(true)), templ.dataset.nodeName, [`data-${ATTR_PREFIX}templ`, "data-node-name"]));
             let html = newEl?.outerHTML || newEl?.textContent?.replace(/^\n{0,}|\n{0,}$/, "");
@@ -51,7 +50,6 @@ export function _handleConditionals(el, mode, ops) {
                         console.error("Syntax error in templ", e);
                     }
                 }
-                console.log("REPLACED", html)
             }
             else html = val;
 

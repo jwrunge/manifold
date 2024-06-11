@@ -1,41 +1,28 @@
 import { _registerInternalStore } from "./domutil";
 import { _store } from "./store";
 import { _scheduleUpdate } from "./updates";
-import { _getStorePathFromKey, _inputNestSplitRx, _nestedValue, _randomEnoughId, ATTR_PREFIX } from "./util";
+import { _evalInputs, _inputNestSplitRx, _nestedValue, _randomEnoughId } from "./util";
 
-export function _handleBindSync(el, input, output, trigger, mode, processFunc) {
+export function _handleBindSync(el, inputs, output, trigger, mode, processFunc) {
     /**
      * HANDLE MF-BIND - inputs are stores, output is element property
      */
-    if(mode == `${ATTR_PREFIX}bind`) {
-        let stores = [], paths = [];
-        for(let s of input) {
-            let [storeName, path] = _getStorePathFromKey(s);
-            stores.push(storeName);
-            paths.push(path);
-        }
-
+    if(mode.match("bind")) {
         _registerInternalStore(
             _randomEnoughId(),
-            stores,
+            inputs,
             {
                 observeEl: el,
                 func: ()=> {
-                    let storeValues = [];
-                    for(let i=0; i<stores.length; i++) storeValues.push(_nestedValue(_store(stores[i])?.value, paths[i]));
+                    let val = processFunc?.(..._evalInputs(inputs), el);
 
-                    let val = processFunc?.(...storeValues, el) ?? storeValues[0];
-
-                    if(output && val !== undefined) {
+                    if(output && val != undefined) {
                         let parts = output.split(":");
-                        if(parts.length > 1) {
-                            switch(parts[0]) {
-                                case "style": el.style[parts[1]] = val; break;
-                                case "attr": el.setAttribute(parts[1], val); break;
-                                default: el[output] = val;
-                            }
+                        switch(parts[0]) {
+                            case "style": el.style[parts[1]] = val; break;
+                            case "attr": el.setAttribute(parts[1], val); break;
+                            default: el[output] = val;
                         }
-                        else el[output] = val;
                     }
 
                     //Make sure to update dependent stores on value update
@@ -50,32 +37,26 @@ export function _handleBindSync(el, input, output, trigger, mode, processFunc) {
         /**
          * HANDLE MF-SYNC - inputs are element properties, output is a store
          */
-        if(mode == `${ATTR_PREFIX}sync`) {
-            let [storeName, path] = _getStorePathFromKey(output || "");
-            let ev = ()=> {
-                let propValues = input.map(prop=> {
-                    prop = prop.trim();
-                    let parts = prop.split(":");
-                    if(parts.length > 1) {
-                        switch(parts[0]) {
-                            case "style": return el.style[prop] ?? undefined;
-                            case "attr": return el.getAttribute(prop) ?? undefined;
-                            default: return el[prop] ?? undefined;
-                        }
-                    }
-                    else return el[prop] ?? undefined;
-                });
+        let ev = ()=> {
+            if(inputs.length > 1) console.warn("Multiple sync props", el);
 
-                let value = processFunc?.(...propValues) ?? propValues[0];
-                
-                if(storeName && value !== undefined) {
-                    _store(storeName)?.update?.(curVal=> {
-                        return path?.length ? _nestedValue(curVal, path, value) : value
-                    });
-                }
+            // Get prop value
+            let parts = inputs?.[0].trim().split(":");
+            let val;
+            switch(parts[0]) {
+                case "style": val = el.style[parts[1]]; break;
+                case "attr": val = el.getAttribute(parts[1]); break;
+                default: val = el[parts[0]];
             }
-            if(trigger == "$mount") ev();
-            else el.addEventListener(trigger, ev);
+
+            let numVal = parseFloat(val);
+            if(!isNaN(numVal)) val = numVal;
+
+            let value = processFunc?.(val, el);
+            if(output && value !== undefined) _store(output)?.update?.(value);
         }
+        
+        if(trigger == "$mount") ev();
+        else el.addEventListener(trigger, ev);
     }
 }
