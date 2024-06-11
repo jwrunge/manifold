@@ -99,9 +99,6 @@ export function _parseFunction(condition) {
     return { valueList, func, as };
 }
 
-// @ts-ignore
-window.parse = _parseFunction;
-
 export function _evalInputs(inputs) {
     let values = [];
     for(let input of inputs) {

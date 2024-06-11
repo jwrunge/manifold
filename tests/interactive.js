@@ -191,18 +191,4 @@ function isChecked(val, el) {
     else return false;
 }
 
-function showDiv(val) {
-    return val == "We're at 4k";
-}
-
-function syncChecked(store1, store2) {
-    // console.log("SYNCING CHECKED")
-    // console.log("STORE 1 VAL", store1);
-    // console.log("STORE 2 VAL", store2);
-    if(store1 === false) return "We're at 4k";
-    Mfld.get("store1").update(store1 === false ? "We're at 4k" : store1);
-}
-
 Mfld.funcs({"isChecked": isChecked});
-
-window.setStore = (val)=> Mfld.get("store1").update(val);

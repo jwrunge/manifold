@@ -24,8 +24,36 @@ export function _handleTemplates(el, mode, as, func, valueList, ops) {
     el.after(templ);
     el.remove();
 
+    // if(mode.match(/if/)) {
+    //     let conditions = [ templ.dataset?.[`${ATTR_PREFIX}if`] ];
+    //     let innerHTML = [ templ.innerHTML ];
+    //     let sibs = [];
+
+    //     console.log(startElement, startElement?.nextElementSibling, startElement?.nextElementSibling?.nextElementSibling)
+    //     let addElse = true;
+
+    //     _iterateSiblings(
+    //         startElement?.nextElementSibling?.nextElementSibling, // Skip if
+    //         (sib)=> sib?.dataset?.[`${ATTR_PREFIX}elseif`] == undefined || sib?.dataset?.[`${ATTR_PREFIX}else`] == undefined,
+    //         (sib)=> {
+    //             if(sib?.dataset?.[`${ATTR_PREFIX}else`] != undefined) addElse = false;
+    //             conditions.push(sib?.dataset?.[`${ATTR_PREFIX}elseif`] || sib?.dataset?.[`${ATTR_PREFIX}else`])
+    //             innerHTML.push(sib.innerHTML);
+    //             sibs.push(sib);
+    //         }, 
+    //     );
+
+    //     if(addElse) {
+    //         conditions.push("return true");
+    //         innerHTML.push("");
+    //     }
+
+    //     console.log(conditions, innerHTML)
+    //     for(let sib of sibs) sib.remove();
+    // }
+
     let templStore = _registerInternalStore(
-        _randomEnoughId(), 
+        _randomEnoughId(),
         valueList, 
         { func, observeEl: templ }
     );
@@ -39,7 +67,7 @@ export function _handleTemplates(el, mode, as, func, valueList, ops) {
                 (sib)=> _applyTransition(/** @type {HTMLElement}*/(sib), "out", ops, ()=> sib?.remove()), 
             );
 
-            let it = mode.match(/each/) ? _iterable : (object, cb)=> cb(object);
+            let it = mode.match(/each/) ? _iterable : (object, cb)=> cb(object || "");
 
             it(val, (val, key)=> {
                 if(val == undefined) return;
