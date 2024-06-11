@@ -31,7 +31,7 @@ export function _iterable(obj, cb) {
     if(obj instanceof Map) for(const [key, value] of obj.entries()) cb(key, value);
     else {
         try { 
-            let arr = Array.from(obj);
+            let arr = Array.from(obj || []);
             if(arr?.length) arr.forEach(cb);
             else for(let key in obj) cb(key, obj[key]);
         }

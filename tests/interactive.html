@@ -28,7 +28,7 @@
   <p>Store 2 nested: <span data-mf_Bind="store2.values[1]->innerHTML">Here is a default value.</span></p>
   <p>Checkbox set to checked? <span data-mf_Bind="store2.values[0]->innerText"></span></p>
   <p>Store 4 value: <span data-mf_Bind="store4->innerText"></span></p>
-  <p>Checked store checked? <span data-mf_Bind="checkedStore-> innerText">Unknown</span></p>
+  <p>Checked store checked? <span data-mf_Bind="(checkedStore)=> { console.log('CHECKED?', checkedStore); return checkedStore; } -> innerText">Unknown</span></p>
   <p>Value of Mass Store 99: <span data-mf_Bind="mass_store99 -> innerText">Unknown</span></p>
   <div data-secret="THIS IS A SECRET" data-mf_Sync="on($mount) MfFn.sendAlert(dataSecret) -> checkedStore"></div>
 

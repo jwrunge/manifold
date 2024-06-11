@@ -5,6 +5,7 @@
 - Check - what if if fails and there is no fallback?
 - Checkbox not responding on false -- preventing update?
 - Components
-- Fix conditionals, loops
+- Fix conditionals
+- Single global object with subprops -- define global type?
 
 - Fix transition spacer

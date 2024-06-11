@@ -25,9 +25,6 @@ let _nextTickQueue = [];
 let spacer;
 let spacerHeight = "";
 
-// Polyfill requestAnimationFrame
-let tick = globalThis?.requestAnimationFrame || ((fn)=> setTimeout(fn, 0));
-
 export function _addToNextTickQueue(fn) {
     if(fn) _nextTickQueue.push(fn);
 }
@@ -37,7 +34,7 @@ export function _scheduleUpdate(update) {
     workArray.push(update);
     if(!cancelAnimationFrame) {
         cancelAnimationFrame = true;
-        tick(_runUpdates);
+        requestAnimationFrame(_runUpdates);
     }
 }
 
