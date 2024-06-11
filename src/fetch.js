@@ -3,7 +3,7 @@ import { _scheduleUpdate } from "./updates";
 import { _registerSubs } from "./registrar.js";
 import { _store } from "./store.js";
 
-/** @typedef {import("./index.module.js").MfldOps} MfldOps */
+/** @typedef {import("./index.js").MfldOps} MfldOps */
 
 /**
  * @param {HTMLElement} el 
@@ -11,10 +11,10 @@ import { _store } from "./store.js";
  * @param {MfldOps} fetchOps
  * @param {string} href
  * @param {string} [method] 
- * @param {any} [input]
+ * @param {any[] | "$form"} [valueList]
  * @param {Function} [processFunc]
  */
-export function _handleFetch(el, trigger, fetchOps, href, method, input, processFunc) {
+export function _handleFetch(el, trigger, fetchOps, href, method, valueList, processFunc) {
     /**
      * @param {Event} [e]
      */
@@ -33,6 +33,7 @@ export function _handleFetch(el, trigger, fetchOps, href, method, input, process
         } : undefined;
 
         // Parse input
+        let input = processFunc?.(...(valueList || [])) || valueList;
         let body = Array.isArray(input) ? input[0] : input == "$form" ? new FormData(/** @type {HTMLFormElement}*/(el)) : input;
         if(processFunc) {
             let toFunc = Array.isArray(input) ? (input?.map(s=> _store(s).value) || []) : [body];

@@ -4,13 +4,16 @@ import { _store } from "./store";
  * @param {HTMLElement} el
  * @returns {HTMLElement}
  */
-export function _ensureNodeName(el, nodeName, skipAttributes = []) {
+export function _ensureNodeName(el, nodeName, skipAttributes = [], removeClasses = []) {
     // Make sure this is a template
     if(el.tagName != nodeName) {
         let newEl = document.createElement(nodeName);
-        newEl.innerHTML = el.innerHTML;                
+        newEl.innerHTML = el.innerHTML;       
         for(let attr of el.attributes) {
             if(!skipAttributes.includes(attr.name)) newEl.setAttribute(attr.name, attr.value);
+        }
+        for(let cls of removeClasses) {
+            newEl.classList.remove(cls);
         }
         el.replaceWith(newEl);
 

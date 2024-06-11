@@ -6,33 +6,6 @@ export function _randomEnoughId() {
     return `${Date.now()}.${Math.floor(Math.random() * 100_000)}`;
 }
 
-// /**
-//  * Get or set nested store values
-//  * @param {any} obj 
-//  * @param {(string | number)[]} path 
-//  * @param {any} [newval] 
-//  * @returns 
-//  */
-// export function _nestedValue(obj, path, newval) {
-//     let ptr = obj;
-
-//     for(let key of path) {
-//         //Dynamically letruct object if it doesn't exist
-//         if(ptr == undefined) ptr = typeof key == "number" ? [] : {};
-
-//         //Set or get value
-//         if(newval == undefined || path[path.length - 1] !== key) ptr = ptr instanceof Map ? ptr?.get(key) : ptr?.[key];
-//         else ptr instanceof Map ? ptr.set(key, newval) : ptr[key] = newval;
-//     }
-
-//     return ptr;
-// }
-
-// export function _getStorePathFromKey(s) {
-//     let [storeName, ...path] = (s)?.split(_inputNestSplitRx);
-//     return [storeName, path?.map(sp=> !isNaN(parseInt(sp)) ? parseInt(sp) : sp).filter(sp=> sp) || []];
-// }
-
 function _getOverride(name, el, ops, parse = true, def = "{}", as) {
     let override = el.dataset[`${ATTR_PREFIX}${name}`];
     if(!override) return undefined;
@@ -45,9 +18,9 @@ function _getOverride(name, el, ops, parse = true, def = "{}", as) {
 
 /**
  * Get or set nested store values
- * @param {import("./index.module").MfldOps} ops
+ * @param {import(".").MfldOps} ops
  * @param {HTMLElement} el
- * @returns {import("./index.module").MfldOps}
+ * @returns {import(".").MfldOps}
  */
 export function _getOpOverrides(ops, el) {
     let overrides = _getOverride("overrides", el, ops);
@@ -94,8 +67,8 @@ export function _parseFunction(condition) {
     }
 
     let [fstr, values] = condition?.split("=>")?.map(s=> s.trim())?.reverse() || ["", ""];
-    let [fn, asStr] = fstr?.split(/\s{1,}as\s{1,}/) || [fn, "value"];
-    let as = asStr?.slice?.(_commaSepRx)?.map?.(s=> s.trim())?.[0] || ["value"];
+    let [fn, asStr] = fstr?.split(/\s{1,}as\s{1,}/) || [fstr, "value"];
+    let as = asStr?.split?.(_commaSepRx)?.map?.(s=> s.trim()) || ["value"];
 
     // Set up function to evaluate store values
     let valueList = values?.split(",")?.map(s=> s.replace(/[()]/g, "").trim()) || [];
@@ -120,18 +93,19 @@ export function _parseFunction(condition) {
         }
         catch(e) {
             console.error(e);
-            console.log(valueList, fn)
         }
     }
 
     return { valueList, func, as };
 }
 
+// @ts-ignore
 window.parse = _parseFunction;
 
 export function _evalInputs(inputs) {
     let values = [];
     for(let input of inputs) {
+        // @ts-ignore
         let S = MfSt.get(input);
         values.push(S.value || globalThis.value);
     }

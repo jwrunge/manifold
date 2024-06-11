@@ -21,12 +21,12 @@ const terserOps = {
 
 function constructProfiles(ops) {
     return ops.map(op=> { 
-        const { prefix, suffix, sourceMaps } = op;
+        const { prefix, sourceMaps } = op;
         return {
-            input: `src/index.${op.module ? "module" : "tag"}.js`,
+            input: `src/index.js`,
             output: [
                 {
-                    file: `dist/${op.subfolder ? op.subfolder + "/" : ""}${prefix ? prefix + "." : ""}mfld${suffix ? "." + suffix : ""}${op.module ? op.mod === "es" ? ".js" : "." + op.mod : ".js"}`,
+                    file: `dist/${prefix ? prefix + "." : ""}mfld.${op.mod === "cjs" ? "cjs" : "js"}`,
                     format: op.mod,
                     name: "Mfld",
                     sourcemap: sourceMaps,
@@ -47,20 +47,9 @@ function constructProfiles(ops) {
 
 export default [
     ...constructProfiles([
-        { mod: "es", sourceMaps: false, jsdocTypes: true },
-        { suffix: "slim", mod: "es", sourceMaps: false, jsdocTypes: false },
-        { prefix: "slim", suffix: "mod", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: false },
-        { prefix: "slim", suffix: "mod", mod: "es", module: true, sourceMaps: false, jsdocTypes: false },
-        { subfolder: "dev", suffix: "mod", mod: "cjs", module: true, sourceMaps: false, jsdocTypes: true },
-        { subfolder: "dev", suffix: "mod", mod: "es", module: true, sourceMaps: true, jsdocTypes: true }
+        { mod: "cjs", sourceMaps: false, jsdocTypes: false },
+        { mod: "es", sourceMaps: false, jsdocTypes: false },
+        { prefix: "dev", mod: "cjs", sourceMaps: false, jsdocTypes: true },
+        { prefix: "dev", mod: "es", sourceMaps: true, jsdocTypes: true }
     ]),
-    // {
-    //     input: "src/extras/smartOutro.js",
-    //     output: {
-    //         file: "dist/extras/smartOutro.js",
-    //         format: "es",
-    //         name: "smartOutro"
-    //     },
-    //     plugins: [ terser(terserOps) ]
-    // }
 ];

@@ -5,6 +5,6 @@
 - Check - what if if fails and there is no fallback?
 - Checkbox not responding on false -- preventing update?
 - Components
-- Fix conditionals, loops, fetch
+- Fix conditionals, loops
 
 - Fix transition spacer

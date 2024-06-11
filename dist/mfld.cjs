@@ -113,4 +113,4 @@ for(let o of f)i.match(/bind|sync/)?_(e,d,a,o,i,c):M(e,o,n,a,i.replace(t,""),d,c
 t=e?.[e.length-1]||""}return t?.split(n)?.map((t=>t.trim()))||[]}globalThis.addEventListener("popstate",(t=>{}))
 let L={store:(store_name,store_ops)=>(store_ops?.hasOwnProperty("value")||store_ops?.hasOwnProperty("updater")||(store_ops={value:store_ops}),b(store_name,store_ops)),ustore:(store_name,store_ops)=>b(store_name,store_ops),get:store_name=>b(store_name),func:func_name=>MfFn[func_name],funcs:funcs=>{for(let t in funcs)MfFn[t]=funcs[t]},config:(new_ops,profile_name)=>{return t=new_ops,void((e=profile_name)?O.profiles={...O.profiles,[e]:t}:O={...O,...t})
 var t,e},onTick:t=>{var e;(e=t)&&u.push(e)},register:t=>{"string"==typeof t&&(t=document.querySelector(t)),N(t)}}
-export{L as Mfld}
+exports.Mfld=L

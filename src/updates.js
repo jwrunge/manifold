@@ -1,4 +1,4 @@
-/** @typedef {import("./index.module.js").MfldOps} MfldOps */
+/** @typedef {import("./index.js").MfldOps} MfldOps */
 
 import { ATTR_PREFIX } from "./util.js";
 

@@ -9,16 +9,18 @@
 <body>
   <h1>Reactivity test - IIFE</h1>
 
-  <!-- <p data-mf_templ="(store1)=> { console.log(store1); return store1.toUpperCase(); } as val"></p>
-  <div data-mf_templ="(store1)=> { console.log(store1); return store1.toUpperCase(); } as val"> -->
+  <p data-mf_templ="(store1)=> { console.log(store1); store1.toUpperCase() }"></p>
+  <div data-mf_templ="(store1)=> { return store1.toUpperCase(); } as val">
     <!-- <input data-mf_bind="${val}-> value" data-mf_sync="on(click) console.log(value)"> -->
      <div style="margin-top: 5rem">${val}</div>
-     <input type="text" data-mf_bind="store1->value" data-mf_sync="on(change, keyup) (store1)=> console.log(store1)">
+     ${val.toLowerCase()}
+     ${`1234` + val.slice(0, 1).toUpperCase() + val.slice(1).toLowerCase()}
+     <input type="text" data-mf_bind="store1->value" data-mf_sync="on(change, keyup) (value)=> console.log(value)">
   </div>
 
   <p>This is an example of dynamic text! The current store value is: 
     <span 
-      data-mf_Bind=" (store1)=> store1.toUpperCase()->innerText; 
+      data-mf_Bind=" (store1)=> store1.toUpperCase()->innerText;;
                     (store1)=> store1 === 'My text' ? 'green' : 'blue' -> style:backgroundColor"
     >Here is a default value.</span>
   </p>
@@ -97,15 +99,14 @@
     <div>ELSE</div>
   </template>
 
-  <!-- <div class="special-insert" data-mf_Get="on(click) /tests/interactive.html" data-mf_swapinner=".sync-grid -> header">Default insert</div> -->
-  <!-- <nav data-mf_Post="on(click) (store1, store2)=> store1.toUpperCase() + JSON.stringify(store2 || {}) -> /tests/header.html" data-mf_swapinner="header -> h1" data-mf_transsmart="true" data-mf_transdur="[5000, 300]">
+  <div class="special-insert" data-mf_Get="on(click) /tests/interactive.html" data-mf_swapinner=".sync-grid -> header">Default insert</div>
+  <nav data-mf_Post="on(click) (store1, store2)=> store1.toUpperCase() + JSON.stringify(store2 || {}) -> /tests/header.html" data-mf_swapinner="header -> h1" data-mf_transsmart="true" data-mf_transdur="300">
     <p>This is some default nav content.</p>
-  </nav> -->
+  </nav>
 
   <div class="trans" data-mf_Bind="specialStyling(store1)"></div>
 
   <!-- Store script -->
-  <!-- <script src="../dist/dev.mfld.mod.js" type="module"></script> -->
   <script src="./tests/interactive.js" type="module"></script>
 </body>
 </html>

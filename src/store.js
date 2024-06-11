@@ -1,10 +1,10 @@
 /** 
  * @template T
- * @typedef {import("./index.module.js").UpdaterFunction<T>} UpdaterFunction 
+ * @typedef {import("./index.js").UpdaterFunction<T>} UpdaterFunction 
  */
 /** 
  * @template T
- * @typedef {import("./index.module.js").StoreOptions<T>} StoreOptions 
+ * @typedef {import("./index.js").StoreOptions<T>} StoreOptions 
  */
 
 import { _scheduleUpdate } from "./updates.js";
@@ -52,6 +52,7 @@ export class Store {
     /** @type {Set<Store<any>>} */ _upstreamStores = new Set();
     /** @type {Set<Store<any>>} */ _downstreamStores = new Set();
     /** @type {HTMLElement | SVGScriptElement | string | "global"} */ _scope;
+    /** @type {any | undefined} */ _updateTimeout;
 
     /**
      * @param {string} name
@@ -136,24 +137,31 @@ export class Store {
     */
     async update(value) {
         return new Promise(async (resolve)=> {
-            //Apply new value   
-            let newValue = (typeof value == "function" ? /** @type {Function} */(await value)?.(this.value) : value);
-            let newHash = _hashAny(newValue);
-            
-            if(newHash !== this._storedHash) {
-                this.value = newValue;
-                this._storedHash = newHash;
+            // Group updates
+            if(this._updateTimeout) clearTimeout(this._updateTimeout);
+            this._updateTimeout = setTimeout(()=> {
 
-                // Add this store to the work order
-                for(let ds of this._downstreamStores) await ds._auto_update();
+                _scheduleUpdate(async ()=> {
+                    //Apply new value   
+                    let newValue = (typeof value == "function" ? /** @type {Function} */(await value)?.(this.value) : value);
+                    let newHash = _hashAny(newValue);
+                    
+                    if(newHash !== this._storedHash) {
+                        this.value = newValue;
+                        this._storedHash = newHash;
 
-                // Wait for next animation frame to return the value
-                _scheduleUpdate(()=> {
-                    for(let [ref, sub] of this?._subscriptions || []) sub?.(this.value, ref);
-                    resolve(this.value);
+                        // Add this store to the work order
+                        for(let ds of this._downstreamStores) await ds._auto_update();
+
+                        // Wait for next animation frame to return the value
+                        for(let [ref, sub] of this?._subscriptions || []) sub?.(this.value, ref);
+                        resolve(this.value);
+                    }
+                    else {
+                        resolve(this.value);
+                    }
                 });
-            }
-            else resolve(this.value);
+            }, 0);
         });
     }
 

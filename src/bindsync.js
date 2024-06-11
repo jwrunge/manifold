@@ -1,7 +1,7 @@
 import { _registerInternalStore } from "./domutil";
 import { _store } from "./store";
 import { _scheduleUpdate } from "./updates";
-import { _evalInputs, _inputNestSplitRx, _nestedValue, _randomEnoughId } from "./util";
+import { _evalInputs, _inputNestSplitRx, _randomEnoughId } from "./util";
 
 export function _handleBindSync(el, inputs, output, trigger, mode, processFunc) {
     /**

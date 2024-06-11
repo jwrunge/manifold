@@ -3,8 +3,8 @@ import { _scheduleUpdate } from "./updates.js";
 import { _commaSepRx, _getOpOverrides, _parseFunction, ATTR_PREFIX } from "./util.js";
 import { _handleFetch } from "./fetch.js";
 import { _handleBindSync } from "./bindsync.js";
-import { _handleConditionals } from "./conditionals.js";
-/** @typedef {import("./index.module.js").MfldOps} MfldOps */
+import { _handleTemplates } from "./templates.js";
+/** @typedef {import("./index.js").MfldOps} MfldOps */
 
 /** @type {Partial<MfldOps>} */
 let _ops = {};
@@ -44,52 +44,51 @@ export function _registerSubs(parent) {
         //Check for <a> and <form> elements
         if(el.dataset?.[`${ATTR_PREFIX}promote`] !== undefined) {
             let [mode, href, input, trigger] = el.tagName == "A" ?
-                ["get", /** @type {HTMLAnchorElement}*/(el).href, "", "click"] : 
+                ["get", /** @type {HTMLAnchorElement}*/(el).href, [], "click"] : 
                 [/** @type {HTMLFormElement}*/(el).method.toLowerCase(), /** @type {HTMLFormElement}*/(el).action, "$form", "submit"];
 
             if(href) {
-                _handleFetch(el, trigger, _op_overrides, href, mode, input);
+                _handleFetch(el, trigger, _op_overrides, href, mode, /** @type {any[] | "$form"}*/(input));
                 continue;
             }
         }
 
         //Loop over all data attributes (modes)
         for(let mode in el.dataset) {
-            //HANDLE CONDITIONALS AND LOOPS
-            // if([`${ATTR_PREFIX}templ`, `${ATTR_PREFIX}if`, `${ATTR_PREFIX}each`].includes(mode)) {
-            //     _handleConditionals(el, mode, _op_overrides);
-            //     continue;
-            // }
-
             if(!_modes.includes(mode)) continue;
-            let shouldHaveTriggers = ![`${ATTR_PREFIX}bind`].includes(mode);
+            let shouldHaveTriggers = !mode.match(/bind|templ|if|each/);
 
             //Loop over provided settings
-            let setting = el.dataset?.[mode];
-            //Break out settings
-            let [sourceParts, output] = setting?.split("->")?.map(s=> s.trim()) || [];
-            let triggers = shouldHaveTriggers ? _paramsInParens(sourceParts.slice(0, sourceParts.indexOf(")"))) : [];
-            let processFuncStr = shouldHaveTriggers ? sourceParts.slice(sourceParts.indexOf(")") + 1) : sourceParts;
+            for(let setting of el.dataset?.[mode]?.split(";;") || []) {
+                //Break out settings
+                let [sourceParts, output] = setting?.split("->")?.map(s=> s.trim()) || [];
+                let triggers = shouldHaveTriggers ? _paramsInParens(sourceParts.slice(0, sourceParts.indexOf(")"))) : [];
+                if(!output && mode.match(/get|head|post|put|delete|patch/)) {
+                    output = sourceParts.slice(sourceParts.indexOf(")") + 1);
+                    sourceParts = "";
+                }
+                let processFuncStr = shouldHaveTriggers ? sourceParts?.slice(sourceParts.indexOf(")") + 1) : sourceParts;
 
-            //Handle errors
-            if(shouldHaveTriggers && !triggers?.length) { console.error("No trigger", el); break; }
+                //Handle errors
+                if(shouldHaveTriggers && !triggers?.length) { console.error("No trigger", el); break; }
 
-            let { func, valueList, as } = _parseFunction(processFuncStr);
-            if(processFuncStr && !func) console.warn(`"${processFuncStr}" not registered`, el);
+                let { func, valueList, as } = _parseFunction(processFuncStr);
+                if(processFuncStr && !func) console.warn(`"${processFuncStr}" not registered`, el);
 
-            //Loop over triggers
-            if(!triggers?.length) triggers = [""]
-            for(let trigger of triggers) {
-                if(mode.match(/bind|sync/)) _handleBindSync(el, valueList, output, trigger, mode, func);
-                // else {
-                //     if(!output) {
-                //         output = input[0];
-                //         input = [];
-                //     }
-                //     _handleFetch(el, trigger, _op_overrides, output, mode.replace(ATTR_PREFIX, ""), input, processFunc);
-                // }
-            }
-        }; //End loop settings
+                //Handle conditionals and loops
+                if(mode.match(/if|each|templ/)) _handleTemplates(el, mode, as || [], func, valueList || [], _op_overrides);
+                else {
+                    //Loop over triggers
+                    if(!triggers?.length) triggers = [""]
+                    for(let trigger of triggers) {
+                        if(mode.match(/bind|sync/)) _handleBindSync(el, valueList, output, trigger, mode, func);
+                        else {
+                            _handleFetch(el, trigger, _op_overrides, output, mode.replace(ATTR_PREFIX, ""), valueList, func);
+                        }
+                    }
+                }
+            }; //End loop settings
+        }; //End loop dataset
     };  //End loop elements
 }
 

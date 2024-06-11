@@ -1,6 +1,4 @@
-/// <reference path="../dist/Mfld.js" />
-
-import { Mfld } from "../dist/dev/mfld.mod.js";
+import { Mfld } from "../dist/dev.mfld.js";
 
 function sendAlert(val) {
     return val
@@ -202,7 +200,9 @@ function syncChecked(store1, store2) {
     // console.log("STORE 1 VAL", store1);
     // console.log("STORE 2 VAL", store2);
     if(store1 === false) return "We're at 4k";
-    Mfld.store("store1").update(store1 === false ? "We're at 4k" : store1);
+    Mfld.get("store1").update(store1 === false ? "We're at 4k" : store1);
 }
 
 Mfld.funcs({"isChecked": isChecked});
+
+window.setStore = (val)=> Mfld.get("store1").update(val);
