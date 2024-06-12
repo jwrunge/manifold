@@ -21,7 +21,7 @@ import { _randomEnoughId } from "./util.js";
  * @param {any} input 
  * @returns {any}
  */
-function _hashAny(input) {
+let _hashAny = (input)=> {
     if(!input) return 0;
     if(typeof input == 'number' || input === true) return input;
     if(input instanceof Map || input instanceof Set) return _hashAny(Array.from(input.entries() || input));
@@ -177,14 +177,14 @@ export class Store {
  * @param {StoreOptions<T> | T} [ops] - Options to update the store
  * @returns {Store<T>}
  */
-export function _store(name, ops) {
+export let _store = (name, ops)=> {
     let found_store = MfSt.get(name);
     return ops ? (found_store ? found_store._modify(name, ops) : new Store(name, ops)) : (found_store || new Store(name, ops));
 }
 /**
  * @param {HTMLElement | string} scope 
  */
-export function _clearScope(scope) {
+export let _clearScope = (scope)=> {
     // @ts-ignore
     MsFt.forEach(store=> {
         if(store._scope == scope) _destroy(store); 
@@ -194,7 +194,7 @@ export function _clearScope(scope) {
 /**
  * @param {Store<any>} store 
  */
-export function _destroy(store) {
+export let _destroy = (store)=> {
     // @ts-ignore
     MfSt.delete(store.name);
     // @ts-ignore

@@ -14,7 +14,7 @@ import { _store } from "./store.js";
  * @param {any[] | "$form"} [valueList]
  * @param {Function} [processFunc]
  */
-export function _handleFetch(el, trigger, fetchOps, href, method, valueList, processFunc) {
+export let _handleFetch = (el, trigger, fetchOps, href, method, valueList, processFunc)=> {
     /**
      * @param {Event} [e]
      */

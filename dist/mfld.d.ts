@@ -1,9 +1,5 @@
 export declare module "mfld" {
-    export { N as Mfld };
-    /**
-     * !
-     */
-    export type HookKey = "in-start" | "in-end" | "out-start" | "out-end";
+    export { O as Mfld };
     /**
      * !
      */
@@ -70,10 +66,7 @@ export declare module "mfld" {
          * - Transition hooks
          */
         hooks?: {
-            "in-start"?: (el: HTMLElement) => void;
-            "in-end"?: (el: HTMLElement) => void;
-            "out-start"?: (el: HTMLElement) => void;
-            "out-end"?: (el: HTMLElement) => void;
+            [x: string]: (el: HTMLElement) => void;
         };
     };
     /**
@@ -146,7 +139,7 @@ export declare module "mfld" {
      * !
      */
     export type MfldFunc = Function;
-    namespace N {
+    namespace O {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*

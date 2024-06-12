@@ -25,18 +25,18 @@ let _nextTickQueue = [];
 let spacer;
 let spacerHeight = "";
 
-export function _addToNextTickQueue(fn) {
+export let _addToNextTickQueue = (fn)=> {
     fn && _nextTickQueue.push(fn);
 }
 
-export function _scheduleUpdate(update) {
+export let _scheduleUpdate = (update)=> {
     workArray.push(update);
     if(!cancelAnimationFrame) {
         cancelAnimationFrame = requestAnimationFrame(_runUpdates);
     }
 }
 
-function _addSpacer(inEl, wrapper, wrapperHeight, replaceWholeObject = false, ops) {
+let _addSpacer = (inEl, wrapper, wrapperHeight, replaceWholeObject = false, ops)=> {
     if(!(ops.trans?.smartTransition ?? true)) return;
     let { paddingTop, paddingBottom } = wrapper instanceof Element ? window.getComputedStyle(wrapper) : { paddingTop: 0, paddingBottom: 0 };
     let spacer = document.createElement("div");
@@ -44,7 +44,7 @@ function _addSpacer(inEl, wrapper, wrapperHeight, replaceWholeObject = false, op
     wrapper?.after(spacer);
 }
 
-function _adjustSizing(inEl, ops) {
+let _adjustSizing = (inEl, ops)=> {
     if(!ops.trans?.smartTransition ?? true) return;
     let dur = (ops?.trans?.dur?.[0] || ops?.trans?.dur || 600)/2
     _scheduleUpdate(()=> {
@@ -56,7 +56,7 @@ function _adjustSizing(inEl, ops) {
     });
 }
 
-function _runUpdates() {
+let _runUpdates = ()=> {
     cancelAnimationFrame = false;
     
     for(let order of workArray) {
@@ -113,7 +113,7 @@ function _runUpdates() {
  * @param {boolean} [_getDimensionsAfterUpdate]
  * @returns 
  */
-export function _applyTransition(el, dir, ops, fn, refElement, _getDimensionsAfterUpdate = false) {
+export let _applyTransition = (el, dir, ops, fn, refElement, _getDimensionsAfterUpdate = false)=> {
     if(el?.nodeType == Node.TEXT_NODE) {
         el = el.replaceWith(document?.createElement("div")).textContent = el.textContent;
     }
@@ -171,7 +171,7 @@ export function _applyTransition(el, dir, ops, fn, refElement, _getDimensionsAft
     }
 }
 
-function _getDimensions(refElement) {
+let _getDimensions = (refElement)=> {
     let style = getComputedStyle(refElement);
     return {
         w: `calc(${(refElement).clientWidth}px - ${style.paddingLeft} - ${style.paddingRight})`,

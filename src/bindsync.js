@@ -3,7 +3,7 @@ import { _store } from "./store";
 import { _scheduleUpdate } from "./updates";
 import { _inputNestSplitRx, _randomEnoughId } from "./util";
 
-export function _handleBindSync(el, inputs, output, trigger, mode, processFunc) {
+export let _handleBindSync = (el, inputs, output, trigger, mode, processFunc)=> {
     if(mode.match("bind")) {
         _registerInternalStore(_randomEnoughId(), inputs, {
             observeEl: el,

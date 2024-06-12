@@ -4,7 +4,7 @@ import { _store } from "./store";
  * @param {HTMLElement} el
  * @returns {HTMLElement}
  */
-export function _ensureNodeName(el, nodeName, skipAttributes = [], removeClasses = []) {
+export let _ensureNodeName = (el, nodeName, skipAttributes = [], removeClasses = [])=> {
     if(el.tagName == nodeName) return el;
 
     let newEl = document.createElement(nodeName);
@@ -20,7 +20,7 @@ export function _ensureNodeName(el, nodeName, skipAttributes = [], removeClasses
  * @param {any} obj 
  * @param {(value: any, index: any, array?: any)=> void} cb 
  */
-export function _iterable(obj, cb) {
+export let _iterable = (obj, cb)=> {
     if(obj instanceof Map) for(const [key, value] of obj.entries()) cb(key, value);
     else {
         try { 
@@ -39,7 +39,7 @@ export function _iterable(obj, cb) {
  * @param {Function} [cb] 
  * @returns {Element | null | undefined}
  */
-export function _iterateSiblings(sib, breakFn, cb) {
+export let _iterateSiblings = (sib, breakFn, cb)=> {
     return breakFn?.(sib) ? sib : _iterateSiblings(cb?.(sib) || sib?.nextElementSibling, breakFn, cb);
 }
 
@@ -56,7 +56,7 @@ export function _iterateSiblings(sib, breakFn, cb) {
  * @param {InternalStoreOptions} [options]
  * @returns 
  */
-export function _registerInternalStore(storeName = "", storeList = [], options) {
+export let _registerInternalStore = (storeName = "", storeList = [], options)=> {
     // Register new store (to prevent excess evaluations)
     return _store(storeName, {
         upstream: [...storeList],

@@ -14,7 +14,7 @@ let _modes = ["bind", "sync", "templ", "if", "each", "get", "head", "post", "put
  * @param {Partial<MfldOps>} newops 
  * @param {string} [profileName] 
  */
-export function _setOptions(newops, profileName) {
+export let _setOptions = (newops, profileName)=> {
     if(profileName) _ops.profiles = { ..._ops.profiles, [profileName]: newops };
     else _ops = { ..._ops, ...newops };
 }
@@ -30,7 +30,7 @@ globalThis.addEventListener("popstate", (e)=> {
 /**
  * @param {HTMLElement | null} [parent] 
  */
-export function _register(parent) {
+export let _register = (parent)=> {
     if(parent && parent.nodeType == Node.TEXT_NODE) return;
 
     /** @type {NodeListOf<HTMLElement> | []} */

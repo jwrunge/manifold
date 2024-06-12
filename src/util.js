@@ -2,11 +2,11 @@ export let ATTR_PREFIX = "mf_";
 export let _inputNestSplitRx = /[\.\[\]\?]{1,}/g;
 export let _commaSepRx = /, {0,}/g;
 
-export function _randomEnoughId() {
+export let _randomEnoughId = ()=> {
     return `${Date.now()}.${Math.floor(Math.random() * 100_000)}`;
 }
 
-function _getOverride(name, el, ops, parse = true, def = "{}", as) {
+let _getOverride = (name, el, ops, parse = true, def = "{}", as)=> {
     let override = el.dataset[`${ATTR_PREFIX}${name}`];
     if(!override) return;
     if(name == "overrides") return ops.profiles?.[override]?.fetch || JSON.parse(override || def);
@@ -22,7 +22,7 @@ function _getOverride(name, el, ops, parse = true, def = "{}", as) {
  * @param {HTMLElement} el
  * @returns {import(".").MfldOps}
  */
-export function _getOpOverrides(ops, el) {
+export let _getOpOverrides = (ops, el)=> {
     let overrides = _getOverride("overrides", el, ops);
 
     return {
@@ -49,7 +49,7 @@ export function _getOpOverrides(ops, el) {
  * @param {{el: HTMLElement, datakey: string} | string} condition 
  * @returns {{ valueList?: string[], func?: Function, as?: string[] }}
  */
-export function _parseFunction(condition) {
+export let _parseFunction = (condition)=> {
     if(typeof condition != "string") {
         condition = condition?.el?.dataset?.[condition?.datakey] || "";
         if(!condition && /** @type {any}*/(condition)?.el?.dataset?.[`${ATTR_PREFIX}else`] != undefined) condition = "return true";

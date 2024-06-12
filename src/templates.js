@@ -13,7 +13,7 @@ import { _parseFunction, _randomEnoughId, ATTR_PREFIX } from "./util";
  * @param {any[]} valueList
  * @param {import(".").MfldOps} ops 
  */
-export function _handleTemplates(el, mode, as, func, valueList, ops) {
+export let _handleTemplates = (el, mode, as, func, valueList, ops)=> {
     let startElement = document.createElement("template");
     let templ = /** @type {HTMLTemplateElement}*/(_ensureNodeName(/** @type {HTMLElement}*/(el.cloneNode(true)), "TEMPLATE"));
     startElement.classList.add(`${mode}-start`);
