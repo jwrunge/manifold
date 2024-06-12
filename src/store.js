@@ -8,7 +8,7 @@
  */
 
 import { _scheduleUpdate } from "./updates.js";
-import { _randomEnoughId } from "./util.js";
+import { _id } from "./util.js";
 
 /**
  * @callback SubFunction
@@ -33,9 +33,11 @@ let _hashAny = (input)=> {
 }
 
 //Static
-/** @type {Map<string, Store<any>>} */ if(!window.MfSt) window.MfSt = new Map();
-/** @type {{[key: string]: Function}} */ if(!window.MfFn) window.MfFn = {};
-/** @type {Map<Element, {toDestroy: Set<Store<any>>, observer: MutationObserver}>} */ if(!window.MfMutOb) window.MfMutOb = new Map();
+if(!window.MFLD) window.MFLD = {
+    st: new Map(),
+    fn: {},
+    mut: new Map(),
+}
 
 /**
  * @template T
@@ -65,13 +67,13 @@ export class Store {
         this.name = name;
         this._scope = ops?.scope || document.currentScript || "global";
         // @ts-ignore
-        MfSt.set(name, this);
+        MFLD.st.set(name, this);
 
         //Watch for scope destroy
         // Watch for scope destroy
         if(this._scope instanceof Element) {
             // @ts-ignore
-            let mutOb = MfMutOb.get(this._scope) || { toRemove: new Set() };
+            let mutOb = MFLD.mut.get(this._scope) || { toRemove: new Set() };
             if(!mutOb.observer) {
                 mutOb.observer = new MutationObserver((muts)=> {
                     for(let mut of muts) {
@@ -85,7 +87,7 @@ export class Store {
                                             mutOb.observer.disconnect();
                                             mutOb.toRemove.delete(store);
                                             // @ts-ignore
-                                            MfMutOb.delete(scope)
+                                            MFLD.mut.delete(scope)
                                         }
                                     }
                                 }
@@ -97,7 +99,7 @@ export class Store {
             }
             mutOb.toRemove.add(this);
             // @ts-ignore
-            MfMutOb.set(this._scope, mutOb);
+            MFLD.mut.set(this._scope, mutOb);
         }
         
         (ops?.upstream?.map(s=> {
@@ -119,7 +121,7 @@ export class Store {
      * @param {boolean} [immediate]
      */
     sub(sub, ref, immediate = true) {
-        this._subscriptions.set(ref || _randomEnoughId(), sub);
+        this._subscriptions.set(ref || _id(), sub);
         if(immediate) sub?.(this.value);
     }
 
@@ -178,7 +180,7 @@ export class Store {
  * @returns {Store<T>}
  */
 export let _store = (name, ops)=> {
-    let found_store = MfSt.get(name);
+    let found_store = MFLD.st.get(name);
     return ops ? (found_store ? found_store._modify(name, ops) : new Store(name, ops)) : (found_store || new Store(name, ops));
 }
 /**
@@ -196,7 +198,7 @@ export let _clearScope = (scope)=> {
  */
 export let _destroy = (store)=> {
     // @ts-ignore
-    MfSt.delete(store.name);
+    MFLD.st.delete(store.name);
     // @ts-ignore
     store = undefined;
 }

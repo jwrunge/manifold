@@ -6,7 +6,7 @@ import { ATTR_PREFIX } from "./util.js";
  * @typedef {Object} DomWorkOrder
  * @property {HTMLElement} in - The input HTMLElement
  * @property {HTMLElement} out - The output HTMLElement
- * @property {"append" | "prepend" | "swapinner" | "swapouter"} relation - The relation between the input and output elements
+ * @property {"append" | "prepend" | "inner" | "outer"} relation - The relation between the input and output elements
  * @property {Partial<MfldOps>} ops - The fetch options for the operation
  * @property {(el: HTMLElement | null) => void} done - The callback function to be executed when the operation is done
  */
@@ -66,7 +66,7 @@ let _runUpdates = ()=> {
         }
 
         let wrapperHeight = order.out ? order.out.clientHeight : 0;
-        let _getDimensionsAfterUpdate = order.relation == "swapinner";
+        let _getDimensionsAfterUpdate = order.relation == "inner";
 
         if(order.relation == "prepend") {
             _addSpacer?.(order.in, order.out, wrapperHeight, order.ops);
@@ -76,7 +76,7 @@ let _runUpdates = ()=> {
             });
         }
         else {
-            if(["swapinner", "swapouter"].includes(order.relation)) {
+            if(["inner", "outer"].includes(order.relation)) {
                 let container = order.out?.cloneNode(true);
                 if(container) {
                     order.out?.after(container);
@@ -90,7 +90,7 @@ let _runUpdates = ()=> {
 
             _addSpacer?.(order.in, order.out, wrapperHeight, order.ops);
             _applyTransition(order.in, "in", order.ops, ()=> {
-                if(order.relation == "swapouter") order.out?.replaceWith(order.in)
+                if(order.relation == "outer") order.out?.replaceWith(order.in)
                 else order.out?.appendChild(order.in);
                 _adjustSizing?.(order.in, order.ops);
             });

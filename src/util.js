@@ -2,7 +2,7 @@ export let ATTR_PREFIX = "mf_";
 export let _inputNestSplitRx = /[\.\[\]\?]{1,}/g;
 export let _commaSepRx = /, {0,}/g;
 
-export let _randomEnoughId = ()=> {
+export let _id = ()=> {
     return `${Date.now()}.${Math.floor(Math.random() * 100_000)}`;
 }
 
@@ -13,7 +13,8 @@ export let _randomEnoughId = ()=> {
  * @returns {import(".").MfldOps}
  */
 export let _getOpOverrides = (ops, el)=> {
-    let overrides = ops.profiles?.[override] || JSON.parse( el.dataset?.overrides || {});
+    let override = el.dataset?.override || "";
+    let overrides = ops.profiles?.[override] || {}// || JSON.parse(override || {});
     
     let res = { ...ops, ...overrides };
     // Get per-value overrides
@@ -38,7 +39,7 @@ export let _parseFunction = (condition)=> {
     // Set up function to evaluate store values
     let valueList = values?.split(",")?.map(s=> s.replace(/[()]/g, "").trim()) || [];
     // @ts-ignore
-    let func = window[fn] || MfFn[fn];
+    let func = window[fn] || MFLD.fn[fn];
     if(!func) {
         // If function is not found, try to create it; account for implicit returns
         if(!valueList?.length && !fn.includes("=>")) {

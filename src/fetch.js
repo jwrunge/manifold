@@ -62,7 +62,7 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, valueList, proce
         let resp = await data?.[fetchOps?.fetch?.resType || "text"]();
 
         // Handle resolutions
-        for(let instruction of ["append", "prepend", "swapinner", "swapouter"]) {
+        for(let instruction of ["append", "prepend", "inner", "outer"]) {
             let ds = el.dataset[`${ATTR_PREFIX}${instruction}`];
             if(ds === undefined) continue;
             let [selector, toReplace] = ds?.split("->").map(s=> s.trim()) || [];
@@ -73,7 +73,7 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, valueList, proce
                 _scheduleUpdate({
                     in: /** @type {HTMLElement} */ (fullMarkup.querySelector(selector || "body")),
                     out: /** @type {HTMLElement} */ (toReplace ? document.querySelector(toReplace) : el),
-                    relation: /** @type {"append" | "prepend" | "swapinner" | "swapouter"}*/(instruction),
+                    relation: /** @type {"append" | "prepend" | "inner" | "outer"}*/(instruction),
                     ops: fetchOps,
                     done: (el)=> {
                         _register(el)

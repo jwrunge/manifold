@@ -136,7 +136,7 @@ func:
  * @return {MfldFunc}
  */ (func_name)=> /** @type {(val: any, el?: HTMLElement)=> void}*/(
 // @ts-ignore
- MfFn[func_name]),
+ MFLD.fn[func_name]),
 funcs: 
 /**!
  * - Add functions to the Manifold function registry in key-value pairs.
@@ -146,7 +146,7 @@ funcs:
  */ funcs=> {
     for(let key in funcs) {
     // @ts-ignore
-    MfFn[key] = funcs[key];
+    MFLD.fn[key] = funcs[key];
  }},
 config:
 /**!

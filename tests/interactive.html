@@ -30,7 +30,7 @@
   <p>Store 4 value: <span data-mf_Bind="store4->innerText"></span></p>
   <p>Checked store checked? <span data-mf_Bind="(checkedStore)=> { console.log('CHECKED?', checkedStore); return checkedStore; } -> innerText">Unknown</span></p>
   <p>Value of Mass Store 99: <span data-mf_Bind="mass_store99 -> innerText">Unknown</span></p>
-  <div data-secret="THIS IS A SECRET" data-mf_Sync="on($mount) MfFn.sendAlert(dataSecret) -> checkedStore"></div>
+  <div data-secret="THIS IS A SECRET" data-mf_Sync="on($mount) MFLD.fn.sendAlert(dataSecret) -> checkedStore"></div>
 
   <!-- Content -->
   <div class="sync-grid">
@@ -79,7 +79,7 @@
 
   <button data-mf_Post="on(click) ()=> {return {name: 'Jake', age: 36}} -> /tests/header.html">JSON Sender</button>
 
-  <form action="/tests/header.html" method="post" data-mf_swapinner="h2->h1" data-mf_promote data-mf_pushstate>
+  <form action="/tests/header.html" method="post" data-mf_inner="h2->h1" data-mf_promote data-mf_pushstate>
     <label>Name: <input type="text" name="name" autocomplete="name" required></label>
     <label>Age: <input type="number" name="age"></label>
     <button type="submit">SUBMIT</button>
@@ -99,8 +99,8 @@
     <div>ELSE</div>
   </template>
 
-  <div class="special-insert" data-mf_Get="on(click) /tests/interactive.html" data-mf_swapinner=".sync-grid -> header">Default insert</div>
-  <nav data-mf_Post="on(click) (store1, store2)=> store1.toUpperCase() + JSON.stringify(store2 || {}) -> /tests/header.html" data-mf_swapinner="header -> h1" data-mf_transsmart="true" data-mf_transdur="300">
+  <div class="special-insert" data-mf_Get="on(click) /tests/interactive.html" data-mf_inner=".sync-grid -> header">Default insert</div>
+  <nav data-mf_Post="on(click) (store1, store2)=> store1.toUpperCase() + JSON.stringify(store2 || {}) -> /tests/header.html" data-mf_inner="header -> h1" data-mf_transsmart="true" data-mf_transdur="300">
     <p>This is some default nav content.</p>
   </nav>
 
