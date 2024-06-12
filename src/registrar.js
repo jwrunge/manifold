@@ -1,6 +1,6 @@
 import { _store } from "./store.js";
 import { _scheduleUpdate } from "./updates.js";
-import { _commaSepRx, _getOpOverrides, _parseFunction, ATTR_PREFIX } from "./util.js";
+import { _commaSepRx, _getOpOverrides, _glob, _parseFunction, ATTR_PREFIX } from "./util.js";
 import { _handleFetch } from "./fetch.js";
 import { _handleBindSync } from "./bindsync.js";
 import { _handleTemplates } from "./templates.js";
@@ -20,7 +20,7 @@ export let _setOptions = (newops, profileName)=> {
 }
 
 // Handle location state changes
-window.addEventListener("popstate", (e)=> {
+_glob.addEventListener("popstate", (e)=> {
     // for(let update of e.state) {
     //     _scheduleUpdate(update);
     // }

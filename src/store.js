@@ -8,7 +8,7 @@
  */
 
 import { _scheduleUpdate } from "./updates.js";
-import { _id } from "./util.js";
+import { _glob, _id } from "./util.js";
 
 /**
  * @callback SubFunction
@@ -33,7 +33,7 @@ let _hashAny = (input)=> {
 }
 
 //Static
-if(!window.MFLD) window.MFLD = {
+if(!_glob.MFLD) _glob.MFLD = {
     st: new Map(),
     fn: {},
     mut: new Map(),
@@ -176,11 +176,11 @@ export class Store {
 /**
  * @template T
  * @param {string} name - The name of the store
- * @param {StoreOptions<T> | T} [ops] - Options to update the store
+ * @param {StoreOptions<T>} [ops] - Options to update the store
  * @returns {Store<T>}
  */
 export let _store = (name, ops)=> {
-    let found_store = MFLD.st.get(name);
+    let found_store = /** @type {Store<any>}*/(_glob.MFLD.st.get(name));
     return ops ? (found_store ? found_store._modify(name, ops) : new Store(name, ops)) : (found_store || new Store(name, ops));
 }
 /**

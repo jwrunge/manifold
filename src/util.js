@@ -6,6 +6,25 @@ export let _id = ()=> {
     return `${Date.now()}.${Math.floor(Math.random() * 100_000)}`;
 }
 
+/** 
+ * @template T
+ * @typedef {import("./index.js").Store<T>} Store 
+ */
+
+/**!
+ * @typedef {object} MFLDGlobal
+ * @property {Map<string, Store<any>>} st
+ * @property {Object} fn
+ * @property {Map<HTMLElement, { toRemove: Set<Store<any>>, observer: MutationObserver }>} mut
+ */
+
+/**!
+ * @typedef {Window & { MFLD: MFLDGlobal }} MFLDWindowObj
+ * @property {MFLDGlobal} MFLD
+ */
+// @ts-ignore
+export let _glob = /** @type {MFLDWindowObj}*/(window);
+
 /**
  * Get or set nested store values
  * @param {import(".").MfldOps} ops
@@ -39,7 +58,7 @@ export let _parseFunction = (condition)=> {
     // Set up function to evaluate store values
     let valueList = values?.split(",")?.map(s=> s.replace(/[()]/g, "").trim()) || [];
     // @ts-ignore
-    let func = window[fn] || MFLD.fn[fn];
+    let func = _glob[fn] || MFLD.fn[fn];
     if(!func) {
         // If function is not found, try to create it; account for implicit returns
         if(!valueList?.length && !fn.includes("=>")) {
@@ -52,7 +71,7 @@ export let _parseFunction = (condition)=> {
             }
         }
 
-        valueList = (typeof valueList == "string" ? valueList.split(/\s*,\s*/) : valueList).map(v => v.split(_inputNestSplitRx)[0]);
+        valueList = (typeof valueList == "string" ? /** @type {string}*/(valueList).split(/\s*,\s*/) : valueList).map(v => v.split(_inputNestSplitRx)[0]);
         if(!fn.match(/^\s{0,}\{/) && !fn.includes("return")) fn = fn.replace(/^\s{0,}/, "return ");
         try {
             func = new Function(...valueList, fn);

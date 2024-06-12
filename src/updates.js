@@ -1,6 +1,6 @@
 /** @typedef {import("./index.js").MfldOps} MfldOps */
 
-import { ATTR_PREFIX } from "./util.js";
+import { _glob, ATTR_PREFIX } from "./util.js";
 
 /**
  * @typedef {Object} DomWorkOrder
@@ -12,7 +12,7 @@ import { ATTR_PREFIX } from "./util.js";
  */
 
 /** @type {(DomWorkOrder | Function)[]} */ let workArray = [];
-let cancelAnimationFrame = false;
+let cancelAnimationFrame = 0;
 /** @type {Map<string, (any | ((any)=> any))>} */
 
 // Next tick queue
@@ -57,7 +57,7 @@ let _adjustSizing = (inEl, ops)=> {
 }
 
 let _runUpdates = ()=> {
-    cancelAnimationFrame = false;
+    cancelAnimationFrame = 0;
     
     for(let order of workArray) {
         if(typeof order == "function") {
@@ -77,7 +77,7 @@ let _runUpdates = ()=> {
         }
         else {
             if(["inner", "outer"].includes(order.relation)) {
-                let container = order.out?.cloneNode(true);
+                let container = /** @type {HTMLElement}*/(order.out?.cloneNode(true));
                 if(container) {
                     order.out?.after(container);
                     if(_getDimensionsAfterUpdate) {
@@ -115,7 +115,8 @@ let _runUpdates = ()=> {
  */
 export let _applyTransition = (el, dir, ops, fn, refElement, _getDimensionsAfterUpdate = false)=> {
     if(el?.nodeType == Node.TEXT_NODE) {
-        el = el.replaceWith(document?.createElement("div")).textContent = el.textContent;
+        el.replaceWith(document?.createElement("div"));
+        el.textContent = el.textContent;
     }
 
     if(el) {
@@ -176,7 +177,7 @@ let _getDimensions = (refElement)=> {
     let rect = refElement.getBoundingClientRect();
     return {
         w: `calc(${(refElement).clientWidth}px - ${style.paddingLeft} - ${style.paddingRight})`,
-        left: `calc(${rect.left}px + ${window.scrollX}px)`,
-        top: `calc(${rect.top}px + ${window.scrollY}px)`
+        left: `calc(${rect.left}px + ${_glob.scrollX}px)`,
+        top: `calc(${rect.top}px + ${_glob.scrollY}px)`
     };
 }
