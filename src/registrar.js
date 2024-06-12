@@ -30,7 +30,7 @@ globalThis.addEventListener("popstate", (e)=> {
 /**
  * @param {HTMLElement | null} [parent] 
  */
-export function _registerSubs(parent) {
+export function _register(parent) {
     if(parent && parent.nodeType == Node.TEXT_NODE) return;
 
     /** @type {NodeListOf<HTMLElement> | []} */
@@ -62,7 +62,7 @@ export function _registerSubs(parent) {
             for(let setting of el.dataset?.[mode]?.split(";;") || []) {
                 //Break out settings
                 let [sourceParts, output] = setting?.split("->")?.map(s=> s.trim()) || [];
-                let triggers = shouldHaveTriggers ? _paramsInParens(sourceParts.slice(0, sourceParts.indexOf(")"))) : [];
+                let triggers = shouldHaveTriggers ?sourceParts.slice(0, sourceParts.indexOf(")"))?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s=> s.trim()) || [] : [];
                 if(!output && mode.match(/get|head|post|put|delete|patch/)) {
                     output = sourceParts.slice(sourceParts.indexOf(")") + 1);
                     sourceParts = "";
@@ -90,16 +90,4 @@ export function _registerSubs(parent) {
             }; //End loop settings
         }; //End loop dataset
     };  //End loop elements
-}
-
-/**
- * @param {string} str 
- * @returns 
- */
-function _paramsInParens(str) {
-    if(str?.includes("(")) {
-        let matches = str.match(/[^\(\)]{1,}/g);
-        str = matches?.[matches.length - 1] || "";
-    }
-    return str?.split(_commaSepRx)?.map(s=> s.trim()) || [];
 }

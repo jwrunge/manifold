@@ -1,6 +1,6 @@
 import { _parseFunction, ATTR_PREFIX } from "./util.js";
 import { _scheduleUpdate } from "./updates";
-import { _registerSubs } from "./registrar.js";
+import { _register } from "./registrar.js";
 import { _store } from "./store.js";
 
 /** @typedef {import("./index.js").MfldOps} MfldOps */
@@ -76,7 +76,7 @@ export function _handleFetch(el, trigger, fetchOps, href, method, valueList, pro
                     relation: /** @type {"append" | "prepend" | "swapinner" | "swapouter"}*/(instruction),
                     ops: fetchOps,
                     done: (el)=> {
-                        _registerSubs(el)
+                        _register(el)
                     },
                 });
             }

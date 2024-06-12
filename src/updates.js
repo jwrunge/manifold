@@ -26,33 +26,27 @@ let spacer;
 let spacerHeight = "";
 
 export function _addToNextTickQueue(fn) {
-    if(fn) _nextTickQueue.push(fn);
+    fn && _nextTickQueue.push(fn);
 }
 
-/** @export @param {(DomWorkOrder | Function)} update */
 export function _scheduleUpdate(update) {
     workArray.push(update);
     if(!cancelAnimationFrame) {
-        cancelAnimationFrame = true;
-        requestAnimationFrame(_runUpdates);
+        cancelAnimationFrame = requestAnimationFrame(_runUpdates);
     }
 }
 
 function _addSpacer(inEl, wrapper, wrapperHeight, replaceWholeObject = false, ops) {
-    if(!ops.trans?.smartTransition ?? true) return;
-    //Conserve parent size
-    spacer = document.createElement("div");
-    
+    if(!(ops.trans?.smartTransition ?? true)) return;
     let { paddingTop, paddingBottom } = wrapper instanceof Element ? window.getComputedStyle(wrapper) : { paddingTop: 0, paddingBottom: 0 };
-    spacerHeight = spacer.style.height = `calc(${(Math.abs(wrapperHeight - (inEl?.clientHeight || 0)))}px - ${paddingTop} - ${paddingBottom})`;
-
+    let spacer = document.createElement("div");
+    spacer.style.height = `calc(${Math.abs(wrapperHeight - (inEl?.clientHeight || 0))}px - ${paddingTop} - ${paddingBottom})`;
     wrapper?.after(spacer);
 }
 
 function _adjustSizing(inEl, ops) {
     if(!ops.trans?.smartTransition ?? true) return;
     let dur = (ops?.trans?.dur?.[0] || ops?.trans?.dur || 600)/2
-
     _scheduleUpdate(()=> {
         spacer?.remove();
         inEl?.animate?.([
@@ -65,62 +59,47 @@ function _adjustSizing(inEl, ops) {
 function _runUpdates() {
     cancelAnimationFrame = false;
     
-    /**
-    * @type {DomWorkOrder[]}
-    */
     for(let order of workArray) {
-        if(typeof order == "function") (/** @type {Function} */ order)();
-        else {
-            let wrapperHeight = order.out ? order.out.clientHeight : 0;
-
-            // Prepend
-            if(order.relation == "prepend") {
-                _addSpacer?.(order.in, order.out, wrapperHeight, false, order.ops);
-
-                //Prepend
-                _applyTransition(order.in, "in", order.ops, ()=> {
-                    if(order.in) order.out?.prepend(order.in);
-                    _adjustSizing?.(order.in, order.ops);
-                });
-            }
-            // Remove old children
-            else {
-                if(["swapinner", "swapouter"].includes(order.relation)) {
-                    //Remove old children before appending (if swapping children)
-                    let container = /** @type {HTMLElement | null}*/(order.out?.cloneNode(true));
-
-                    if(container) {
-                        order.out?.after(container);
-                        let getDimensionsAfterUpdate = order.relation == "swapinner" ? true : false;
-
-                        if(order.relation == "swapinner") {
-                            container.style.border = "none";
-                            order.out.replaceChildren();
-                        }
-
-                        // Transition old children out
-                        _applyTransition(container, "out", order.ops, undefined, order.out, getDimensionsAfterUpdate);
-                    }
-                }
-
-                _addSpacer?.(order.in, order.out, wrapperHeight, false, order.ops);
-
-                // Transition incoming element and append
-                _applyTransition(order.in, "in", order.ops, ()=> {
-                    if(order.in) {
-                        if(order.relation == "swapouter") order.out?.replaceWith(order.in)
-                        else order.out?.appendChild(order.in);
-                    }
-                    _adjustSizing?.(order.in, order.ops);
-                });
-            }
-
-            order.done?.(order.in);
+        if(typeof order == "function") {
+            order();
+            continue;
         }
+
+        let wrapperHeight = order.out ? order.out.clientHeight : 0;
+        let _getDimensionsAfterUpdate = order.relation == "swapinner";
+
+        if(order.relation == "prepend") {
+            _addSpacer?.(order.in, order.out, wrapperHeight, false, order.ops);
+            _applyTransition(order.in, "in", order.ops, ()=> {
+                order.out?.prepend(order.in);
+                _adjustSizing?.(order.in, order.ops);
+            });
+        }
+        else {
+            if(["swapinner", "swapouter"].includes(order.relation)) {
+                let container = order.out?.cloneNode(true);
+                if(container) {
+                    order.out?.after(container);
+                    if(_getDimensionsAfterUpdate) {
+                        container.style.border = "none";
+                        order.out.replaceChildren();
+                    }
+                    _applyTransition(container, "out", order.ops, undefined, order.out, _getDimensionsAfterUpdate);
+                }
+            }
+
+            _addSpacer?.(order.in, order.out, wrapperHeight, false, order.ops);
+            _applyTransition(order.in, "in", order.ops, ()=> {
+                if(order.relation == "swapouter") order.out?.replaceWith(order.in)
+                else order.out?.appendChild(order.in);
+                _adjustSizing?.(order.in, order.ops);
+            });
+        }
+
+        order.done?.(order.in);
     }
 
-    //Handle queued nextTick functions
-    for(let fn of _nextTickQueue) fn();
+    _nextTickQueue.forEach(fn => fn());
     _nextTickQueue = [];
     workArray = [];
 }
@@ -131,61 +110,45 @@ function _runUpdates() {
  * @param {Partial<MfldOps>} ops 
  * @param {Function} [fn] 
  * @param {HTMLElement} [refElement]
- * @param {boolean} [getDimensionsAfterUpdate]
+ * @param {boolean} [_getDimensionsAfterUpdate]
  * @returns 
  */
-export function _applyTransition(el, dir, ops, fn, refElement, getDimensionsAfterUpdate = false) {
-    //Handle text nodes
+export function _applyTransition(el, dir, ops, fn, refElement, _getDimensionsAfterUpdate = false) {
     if(el?.nodeType == Node.TEXT_NODE) {
-        let text = el.textContent;
-        let newNode = document?.createElement("div");
-        newNode.textContent = text;
-        el.replaceWith(newNode);
-        el = newNode;
+        el = el.replaceWith(document?.createElement("div")).textContent = el.textContent;
     }
 
     if(el) {
-        let dur = Array.isArray(ops.trans?.dur) ? ops.trans?.dur[dir == "in" ? 0 : 1] || ops.trans?.dur[0] : ops.trans?.dur || 0;
-
-        //Initiate transition
-        let transClass = ops?.trans?.class || `${ATTR_PREFIX}trans`;
+        const dur = Array.isArray(ops.trans?.dur) ? ops.trans?.dur[dir == "in" ? 0 : 1] || ops.trans?.dur[0] : ops.trans?.dur || 0;
+        const transClass = ops?.trans?.class || `${ATTR_PREFIX}trans`;
         el?.classList?.add(transClass);
         ops.trans?.hooks?.[`${dir}-start`]?.(el);
 
-        //Wait to apply class
         if(dir == "out") {
-            // Set dimensions
-            if(!refElement) refElement = el;
+            refElement = refElement || el;
             if(!refElement) return;
             let dimensions = {};
-            if((ops.trans?.smartTransition ?? true) && getDimensionsAfterUpdate == false) {
-                let style = getComputedStyle(refElement);
-                dimensions.w = `calc(${(refElement).clientWidth}px - ${style.paddingLeft} - ${style.paddingRight})`;
-                dimensions.left = `calc(${refElement.getBoundingClientRect().left}px + ${window.scrollX}px)`;
-                dimensions.top = `calc(${refElement.getBoundingClientRect().top}px + ${window.scrollY}px)`;
+            if((ops.trans?.smartTransition ?? true) && !_getDimensionsAfterUpdate) {
+                dimensions = _getDimensions(refElement);
             }
 
             _scheduleUpdate(()=> {
+                if((ops.trans?.smartTransition ?? true) && _getDimensionsAfterUpdate && refElement) {
+                    dimensions = _getDimensions(refElement);
+                }
+
                 if(ops.trans?.smartTransition ?? true) {
-                    if(getDimensionsAfterUpdate && refElement) {
-                        let style = getComputedStyle(refElement);
-                        dimensions.w = `calc(${(refElement).clientWidth}px - ${style.paddingLeft} - ${style.paddingRight})`;
-                        dimensions.left = `calc(${refElement.getBoundingClientRect().left}px + ${window.scrollX}px)`;
-                        dimensions.top = `calc(${refElement.getBoundingClientRect().top}px + ${window.scrollY}px)`;
-                    }
-                    
                     el.style.position = "fixed";
                     el.style.width = dimensions.w;
                     el.style.left = dimensions.left;
                     el.style.top = dimensions.top;
                     el.style.margin = "0";
                 }
-
                 if(dur) el.style.transitionDuration = `${dur}ms`;
+
                 el.classList?.add("out");
             })
         }
-        //If dir == in
         else {
             el?.classList?.add("in");
             if(dur) el.style.transitionDuration = `${dur}ms`;
@@ -199,7 +162,6 @@ export function _applyTransition(el, dir, ops, fn, refElement, getDimensionsAfte
         
         setTimeout(()=> {
             _scheduleUpdate(()=> {
-                //Wrapup
                 if(dir == "out") el?.remove();
                 el?.classList?.remove(transClass);
                 ops.trans?.hooks?.[`${dir}-end`]?.(el);
@@ -207,4 +169,13 @@ export function _applyTransition(el, dir, ops, fn, refElement, getDimensionsAfte
         }, 
         dur + (dir == "in" ? ops.trans?.swap || 0 : 0));
     }
+}
+
+function _getDimensions(refElement) {
+    let style = getComputedStyle(refElement);
+    return {
+        w: `calc(${(refElement).clientWidth}px - ${style.paddingLeft} - ${style.paddingRight})`,
+        left: `calc(${refElement.getBoundingClientRect().left}px + ${window.scrollX}px)`,
+        top: `calc(${refElement.getBoundingClientRect().top}px + ${window.scrollY}px)`
+    };
 }

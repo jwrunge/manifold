@@ -1,5 +1,5 @@
 import { _ensureNodeName, _iterable, _iterateSiblings, _registerInternalStore } from "./domutil";
-import { _registerSubs } from "./registrar";
+import { _register } from "./registrar";
 import { _store } from "./store";
 import { _applyTransition, _scheduleUpdate } from "./updates";
 import { _parseFunction, _randomEnoughId, ATTR_PREFIX } from "./util";
@@ -73,7 +73,7 @@ export function _handleTemplates(el, mode, as, func, valueList, ops) {
                 // Replace values
                 for(let element of elms) {
                     templ.before(element);
-                    _applyTransition(/** @type {HTMLElement}*/(element), "in", ops, ()=> _registerSubs(/** @type {HTMLElement}*/(element)));
+                    _applyTransition(/** @type {HTMLElement}*/(element), "in", ops, ()=> _register(/** @type {HTMLElement}*/(element)));
                 }
             });
         });

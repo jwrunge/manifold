@@ -23,16 +23,11 @@ import { _randomEnoughId } from "./util.js";
  */
 function _hashAny(input) {
     if(!input) return 0;
-    if(typeof input == 'number') return input;
-    if(input === true) return 1;
-
-    if(input instanceof Map) return _hashAny(Array.from(input.entries()));
-    else if(input instanceof Set) return _hashAny(Array.from(input));
+    if(typeof input == 'number' || input === true) return input;
+    if(input instanceof Map || input instanceof Set) return _hashAny(Array.from(input.entries() || input));
 
     let hash = 0;
-    for(let char of new TextEncoder().encode(
-        typeof input == 'string' ? input : input?.toString() || ""
-    )) 
+    for(let char of new TextEncoder().encode(input?.toString() || "")) 
         hash = ((hash << 5) - hash) + char;
     return hash;
 }
@@ -76,10 +71,8 @@ export class Store {
         // Watch for scope destroy
         if(this._scope instanceof Element) {
             // @ts-ignore
-            let mutOb = MfMutOb.get(this._scope);
-            if(!mutOb) {
-                mutOb = {};
-                mutOb.toRemove = new Set();
+            let mutOb = MfMutOb.get(this._scope) || { toRemove: new Set() };
+            if(!mutOb.observer) {
                 mutOb.observer = new MutationObserver((muts)=> {
                     for(let mut of muts) {
                         if(mut.type == "childList") {
@@ -165,10 +158,6 @@ export class Store {
         });
     }
 
-    async clearHash() {
-        this._storedHash = undefined;
-    }
-
     async _auto_update() {
         let newVal = await this._updater?.(
             Array.from(this._upstreamStores)?.map(S => S?.value) || [], 
@@ -189,34 +178,23 @@ export class Store {
  * @returns {Store<T>}
  */
 export function _store(name, ops) {
-    // @ts-ignore
     let found_store = MfSt.get(name);
-    if(ops) {
-        if(found_store) {
-            return found_store._modify(name, ops);
-        }
-        return new Store(name, ops);
-    }
-    return found_store || new Store(name, /** @type {StoreOptions<T>}*/(ops));
+    return ops ? (found_store ? found_store._modify(name, ops) : new Store(name, ops)) : (found_store || new Store(name, ops));
 }
-
 /**
  * @param {HTMLElement | string} scope 
  */
 export function _clearScope(scope) {
     // @ts-ignore
-    for(let store of MfSt.values()) {
-        if(store._scope == scope) _destroy(store);
-    }
+    MsFt.forEach(store=> {
+        if(store._scope == scope) _destroy(store); 
+    });
 }
 
 /**
  * @param {Store<any>} store 
  */
 export function _destroy(store) {
-    store._subscriptions.clear();
-    store._upstreamStores.clear();
-    store._downstreamStores.clear();
     // @ts-ignore
     MfSt.delete(store.name);
     // @ts-ignore

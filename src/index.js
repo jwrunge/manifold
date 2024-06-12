@@ -1,6 +1,6 @@
 import { _store } from "./store.js";
 import { _addToNextTickQueue } from "./updates.js";
-import { _registerSubs, _setOptions } from "./registrar.js";
+import { _register, _setOptions } from "./registrar.js";
 
 /**! @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey*/
 
@@ -166,6 +166,6 @@ register:
  * @param {HTMLElement | string | null} [parent]
  */ (parent)=> {
     if(typeof parent == "string") parent = /** @type {HTMLElement | null}*/(document.querySelector(parent));
-        _registerSubs(parent)
+        _register(parent)
     },
 };

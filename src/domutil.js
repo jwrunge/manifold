@@ -5,22 +5,15 @@ import { _store } from "./store";
  * @returns {HTMLElement}
  */
 export function _ensureNodeName(el, nodeName, skipAttributes = [], removeClasses = []) {
-    // Make sure this is a template
-    if(el.tagName != nodeName) {
-        let newEl = document.createElement(nodeName);
-        newEl.innerHTML = el.innerHTML;       
-        for(let attr of el.attributes) {
-            if(!skipAttributes.includes(attr.name)) newEl.setAttribute(attr.name, attr.value);
-        }
-        for(let cls of removeClasses) {
-            newEl.classList.remove(cls);
-        }
-        el.replaceWith(newEl);
+    if(el.tagName == nodeName) return el;
 
-        // If not, it's default content
-        return newEl;
-    }
-    return el;
+    let newEl = document.createElement(nodeName);
+    newEl.innerHTML = el.innerHTML;       
+    [...el.attributes].filter(attr => !skipAttributes.includes(attr.name)).forEach(attr => newEl.setAttribute(attr.name, attr.value));
+    removeClasses.forEach(cls => newEl.classList.remove(cls));
+    el.replaceWith(newEl);
+
+    return newEl;
 }
 
 /**
@@ -47,9 +40,7 @@ export function _iterable(obj, cb) {
  * @returns {Element | null | undefined}
  */
 export function _iterateSiblings(sib, breakFn, cb) {
-    if(breakFn?.(sib)) return sib;
-    sib = cb?.(sib) || sib;
-    return _iterateSiblings(sib?.nextElementSibling, breakFn, cb);
+    return breakFn?.(sib) ? sib : _iterateSiblings(cb?.(sib) || sib?.nextElementSibling, breakFn, cb);
 }
 
 /**
@@ -65,10 +56,10 @@ export function _iterateSiblings(sib, breakFn, cb) {
  * @param {InternalStoreOptions} [options]
  * @returns 
  */
-export function _registerInternalStore(storeName, storeList, options) {
+export function _registerInternalStore(storeName = "", storeList = [], options) {
     // Register new store (to prevent excess evaluations)
-    return _store(storeName || "", {
-        upstream: [...storeList || []],
+    return _store(storeName, {
+        upstream: [...storeList],
         updater: (list)=> {
             try {
                 return options?.func?.(...list) || list[0];

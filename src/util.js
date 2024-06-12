@@ -8,11 +8,11 @@ export function _randomEnoughId() {
 
 function _getOverride(name, el, ops, parse = true, def = "{}", as) {
     let override = el.dataset[`${ATTR_PREFIX}${name}`];
-    if(!override) return undefined;
-    if(name == "overrides") return ops.profiles?.[override || ""]?.fetch || JSON.parse(override || "{}");
+    if(!override) return;
+    if(name == "overrides") return ops.profiles?.[override]?.fetch || JSON.parse(override || def);
     if(parse) return JSON.parse(override || def);
-    if(as == "num") return parseInt(override) || undefined;
-    if(as == "bool") return override == "true" ? true : override == "false" ? false : undefined;
+    if(as == "num") return parseInt(override);
+    if(as == "bool") return override == "true";
     return override;
 }
 
@@ -25,35 +25,24 @@ function _getOverride(name, el, ops, parse = true, def = "{}", as) {
 export function _getOpOverrides(ops, el) {
     let overrides = _getOverride("overrides", el, ops);
 
-    let newops = {
+    return {
         profiles: ops.profiles,
         fetch: {
             ...ops.fetch,
-            ...{
-                responseType: _getOverride("responsetype", el, ops, false) || ops.fetch?.responseType
-            },
-            ...(overrides?.fetch || {}),
-            ...(_getOverride("fetch", el, ops) || {}),
+            responseType: _getOverride("responsetype", el, ops, false) || ops.fetch?.responseType,
+            ...overrides?.fetch,
+            ..._getOverride("fetch", el, ops),
         },
         trans: {
             ...ops.trans,
-            ...{
-                dur: _getOverride("transdur", el, ops, true, "[]", "num") || ops.trans?.dur,
-                swap: _getOverride("transswap", el, ops, false, "", "num") || ops.trans?.swap,
-                class: _getOverride("transclass", el, ops, false) || ops.trans?.class,
-                smartTransition: _getOverride("transsmart", el, ops, false, undefined, "bool") || ops.trans?.smartTransition,
-            },
-            ...(overrides?.trans || {}),
-            ...(_getOverride("trans", el, ops) || {}),
+            dur: _getOverride("transdur", el, ops, true, "[]", "num") || ops.trans?.dur,
+            swap: _getOverride("transswap", el, ops, false, "", "num") || ops.trans?.swap,
+            class: _getOverride("transclass", el, ops, false) || ops.trans?.class,
+            smartTransition: _getOverride("transsmart", el, ops, false, undefined, "bool") || ops.trans?.smartTransition,
+            ...overrides?.trans,
+            ..._getOverride("trans", el, ops),
         },
     }
-
-    return newops;
-}
-
-function _parseValues(values) {
-    if(typeof values == "string") values = values.split(/\s{0,},\s{0,}/);
-    return values.map(v=> v.split(_inputNestSplitRx)?.[0]) || [];
 }
 
 /**
@@ -86,7 +75,7 @@ export function _parseFunction(condition) {
             }
         }
 
-        valueList = _parseValues(valueList);
+        valueList = (typeof valueList == "string" ? valueList.split(/\s*,\s*/) : valueList).map(v => v.split(_inputNestSplitRx)[0]);
         if(!fn.match(/^\s{0,}\{/) && !fn.includes("return")) fn = fn.replace(/^\s{0,}/, "return ");
         try {
             func = new Function(...valueList, fn);
@@ -97,14 +86,4 @@ export function _parseFunction(condition) {
     }
 
     return { valueList, func, as };
-}
-
-export function _evalInputs(inputs) {
-    let values = [];
-    for(let input of inputs) {
-        // @ts-ignore
-        let S = MfSt.get(input);
-        values.push(S.value || globalThis.value);
-    }
-    return values;
 }
