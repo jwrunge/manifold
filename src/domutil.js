@@ -1,4 +1,5 @@
 import { _store } from "./store";
+import { _randomEnoughId } from "./util";
 
 /**
  * @param {HTMLElement} el
@@ -51,14 +52,13 @@ export let _iterateSiblings = (sib, breakFn, cb)=> {
  */
 
 /**
- * @param {string} [storeName] 
  * @param {string[]} [storeList] 
  * @param {InternalStoreOptions} [options]
  * @returns 
  */
-export let _registerInternalStore = (storeName = "", storeList = [], options)=> {
+export let _registerInternalStore = (storeList = [], options)=> {
     // Register new store (to prevent excess evaluations)
-    return _store(storeName, {
+    return _store(_randomEnoughId(), {
         upstream: [...storeList],
         updater: (list)=> {
             try {

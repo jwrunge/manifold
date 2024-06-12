@@ -1,5 +1,5 @@
 export declare module "mfld" {
-    export { O as Mfld };
+    export { F as Mfld };
     /**
      * !
      */
@@ -28,7 +28,7 @@ export declare module "mfld" {
         /**
          * - Response type (default: "text")
          */
-        responseType?: "json" | "text";
+        resType?: "json" | "text";
         /**
          * - Error callback - run on fetch error
          */
@@ -61,7 +61,7 @@ export declare module "mfld" {
         /**
          * - Enable smart transitions (default: true)
          */
-        smartTransition?: boolean;
+        smart?: boolean;
         /**
          * - Transition hooks
          */
@@ -139,7 +139,7 @@ export declare module "mfld" {
      * !
      */
     export type MfldFunc = Function;
-    namespace O {
+    namespace F {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*

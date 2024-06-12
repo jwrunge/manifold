@@ -20,7 +20,7 @@ export let _setOptions = (newops, profileName)=> {
 }
 
 // Handle location state changes
-globalThis.addEventListener("popstate", (e)=> {
+window.addEventListener("popstate", (e)=> {
     // for(let update of e.state) {
     //     _scheduleUpdate(update);
     // }

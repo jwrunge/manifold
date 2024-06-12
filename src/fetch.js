@@ -45,13 +45,13 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, valueList, proce
             ...(fetchOps?.fetch?.request || {}),
             headers: {
                 ...fetchOps?.fetch?.request?.headers,
-                "Manifold-App-Fetch": "true",
+                "MFLD": "true",
             },
             method,
             body: input == "$form" || typeof body == "string" ? body : JSON.stringify(body),
         })
         .catch(error=> {
-            fetchOps?.fetch?.err?.(error) || console.error("FETCH ERROR", error);
+            fetchOps?.fetch?.err?.(error);
         });
 
         //Handle onCode callback
@@ -59,7 +59,7 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, valueList, proce
         if(code && fetchOps?.fetch?.onCode?.(code, data) == false) return;
 
         //Return JSON or text in callback
-        let resp = await data?.[fetchOps?.fetch?.responseType || "text"]();
+        let resp = await data?.[fetchOps?.fetch?.resType || "text"]();
 
         // Handle resolutions
         for(let instruction of ["append", "prepend", "swapinner", "swapouter"]) {

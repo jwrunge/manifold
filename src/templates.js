@@ -2,7 +2,7 @@ import { _ensureNodeName, _iterable, _iterateSiblings, _registerInternalStore } 
 import { _register } from "./registrar";
 import { _store } from "./store";
 import { _applyTransition, _scheduleUpdate } from "./updates";
-import { _parseFunction, _randomEnoughId, ATTR_PREFIX } from "./util";
+import { _parseFunction, ATTR_PREFIX } from "./util";
 
 /**
  * Handle conditional and loop elements
@@ -25,7 +25,6 @@ export let _handleTemplates = (el, mode, as, func, valueList, ops)=> {
     el.remove();
 
     let templStore = _registerInternalStore(
-        _randomEnoughId(),
         valueList, 
         { func, observeEl: templ }
     );

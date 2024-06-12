@@ -14,7 +14,7 @@ import { _register, _setOptions } from "./registrar.js";
 /**!
  * @typedef {object} FetchOptions
  * @property {RequestInit} [request] - Fetch request options
- * @property {"json"|"text"} [responseType] - Response type (default: "text")
+ * @property {"json"|"text"} [resType] - Response type (default: "text")
  * @property {(err: Error)=> void} [err] - Error callback - run on fetch error
  * @property {(code: number, data: void | Response)=> boolean | void} [onCode] - Callback function - run on fetch response code; return `false` to prevent further processing
  * @property {ExternalOptions[]} [externals] - External domain fetch settings
@@ -25,7 +25,7 @@ import { _register, _setOptions } from "./registrar.js";
  * @property {string} [class] - CSS class applied to transitions (default: `mfTrans`)
  * @property {[number, number] | number} [dur] - Transition duration: [in, out] or single value (in ms); default: 300
  * @property {number} [swap] - Swap delay (in ms) - applied between one element's outro start and the replacement's intro start; default: 0
- * @property {boolean} [smartTransition] - Enable smart transitions (default: true)
+ * @property {boolean} [smart] - Enable smart transitions (default: true)
  * @property {{ [key in HookKey]?: (el: HTMLElement)=> void }} [hooks] - Transition hooks
  */
 

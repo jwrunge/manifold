@@ -36,16 +36,16 @@ export let _scheduleUpdate = (update)=> {
     }
 }
 
-let _addSpacer = (inEl, wrapper, wrapperHeight, replaceWholeObject = false, ops)=> {
-    if(!(ops.trans?.smartTransition ?? true)) return;
-    let { paddingTop, paddingBottom } = wrapper instanceof Element ? window.getComputedStyle(wrapper) : { paddingTop: 0, paddingBottom: 0 };
+let _addSpacer = (inEl, wrapper, wrapperHeight, ops)=> {
+    if(!(ops.trans?.smart ?? true)) return;
+    let { paddingTop, paddingBottom } = wrapper instanceof Element ? getComputedStyle(wrapper) : { paddingTop: 0, paddingBottom: 0 };
     let spacer = document.createElement("div");
     spacer.style.height = `calc(${Math.abs(wrapperHeight - (inEl?.clientHeight || 0))}px - ${paddingTop} - ${paddingBottom})`;
     wrapper?.after(spacer);
 }
 
 let _adjustSizing = (inEl, ops)=> {
-    if(!ops.trans?.smartTransition ?? true) return;
+    if(!ops.trans?.smart ?? true) return;
     let dur = (ops?.trans?.dur?.[0] || ops?.trans?.dur || 600)/2
     _scheduleUpdate(()=> {
         spacer?.remove();
@@ -69,7 +69,7 @@ let _runUpdates = ()=> {
         let _getDimensionsAfterUpdate = order.relation == "swapinner";
 
         if(order.relation == "prepend") {
-            _addSpacer?.(order.in, order.out, wrapperHeight, false, order.ops);
+            _addSpacer?.(order.in, order.out, wrapperHeight, order.ops);
             _applyTransition(order.in, "in", order.ops, ()=> {
                 order.out?.prepend(order.in);
                 _adjustSizing?.(order.in, order.ops);
@@ -88,7 +88,7 @@ let _runUpdates = ()=> {
                 }
             }
 
-            _addSpacer?.(order.in, order.out, wrapperHeight, false, order.ops);
+            _addSpacer?.(order.in, order.out, wrapperHeight, order.ops);
             _applyTransition(order.in, "in", order.ops, ()=> {
                 if(order.relation == "swapouter") order.out?.replaceWith(order.in)
                 else order.out?.appendChild(order.in);
@@ -128,16 +128,16 @@ export let _applyTransition = (el, dir, ops, fn, refElement, _getDimensionsAfter
             refElement = refElement || el;
             if(!refElement) return;
             let dimensions = {};
-            if((ops.trans?.smartTransition ?? true) && !_getDimensionsAfterUpdate) {
+            if((ops.trans?.smart ?? true) && !_getDimensionsAfterUpdate) {
                 dimensions = _getDimensions(refElement);
             }
 
             _scheduleUpdate(()=> {
-                if((ops.trans?.smartTransition ?? true) && _getDimensionsAfterUpdate && refElement) {
+                if((ops.trans?.smart ?? true) && _getDimensionsAfterUpdate && refElement) {
                     dimensions = _getDimensions(refElement);
                 }
 
-                if(ops.trans?.smartTransition ?? true) {
+                if(ops.trans?.smart ?? true) {
                     el.style.position = "fixed";
                     el.style.width = dimensions.w;
                     el.style.left = dimensions.left;
@@ -173,9 +173,10 @@ export let _applyTransition = (el, dir, ops, fn, refElement, _getDimensionsAfter
 
 let _getDimensions = (refElement)=> {
     let style = getComputedStyle(refElement);
+    let rect = refElement.getBoundingClientRect();
     return {
         w: `calc(${(refElement).clientWidth}px - ${style.paddingLeft} - ${style.paddingRight})`,
-        left: `calc(${refElement.getBoundingClientRect().left}px + ${window.scrollX}px)`,
-        top: `calc(${refElement.getBoundingClientRect().top}px + ${window.scrollY}px)`
+        left: `calc(${rect.left}px + ${window.scrollX}px)`,
+        top: `calc(${rect.top}px + ${window.scrollY}px)`
     };
 }
