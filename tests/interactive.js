@@ -136,29 +136,29 @@ setTimeout(()=> {
 setTimeout(()=> {
     store3.update("three")
 }, 3000)
-setTimeout(()=> {
-    store3.update("four")
-}, 9000)
-setTimeout(()=> {
-    store3.update("five")
-}, 15000)
+// setTimeout(()=> {
+//     store3.update("four")
+// }, 9000)
+// setTimeout(()=> {
+//     store3.update("five")
+// }, 15000)
 
-setTimeout(()=> {
-    Mfld.get("store1").update("<span class='colorful'>Another update</span>")
-}, 4000)
-setTimeout(()=> {
-    Mfld.get("store1").update("We're at 4k")
-}, 8000)
-setTimeout(()=> {
-    Mfld.get("store1").update("Last one")
-}, 12000)
+// setTimeout(()=> {
+//     Mfld.get("store1").update("<span class='colorful'>Another update</span>")
+// }, 4000)
+// setTimeout(()=> {
+//     Mfld.get("store1").update("We're at 4k")
+// }, 8000)
+// setTimeout(()=> {
+//     Mfld.get("store1").update("Last one")
+// }, 12000)
 
-setTimeout(()=> {
-    Mfld.get("store1").update("FINAL");
-    store2.update({ values: ["final", "final"] });
-    store3.update("final");
-    store4.update(1000)
-}, 16000)
+// setTimeout(()=> {
+//     Mfld.get("store1").update("FINAL");
+//     store2.update({ values: ["final", "final"] });
+//     store3.update("final");
+//     store4.update(1000)
+// }, 16000)
 
 function specialStyling(val, el) {
     if(val == "My text") {

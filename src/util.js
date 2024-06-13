@@ -43,7 +43,7 @@ export let _getOpOverrides = (ops, el)=> {
 
 /**
  * @param {{el: HTMLElement, datakey: string} | string} condition 
- * @returns {{ valueList?: string[], func?: Function, as?: string[] }}
+ * @returns {{ valueList: any[], func?: Function, as?: string[] }}
  */
 export let _parseFunction = (condition)=> {
     if(typeof condition != "string") {
@@ -71,7 +71,7 @@ export let _parseFunction = (condition)=> {
             }
         }
 
-        valueList = (typeof valueList == "string" ? /** @type {string}*/(valueList).split(/\s*,\s*/) : valueList).map(v => v.split(_inputNestSplitRx)[0]);
+        valueList = (typeof valueList == "string" ? /** @type {string}*/(valueList).split(/\s*,\s*/) || [] : valueList).map(v => v.split(_inputNestSplitRx)[0]) || [];
         if(!fn.match(/^\s{0,}\{/) && !fn.includes("return")) fn = fn.replace(/^\s{0,}/, "return ");
         try {
             func = new Function(...valueList, fn);

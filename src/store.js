@@ -135,7 +135,6 @@ export class Store {
             // Group updates
             if(this._updateTimeout) clearTimeout(this._updateTimeout);
             this._updateTimeout = setTimeout(()=> {
-
                 _scheduleUpdate(async ()=> {
                     //Apply new value   
                     let newValue = (typeof value == "function" ? /** @type {Function} */(await value)?.(this.value) : value);

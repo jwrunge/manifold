@@ -9,12 +9,12 @@
 <body>
   <h1>Reactivity test</h1>
 
-  <p data-mf_templ="(store1)=> { console.log(store1); store1.toUpperCase() }"></p>
-  <div data-mf_templ="(store1)=> { return store1.toUpperCase(); } as val">
-    <!-- <input data-mf_bind="${val}-> value" data-mf_sync="on(click) console.log(value)"> -->
-     <div style="margin-top: 5rem">${val}</div>
-     ${val.toLowerCase()}
-     ${`1234` + val.slice(0, 1).toUpperCase() + val.slice(1).toLowerCase()}
+  <p data-mf_templ="(store1)=> { return store1.toUpperCase() }"></p>
+  <div data-mf_templ="(store1)=> { return store1.toUpperCase(); } as v">
+    <!-- <input data-mf_bind="$:{v}-> value" data-mf_sync="on(click) console.log(value)"> -->
+     <div style="margin-top: 5rem">$:{v}</div>
+     $:{v.toLowerCase()}
+     $:{`1234` + v.slice(0, 1).toUpperCase() + v.slice(1).toLowerCase()}
      <input type="text" data-mf_bind="store1->value" data-mf_sync="on(change, keyup) (value)=> console.log(value)">
   </div>
 
@@ -28,7 +28,7 @@
   <p>Store 2 nested: <span data-mf_Bind="store2.values[1]->innerHTML">Here is a default value.</span></p>
   <p>Checkbox set to checked? <span data-mf_Bind="store2.values[0]->innerText"></span></p>
   <p>Store 4 value: <span data-mf_Bind="store4->innerText"></span></p>
-  <p>Checked store checked? <span data-mf_Bind="(checkedStore)=> { console.log('CHECKED?', checkedStore); return checkedStore; } -> innerText">Unknown</span></p>
+  <p>Checked store checked? <span data-mf_Bind="(checkedStore)=> { return checkedStore; } -> innerText">Unknown</span></p>
   <p>Value of Mass Store 99: <span data-mf_Bind="mass_store99 -> innerText">Unknown</span></p>
   <div data-secret="THIS IS A SECRET" data-mf_Sync="on($mount) MFLD.fn.sendAlert(dataSecret) -> checkedStore"></div>
 
@@ -36,16 +36,16 @@
   <div class="sync-grid">
     <label>On keyup:</label> <input data-mf_Bind="store1->value" data-mf_Sync="on(keyup, change) value -> store1">
     <label>Bind only:</label> <input data-mf_Bind="store1->value">
-    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-mf_Bind="store1->checked" data-mf_Sync="on(change) (checked)=> { console.log(checked); return checked }->checkedStore">
+    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-mf_Bind="store1->checked" data-mf_Sync="on(change) (checked)=> { return checked }->checkedStore">
     <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-mf_Bind="isChecked(store1)->checked">
     
     <!-- Select (with dynamic options) -->
     <label>Dyn select</label>
     <select data-mf_Bind="store1->value" data-mf_Sync="on(change) value->store1">
       <!-- Dynamic frontend replace -->
-      <template id="select-ops" data-mf_each="(store1)=> store1 as letter, index">
+      <template id="select-ops" data-mf_each="(store1)=> store1 as l, i">
         <!-- Dynamic options -->
-        <option value="${letter}">${index}: ${letter}</option>
+        <option value="$:{l}">$:{i}: $:{l}</option>
       </template>
 
       <!-- Default / fallback options (replaced if dynamic options work) -->
@@ -73,7 +73,7 @@
     <option value="2">Two</option>
     <option value="3">Three</option>
     <template data-mf_each="(store1)=> store1 as letter, index">
-      <option value="${index}">${index}: ${letter}</option>
+      <option value="$:{index}">$:{index}: $:{letter}</option>
     </template>
   </select>
 
@@ -85,17 +85,17 @@
     <button type="submit">SUBMIT</button>
   </form>
 
-  <template data-mf_each="(store1)=> store1 as letter, index">
-    <div>This is letter ${index + 30}: ${letter.toLowerCase()}</div>
+  <template data-mf_each="(store1)=> store1 as l, i">
+    <div>This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
   </template>
 
-  <div data-mf_if="(store1, store3)=> return store1 == 'Last one' || store3 == 'three'">
+  <div data-mf_if="(store1, store3)=> return (store1 == 'Last one' || store3 == 'three')">
     <div>,/;mn bk,jbbkkjlbikujbuibbbbbbbb</div>
   </div>
   <template data-mf_elseif='(store1)=> return store1 == "We&#39;re at 4k"'>
     <div>elif</div>
   </template>
-  <template data-mf_else>
+  <template data-mf_else="()=> true">
     <div>ELSE</div>
   </template>
 

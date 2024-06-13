@@ -8,7 +8,7 @@ import { _handleTemplates } from "./templates.js";
 
 /** @type {Partial<MfldOps>} */
 let _ops = {};
-let _modes = ["bind", "sync", "templ", "if", "each", "get", "head", "post", "put", "delete", "patch"].map(m=> `${ATTR_PREFIX}${m}`);
+let _modes = ["bind", "sync", "templ", "if", "elseif", "else", "each", "get", "head", "post", "put", "delete", "patch"].map(m=> `${ATTR_PREFIX}${m}`);
 
 /**!
  * @param {Partial<MfldOps>} newops 
@@ -56,10 +56,13 @@ export let _register = (parent)=> {
         //Loop over all data attributes (modes)
         for(let mode in el.dataset) {
             if(!_modes.includes(mode)) continue;
-            let shouldHaveTriggers = !mode.match(/bind|templ|if|each/);
+            let shouldHaveTriggers = !mode.match(/bind|templ|if|elseif|else|each/);
 
             //Loop over provided settings
             for(let setting of el.dataset?.[mode]?.split(";;") || []) {
+                //Don't break out settings for conditionals
+                // if(mode.match(/if/)) _handleConditionals(el, _op_overrides);
+
                 //Break out settings
                 let [sourceParts, output] = setting?.split("->")?.map(s=> s.trim()) || [];
                 let triggers = shouldHaveTriggers ?sourceParts.slice(0, sourceParts.indexOf(")"))?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s=> s.trim()) || [] : [];
@@ -75,8 +78,9 @@ export let _register = (parent)=> {
                 let { func, valueList, as } = _parseFunction(processFuncStr);
                 if(processFuncStr && !func) console.warn(`"${processFuncStr}" not registered`, el);
 
-                //Handle conditionals and loops
-                if(mode.match(/if|each|templ/)) _handleTemplates(el, mode, as || [], func, valueList || [], _op_overrides);
+                if(mode.match(/if|elseif|else/)) console.log("CONDITIONAL SETTINGS", setting, triggers, output, processFuncStr, valueList);
+                //Handle templs and loops
+                if(mode.match(/each|templ|if|elseif|else/)) _handleTemplates(el, mode, as || [], func, valueList || [], _op_overrides);
                 else {
                     //Loop over triggers
                     if(!triggers?.length) triggers = [""]

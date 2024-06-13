@@ -1,6 +1,6 @@
 {
     "name": "mfld",
-    "version": "0.0.10",
+    "version": "0.1.0",
     "main": "dist/slim.mfld.js",
     "exports": {
         ".": {
@@ -23,7 +23,7 @@
         "version": "node ./util/updateVersion.js",
         "increment-patch": "node util/incrementPatchVersion.js",
         "pub": "npm run build && npm run increment-patch && npm publish",
-        "test.gzip": "wsl gzip -c ./dist/mfld.slim.js > ./dist/cu.gz"
+        "test.gzip": "wsl gzip -c ./dist/mfld.js > ./dist/cu.gz"
     },
     "devDependencies": {
         "@rollup/plugin-terser": "^0.4.4",

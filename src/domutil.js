@@ -3,15 +3,14 @@ import { _id } from "./util";
 
 /**
  * @param {HTMLElement} el
- * @returns {HTMLElement}
+ * @returns {HTMLTemplateElement}
  */
-export let _ensureNodeName = (el, nodeName, skipAttributes = [], removeClasses = [])=> {
-    if(el.tagName == nodeName) return el;
+export let _ensureTemplate = (el)=> {
+    let nodeName = "TEMPLATE";
+    if(el.tagName == nodeName) return /** @type {HTMLTemplateElement}*/(el);
 
-    let newEl = document.createElement(nodeName);
-    newEl.innerHTML = el.innerHTML;       
-    [...el.attributes].filter(attr => !skipAttributes.includes(attr.name)).forEach(attr => newEl.setAttribute(attr.name, attr.value));
-    removeClasses.forEach(cls => newEl.classList.remove(cls));
+    let newEl = /** @type {HTMLTemplateElement}*/(document.createElement(nodeName));
+    newEl.content.appendChild(el.cloneNode(true));
     el.replaceWith(newEl);
 
     return newEl;
@@ -19,7 +18,7 @@ export let _ensureNodeName = (el, nodeName, skipAttributes = [], removeClasses =
 
 /**
  * @param {any} obj 
- * @param {(value: any, index: any, array?: any)=> void} cb 
+ * @param {(value: any, index: any)=> void} cb 
  */
 export let _iterable = (obj, cb)=> {
     if(obj instanceof Map) for(const [key, value] of obj.entries()) cb(key, value);
@@ -40,8 +39,8 @@ export let _iterable = (obj, cb)=> {
  * @param {Function} [cb] 
  * @returns {Element | null | undefined}
  */
-export let _iterateSiblings = (sib, breakFn, cb)=> {
-    return breakFn?.(sib) ? sib : _iterateSiblings(cb?.(sib) || sib?.nextElementSibling, breakFn, cb);
+export function _iterateSiblings(sib, breakFn, cb) {
+    return breakFn?.(sib) ? sib : _iterateSiblings((cb?.(sib) || sib)?.nextElementSibling, breakFn, cb);
 }
 
 /**
@@ -62,7 +61,7 @@ export let _registerInternalStore = (storeList = [], options)=> {
         upstream: [...storeList],
         updater: (list)=> {
             try {
-                return options?.func?.(...list) || list[0];
+                return options?.func?.(...list) ?? list[0];
             }
             catch(_) {
                 return;
