@@ -1,6 +1,6 @@
 import { _store } from "./store.js";
 import { _scheduleUpdate } from "./updates.js";
-import { _commaSepRx, _getOpOverrides, _glob, _parseFunction, ATTR_PREFIX } from "./util.js";
+import { _commaSepRx, _getOpOverrides, _glob, _id, _parseFunction, ATTR_PREFIX } from "./util.js";
 import { _handleFetch } from "./fetch.js";
 import { _handleBindSync } from "./bindsync.js";
 import { _handleTemplates } from "./templates.js";
@@ -20,10 +20,8 @@ export let _setOptions = (newops, profileName)=> {
 }
 
 // Handle location state changes
-_glob.addEventListener("popstate", (e)=> {
-    // for(let update of e.state) {
-    //     _scheduleUpdate(update);
-    // }
+_glob.addEventListener("popstate", ()=> {
+    location.reload();
 });
 
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
@@ -31,6 +29,7 @@ _glob.addEventListener("popstate", (e)=> {
  * @param {HTMLElement | null} [parent] 
  */
 export let _register = (parent)=> {
+    console.log("%cREGISTERING", "color: yellow; font-weight: bold", parent)
     if(parent && parent.nodeType == Node.TEXT_NODE) return;
 
     /** @type {NodeListOf<HTMLElement> | []} */
@@ -40,6 +39,7 @@ export let _register = (parent)=> {
 
     for(let el of els) {
         let _op_overrides = _getOpOverrides(_ops, el);
+        if(!el.id) el.id = _id();
 
         //Check for <a> and <form> elements
         if(el.dataset?.[`${ATTR_PREFIX}promote`] !== undefined) {
@@ -60,9 +60,6 @@ export let _register = (parent)=> {
 
             //Loop over provided settings
             for(let setting of el.dataset?.[mode]?.split(";;") || []) {
-                //Don't break out settings for conditionals
-                // if(mode.match(/if/)) _handleConditionals(el, _op_overrides);
-
                 //Break out settings
                 let [sourceParts, output] = setting?.split("->")?.map(s=> s.trim()) || [];
                 let triggers = shouldHaveTriggers ?sourceParts.slice(0, sourceParts.indexOf(")"))?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s=> s.trim()) || [] : [];

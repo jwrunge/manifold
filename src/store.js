@@ -192,8 +192,7 @@ export let _clearScope = (scope)=> {
  * @param {Store<any>} store 
  */
 export let _destroy = (store)=> {
-    // @ts-ignore
-    MFLD.st.delete(store.name);
+    _glob.MFLD.st.delete(store?.name || "");
     // @ts-ignore
     store = undefined;
 }

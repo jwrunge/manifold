@@ -1,7 +1,7 @@
 import { _registerInternalStore } from "./domutil";
 import { _store } from "./store";
 import { _scheduleUpdate } from "./updates";
-import { _glob, _inputNestSplitRx } from "./util";
+import { _glob, _handlePushState, _inputNestSplitRx } from "./util";
 
 export let _handleBindSync = (el, inputs, output, trigger, mode, processFunc)=> {
     if(mode.match("bind")) {
@@ -20,14 +20,17 @@ export let _handleBindSync = (el, inputs, output, trigger, mode, processFunc)=> 
             }
         });
     } else {
-        let ev = ()=> {
+        let ev = (e)=> {
             if(inputs.length > 1) console.warn("Multiple sync props", el);
-            let [type, attr] = inputs?.[0].trim().split(":");
-            let val = type == "style" ? el.style[attr] : type == "attr" ? el.getAttribute(attr) : el[type];
-            let numVal = parseFloat(val);
+            let [type, attr] = inputs?.[0]?.trim().split(":") || [],
+                val = type == "style" ? el.style[attr] : type == "attr" ? el.getAttribute(attr) : el[type],
+                numVal = parseFloat(val),
+                value;
+            
             if(!isNaN(numVal)) val = numVal;
-            let value = processFunc?.(val, el);
+            value = processFunc?.(val, el);
             if(output && value !== undefined) _store(output)?.update?.(value);
+            _handlePushState(el, e);
         }
         if(trigger == "$mount") ev();
         else el.addEventListener(trigger, ev);

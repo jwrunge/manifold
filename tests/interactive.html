@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="tests/style.css"/>
+  <!-- <link rel="stylesheet" href="tests/style.css"/> -->
   <title>Reactivity Test</title>
 </head>
 <body>
-  <h1>Reactivity test</h1>
+  <h1><span data-mf_sync="on(click) alert('working')">Reactivity test</span></h1>
 
   <p data-mf_templ="(store1)=> { return store1.toUpperCase() }"></p>
   <div data-mf_templ="(store1)=> { return store1.toUpperCase(); } as v">
     <!-- <input data-mf_bind="$:{v}-> value" data-mf_sync="on(click) console.log(value)"> -->
      <div style="margin-top: 5rem">$:{v}</div>
-     $:{v.toLowerCase()}
-     $:{`1234` + v.slice(0, 1).toUpperCase() + v.slice(1).toLowerCase()}
+     $:{v.toLowerCase()}<br>
+     $:{`1234` + v.slice(0, 1).toUpperCase() + v.slice(1).toLowerCase()}<br>
      <input type="text" data-mf_bind="store1->value" data-mf_sync="on(change, keyup) (value)=> console.log(value)">
   </div>
 
@@ -85,8 +85,8 @@
     <button type="submit">SUBMIT</button>
   </form>
 
-  <template data-mf_each="(store1)=> store1 as l, i">
-    <div>This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
+  <template data-mf_each="(store1)=> store1 as l, i" data-mf_trans_dur="5000">
+    <div class="clickable" data-mf_sync="on(click) alert('working')">This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
   </template>
 
   <div data-mf_if="(store1, store3)=> { console.log('CHECKING STORES'); console.log('--- STORE 1', store1); console.log('--- STORE 3', store3); console.log(store1 == 'OK' || store3 == 'three'); return store1 == 'OK'; }">
@@ -100,11 +100,12 @@
   </template>
 
   <div class="special-insert" data-mf_Get="on(click) /tests/interactive.html" data-mf_inner=".sync-grid -> header">Default insert</div>
-  <nav data-mf_Post="on(click) (store1, store2)=> store1.toUpperCase() + JSON.stringify(store2 || {}) -> /tests/header.html" data-mf_inner="header -> h1" data-mf_transsmart="true" data-mf_transdur="300">
+  <nav data-mf_Post="on(click) (store1, store2)=> store1.toUpperCase() + JSON.stringify(store2 || {}) -> /tests/header.html" data-mf_inner="header -> h1" data-mf_transsmart="true" data-mf_transdur="300" data-mf_pushstate>
     <p>This is some default nav content.</p>
   </nav>
 
   <div class="trans" data-mf_Bind="specialStyling(store1)"></div>
+  <a href="tests/header.html" data-mf_promote data-mf_pushstate="whatevs">TO HEADER</a>
 
   <!-- Store script -->
   <script src="./tests/interactive.js" type="module"></script>
@@ -123,7 +124,7 @@
   }
 
   .mf_trans {
-    transition-property: transform, opacity;
+    /* transition-property: transform, opacity; */
     /* transform: scale(1); */
     transform: translateX(0);
     opacity: 1;
@@ -139,5 +140,12 @@
     /* transform: scale(0); */
     transform: translateX(50%);
     opacity: 0;
+  }
+
+  .clickable {
+    cursor: pointer;
+    &:hover {
+      background: yellow;
+    }
   }
 </style>

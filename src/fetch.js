@@ -1,4 +1,4 @@
-import { _parseFunction, ATTR_PREFIX } from "./util.js";
+import { _glob, _handlePushState, _parseFunction, ATTR_PREFIX } from "./util.js";
 import { _scheduleUpdate } from "./updates";
 import { _register } from "./registrar.js";
 import { _store } from "./store.js";
@@ -62,6 +62,7 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, paramList, proce
         let resp = await data?.[fetchOps?.fetch?.resType || "text"]();
 
         // Handle resolutions
+        /** @type {import("./updates").DomWorkOrder | undefined} */
         for(let instruction of ["append", "prepend", "inner", "outer"]) {
             let ds = el.dataset[`${ATTR_PREFIX}${instruction}`];
             if(ds === undefined) continue;
@@ -69,7 +70,17 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, paramList, proce
 
             //Extract content and schedule a DOM update
             let fullMarkup = (new DOMParser())?.parseFromString?.(resp, 'text/html');
+
             if(fullMarkup) {
+                if(!externalPermissions?.styles) fullMarkup.querySelectorAll("style").forEach(s=> s.parentNode?.removeChild(s));
+                if(externalPermissions?.scripts) {
+                    fullMarkup.querySelectorAll("script").forEach(s=> {
+                        let script = document.createElement("script");
+                        script.src = s.src;
+                        document.head.appendChild(script);
+                    });
+                }
+
                 _scheduleUpdate({
                     in: /** @type {HTMLElement} */ (fullMarkup.querySelector(selector || "body")),
                     out: /** @type {HTMLElement} */ (toReplace ? document.querySelector(toReplace) : el),
@@ -82,38 +93,11 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, paramList, proce
             }
         }
 
-        //Push to history if requested
-        if(el.dataset?.[`${ATTR_PREFIX}pushstate`] !== undefined) {
-            history.pushState({}, "", href);
-        }
-
         let resolveTxt = el.dataset?.[`${ATTR_PREFIX}resolve`];
         let resolveFunc = _parseFunction(resolveTxt || "")?.func;
         resolveFunc?.(resp);
 
-            // //Clear existing scripts/styles
-            // for(let s of [pageScripts, pageStyles]) {
-            //     let elements = s.get(fullMarkup) || [];
-            //     elements.forEach(el => el.remove());
-            //     s.set(fullMarkup, []);
-            // }
-
-            // //Get scripts and styles
-            // let seek: string[] = ops.allowScripts ? ["scripts"] : [];
-            // if(ops.allowStyles) seek.push("style");
-            // if(seek.length) {
-            //     let globls: NodeListOf<HTMLScriptElement | HTMLStyleElement> = fullMarkup.querySelectorAll(seek.join(","));
-            //     for(let el of globls) {
-            //         let isScript = el instanceof HTMLScriptElement;
-            //         let source = isScript ? pageScripts : pageStyles;
-
-            //         if(isScript ? ops.allowScripts : ops.allowStyles){
-            //             if(!source.has(parent)) source.set(parent, []);
-            //             source.get(parent)?.push(el as any);
-            //         }
-            //         else if(isScript) el.parentNode?.removeChild(el);
-            //     }
-            // }
+        _handlePushState(el, e, href);
     }
 
     if(trigger == "$mount") ev();

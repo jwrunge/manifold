@@ -83,7 +83,7 @@ export let _handleTemplates = (el, mode, as, func, paramList, ops)=> {
                 for(let element of item.content.children) {
                     if(!element?.innerHTML) element.innerHTML = val;
                     templ.before(element);
-                    _applyTransition(/** @type {HTMLElement}*/(element), "in", ops, ()=> _register(/** @type {HTMLElement}*/(element)));
+                    _applyTransition(/** @type {HTMLElement}*/(element), "in", ops);
                 }
             });
         });

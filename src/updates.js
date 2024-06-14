@@ -111,9 +111,10 @@ let _runUpdates = ()=> {
  * @param {Function} [fn] 
  * @param {HTMLElement} [refElement]
  * @param {boolean} [_getDimensionsAfterUpdate]
+ * @param {Function} [after]
  * @returns 
  */
-export let _applyTransition = (el, dir, ops, fn, refElement, _getDimensionsAfterUpdate = false)=> {
+export let _applyTransition = (el, dir, ops, fn, refElement, _getDimensionsAfterUpdate = false, after)=> {
     if(el?.nodeType == Node.TEXT_NODE) {
         el.replaceWith(document?.createElement("div"));
         el.textContent = el.textContent;
@@ -166,6 +167,9 @@ export let _applyTransition = (el, dir, ops, fn, refElement, _getDimensionsAfter
                 if(dir == "out") el?.remove();
                 el?.classList?.remove(transClass);
                 ops.trans?.hooks?.[`${dir}-end`]?.(el);
+                el.style.transitionDuration = "";
+                console.log("RUNNING AFTER")
+                if(dir == "in") after?.(el);
             });
         }, 
         dur + (dir == "in" ? ops.trans?.swap || 0 : 0));

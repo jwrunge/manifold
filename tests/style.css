@@ -194,7 +194,7 @@ label {
   color: white;
   white-space: nowrap;
   overflow: hidden;
-  transition: height 1s ease-in-out, width 1s ease-in-out, background-color 1s ease-in-out, font-size 1s ease;
+  /* transition: height 1s ease-in-out, width 1s ease-in-out, background-color 1s ease-in-out, font-size 1s ease; */
 }
 
 .colorful {
