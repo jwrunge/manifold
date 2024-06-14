@@ -11,10 +11,10 @@ import { _store } from "./store.js";
  * @param {MfldOps} fetchOps
  * @param {string} href
  * @param {string} [method] 
- * @param {any[] | "$form"} [valueList]
+ * @param {any[] | "$form"} [paramList]
  * @param {Function} [processFunc]
  */
-export let _handleFetch = (el, trigger, fetchOps, href, method, valueList, processFunc)=> {
+export let _handleFetch = (el, trigger, fetchOps, href, method, paramList, processFunc)=> {
     /**
      * @param {Event} [e]
      */
@@ -33,7 +33,7 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, valueList, proce
         } : undefined;
 
         // Parse input
-        let input = processFunc?.(...(valueList || [])) || valueList;
+        let input = processFunc?.(...(paramList || [])) || paramList;
         let body = Array.isArray(input) ? input[0] : input == "$form" ? new FormData(/** @type {HTMLFormElement}*/(el)) : input;
         if(processFunc) {
             let toFunc = Array.isArray(input) ? (input?.map(s=> _store(s).value) || []) : [body];

@@ -2,7 +2,7 @@ import { _ensureTemplate, _iterable, _iterateSiblings, _registerInternalStore } 
 import { _register } from "./registrar";
 import { _store } from "./store";
 import { _applyTransition, _scheduleUpdate } from "./updates";
-import { _id, _parseFunction } from "./util";
+import { _id, _parseFunction, ATTR_PREFIX } from "./util";
 
 /**
  * Handle conditional and loop elements
@@ -10,12 +10,18 @@ import { _id, _parseFunction } from "./util";
  * @param {string} mode 
  * @param {string[]} as 
  * @param {Function | undefined} func
- * @param {any[]} valueList
+ * @param {any[]} paramList
  * @param {import(".").MfldOps} ops 
  */
-export let _handleTemplates = (el, mode, as, func, valueList, ops)=> {
-    let startElement = document.createElement("template");
-    let templ = /** @type {HTMLTemplateElement}*/(_ensureTemplate(/** @type {HTMLElement}*/(el.cloneNode(true))));
+export let _handleTemplates = (el, mode, as, func, paramList, ops)=> {
+    let startElement = document.createElement("template"),
+        templ = /** @type {HTMLTemplateElement}*/(_ensureTemplate(/** @type {HTMLElement}*/(el.cloneNode(true)))),
+        templStore,
+        conditional = mode.match(/if|else/), 
+        conditionalSub = mode.match(/(else|elseif)(\s|$)/), // Whole word match to allow for exact checks later on (otherwise else is greedy)
+        newFunc = undefined,
+        prevConditions = [];
+
     startElement.classList.add(`${mode}-start`);
     templ.classList.add(`${mode}-end`);
 
@@ -24,30 +30,33 @@ export let _handleTemplates = (el, mode, as, func, valueList, ops)=> {
     el.remove();
 
     // Handle conditional elements
-    let conditional = mode.match(/if|elseif|else/);
-    let newFunc = undefined;
     if(conditional) {
         // Get upstream conditions
-        let previousConditionStore;
-        if(!mode.match(/if/)) {
-            let lastEl = /** @type {HTMLElement}*/(startElement?.previousElementSibling?.previousElementSibling);
-            let lastStore = lastEl?.dataset?.[`${mode}-cstore`];
-            previousConditionStore = lastStore ? _store(lastStore) : undefined;
+        if(conditionalSub) {
+            let first = _iterateSiblings(startElement, (sib)=> sib?.classList?.contains(`${ATTR_PREFIX}if-end`), null, true);
+            _iterateSiblings(
+                first, 
+                sib=> sib == templ, 
+                sib=> { if(sib?.dataset?.[`${ATTR_PREFIX}cstore`]) prevConditions.push(sib?.dataset?.[`${ATTR_PREFIX}cstore`]) }
+            );
+
+            if(!paramList || conditionalSub[0] == "else") paramList = prevConditions;
+            else paramList = [...paramList, ...prevConditions];
         }
 
-        // Create funciton
-        newFunc = (list)=> {
-            if(!func) return true;
-            return func?.(list) == true;
+        // Create function
+        newFunc = (...list)=> {
+            if(conditionalSub) for(let res of list.slice(-prevConditions.length)) if(res == true) return false;
+            return conditionalSub?.[0] == "else" ? true : func?.(...list) == true;
         }
     }
 
-    let templStore = _registerInternalStore(
-        valueList, 
+    templStore = _registerInternalStore(
+        paramList, 
         { func: conditional ? newFunc : func, observeEl: templ }
     );
-
-    el.dataset[`${mode}-cstore`] = templStore.name;
+    
+    if(conditional) templ.dataset[`${ATTR_PREFIX}cstore`] = templStore.name;
 
     // Clear old elements
     templStore.sub(val=> {

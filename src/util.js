@@ -8,7 +8,7 @@ export let _id = ()=> {
 
 /** 
  * @template T
- * @typedef {import("./index.js").Store<T>} Store 
+ * @typedef {import("./store.js").Store<T>} Store 
  */
 
 /**!
@@ -43,7 +43,7 @@ export let _getOpOverrides = (ops, el)=> {
 
 /**
  * @param {{el: HTMLElement, datakey: string} | string} condition 
- * @returns {{ valueList: any[], func?: Function, as?: string[] }}
+ * @returns {{ paramList: any[], func?: Function, as?: string[] }}
  */
 export let _parseFunction = (condition)=> {
     if(typeof condition != "string") {
@@ -51,35 +51,33 @@ export let _parseFunction = (condition)=> {
         if(!condition && /** @type {any}*/(condition)?.el?.dataset?.[`${ATTR_PREFIX}else`] != undefined) condition = "return true";
     }
 
-    let [fstr, values] = condition?.split("=>")?.map(s=> s.trim())?.reverse() || ["", ""];
-    let [fn, asStr] = fstr?.split(/\s{1,}as\s{1,}/) || [fstr, "value"];
-    let as = asStr?.split?.(_commaSepRx)?.map?.(s=> s.trim()) || ["value"];
+    let [fstr, values] = condition?.split("=>")?.map(s=> s.trim())?.reverse() || ["", ""],
+        [fn, asStr] = fstr?.split(/\s{1,}as\s{1,}/) || [fstr, "value"],
+        as = asStr?.split?.(_commaSepRx)?.map?.(s=> s.trim()) || ["value"],
+        paramList = values?.split(",")?.map(s=> s.replace(/[()]/g, "").trim()) || [],    // Set up function to evaluate store values
+        func = _glob[fn] || _glob.MFLD.fn[fn];
 
-    // Set up function to evaluate store values
-    let valueList = values?.split(",")?.map(s=> s.replace(/[()]/g, "").trim()) || [];
-    // @ts-ignore
-    let func = _glob[fn] || MFLD.fn[fn];
     if(!func) {
         // If function is not found, try to create it; account for implicit returns
-        if(!valueList?.length && !fn.includes("=>")) {
+        if(!paramList?.length && !fn.includes("=>")) {
             if(!fn.match(/\(|\)/)) {
-                valueList = [fn];
+                paramList = [fn];
                 fn = `return ${fn}`;
             }
             else {
-                valueList = fn.match(/\([^\)]{1,}\)/)?.[0]?.replace(/[\(\) ]/g, "").split(",").filter(s=> !s.match(/[\"\'\`]/)) || [];
+                paramList = fn.match(/\([^\)]{1,}\)/)?.[0]?.replace(/[\(\) ]/g, "").split(",").filter(s=> !s.match(/[\"\'\`]/)) || [];
             }
         }
 
-        valueList = (typeof valueList == "string" ? /** @type {string}*/(valueList).split(/\s*,\s*/) || [] : valueList).map(v => v.split(_inputNestSplitRx)[0]) || [];
+        paramList = (typeof paramList == "string" ? /** @type {string}*/(paramList).split(/\s*,\s*/) || [] : paramList).map(v => v.split(_inputNestSplitRx)[0]) || [];
         if(!fn.match(/^\s{0,}\{/) && !fn.includes("return")) fn = fn.replace(/^\s{0,}/, "return ");
         try {
-            func = new Function(...valueList, fn);
+            func = new Function(...paramList, fn);
         }
         catch(e) {
             console.error(e);
         }
     }
 
-    return { valueList, func, as };
+    return { paramList, func, as };
 }

@@ -36,11 +36,12 @@ export let _iterable = (obj, cb)=> {
 /**
  * @param {Element | null} [sib] 
  * @param {Function} [breakFn] 
- * @param {Function} [cb] 
+ * @param {Function | null} [cb] 
  * @returns {Element | null | undefined}
  */
-export function _iterateSiblings(sib, breakFn, cb) {
-    return breakFn?.(sib) ? sib : _iterateSiblings((cb?.(sib) || sib)?.nextElementSibling, breakFn, cb);
+export function _iterateSiblings(sib, breakFn, cb, reverse = false) {
+    let dir = reverse ? "previousElementSibling" : "nextElementSibling";
+    return breakFn?.(sib) ? sib : _iterateSiblings((cb?.(sib) || sib)?.[dir], breakFn, cb, reverse);
 }
 
 /**

@@ -66,14 +66,11 @@ export class Store {
     _modify(name, ops) {
         this.name = name;
         this._scope = ops?.scope || document.currentScript || "global";
-        // @ts-ignore
-        MFLD.st.set(name, this);
+        _glob.MFLD.st.set(name, this);
 
         //Watch for scope destroy
-        // Watch for scope destroy
         if(this._scope instanceof Element) {
-            // @ts-ignore
-            let mutOb = MFLD.mut.get(this._scope) || { toRemove: new Set() };
+            let mutOb = _glob.MFLD.mut.get(/** @type {HTMLElement}*/(this._scope)) || { toRemove: new Set(), observer: /** @type {MutationObserver | null}*/(null) };
             if(!mutOb.observer) {
                 mutOb.observer = new MutationObserver((muts)=> {
                     for(let mut of muts) {
@@ -81,10 +78,10 @@ export class Store {
                             for(let node of mut.removedNodes) {
                                 if(node instanceof Element) {
                                     for(let store of mutOb.toRemove) {
-                                        if(store._scope == node) {
+                                        if(store._scope == /** @type {HTMLElement}*/(node)) {
                                             let scope = this._scope;
                                             _destroy(store);
-                                            mutOb.observer.disconnect();
+                                            mutOb.observer?.disconnect();
                                             mutOb.toRemove.delete(store);
                                             // @ts-ignore
                                             MFLD.mut.delete(scope)
@@ -186,8 +183,7 @@ export let _store = (name, ops)=> {
  * @param {HTMLElement | string} scope 
  */
 export let _clearScope = (scope)=> {
-    // @ts-ignore
-    MsFt.forEach(store=> {
+    _glob.MFLD.st.forEach(store=> {
         if(store._scope == scope) _destroy(store); 
     });
 }

@@ -2,9 +2,9 @@
 
 - Handle fetch scripts, styles
 - History API - set up map of states to reference on popstate
-- Check - what if if fails and there is no fallback?
 - Checkbox not responding on false -- preventing update?
 - Components
-- Fix conditionals
+- Global func registry working?
 
+- Double-check function parsing
 - Fix transition spacer

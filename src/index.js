@@ -1,6 +1,7 @@
 import { _store } from "./store.js";
 import { _addToNextTickQueue } from "./updates.js";
 import { _register, _setOptions } from "./registrar.js";
+import { _glob } from "./util.js";
 
 /**! @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey*/
 
@@ -135,8 +136,7 @@ func:
  * @param {string} func_name
  * @return {MfldFunc}
  */ (func_name)=> /** @type {(val: any, el?: HTMLElement)=> void}*/(
-// @ts-ignore
- MFLD.fn[func_name]),
+    _glob.MFLD.fn[func_name]),
 funcs: 
 /**!
  * - Add functions to the Manifold function registry in key-value pairs.
@@ -145,8 +145,7 @@ funcs:
  * @param {{ [key: string]: MfldFunc }} funcs
  */ funcs=> {
     for(let key in funcs) {
-    // @ts-ignore
-    MFLD.fn[key] = funcs[key];
+    _glob.MFLD.fn[key] = funcs[key];
  }},
 config:
 /**!

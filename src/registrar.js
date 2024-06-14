@@ -56,7 +56,7 @@ export let _register = (parent)=> {
         //Loop over all data attributes (modes)
         for(let mode in el.dataset) {
             if(!_modes.includes(mode)) continue;
-            let shouldHaveTriggers = !mode.match(/bind|templ|if|elseif|else|each/);
+            let shouldHaveTriggers = !mode.match(/bind|templ|if|else|each/);
 
             //Loop over provided settings
             for(let setting of el.dataset?.[mode]?.split(";;") || []) {
@@ -75,19 +75,18 @@ export let _register = (parent)=> {
                 //Handle errors
                 if(shouldHaveTriggers && !triggers?.length) { console.error("No trigger", el); break; }
 
-                let { func, valueList, as } = _parseFunction(processFuncStr);
+                let { func, paramList, as } = _parseFunction(processFuncStr);
                 if(processFuncStr && !func) console.warn(`"${processFuncStr}" not registered`, el);
 
-                if(mode.match(/if|elseif|else/)) console.log("CONDITIONAL SETTINGS", setting, triggers, output, processFuncStr, valueList);
                 //Handle templs and loops
-                if(mode.match(/each|templ|if|elseif|else/)) _handleTemplates(el, mode, as || [], func, valueList || [], _op_overrides);
+                if(mode.match(/each|templ|if|else/)) _handleTemplates(el, mode, as || [], func, paramList || [], _op_overrides);
                 else {
                     //Loop over triggers
                     if(!triggers?.length) triggers = [""]
                     for(let trigger of triggers) {
-                        if(mode.match(/bind|sync/)) _handleBindSync(el, valueList, output, trigger, mode, func);
+                        if(mode.match(/bind|sync/)) _handleBindSync(el, paramList, output, trigger, mode, func);
                         else {
-                            _handleFetch(el, trigger, _op_overrides, output, mode.replace(ATTR_PREFIX, ""), valueList, func);
+                            _handleFetch(el, trigger, _op_overrides, output, mode.replace(ATTR_PREFIX, ""), paramList, func);
                         }
                     }
                 }

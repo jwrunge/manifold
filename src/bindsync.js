@@ -8,7 +8,7 @@ export let _handleBindSync = (el, inputs, output, trigger, mode, processFunc)=> 
         _registerInternalStore(inputs, {
             observeEl: el,
             func: ()=> {
-                let val = processFunc?.(...inputs.map(input => _glob.MFLD.st.get(input)?.value || _glob[val]), el);
+                let val = processFunc?.(...(inputs.map(input => _glob.MFLD.st.get(input)?.value || _glob?.[val] || [])), el);
                 if(output && val != undefined) {
                     let [type, attr] = output.split(":");
                     if(type == "style") el.style[attr] = val;

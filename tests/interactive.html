@@ -89,13 +89,13 @@
     <div>This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
   </template>
 
-  <div data-mf_if="(store1, store3)=> return (store1 == 'Last one' || store3 == 'three')">
+  <div data-mf_if="(store1, store3)=> { console.log('CHECKING STORES'); console.log('--- STORE 1', store1); console.log('--- STORE 3', store3); console.log(store1 == 'OK' || store3 == 'three'); return store1 == 'OK'; }">
     <div>,/;mn bk,jbbkkjlbikujbuibbbbbbbb</div>
   </div>
-  <template data-mf_elseif='(store1)=> return store1 == "We&#39;re at 4k"'>
+  <template data-mf_elseif='(store1)=> return store1 == "!OK"'>
     <div>elif</div>
   </template>
-  <template data-mf_else="()=> true">
+  <template data-mf_else>
     <div>ELSE</div>
   </template>
 

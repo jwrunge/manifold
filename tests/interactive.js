@@ -3,7 +3,12 @@ import { Mfld } from "../dist/dev.mfld.js";
 function sendAlert(val) {
     return val
 }
-Mfld.funcs({sendAlert});
+function isChecked(val, el) {
+    if(val == "We're at 4k") return true;
+    else return false;
+}
+
+Mfld.funcs({sendAlert, isChecked});
 
 console.log("Manifold", Mfld);
 
@@ -185,10 +190,3 @@ function specialStyling(val, el) {
     el.style = "background: gray; height: 5rem; border-radius: 10px; width: 5rem; font-size: 2.5rem;"
     }
 }
-
-function isChecked(val, el) {
-    if(val == "We're at 4k") return true;
-    else return false;
-}
-
-Mfld.funcs({"isChecked": isChecked});
