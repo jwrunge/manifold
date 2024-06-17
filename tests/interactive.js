@@ -17,6 +17,11 @@ Mfld.config({
         // smartTransition: true,
         dur: 500,
         // swap: 1000
+    },
+    fetch: {
+        externals: [
+            { domain: "http://localhost", scripts: true, styles: false }
+        ]
     }
 });
 
