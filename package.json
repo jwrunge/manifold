@@ -4,12 +4,10 @@
     "main": "dist/slim.mfld.js",
     "exports": {
         ".": {
-            "require": "./dist/mfld.cjs",
             "import": "./dist/mfld.js",
             "types": "./dist/mfld.d.ts"
         },
         "./dev": {
-            "require": "./dist/dev.mfld.cjs",
             "import": "./dist/dev.mfld.js",
             "types": "./dist/mfld.d.ts"
         }

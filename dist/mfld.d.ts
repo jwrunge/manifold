@@ -1,4 +1,4 @@
-export declare module "mfld" {
+declare module "mfld" {
     export { N as Mfld };
     /**
      * !

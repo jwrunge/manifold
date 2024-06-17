@@ -47,11 +47,11 @@ function constructProfiles(ops) {
 
 export default [
     ...constructProfiles([
-        { mod: "cjs", sourceMaps: false, jsdocTypes: false },
+        // { mod: "cjs", sourceMaps: false, jsdocTypes: false },
         { mod: "es", sourceMaps: false, jsdocTypes: false },
         { prefix: "global", mod: "es", sourceMaps: false, jsdocTypes: false },
         { prefix: "dev.global", mod: "es", sourceMaps: true, jsdocTypes: true },
-        { prefix: "dev", mod: "cjs", sourceMaps: false, jsdocTypes: true },
+        // { prefix: "dev", mod: "cjs", sourceMaps: false, jsdocTypes: true },
         { prefix: "dev", mod: "es", sourceMaps: true, jsdocTypes: true }
     ]),
 ];
