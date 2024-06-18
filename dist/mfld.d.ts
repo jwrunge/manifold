@@ -1,5 +1,5 @@
 declare module "mfld" {
-    export { N as Mfld };
+    export { S as Mfld };
     /**
      * !
      */
@@ -139,7 +139,7 @@ declare module "mfld" {
      * !
      */
     export type MfldFunc = Function;
-    namespace N {
+    namespace S {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
@@ -195,6 +195,6 @@ declare module "mfld" {
          * - Register Manifold subscriptions on the DOM. *Optional:* Pass an `HTMLElement` or selector string to scope the registration to a specific element.
          * @param {HTMLElement | string | null} [parent]
          */
-        function register(e: any): void;
+        function register(n: any): void;
     }
 }

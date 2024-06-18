@@ -3,12 +3,13 @@ import { _store } from "./store";
 import { _scheduleUpdate } from "./updates";
 import { _glob, _handlePushState, _inputNestSplitRx } from "./util";
 
-export let _handleBindSync = (el, inputs, output, trigger, mode, processFunc)=> {
+export let _handleBindSync = (el, output, trigger, mode, processFunc, dependencyList)=> {
     if(mode.match("bind")) {
-        _registerInternalStore(inputs, {
+        output = output?.replace(/\$el\./, "") || "";
+        _registerInternalStore(dependencyList, {
             observeEl: el,
             func: ()=> {
-                let val = processFunc?.(...(inputs.map(input => _glob.MFLD.st.get(input)?.value || _glob?.[val] || [])), el);
+                let val = processFunc?.(el);
                 if(output && val != undefined) {
                     let [type, attr] = output.split(":");
                     if(type == "style") el.style[attr] = val;
@@ -21,14 +22,8 @@ export let _handleBindSync = (el, inputs, output, trigger, mode, processFunc)=> 
         });
     } else {
         let ev = (e)=> {
-            if(inputs.length > 1) console.warn("Multiple sync props", el);
-            let [type, attr] = inputs?.[0]?.trim().split(":") || [],
-                val = type == "style" ? el.style[attr] : type == "attr" ? el.getAttribute(attr) : el[type],
-                numVal = parseFloat(val),
-                value;
-            
-            if(!isNaN(numVal)) val = numVal;
-            value = processFunc?.(val, el);
+            console.log("EV", processFunc.toString(), el, processFunc?.(el));
+            let value = processFunc?.(el);
             if(output && value !== undefined) _store(output)?.update?.(value);
             _handlePushState(el, e);
         }

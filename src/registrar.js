@@ -29,8 +29,7 @@ _glob.addEventListener("popstate", ()=> {
  * @param {HTMLElement | null} [parent] 
  */
 export let _register = (parent)=> {
-    console.log("%cREGISTERING", "color: yellow; font-weight: bold", parent)
-    if(parent && parent.nodeType == Node.TEXT_NODE) return;
+    if(parent?.nodeType == Node.TEXT_NODE) return;
 
     /** @type {NodeListOf<HTMLElement> | []} */
     let els = (parent || document.body).querySelectorAll(
@@ -48,42 +47,41 @@ export let _register = (parent)=> {
                 [/** @type {HTMLFormElement}*/(el).method.toLowerCase(), /** @type {HTMLFormElement}*/(el).action, "$form", "submit"];
 
             if(href) {
-                _handleFetch(el, trigger, _op_overrides, href, mode, /** @type {any[] | "$form"}*/(input));
+                // _handleFetch(el, trigger, _op_overrides, href, mode, /** @type {any[] | "$form"}*/(input));
                 continue;
             }
         }
 
         //Loop over all data attributes (modes)
-        for(let mode in el.dataset) {
-            if(!_modes.includes(mode)) continue;
+        for(let mode of _modes) {
+            if(el.dataset?.[mode] === undefined) continue;
             let shouldHaveTriggers = !mode.match(/bind|templ|if|else|each/);
 
             //Loop over provided settings
             for(let setting of el.dataset?.[mode]?.split(";;") || []) {
                 //Break out settings
-                let [sourceParts, output] = setting?.split("->")?.map(s=> s.trim()) || [];
-                let triggers = shouldHaveTriggers ?sourceParts.slice(0, sourceParts.indexOf(")"))?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s=> s.trim()) || [] : [];
-                if(!output && mode.match(/get|head|post|put|delete|patch/)) {
-                    output = sourceParts.slice(sourceParts.indexOf(")") + 1);
-                    sourceParts = "";
+                let parts = setting?.split(/\s*->\s*/g),
+                    triggers = (shouldHaveTriggers ? parts?.shift()?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s=> s.trim()) : []) || [],
+                    [funcStr, output] = parts,
+                    dependencyList = funcStr?.match(/\$st\.(\w{1,})/g) || [];
+
+                if(!output && mode.match(/get|head|put|post|delete|patch/)) {
+                    output = funcStr;
+                    funcStr = "";
                 }
-                let processFuncStr = shouldHaveTriggers ? sourceParts?.slice(sourceParts.indexOf(")") + 1) : sourceParts;
+                let {func, as} = _parseFunction(funcStr);
 
-                //Handle errors
-                if(shouldHaveTriggers && !triggers?.length) { console.error("No trigger", el); break; }
-
-                let { func, paramList, as } = _parseFunction(processFuncStr);
-                if(processFuncStr && !func) console.warn(`"${processFuncStr}" not registered`, el);
+                console.log("MODE", mode, "FUNC", func, "AS", as, "OUTPUT", output, "DEPS", dependencyList)
 
                 //Handle templs and loops
-                if(mode.match(/each|templ|if|else/)) _handleTemplates(el, mode, as || [], func, paramList || [], _op_overrides);
+                if(mode.match(/each|templ|if|else/)) _handleTemplates(el, mode, as || [], func, dependencyList, _op_overrides);
                 else {
                     //Loop over triggers
                     if(!triggers?.length) triggers = [""]
                     for(let trigger of triggers) {
-                        if(mode.match(/bind|sync/)) _handleBindSync(el, paramList, output, trigger, mode, func);
+                        if(mode.match(/bind|sync/)) _handleBindSync(el, output, trigger, mode, func);
                         else {
-                            _handleFetch(el, trigger, _op_overrides, output, mode.replace(ATTR_PREFIX, ""), paramList, func);
+                            // _handleFetch(el, trigger, _op_overrides, output, mode.replace(ATTR_PREFIX, ""), func);
                         }
                     }
                 }

@@ -34,7 +34,7 @@ let _hashAny = (input)=> {
 
 //Static
 if(!_glob.MFLD) _glob.MFLD = {
-    st: new Map(),
+    st: {},
     fn: {},
     mut: new Map(),
 }
@@ -66,7 +66,7 @@ export class Store {
     _modify(name, ops) {
         this.name = name;
         this._scope = ops?.scope || document.currentScript || "global";
-        _glob.MFLD.st.set(name, this);
+        _glob.MFLD.st[name] = this;
 
         //Watch for scope destroy
         if(this._scope instanceof Element) {
@@ -176,23 +176,22 @@ export class Store {
  * @returns {Store<T>}
  */
 export let _store = (name, ops)=> {
-    let found_store = /** @type {Store<any>}*/(_glob.MFLD.st.get(name));
+    let found_store = /** @type {Store<any>}*/(_glob.MFLD.st[name]);
     return ops ? (found_store ? found_store._modify(name, ops) : new Store(name, ops)) : (found_store || new Store(name, ops));
 }
 /**
  * @param {HTMLElement | string} scope 
  */
 export let _clearScope = (scope)=> {
-    _glob.MFLD.st.forEach(store=> {
+    for(let store of Object.values(_glob.MFLD.st)) {
         if(store._scope == scope) _destroy(store); 
-    });
+    };
 }
 
 /**
  * @param {Store<any>} store 
  */
 export let _destroy = (store)=> {
-    _glob.MFLD.st.delete(store?.name || "");
     // @ts-ignore
-    store = undefined;
+    _glob.MFLD.st[store?.name || ""] = undefined;
 }

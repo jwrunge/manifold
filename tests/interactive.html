@@ -7,43 +7,43 @@
   <title>Reactivity Test</title>
 </head>
 <body>
-  <h1><span data-mf_sync="on(click) alert('working')">Reactivity test</span></h1>
+  <h1><span data-mf_sync="on(click)-> alert('working')">Reactivity test</span></h1>
 
   <p data-mf_templ="(store1)=> { return store1.toUpperCase() }"></p>
   <div data-mf_templ="(store1)=> { return store1.toUpperCase(); } as v">
-    <!-- <input data-mf_bind="$:{v}-> value" data-mf_sync="on(click) console.log(value)"> -->
+    <!-- <input data-mf_bind="$:{v}-> value" data-mf_sync="on(click)-> console.log(value)"> -->
      <div style="margin-top: 5rem">$:{v}</div>
      $:{v.toLowerCase()}<br>
      $:{`1234` + v.slice(0, 1).toUpperCase() + v.slice(1).toLowerCase()}<br>
-     <input type="text" data-mf_bind="store1->value" data-mf_sync="on(change, keyup) (value)=> console.log(value)">
+     <input type="text" data-mf_bind="$st.store1->value" data-mf_sync="on(change, keyup)-> console.log($el.value)">
   </div>
 
   <p>This is an example of dynamic text! The current store value is: 
     <span 
-      data-mf_Bind=" (store1)=> store1.toUpperCase()->innerText;;
-                    (store1)=> store1 === 'My text' ? 'green' : 'blue' -> style:backgroundColor"
+      data-mf_Bind="$st.store1.toUpperCase()->$el.innerText;;
+                    $st.store1 === 'My text' ? 'green' : 'blue' -> $el.style:backgroundColor"
     >Here is a default value.</span>
   </p>
-  <p>Here is text that can be HTML: <span data-mf_Bind="store1->innerHTML">Here is a default value.</span></p>
-  <p>Store 2 nested: <span data-mf_Bind="store2.values[1]->innerHTML">Here is a default value.</span></p>
-  <p>Checkbox set to checked? <span data-mf_Bind="store2.values[0]->innerText"></span></p>
-  <p>Store 4 value: <span data-mf_Bind="store4->innerText"></span></p>
-  <p>Checked store checked? <span data-mf_Bind="(checkedStore)=> { return checkedStore; } -> innerText">Unknown</span></p>
-  <p>Value of Mass Store 99: <span data-mf_Bind="mass_store99 -> innerText">Unknown</span></p>
-  <div data-secret="THIS IS A SECRET" data-mf_Sync="on($mount) MFLD.fn.sendAlert(dataSecret) -> checkedStore"></div>
+  <p>Here is text that can be HTML: <span data-mf_Bind="$st.store1->$el.innerHTML">Here is a default value.</span></p>
+  <p>Store 2 nested: <span data-mf_Bind="$st.store2.values[1]->$el.innerHTML">Here is a default value.</span></p>
+  <p>Checkbox set to checked? <span data-mf_Bind="$st.store2.values[0]->$el.innerText"></span></p>
+  <p>Store 4 value: <span data-mf_Bind="$st.store4->innerText"></span></p>
+  <p>Checked store checked? <span data-mf_Bind="$st.checkedStore -> $el.innerText">Unknown</span></p>
+  <p>Value of Mass Store 99: <span data-mf_Bind="$st.mass_store99 -> $el.innerText">Unknown</span></p>
+  <div data-secret="THIS IS A SECRET" data-mf_Sync="on($mount)-> $fn.sendAlert($el.dataset.dataSecret) -> $st.checkedStore"></div>
 
   <!-- Content -->
   <div class="sync-grid">
-    <label>On keyup:</label> <input data-mf_Bind="store1->value" data-mf_Sync="on(keyup, change) value -> store1">
+    <label>On keyup:</label> <input data-mf_Bind="$st.store1->$el.value" data-mf_Sync="on(keyup, change) -> $el.value -> $st.store1">
     <label>Bind only:</label> <input data-mf_Bind="store1->value">
-    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-mf_Bind="store1->checked" data-mf_Sync="on(change) (checked)=> { return checked }->checkedStore">
-    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-mf_Bind="isChecked(store1)->checked">
+    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-mf_Bind="store1->checked" data-mf_Sync="on(change) ->$el.checked -> $st.checkedStore">
+    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-mf_Bind="$fn.isChecked($st.store1)->$el.checked">
     
     <!-- Select (with dynamic options) -->
     <label>Dyn select</label>
-    <select data-mf_Bind="store1->value" data-mf_Sync="on(change) value->store1">
+    <select data-mf_Bind="$st.store1->$el.value" data-mf_Sync="on(change) ->$el.value->$st.store1">
       <!-- Dynamic frontend replace -->
-      <template id="select-ops" data-mf_each="(store1)=> store1 as l, i">
+      <template id="select-ops" data-mf_each="$st.store1 as l, i">
         <!-- Dynamic options -->
         <option value="$:{l}">$:{i}: $:{l}</option>
       </template>
@@ -86,13 +86,13 @@
   </form>
 
   <template data-mf_each="(store1)=> store1 as l, i" data-mf_trans_dur="5000">
-    <div class="clickable" data-mf_sync="on(click) alert('working')">This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
+    <div class="clickable" data-mf_sync="on(click)-> alert('working')">This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
   </template>
 
   <div data-mf_if="(store1, store3)=> { console.log('CHECKING STORES'); console.log('--- STORE 1', store1); console.log('--- STORE 3', store3); console.log(store1 == 'OK' || store3 == 'three'); return store1 == 'OK'; }">
     <div>,/;mn bk,jbbkkjlbikujbuibbbbbbbb</div>
   </div>
-  <template data-mf_elseif='(store1)=> return store1 == "!OK"'>
+  <template data-mf_elseif='(store1)=> {return store1 == "!OK"}'>
     <div>elif</div>
   </template>
   <template data-mf_else>
@@ -104,7 +104,7 @@
     <p>This is some default nav content.</p>
   </nav>
 
-  <div class="trans" data-mf_Bind="specialStyling(store1)"></div>
+  <div class="trans" data-mf_Bind="$fn.specialStyling($st.store1)"></div>
   <a href="tests/header.html" data-mf_promote data-mf_pushstate="whatevs">TO HEADER</a>
 
   <!-- Store script -->

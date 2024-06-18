@@ -11,10 +11,9 @@ import { _store } from "./store.js";
  * @param {MfldOps} fetchOps
  * @param {string} href
  * @param {string} [method] 
- * @param {any[] | "$form"} [paramList]
  * @param {Function} [processFunc]
  */
-export let _handleFetch = (el, trigger, fetchOps, href, method, paramList, processFunc)=> {
+export let _handleFetch = (el, trigger, fetchOps, href, method, processFunc)=> {
     /**
      * @param {Event} [e]
      */

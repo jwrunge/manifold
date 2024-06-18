@@ -10,10 +10,10 @@ import { _id, _parseFunction, ATTR_PREFIX } from "./util";
  * @param {string} mode 
  * @param {string[]} as 
  * @param {Function | undefined} func
- * @param {any[]} paramList
+ * @param {string[]} dependencyList
  * @param {import(".").MfldOps} ops 
  */
-export let _handleTemplates = (el, mode, as, func, paramList, ops)=> {
+export let _handleTemplates = (el, mode, as, func, dependencyList, ops)=> {
     let startElement = document.createElement("template"),
         templ = /** @type {HTMLTemplateElement}*/(_ensureTemplate(/** @type {HTMLElement}*/(el.cloneNode(true)))),
         templStore,
@@ -39,9 +39,6 @@ export let _handleTemplates = (el, mode, as, func, paramList, ops)=> {
                 sib=> sib == templ, 
                 sib=> { if(sib?.dataset?.[`${ATTR_PREFIX}cstore`]) prevConditions.push(sib?.dataset?.[`${ATTR_PREFIX}cstore`]) }
             );
-
-            if(!paramList || conditionalSub[0] == "else") paramList = prevConditions;
-            else paramList = [...paramList, ...prevConditions];
         }
 
         // Create function
@@ -51,10 +48,7 @@ export let _handleTemplates = (el, mode, as, func, paramList, ops)=> {
         }
     }
 
-    templStore = _registerInternalStore(
-        paramList, 
-        { func: conditional ? newFunc : func, observeEl: templ }
-    );
+    templStore = _registerInternalStore(dependencyList, { func: conditional ? newFunc : func, observeEl: templ });
     
     if(conditional) templ.dataset[`${ATTR_PREFIX}cstore`] = templStore.name;
 
