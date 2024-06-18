@@ -1,4 +1,4 @@
-import { _glob, _handlePushState, _parseFunction, ATTR_PREFIX } from "./util.js";
+import { _handlePushState, _parseFunction, ATTR_PREFIX } from "./util.js";
 import { _scheduleUpdate } from "./updates";
 import { _register } from "./registrar.js";
 import { _store } from "./store.js";

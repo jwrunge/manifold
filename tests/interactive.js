@@ -1,6 +1,7 @@
-import { Mfld } from "../dist/dev.mfld.js";
+import { Mfld, $st, $fn } from "../dist/dev.mfld.js";
 
 function sendAlert(val) {
+    alert("VALUE IS " + val)
     return val
 }
 function isChecked(val, el) {

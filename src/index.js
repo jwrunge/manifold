@@ -1,7 +1,6 @@
-import { _store } from "./store.js";
+import { _glob, _store } from "./store.js";
 import { _addToNextTickQueue } from "./updates.js";
 import { _register, _setOptions } from "./registrar.js";
-import { _glob } from "./util.js";
 
 /**! @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey*/
 
@@ -123,20 +122,6 @@ ustore:
 * @param {StoreOptions<any> | any} store_ops
 * @return {Store<any>}
 */ (store_name, store_ops)=> /**@type {Store<any>}*/(_store(store_name, store_ops)),
-get:
-/**!
- * - Retrieve a Manifold store by name. *returns `Store\<any\>`*
- * @param {string} store_name
- * @return {Store<any>}
- */ (store_name)=> /**@type {Store<any>}*/(_store(store_name)),
-func: 
-/**!
- * - Retrieve a Manifold function by name. *val* refers to the store's current value; *el* refers to the element that triggered the update (if applicable). *returns `MfldFunc`*
- * - *Note:* Functions retrived using this method cannot infer the type of the store's value and is therefore **not** type-checked. It is preferable to keep a reference to the function if you need to preserve type information.
- * @param {string} func_name
- * @return {MfldFunc}
- */ (func_name)=> /** @type {(val: any, el?: HTMLElement)=> void}*/(
-    _glob.MFLD.fn[func_name]),
 funcs: 
 /**!
  * - Add functions to the Manifold function registry in key-value pairs.
@@ -145,7 +130,7 @@ funcs:
  * @param {{ [key: string]: MfldFunc }} funcs
  */ funcs=> {
     for(let key in funcs) {
-    _glob.MFLD.fn[key] = funcs[key];
+    _glob.MFLD.$fn[key] = funcs[key];
  }},
 config:
 /**!
@@ -168,3 +153,6 @@ register:
         _register(parent)
     },
 };
+
+export let $st = _glob.MFLD.$st;
+export let $fn = _glob.MFLD.$fn;

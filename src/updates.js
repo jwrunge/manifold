@@ -1,6 +1,7 @@
 /** @typedef {import("./index.js").MfldOps} MfldOps */
 
-import { _glob, ATTR_PREFIX } from "./util.js";
+import { _glob } from "./store.js";
+import { ATTR_PREFIX } from "./util.js";
 
 /**
  * @typedef {Object} DomWorkOrder
@@ -168,7 +169,6 @@ export let _applyTransition = (el, dir, ops, fn, refElement, _getDimensionsAfter
                 el?.classList?.remove(transClass);
                 ops.trans?.hooks?.[`${dir}-end`]?.(el);
                 el.style.transitionDuration = "";
-                console.log("RUNNING AFTER")
                 if(dir == "in") after?.(el);
             });
         }, 

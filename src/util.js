@@ -1,3 +1,5 @@
+import { _store } from "./store.js";
+
 export let ATTR_PREFIX = "mf_";
 export let _inputNestSplitRx = /[\.\[\]\?]{1,}/g;
 export let _commaSepRx = /, {0,}/g;
@@ -11,23 +13,7 @@ export let _id = ()=> {
  * @typedef {import("./store.js").Store<T>} Store 
  */
 
-/**!
- * @typedef {object} MFLDGlobal
- * @property {{[key: string]: Store<any>}} st
- * @property {{[key: string]: Function}} fn
- * @property {Map<HTMLElement, { toRemove: Set<Store<any>>, observer: MutationObserver }>} mut
- * @property {any} [iface]
- */
-
-/**!
- * @typedef {Window & { MFLD: MFLDGlobal }} MFLDWindowObj
- * @property {MFLDGlobal} MFLD
- */
-// @ts-ignore
-export let _glob = /** @type {MFLDWindowObj}*/(window);
-
 /**
- * Get or set nested store values
  * @param {import(".").MfldOps} ops
  * @param {HTMLElement} el
  * @returns {import(".").MfldOps}
@@ -38,10 +24,8 @@ export let _getOpOverrides = (ops, el)=> {
     
     // ad hoc overrides
     for(let set in el.dataset) {
-        console.log("SET", set)
         for(let key of ["fetch", "trans"]) {
             if(set.startsWith(`${ATTR_PREFIX}${key}_`)) {
-                console.log("MATCH", `${ATTR_PREFIX}${key}_`)
                 try {
                     let prop = set.split("_")[1];
                     /** @type {any} */
@@ -49,7 +33,6 @@ export let _getOpOverrides = (ops, el)=> {
                     if(val?.match(/\{\[/)) val = JSON.parse(val);
                     if(parseInt(val)) val = parseInt(val);
                     res[key][prop] = val;
-                    console.log("Got ", key, prop, val)
                 }
                 catch(e) {
                     console.error(e);
@@ -58,21 +41,28 @@ export let _getOpOverrides = (ops, el)=> {
         }
     }
 
-    console.log(res)
     return res;
 }
 
 /**
  * @param {string} condition 
+ * @param {string} [valArg] 
+ * @param {string} [keyArg] 
  * @returns {{ func?: Function, as?: string[] }}
  */
-export let _parseFunction = (condition)=> {
-    let [fn, asStr] = condition?.split(/\s{1,}as\s{1,}/) || [condition, "value"],
-        fnText = `let $fn = globalThis.MFLD.fn; let $st = globalThis.MFLD.st; console.log($el, $fn, $st); console.log($el.value); console.log($fn); return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
-        as = asStr?.split?.(_commaSepRx)?.map?.(s=> s.trim()) || ["value"] || [],
-        func = new Function("$el", fnText);
-
-    return { func, as };
+export let _parseFunction = (condition, valArg, keyArg)=> {
+    try {
+        let [fnStr, asStr] = condition?.split(/\s{1,}as\s{1,}/) || [condition, "value"],
+            fn = fnStr?.match(/^\s{0,}(function)?\(.{0,}\)(=>)?\s{0,}/) ? `(${fnStr})()` : fnStr,
+            fnText = `return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
+            as = asStr?.split?.(_commaSepRx)?.map?.(s=> s.trim()) || ["value"] || [],
+            func = new Function("$el", "$st", "$fn", valArg || "$val", keyArg || "$key", fnText);
+        return { func, as };
+    }
+    catch(e) {
+        console.error(e);
+        return {};
+    }
 }
 
 /**

@@ -8,7 +8,55 @@
  */
 
 import { _scheduleUpdate } from "./updates.js";
-import { _glob, _id } from "./util.js";
+import { _id } from "./util.js";
+
+/**
+ * @template T
+ * @param {string} name - The name of the store
+ * @param {StoreOptions<T>} [ops] - Options to update the store
+ * @returns {Store<T>}
+ */
+export let _store = (name, ops)=> {
+    let found_store = /** @type {Store<any>}*/(_glob.MFLD.st.get(name));
+    return ops ? (found_store ? found_store._modify(name, ops) : new Store(name, ops)) : (found_store || new Store(name, ops));
+}
+
+/**!
+ * @typedef {object} MFLDGlobal
+ * @property {Map<string, Store<any>>} st
+ * @property {Map<HTMLElement, { toRemove: Set<Store<any>>, observer: MutationObserver }>} mut
+ * @property {<T>(name: string, ops?: import(".").StoreOptions<T> | undefined) => Store<T>} $st
+ * @property {{[key: string]: Function}} $fn
+ */
+
+/**!
+ * @typedef {Window & { MFLD: MFLDGlobal }} MFLDWindowObj
+ * @property {MFLDGlobal} MFLD
+ */
+// @ts-ignore
+export let _glob = /** @type {MFLDWindowObj}*/(window);
+
+if(!_glob.MFLD) _glob.MFLD = {
+    st: new Map(),
+    mut: new Map(),
+    $st: new Proxy(_store, {
+        get: (store, property)=> {
+            return store(/** @type {string}*/(property))?.value;
+        },
+        set: (store, property, value)=> {
+            let propParts = /** @type {string}*/(property).split(/[\.\[\]\?]{1,}/g).map(s=> parseFloat(s.trim()) || s.trim()),
+                S = store(/** @type {string}*/(propParts[0])),
+                ret = S.value;
+
+            for(let part of propParts.slice(1) || []) ret = ret[part];
+            ret = value;
+            S.update(ret);
+
+            return true;
+        }
+    }),
+    $fn: {},
+}
 
 /**
  * @callback SubFunction
@@ -30,13 +78,6 @@ let _hashAny = (input)=> {
     for(let char of new TextEncoder().encode(input?.toString() || "")) 
         hash = ((hash << 5) - hash) + char;
     return hash;
-}
-
-//Static
-if(!_glob.MFLD) _glob.MFLD = {
-    st: {},
-    fn: {},
-    mut: new Map(),
 }
 
 /**
@@ -66,7 +107,7 @@ export class Store {
     _modify(name, ops) {
         this.name = name;
         this._scope = ops?.scope || document.currentScript || "global";
-        _glob.MFLD.st[name] = this;
+        _glob.MFLD.st.set(name, this);
 
         //Watch for scope destroy
         if(this._scope instanceof Element) {
@@ -127,71 +168,59 @@ export class Store {
     * @template T
     * @param {T | ((T)=> T | Promise<T>)} value
     */
-    async update(value) {
-        return new Promise(async (resolve)=> {
-            // Group updates
-            if(this._updateTimeout) clearTimeout(this._updateTimeout);
-            this._updateTimeout = setTimeout(()=> {
-                _scheduleUpdate(async ()=> {
-                    //Apply new value   
-                    let newValue = (typeof value == "function" ? /** @type {Function} */(await value)?.(this.value) : value);
-                    let newHash = _hashAny(newValue);
-                    
-                    if(newHash !== this._storedHash) {
-                        this.value = newValue;
-                        this._storedHash = newHash;
+    update(value) {
+        // Group updates
+        if(this._updateTimeout) clearTimeout(this._updateTimeout);
+        this._updateTimeout = setTimeout(()=> {
+            _scheduleUpdate(()=> {
+                //Apply new value   
+                let newValue = (typeof value == "function" ? /** @type {Function} */(value)?.(this.value) : value);
+                let newHash = _hashAny(newValue);
+                
+                if(newHash !== this._storedHash) {
+                    this.value = newValue;
+                    this._storedHash = newHash;
 
-                        // Add this store to the work order
-                        for(let ds of this._downstreamStores) await ds._auto_update();
+                    // Add this store to the work order
+                    for(let ds of this._downstreamStores) ds._auto_update();
 
-                        // Wait for next animation frame to return the value
-                        for(let [ref, sub] of this?._subscriptions || []) sub?.(this.value, ref);
-                        resolve(this.value);
-                    }
-                    else {
-                        resolve(this.value);
-                    }
-                });
-            }, 0);
-        });
+                    // Wait for next animation frame to return the value
+                    for(let [ref, sub] of this?._subscriptions || []) sub?.(this.value, ref);
+                }
+                
+                return this.value;
+            });
+        }, 0);
     }
 
-    async _auto_update() {
-        let newVal = await this._updater?.(
+    _auto_update() {
+        let newVal = this._updater?.(
             Array.from(this._upstreamStores)?.map(S => S?.value) || [], 
             /** @type {T} */(this?.value)
         );
 
-        await this.update(newVal === undefined ? this.value : newVal);
+        this.update(newVal === undefined ? this.value : newVal);
     }
 }
 
 /**
  * STORE STATIC METHODS
  */
-/**
- * @template T
- * @param {string} name - The name of the store
- * @param {StoreOptions<T>} [ops] - Options to update the store
- * @returns {Store<T>}
- */
-export let _store = (name, ops)=> {
-    let found_store = /** @type {Store<any>}*/(_glob.MFLD.st[name]);
-    return ops ? (found_store ? found_store._modify(name, ops) : new Store(name, ops)) : (found_store || new Store(name, ops));
-}
+
 /**
  * @param {HTMLElement | string} scope 
  */
 export let _clearScope = (scope)=> {
-    for(let store of Object.values(_glob.MFLD.st)) {
+    _glob.MFLD.st.forEach(store=> {
         if(store._scope == scope) _destroy(store); 
-    };
+    });
 }
 
 /**
  * @param {Store<any>} store 
  */
 export let _destroy = (store)=> {
+    _glob.MFLD.st.delete(store?.name || "");
     // @ts-ignore
-    _glob.MFLD.st[store?.name || ""] = undefined;
+    store = undefined;
 }

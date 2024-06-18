@@ -1,8 +1,8 @@
-import { _store } from "./store.js";
+import { _glob, _store } from "./store.js";
 import { _scheduleUpdate } from "./updates.js";
-import { _commaSepRx, _getOpOverrides, _glob, _id, _parseFunction, ATTR_PREFIX } from "./util.js";
+import { _commaSepRx, _getOpOverrides, _id, _parseFunction, ATTR_PREFIX } from "./util.js";
 import { _handleFetch } from "./fetch.js";
-import { _handleBindSync } from "./bindsync.js";
+import { _handleBind, _handleSync } from "./bindsync.js";
 import { _handleTemplates } from "./templates.js";
 /** @typedef {import("./index.js").MfldOps} MfldOps */
 
@@ -24,6 +24,8 @@ _glob.addEventListener("popstate", ()=> {
     location.reload();
 });
 
+export let {$fn, $st} = _glob.MFLD;
+
 //Register subscriptions on the DOM (scopable in case an update needs run on a subset of the DOM)
 /**
  * @param {HTMLElement | null} [parent] 
@@ -31,10 +33,10 @@ _glob.addEventListener("popstate", ()=> {
 export let _register = (parent)=> {
     if(parent?.nodeType == Node.TEXT_NODE) return;
 
-    /** @type {NodeListOf<HTMLElement> | []} */
+    /** @type {NodeListOf<HTMLElement>} */
     let els = (parent || document.body).querySelectorAll(
         `[data-${_modes.join(`],[data-`)}],a,form`
-    ) || [];
+    );
 
     for(let el of els) {
         let _op_overrides = _getOpOverrides(_ops, el);
@@ -53,25 +55,18 @@ export let _register = (parent)=> {
         }
 
         //Loop over all data attributes (modes)
-        for(let mode of _modes) {
-            if(el.dataset?.[mode] === undefined) continue;
-            let shouldHaveTriggers = !mode.match(/bind|templ|if|else|each/);
+        for(let mode in el.dataset) {
+            if(!_modes.includes(mode)) continue;
 
             //Loop over provided settings
             for(let setting of el.dataset?.[mode]?.split(";;") || []) {
                 //Break out settings
-                let parts = setting?.split(/\s*->\s*/g),
-                    triggers = (shouldHaveTriggers ? parts?.shift()?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s=> s.trim()) : []) || [],
-                    [funcStr, output] = parts,
-                    dependencyList = funcStr?.match(/\$st\.(\w{1,})/g) || [];
+                let [funcStr, triggerStr] = setting?.split(/\s*->\s*/).reverse(),
+                    triggers = triggerStr?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s=> s.trim()),
+                    dependencyList = [...funcStr?.matchAll(/\$st\.(\w{1,})/g)].map(m=> m[1]);
 
-                if(!output && mode.match(/get|head|put|post|delete|patch/)) {
-                    output = funcStr;
-                    funcStr = "";
-                }
+                console.log(el, triggers, funcStr, dependencyList);
                 let {func, as} = _parseFunction(funcStr);
-
-                console.log("MODE", mode, "FUNC", func, "AS", as, "OUTPUT", output, "DEPS", dependencyList)
 
                 //Handle templs and loops
                 if(mode.match(/each|templ|if|else/)) _handleTemplates(el, mode, as || [], func, dependencyList, _op_overrides);
@@ -79,10 +74,9 @@ export let _register = (parent)=> {
                     //Loop over triggers
                     if(!triggers?.length) triggers = [""]
                     for(let trigger of triggers) {
-                        if(mode.match(/bind|sync/)) _handleBindSync(el, output, trigger, mode, func);
-                        else {
-                            // _handleFetch(el, trigger, _op_overrides, output, mode.replace(ATTR_PREFIX, ""), func);
-                        }
+                        if(mode.match(/bind/)) _handleBind(el, trigger, func, dependencyList);
+                        else if(mode.match(/sync/)) _handleSync(el, trigger, func);
+                        // else _handleFetch(el, trigger, _op_overrides, mode.replace(ATTR_PREFIX, ""), func);
                     }
                 }
             }; //End loop settings

@@ -1,3 +1,4 @@
+import { $fn, $st } from "./registrar";
 import { _store } from "./store";
 import { _id } from "./util";
 
@@ -59,7 +60,7 @@ export let _registerInternalStore = (storeList, options)=> {
     // Register new store (to prevent excess evaluations)
     return _store(_id(), {
         upstream: [...(storeList || [])],
-        updater: ()=> options?.func?.(options.observeEl),
+        updater: ()=> options?.func?.(options.observeEl, $st, $fn),
         scope: options?.observeEl,
     });
 }

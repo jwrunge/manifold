@@ -1,8 +1,8 @@
+import { $fn, $st } from "./registrar";
 import { _ensureTemplate, _iterable, _iterateSiblings, _registerInternalStore } from "./domutil";
 import { _register } from "./registrar";
-import { _store } from "./store";
 import { _applyTransition, _scheduleUpdate } from "./updates";
-import { _id, _parseFunction, ATTR_PREFIX } from "./util";
+import { _parseFunction, ATTR_PREFIX } from "./util";
 
 /**
  * Handle conditional and loop elements
@@ -49,7 +49,6 @@ export let _handleTemplates = (el, mode, as, func, dependencyList, ops)=> {
     }
 
     templStore = _registerInternalStore(dependencyList, { func: conditional ? newFunc : func, observeEl: templ });
-    
     if(conditional) templ.dataset[`${ATTR_PREFIX}cstore`] = templStore.name;
 
     // Clear old elements
@@ -68,8 +67,10 @@ export let _handleTemplates = (el, mode, as, func, dependencyList, ops)=> {
                 // Get all logical bindings and replace values
                 let item = /** @type {HTMLTemplateElement}*/ (templ.cloneNode(true));
                 if(!conditional) {
-                    let rx = new RegExp("\\$:{([^}]*)}", "g");
-                    let html = templ?.innerHTML?.replace(rx, (_, cap)=> _parseFunction(`(${as.join(",")})=> ${cap}`)?.func?.(val, key) || "") || "";
+                    let html = templ?.innerHTML?.replace(
+                        /\$:{([^}]*)}/g, 
+                        (_, cap)=> _parseFunction(cap, as[0], as[1])?.func?.(el, $st, $fn, val, key) || ""
+                    ) || "";
                     if(item?.innerHTML) item.innerHTML = html;
                 }
 
