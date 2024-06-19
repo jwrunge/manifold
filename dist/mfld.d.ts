@@ -1,5 +1,5 @@
 declare module "mfld" {
-    let L: any;
+    let N: any;
     let F: any;
     namespace A {
         /**!
@@ -39,12 +39,12 @@ declare module "mfld" {
           * - Wait for the next Manifold data update cycle to complete before executing the callback function.
           * @param {()=> void} cb
           */
-        function onTick(t: any): void;
+        function onTick(e: any): void;
         /**!
          * - Register Manifold subscriptions on the DOM. *Optional:* Pass an `HTMLElement` or selector string to scope the registration to a specific element.
          * @param {HTMLElement | string | null} [parent]
          */
         function register(r: any): void;
     }
-    export { L as $fn, F as $st, A as Mfld };
+    export { N as $fn, F as $st, A as Mfld };
 }

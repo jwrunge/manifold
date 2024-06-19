@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- <link rel="stylesheet" href="tests/style.css"/> -->
+  <link rel="stylesheet" href="tests/style.css"/>
   <title>Reactivity Test</title>
 </head>
 <body>
@@ -89,7 +89,7 @@
     <div class="clickable" data-mf_sync="on(click)-> alert('working')">This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
   </template>
 
-  <!--<div data-mf_if="(()=>{ console.log('CHECKING STORES'); console.log('--- STORE 1', $st.store1); console.log('--- STORE 3', $st.store3); console.log($st.store1 == 'OK' || $st.store3 == 'three'); return $st.store1 == 'OK'; })()">
+  <div data-mf_if="()=>{ return $st.store1 == 'OK'; }">
     <div>,/;mn bk,jbbkkjlbikujbuibbbbbbbb</div>
   </div>
   <template data-mf_elseif='$st.store1 == "!OK"'>
@@ -99,7 +99,7 @@
     <div>ELSE</div>
   </template>
 
-  <div class="special-insert" data-mf_Get="on(click) /tests/interactive.html" data-mf_inner=".sync-grid -> header">Default insert</div>
+  <!-- <div class="special-insert" data-mf_Get="on(click) /tests/interactive.html" data-mf_inner=".sync-grid -> header">Default insert</div>
   <nav data-mf_Post="on(click) ($st.store1, $st.store2)=> $st.store1?.toUpperCase() + JSON.stringify(store2 || {}) -> /tests/header.html" data-mf_inner="header -> h1" data-mf_transsmart="true" data-mf_transdur="300" data-mf_pushstate>
     <p>This is some default nav content.</p>
   </nav> -->

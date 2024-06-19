@@ -42,14 +42,20 @@ export let _handleTemplates = (el, mode, as, func, dependencyList, ops)=> {
         }
 
         // Create function
-        newFunc = (...list)=> {
-            if(conditionalSub) for(let res of list.slice(-prevConditions.length)) if(res == true) return false;
-            return conditionalSub?.[0] == "else" ? true : func?.(...list) == true;
+        newFunc = (el, $st, $fn)=> {
+            if(conditionalSub) {
+                for(let d of prevConditions) {
+                    console.log(" --- CHECKING", d, $st[d])
+                    if($st[d]) return false;
+                }
+            }
+            console.log(`RETURNING ${conditionalSub?.[0] == "else" ? true : func?.(el, $st, $fn) == true} FOR`, conditionalSub?.[0], prevConditions)
+            return conditionalSub?.[0] == "else" ? true : func?.(el, $st, $fn) == true;
         }
     }
 
-    templStore = _registerInternalStore(dependencyList, { func: conditional ? newFunc : func, observeEl: templ });
-    if(conditional) templ.dataset[`${ATTR_PREFIX}cstore`] = templStore.name;
+    templStore = _registerInternalStore([...dependencyList, ...prevConditions], { func: conditional ? newFunc : func, observeEl: templ });
+    templ.dataset[`${ATTR_PREFIX}cstore`] = templStore.name;
 
     // Clear old elements
     templStore.sub(val=> {
