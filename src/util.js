@@ -54,9 +54,9 @@ export let _parseFunction = (condition, valArg, keyArg)=> {
     try {
         let [fnStr, asStr] = condition?.split(/\s{1,}as\s{1,}/) || [condition, "value"],
             fn = fnStr?.match(/^\s{0,}(function)?\(.{0,}\)(=>)?\s{0,}/) ? `(${fnStr})()` : fnStr,
-            fnText = `return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
+            fnText = `let {$el, $st, $fn, ${valArg || "$val"}, ${keyArg || "$key"}, $body} = ops;return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
             as = asStr?.split?.(_commaSepRx)?.map?.(s=> s.trim()) || ["value"] || [];
-        let func = new Function("$el", "$st", "$fn", valArg || "$val", keyArg || "$key", fnText);
+        let func = new Function("ops", fnText);
         return { func, as };
     }
     catch(e) {

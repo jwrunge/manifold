@@ -42,17 +42,17 @@ export let _handleTemplates = (el, mode, as, func, dependencyList, ops)=> {
         }
 
         // Create function
-        newFunc = (el, $st, $fn)=> {
+        newFunc = ({$el: el, $st, $fn})=> {
             if(conditionalSub) {
                 for(let d of prevConditions) {
                     if($st[d]) return false;
                 }
             }
-            return conditionalSub?.[0] == "else" ? true : func?.(el, $st, $fn) == true;
+            return conditionalSub?.[0] == "else" ? true : func?.({$el: el, $st, $fn}) == true;
         }
     }
 
-    templStore = _registerInternalStore([...dependencyList, ...prevConditions], { func: conditional ? newFunc : func, observeEl: templ });
+    templStore = _registerInternalStore([...dependencyList, ...prevConditions], conditional ? newFunc : func, templ);
     templ.dataset[`${ATTR_PREFIX}cstore`] = templStore.name;
 
     // Clear old elements
@@ -73,7 +73,7 @@ export let _handleTemplates = (el, mode, as, func, dependencyList, ops)=> {
                 if(!conditional) {
                     let html = templ?.innerHTML?.replace(
                         /\$:{([^}]*)}/g, 
-                        (_, cap)=> _parseFunction(cap, as[0], as[1])?.func?.(el, $st, $fn, val, key) || ""
+                        (_, cap)=> _parseFunction(cap, as[0], as[1])?.func?.({$el: el, $st, $fn, [as[0]]: val, [as[1]]: key}) || ""
                     ) || "";
                     if(item?.innerHTML) item.innerHTML = html;
                 }

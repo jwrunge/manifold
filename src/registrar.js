@@ -61,23 +61,24 @@ export let _register = (parent)=> {
             //Loop over provided settings
             for(let setting of el.dataset?.[mode]?.split(";;") || []) {
                 //Break out settings
-                let parts = setting?.split(/\s*->\s*/g),
-                    href = mode.match(/get|head|post|put|delete|patch/) ? parts.pop() || "" : "",
-                    [funcStr, triggerStr] = parts.reverse(),
-                    triggers = triggerStr?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s=> s.trim()),
+                let isFetch = mode.match(/get|head|post|put|delete|patch/) ? true : false,
+                    parts = setting?.split(/\s*->\s*/g),
+                    href = isFetch ? parts.pop() || "" : "",
+                    triggers = isFetch || mode.match(/sync/) ? parts.shift()?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s=> s.trim()) : [] || [],
+                    funcStr = parts?.[0] || "",
                     dependencyList = Array.from(new Set([...funcStr?.matchAll(/\$st\.(\w{1,})/g)].map(m=> m[1])));
 
                 let {func, as} = _parseFunction(funcStr);
-
+                
                 //Handle templs and loops
                 if(mode.match(/each|templ|if|else/)) _handleTemplates(el, mode, as || [], func, dependencyList, _op_overrides);
                 else {
                     //Loop over triggers
                     if(!triggers?.length) triggers = [""]
                     for(let trigger of triggers) {
-                        if(mode.match(/bind/)) _handleBind(el, trigger, func, dependencyList);
+                        if(mode.match(/bind/)) _handleBind(el, func, dependencyList);
                         else if(mode.match(/sync/)) _handleSync(el, trigger, func);
-                        else _handleFetch(el, trigger, _op_overrides, href, mode.replace(ATTR_PREFIX, ""), func, dependencyList);
+                        else _handleFetch(el, trigger, _op_overrides, href, mode.replace(ATTR_PREFIX, ""), func);
                     }
                 }
             }; //End loop settings

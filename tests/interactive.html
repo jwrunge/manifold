@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- <link rel="stylesheet" href="tests/style.css"/> -->
+  <link rel="stylesheet" href="tests/style.css"/>
   <!-- <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script> -->
   <title>Reactivity Test</title>
 </head>
@@ -43,7 +43,7 @@
 
   <!-- Content -->
   <div class="sync-grid">
-    <label>On keyup:</label> <input data-mf_bind="()=> { $el.value = $st.store1; }" data-mf_Sync="on(keyup, change) -> $st.store1 = $el.value">
+    <label>On keyup:</label> <input data-mf_bind="$el.value = $st.store1" data-mf_Sync="on(keyup, change) -> $st.store1 = $el.value">
     <label>Bind only:</label> <input data-mf_Bind="$el.value = $st.store1">
     <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-mf_Bind="$el.checked = $st.store1" data-mf_Sync="on(change) -> $st.checkedStore = $el.checked || false">
     <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-mf_Bind="$el.checked = $fn.isChecked($st.store1)">

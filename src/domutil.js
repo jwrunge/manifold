@@ -46,21 +46,16 @@ export function _iterateSiblings(sib, breakFn, cb, reverse = false) {
 }
 
 /**
- * @typedef InternalStoreOptions
+ * @param {string[]} upstream
  * @property {Function} [func]
  * @property {HTMLElement} [observeEl]
- */
-
-/**
- * @param {string[]} storeList
- * @param {InternalStoreOptions} options
  * @returns 
  */
-export let _registerInternalStore = (storeList, options)=> {
+export let _registerInternalStore = (upstream, func, $el)=> {
     // Register new store (to prevent excess evaluations)
     return _store(_id(), {
-        upstream: [...(storeList || [])],
-        updater: ()=> options?.func?.(options.observeEl, $st, $fn),
-        scope: options?.observeEl,
+        upstream,
+        updater: ()=> func?.({$el, $st, $fn}),
+        scope: $el,
     });
 }

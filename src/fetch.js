@@ -13,12 +13,12 @@ import { $fn, $st } from "./index.js";
  * @param {string} href
  * @param {string} [method] 
  * @param {Function} [func]
- * @param {string[]} [paramList]
  */
-export let _handleFetch = (el, trigger, fetchOps, href, method, func, paramList)=> {
+export let _handleFetch = (el, trigger, fetchOps, href, method, func)=> {
     /**
      * @param {Event} [e]
      */
+
     let ev = async e=> {  
         e?.preventDefault();
         e?.stopPropagation();
@@ -34,7 +34,7 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, func, paramList)
         } : undefined;
 
         // Parse input
-        let input = func?.(el, $st, $fn) || paramList;
+        let input = func?.(el, $st, $fn);
         let body = Array.isArray(input) ? input[0] : input == "$form" ? new FormData(/** @type {HTMLFormElement}*/(el)) : input;
         if(func) {
             let toFunc = Array.isArray(input) ? (input?.map(s=> _store(s).value) || []) : [body];

@@ -1,6 +1,6 @@
 declare module "mfld" {
     let N: any;
-    let k: any;
+    let O: any;
     namespace L {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
@@ -46,5 +46,5 @@ declare module "mfld" {
          */
         function register(t: any): void;
     }
-    export { N as $fn, k as $st, L as Mfld };
+    export { N as $fn, O as $st, L as Mfld };
 }
