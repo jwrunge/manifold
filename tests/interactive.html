@@ -99,13 +99,13 @@
     <div>ELSE</div>
   </template>
 
-  <!-- <div class="special-insert" data-mf_Get="on(click) /tests/interactive.html" data-mf_inner=".sync-grid -> header">Default insert</div>
-  <nav data-mf_Post="on(click) ($st.store1, $st.store2)=> $st.store1?.toUpperCase() + JSON.stringify(store2 || {}) -> /tests/header.html" data-mf_inner="header -> h1" data-mf_transsmart="true" data-mf_transdur="300" data-mf_pushstate>
+  <div class="special-insert" data-mf_Get="on(click) -> /tests/interactive.html" data-mf_inner=".sync-grid -> header">Default insert</div>
+  <nav data-mf_Post="on(click) -> ()=> $st.store1?.toUpperCase() + JSON.stringify($st.store2 || {}) -> /tests/header.html" data-mf_inner="header -> h1" data-mf_transsmart="true" data-mf_transdur="300" data-mf_pushstate>
     <p>This is some default nav content.</p>
-  </nav> -->
+  </nav>
 
-  <!-- <div class="trans" data-mf_Bind="specialStyling($st.store1)"></div> -->
-  <!-- <a href="tests/header.html" data-mf_promote data-mf_pushstate="whatevs">TO HEADER</a> -->
+  <div class="trans" data-mf_Bind="$fn.specialStyling($st.store1, $el)"></div>
+  <a href="tests/header.html" data-mf_promote data-mf_pushstate="whatevs">TO HEADER</a>
 
   <!-- Store script -->
   <script src="./tests/interactive.js" type="module"></script>

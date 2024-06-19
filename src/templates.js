@@ -45,11 +45,9 @@ export let _handleTemplates = (el, mode, as, func, dependencyList, ops)=> {
         newFunc = (el, $st, $fn)=> {
             if(conditionalSub) {
                 for(let d of prevConditions) {
-                    console.log(" --- CHECKING", d, $st[d])
                     if($st[d]) return false;
                 }
             }
-            console.log(`RETURNING ${conditionalSub?.[0] == "else" ? true : func?.(el, $st, $fn) == true} FOR`, conditionalSub?.[0], prevConditions)
             return conditionalSub?.[0] == "else" ? true : func?.(el, $st, $fn) == true;
         }
     }

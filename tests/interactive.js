@@ -4,12 +4,39 @@ function sendAlert(val) {
     alert("VALUE IS " + val)
     return val
 }
-function isChecked(val, el) {
+function isChecked(val) {
     if(val == "We're at 4k") return true;
     else return false;
 }
 
-Mfld.funcs({sendAlert, isChecked});
+function specialStyling(val, el) {
+    console.log(val, el)
+    if(val == "My text") {
+    el.innerHTML = "My text";
+    el.style = "background: blue; height: 5rem; width: 90vw; width: 12rem;";
+    }
+    else if(val == "<span class='colorful'>Another update</span>") {
+    el.style = "background: green; height: 15rem; border-radius: 10px; width: 10rem;"
+    }
+    else if(val == "We're at 4k") {
+    el.innerHTML = "We're at 4k!!!";
+    el.style = "background: orange; height: 8rem; border-radius: 10px; width: 20rem;"
+    }
+    else if(val == "Last one") {
+    el.innerHTML = "All done!"
+    el.style = "background: red; height: 10rem; border-radius: 10px; width: 15rem; font-size: 2rem;"
+    }
+    else if(val == true) {
+    el.innerHTML = "Ooooh, good times!"
+    el.style = "background: green; height: 25rem; border-radius: 10px; width: 25rem; font-size: 2.5rem;"
+    }
+    else {
+    el.innerHTML = ""
+    el.style = "background: gray; height: 5rem; border-radius: 10px; width: 5rem; font-size: 2.5rem;"
+    }
+}
+
+Mfld.funcs({sendAlert, isChecked, specialStyling});
 
 console.log("Manifold", Mfld);
 
@@ -171,28 +198,3 @@ setTimeout(()=> {
 //     store4.update(1000)
 // }, 16000)
 
-function specialStyling(val, el) {
-    if(val == "My text") {
-    el.innerHTML = "My text";
-    el.style = "background: blue; height: 5rem; width: 90vw; width: 12rem;";
-    }
-    else if(val == "<span class='colorful'>Another update</span>") {
-    el.style = "background: green; height: 15rem; border-radius: 10px; width: 10rem;"
-    }
-    else if(val == "We're at 4k") {
-    el.innerHTML = "We're at 4k!!!";
-    el.style = "background: orange; height: 8rem; border-radius: 10px; width: 20rem;"
-    }
-    else if(val == "Last one") {
-    el.innerHTML = "All done!"
-    el.style = "background: red; height: 10rem; border-radius: 10px; width: 15rem; font-size: 2rem;"
-    }
-    else if(val == true) {
-    el.innerHTML = "Ooooh, good times!"
-    el.style = "background: green; height: 25rem; border-radius: 10px; width: 25rem; font-size: 2.5rem;"
-    }
-    else {
-    el.innerHTML = ""
-    el.style = "background: gray; height: 5rem; border-radius: 10px; width: 5rem; font-size: 2.5rem;"
-    }
-}

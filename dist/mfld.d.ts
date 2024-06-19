@@ -1,7 +1,7 @@
 declare module "mfld" {
     let N: any;
-    let F: any;
-    namespace A {
+    let k: any;
+    namespace L {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
@@ -39,12 +39,12 @@ declare module "mfld" {
           * - Wait for the next Manifold data update cycle to complete before executing the callback function.
           * @param {()=> void} cb
           */
-        function onTick(e: any): void;
+        function onTick(t: any): void;
         /**!
          * - Register Manifold subscriptions on the DOM. *Optional:* Pass an `HTMLElement` or selector string to scope the registration to a specific element.
          * @param {HTMLElement | string | null} [parent]
          */
-        function register(r: any): void;
+        function register(t: any): void;
     }
-    export { N as $fn, F as $st, A as Mfld };
+    export { N as $fn, k as $st, L as Mfld };
 }

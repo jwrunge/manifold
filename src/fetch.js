@@ -2,6 +2,7 @@ import { _handlePushState, _parseFunction, ATTR_PREFIX } from "./util.js";
 import { _scheduleUpdate } from "./updates";
 import { _register } from "./registrar.js";
 import { _store } from "./store.js";
+import { $fn, $st } from "./index.js";
 
 /** @typedef {import("./index.js").MfldOps} MfldOps */
 
@@ -11,9 +12,10 @@ import { _store } from "./store.js";
  * @param {MfldOps} fetchOps
  * @param {string} href
  * @param {string} [method] 
- * @param {Function} [processFunc]
+ * @param {Function} [func]
+ * @param {string[]} [paramList]
  */
-export let _handleFetch = (el, trigger, fetchOps, href, method, processFunc)=> {
+export let _handleFetch = (el, trigger, fetchOps, href, method, func, paramList)=> {
     /**
      * @param {Event} [e]
      */
@@ -32,11 +34,11 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, processFunc)=> {
         } : undefined;
 
         // Parse input
-        let input = processFunc?.(...(paramList || [])) || paramList;
+        let input = func?.(el, $st, $fn) || paramList;
         let body = Array.isArray(input) ? input[0] : input == "$form" ? new FormData(/** @type {HTMLFormElement}*/(el)) : input;
-        if(processFunc) {
+        if(func) {
             let toFunc = Array.isArray(input) ? (input?.map(s=> _store(s).value) || []) : [body];
-            body = processFunc?.(...toFunc)
+            body = func?.(...toFunc)
         }
 
         //Fetch data
