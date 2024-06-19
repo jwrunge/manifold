@@ -45,7 +45,7 @@ if(o!==this.l){this.value=e,this.l=o
 for(let t of this.p)t.m()
 for(let[t,e]of this?.i||[])e?.(this.value,t)}return this.value}))}),0)}m(){let t=this.o?.(Array.from(this.u)?.map((t=>t?.value))||[],this?.value)
 this.update(void 0===t?this.value:t)}}let g=t=>{m.MFLD.st.delete(t?.name||""),t=void 0},w=(e,o,n,s,l,f,a)=>{let c=async o=>{o?.preventDefault(),o?.stopPropagation(),l||(l=(o?.target)?.method||"get")
-let c=n?.fetch?.externals?.find((t=>s?.startsWith(t.domain)))||!s.match(/^https?:\/\//)||s.includes(location.origin)?{scripts:!0,styles:!0}:void 0,d=f?.(...a||[])||a,p=Array.isArray(d)?d[0]:"$form"==d?new FormData(e):d
+let c=n?.fetch?.externals?.find((t=>s?.startsWith(t.domain)))||!s.match(/^https?:\/\//)||s.includes(location.origin)?{scripts:!0,styles:!0}:void 0,d=f?.(e,k,N)||a,p=Array.isArray(d)?d[0]:"$form"==d?new FormData(e):d
 if(f){let t=Array.isArray(d)?d?.map((t=>$(t).value))||[]:[p]
 p=f?.(...t)}let h=await fetch(s,{...n?.fetch?.request||{},headers:{...n?.fetch?.request?.headers,MFLD:"true"},method:l,body:"$form"==d||"string"==typeof p?p:JSON.stringify(p)}).catch((t=>{n?.fetch?.err?.(t)})),m=h?.status
 if(m&&0==n?.fetch?.onCode?.(m,h))return

@@ -3,11 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="tests/style.css"/>
+  <!-- <link rel="stylesheet" href="tests/style.css"/> -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
   <title>Reactivity Test</title>
 </head>
 <body>
   <h1><span data-mf_sync="on(click)-> alert('working')">Reactivity test</span></h1>
+
+  <!-- <model-viewer 
+    alt="Neil Armstrong's Spacesuit from the Smithsonian Digitization Programs Office and National Air and Space Museum" 
+    src="tests/NeilArmstrong.glb" ar environment-image="tests/moon_1k.hdr" 
+    poster="tests/NeilArmstrong.webp" 
+    shadow-intensity="1" 
+    data-mf_bind="$el.cameraControls = $st.store1 == 'OK' ? true : undefined" touch-action="pan-y">
+  </model-viewer> -->
 
   <p data-mf_templ="$st.store1?.toUpperCase()"></p>
   <div data-mf_templ="$st.store1?.toUpperCase() as v">
@@ -147,5 +156,10 @@
     &:hover {
       background: yellow;
     }
+  }
+
+  model-viewer {
+    width: 100%;
+    height: 50vh;
   }
 </style>

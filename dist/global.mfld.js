@@ -45,7 +45,7 @@ if(o!==this.l){this.value=e,this.l=o
 for(let t of this.h)t.m()
 for(let[t,e]of this?.i||[])e?.(this.value,t)}return this.value}))}),0)}m(){let t=this.o?.(Array.from(this.u)?.map((t=>t?.value))||[],this?.value)
 this.update(void 0===t?this.value:t)}}let y=t=>{m.MFLD.st.delete(t?.name||""),t=void 0},w=(e,o,i,s,l,f,u)=>{let c=async o=>{o?.preventDefault(),o?.stopPropagation(),l||(l=(o?.target)?.method||"get")
-let c=i?.fetch?.externals?.find((t=>s?.startsWith(t.domain)))||!s.match(/^https?:\/\//)||s.includes(location.origin)?{scripts:!0,styles:!0}:void 0,d=f?.(...u||[])||u,h=Array.isArray(d)?d[0]:"$form"==d?new FormData(e):d
+let c=i?.fetch?.externals?.find((t=>s?.startsWith(t.domain)))||!s.match(/^https?:\/\//)||s.includes(location.origin)?{scripts:!0,styles:!0}:void 0,d=f?.(e,k,N)||u,h=Array.isArray(d)?d[0]:"$form"==d?new FormData(e):d
 if(f){let t=Array.isArray(d)?d?.map((t=>$(t).value))||[]:[h]
 h=f?.(...t)}let p=await fetch(s,{...i?.fetch?.request||{},headers:{...i?.fetch?.request?.headers,MFLD:"true"},method:l,body:"$form"==d||"string"==typeof h?h:JSON.stringify(h)}).catch((t=>{i?.fetch?.err?.(t)})),m=p?.status
 if(m&&0==i?.fetch?.onCode?.(m,p))return
@@ -80,5 +80,5 @@ if(e)continue}for(let o in r.dataset)if(E.includes(o))for(let i of r.dataset?.[o
 if(o.match(/each|templ|if|else/))S(r,o,p||[],h,d,s)
 else{c?.length||(c=[""])
 for(let e of c)o.match(/bind/)?T(r,e,h,d):o.match(/sync/)?x(r,e,h):w(r,e,s,f,o.replace(t,""),h,d)}}}},L={store:(store_name,store_ops)=>(store_ops?.hasOwnProperty("value")||store_ops?.hasOwnProperty("updater")||(store_ops={value:store_ops}),$(store_name,store_ops)),ustore:(store_name,store_ops)=>$(store_name,store_ops),funcs:funcs=>{for(let t in funcs)m.MFLD.$fn[t]=funcs[t]},config:(new_ops,profile_name)=>{return t=new_ops,void((e=profile_name)?_.profiles={..._.profiles,[e]:t}:_={..._,...t})
-var t,e},onTick:t=>{var e;(e=t)&&f.push(e)},register:t=>{"string"==typeof t&&(t=document.querySelector(t)),D(t)}}
-m.MFLD.$st,m.MFLD.$fn,globalThis.Mfld||(globalThis.Mfld=L)
+var t,e},onTick:t=>{var e;(e=t)&&f.push(e)},register:t=>{"string"==typeof t&&(t=document.querySelector(t)),D(t)}},k=m.MFLD.$st,N=m.MFLD.$fn
+globalThis.Mfld||(globalThis.Mfld=L)

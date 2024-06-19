@@ -45,7 +45,7 @@ if(o!==this.l){this.value=e,this.l=o
 for(let t of this.h)t.m()
 for(let[t,e]of this?.i||[])e?.(this.value,t)}return this.value}))}),0)}m(){let t=this.o?.(Array.from(this.u)?.map((t=>t?.value))||[],this?.value)
 this.update(void 0===t?this.value:t)}}let y=t=>{m.MFLD.st.delete(t?.name||""),t=void 0},w=(e,o,i,s,l,f,u)=>{let c=async o=>{o?.preventDefault(),o?.stopPropagation(),l||(l=(o?.target)?.method||"get")
-let c=i?.fetch?.externals?.find((t=>s?.startsWith(t.domain)))||!s.match(/^https?:\/\//)||s.includes(location.origin)?{scripts:!0,styles:!0}:void 0,d=f?.(...u||[])||u,h=Array.isArray(d)?d[0]:"$form"==d?new FormData(e):d
+let c=i?.fetch?.externals?.find((t=>s?.startsWith(t.domain)))||!s.match(/^https?:\/\//)||s.includes(location.origin)?{scripts:!0,styles:!0}:void 0,d=f?.(e,k,N)||u,h=Array.isArray(d)?d[0]:"$form"==d?new FormData(e):d
 if(f){let t=Array.isArray(d)?d?.map((t=>$(t).value))||[]:[h]
 h=f?.(...t)}let p=await fetch(s,{...i?.fetch?.request||{},headers:{...i?.fetch?.request?.headers,MFLD:"true"},method:l,body:"$form"==d||"string"==typeof h?h:JSON.stringify(h)}).catch((t=>{i?.fetch?.err?.(t)})),m=p?.status
 if(m&&0==i?.fetch?.onCode?.(m,p))return
@@ -121,6 +121,6 @@ t=>{var e;(e=t)&&f.push(e)},register:
  * - Register Manifold subscriptions on the DOM. *Optional:* Pass an `HTMLElement` or selector string to scope the registration to a specific element.
  * @param {HTMLElement | string | null} [parent]
  */
-t=>{"string"==typeof t&&(t=document.querySelector(t)),D(t)}}
-m.MFLD.$st,m.MFLD.$fn,globalThis.Mfld||(globalThis.Mfld=L)
+t=>{"string"==typeof t&&(t=document.querySelector(t)),D(t)}},k=m.MFLD.$st,N=m.MFLD.$fn
+globalThis.Mfld||(globalThis.Mfld=L)
 //# sourceMappingURL=dev.global.mfld.js.map
