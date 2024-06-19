@@ -39,17 +39,17 @@ export let _register = (parent)=> {
     );
 
     for(let el of els) {
-        let _op_overrides = _getOpOverrides(_ops, el);
+        let _op_overrides = _getOpOverrides(structuredClone(_ops), el);
         if(!el.id) el.id = _id();
 
         //Check for <a> and <form> elements
         if(el.dataset?.[`${ATTR_PREFIX}promote`] !== undefined) {
             let [mode, href, input, trigger] = el.tagName == "A" ?
-                ["get", /** @type {HTMLAnchorElement}*/(el).href, [], "click"] : 
-                [/** @type {HTMLFormElement}*/(el).method.toLowerCase(), /** @type {HTMLFormElement}*/(el).action, "$form", "submit"];
+                ["get", /** @type {HTMLAnchorElement}*/(el).href, undefined, "click"] : 
+                [/** @type {HTMLFormElement}*/(el).method.toLowerCase(), /** @type {HTMLFormElement}*/(el).action, ()=> "$form", "submit"];
 
             if(href) {
-                // _handleFetch(el, trigger, _op_overrides, href, mode, /** @type {any[] | "$form"}*/(input));
+                _handleFetch(el, trigger, _op_overrides, href, mode, input);
                 continue;
             }
         }

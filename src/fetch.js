@@ -34,12 +34,8 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, func)=> {
         } : undefined;
 
         // Parse input
-        let input = func?.(el, $st, $fn);
-        let body = Array.isArray(input) ? input[0] : input == "$form" ? new FormData(/** @type {HTMLFormElement}*/(el)) : input;
-        if(func) {
-            let toFunc = Array.isArray(input) ? (input?.map(s=> _store(s).value) || []) : [body];
-            body = func?.(...toFunc)
-        }
+        let input = func?.({$el: el, $st, $fn});
+        let body = input == "$form" ? new FormData(/** @type {HTMLFormElement}*/(el)) : input;
 
         //Fetch data
         let data = await fetch(href, {
@@ -96,7 +92,7 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, func)=> {
 
         let resolveTxt = el.dataset?.[`${ATTR_PREFIX}resolve`];
         let resolveFunc = _parseFunction(resolveTxt || "")?.func;
-        resolveFunc?.(resp);
+        resolveFunc?.({$el: el, $st, $fn, $body: resp});
 
         _handlePushState(el, e, href);
     }

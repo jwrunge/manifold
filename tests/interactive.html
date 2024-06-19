@@ -86,19 +86,19 @@
     </template>
   </select> -->
 
-  <!-- <button data-mf_Post="on(click) -> ()=> {return {name: 'Jake', age: 36}} -> /tests/header.html">JSON Sender</button> -->
+  <button data-mf_Post="on(click) -> {name: 'Jake', age: 36} -> /tests/header.html">JSON Sender</button>
 
-  <!-- <form action="/tests/header.html" method="post" data-mf_inner="h2->h1" data-mf_promote data-mf_pushstate>
+  <form action="/tests/header.html" method="post" data-mf_inner="h2->h1" data-mf_promote data-mf_pushstate>
     <label>Name: <input type="text" name="name" autocomplete="name" required></label>
     <label>Age: <input type="number" name="age"></label>
     <button type="submit">SUBMIT</button>
-  </form>-->
+  </form>
 
-  <template data-mf_each="$st.store1 as l, i" data-mf_trans_dur="5000">
+  <template data-mf_each="$st.store1 as l, i">
     <div class="clickable" data-mf_sync="on(click)-> alert('working')">This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
   </template>
 
-  <div data-mf_if="()=>{ return $st.store1 == 'OK'; }">
+  <div data-mf_if="()=>{ return $st.store1 == 'OK'; }" data-mf_trans_dur="[1000, 4000]">
     <div>,/;mn bk,jbbkkjlbikujbuibbbbbbbb</div>
   </div>
   <template data-mf_elseif='$st.store1 == "!OK"'>

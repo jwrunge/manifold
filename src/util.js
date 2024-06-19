@@ -1,7 +1,6 @@
 import { _store } from "./store.js";
 
 export let ATTR_PREFIX = "mf_";
-export let _inputNestSplitRx = /[\.\[\]\?]{1,}/g;
 export let _commaSepRx = /, {0,}/g;
 
 export let _id = ()=> {
@@ -27,11 +26,13 @@ export let _getOpOverrides = (ops, el)=> {
         for(let key of ["fetch", "trans"]) {
             if(set.startsWith(`${ATTR_PREFIX}${key}_`)) {
                 try {
-                    let prop = set.split("_")[1];
+                    let prop = set.split("_")[2];
                     /** @type {any} */
                     let val = el.dataset[set];
-                    if(val?.match(/\{\[/)) val = JSON.parse(val);
-                    if(parseInt(val)) val = parseInt(val);
+                    if(val?.match(/\{|\[/)) val = JSON.parse(val);
+                    else if(parseInt(val)) val = parseInt(val);
+                    if(Array.isArray(val)) val = val.map(v=> parseInt(v) || v);
+                    console.log("Override", key, prop, val)
                     res[key][prop] = val;
                 }
                 catch(e) {
@@ -41,6 +42,7 @@ export let _getOpOverrides = (ops, el)=> {
         }
     }
 
+    console.log("Override",res)
     return res;
 }
 

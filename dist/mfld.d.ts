@@ -1,5 +1,5 @@
 declare module "mfld" {
-    let N: any;
+    let k: any;
     let O: any;
     namespace L {
         /**!
@@ -46,5 +46,5 @@ declare module "mfld" {
          */
         function register(t: any): void;
     }
-    export { N as $fn, O as $st, L as Mfld };
+    export { k as $fn, O as $st, L as Mfld };
 }

@@ -43,7 +43,7 @@ console.log("Manifold", Mfld);
 Mfld.config({
     trans: {
         // smartTransition: true,
-        dur: 500,
+        // dur: 500,
         // swap: 1000
     },
     fetch: {
