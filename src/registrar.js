@@ -8,7 +8,7 @@ import { _handleTemplates } from "./templates.js";
 
 /** @type {Partial<MfldOps>} */
 let _ops = {};
-let _modes = ["bind", "sync", "templ", "if", "elseif", "else", "each", "get", "head", "post", "put", "delete", "patch"].map(m=> `${ATTR_PREFIX}${m}`);
+let _modes = ["bind", "sync", "templ", "if", "elseif", "else", "each", "get", "head", "post", "put", "delete", "patch", "promote"].map(m=> `${ATTR_PREFIX}${m}`);
 
 /**!
  * @param {Partial<MfldOps>} newops 
@@ -47,6 +47,8 @@ export let _register = (parent)=> {
             let [mode, href, input, trigger] = el.tagName == "A" ?
                 ["get", /** @type {HTMLAnchorElement}*/(el).href, undefined, "click"] : 
                 [/** @type {HTMLFormElement}*/(el).method.toLowerCase(), /** @type {HTMLFormElement}*/(el).action, ()=> "$form", "submit"];
+
+            console.log("PROMOTE", el, href, trigger)
 
             if(href) {
                 _handleFetch(el, trigger, _op_overrides, href, mode, input);

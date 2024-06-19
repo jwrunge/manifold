@@ -37,6 +37,8 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, func)=> {
         let input = func?.({$el: el, $st, $fn});
         let body = input == "$form" ? new FormData(/** @type {HTMLFormElement}*/(el)) : input;
 
+        console.log("FETCHING", href, method, body, input, fetchOps?.fetch?.request?.headers)
+
         //Fetch data
         let data = await fetch(href, {
             ...(fetchOps?.fetch?.request || {}),
@@ -67,6 +69,8 @@ export let _handleFetch = (el, trigger, fetchOps, href, method, func)=> {
 
             //Extract content and schedule a DOM update
             let fullMarkup = (new DOMParser())?.parseFromString?.(resp, 'text/html');
+
+            console.log("FULL MARKUP", fullMarkup, selector, toReplace)
 
             if(fullMarkup) {
                 if(!externalPermissions?.styles) fullMarkup.querySelectorAll("style").forEach(s=> s.parentNode?.removeChild(s));

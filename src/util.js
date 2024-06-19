@@ -29,6 +29,7 @@ export let _getOpOverrides = (ops, el)=> {
                     let prop = set.split("_")[2];
                     /** @type {any} */
                     let val = el.dataset[set];
+                    console.log("OVERRIDE VAL", val)
                     if(val?.match(/\{|\[/)) val = JSON.parse(val);
                     else if(parseInt(val)) val = parseInt(val);
                     if(Array.isArray(val)) val = val.map(v=> parseInt(v) || v);
