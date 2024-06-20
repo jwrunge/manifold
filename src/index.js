@@ -1,6 +1,7 @@
 import { _glob, _store } from "./store.js";
 import { _addToNextTickQueue } from "./updates.js";
 import { _register, _setOptions } from "./registrar.js";
+import { _makeComponent, _component } from "./component.js";
 
 /**! @typedef {"in-start"|"in-end"|"out-start"|"out-end"} HookKey*/
 
@@ -156,3 +157,6 @@ register:
 
 export let $st = _glob.MFLD.$st;
 export let $fn = _glob.MFLD.$fn;
+export let makeComponent = _makeComponent;
+export let component = _component;
+

@@ -1,11 +1,10 @@
 # TO DO
 
-- Handle fetch scripts, styles
+- History API - set up map of states to reference on popstate / routing
 - Checkbox not responding on false -- preventing update?
 - Components
-- Common scaffolding
 
+- Common scaffolding
 - Fix transition spacer
-- History API - set up map of states to reference on popstate / routing
 
 - Double-check -- are store updates being called too often in templ? (check conditions - elseif seems to be called twice)

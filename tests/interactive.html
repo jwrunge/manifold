@@ -10,6 +10,13 @@
 <body>
   <h1><span data-mf_sync="on(click)-> alert('working')">Reactivity test</span></h1>
 
+  <!-- <test-component></test-component> -->
+  <new-component>
+    <div data-mf_each="$st.store1 as l, i">
+      <div>This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
+    </div>
+  </new-component>
+
   <!-- <model-viewer 
     alt="Neil Armstrong's Spacesuit from the Smithsonian Digitization Programs Office and National Air and Space Museum" 
     src="tests/NeilArmstrong.glb" ar environment-image="tests/moon_1k.hdr" 
@@ -114,7 +121,7 @@
   </nav>
 
   <div class="trans" data-mf_Bind="$fn.specialStyling($st.store1, $el)"></div>
-  <a href="tests/header.html" data-mf_promote data-mf_pushstate="whatevs" data-mf_outer="header" data-mf_fetch_externals='[{"domain": "$origin", "scripts": "all", "styles": "selected"}]'>TO HEADER</a>
+  <a href="tests/header.html" data-mf_promote data-mf_pushstate="whatevs" data-mf_outer="header" data-mf_fetch_externals='[{"domain": "$origin", "scripts": "all", "styles": "all"}]'>TO HEADER</a>
 
   <!-- Store script -->
   <script src="./tests/interactive.js" type="module"></script>

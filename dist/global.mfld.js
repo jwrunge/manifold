@@ -1,29 +1,29 @@
-let t="mf_",e=/, {0,}/g,o=()=>`${Date.now()}.${Math.floor(1e5*Math.random())}`,n=(e,o)=>{let n=e.profiles?.[o.dataset?.override||""],i={...e,...n}
-for(let e in o.dataset)for(let n of["fetch","trans"])if(e.startsWith(`${t}${n}_`))try{let t=e.split("_")[2],r=o.dataset[e]
-r?.match(/\{|\[/)?r=JSON.parse(r):parseInt(r)&&(r=parseInt(r)),Array.isArray(r)&&(r=r.map((t=>parseInt(t)||t))),i[n][t]=r}catch(t){console.error(t)}return i},i=(t,o,n)=>{try{let[i,r]=t?.split(/\s{1,}as\s{1,}/)||[t,"value"],s=`let {$el, $st, $fn, ${o||"$val"}, ${n||"$key"}, $body} = ops;return ${i?.match(/^\s{0,}(function)?\(.{0,}\)(=>)?\s{0,}/)?`(${i})()`:i}`,l=r?.split?.(e)?.map?.((t=>t.trim()))||["value"]||[]
-return{func:new Function("ops",s),as:l}}catch(t){return console.error(t),{}}}
-function r(e,o,n){o?.preventDefault()
-let i=e.dataset?.[`${t}pushstate`],r=n
-switch(i){case"":break
+let t="mf_",e=/, {0,}/g,o=()=>`${Date.now()}.${Math.floor(1e5*Math.random())}`,s=(e,o)=>{let s=e.profiles?.[o.dataset?.override||""],n={...e,...s}
+for(let e in o.dataset)for(let s of["fetch","trans"])if(e.startsWith(`${t}${s}_`))try{let t=e.split("_")[2],i=o.dataset[e]
+i?.match(/\{|\[/)?i=JSON.parse(i):parseInt(i)&&(i=parseInt(i)),Array.isArray(i)&&(i=i.map((t=>parseInt(t)||t))),n[s][t]=i}catch(t){console.error(t)}return n},n=(t,o,s)=>{try{let[n,i]=t?.split(/\s{1,}as\s{1,}/)||[t,"value"],l=`let {$el, $st, $fn, ${o||"$val"}, ${s||"$key"}, $body} = ops;return ${n?.match(/^\s{0,}(function)?\(.{0,}\)(=>)?\s{0,}/)?`(${n})()`:n}`,r=i?.split?.(e)?.map?.((t=>t.trim()))||["value"]||[]
+return{func:new Function("ops",l),as:r}}catch(t){return console.error(t),{}}}
+function i(e,o,s){o?.preventDefault()
+let n=e.dataset?.[`${t}pushstate`],i=s
+switch(n){case"":break
 case void 0:return
-default:r=`#${i}`}history.pushState(null,"",r)}let s=[],l=0,f=[],a=t=>{s.push(t),l||(l=requestAnimationFrame($))},u=(t,e,o,n)=>{if(!(n.trans?.smart??1))return
-let{paddingTop:i,paddingBottom:r}=e instanceof Element?getComputedStyle(e):{paddingTop:0,paddingBottom:0},s=document.createElement("div")
-s.style.height=`calc(${Math.abs(o-(t?.clientHeight||0))}px - ${i} - ${r})`,e?.after(s)},c=(t,e)=>{if(!e.trans?.smart??1)return
+default:i=`#${n}`}history.pushState(null,"",i)}let l=[],r=0,a=[],f=t=>{l.push(t),r||(r=requestAnimationFrame(d))},c=(t,e,o,s)=>{if(!(s.trans?.smart??1))return
+let{paddingTop:n,paddingBottom:i}=e instanceof Element?getComputedStyle(e):{paddingTop:0,paddingBottom:0},l=document.createElement("div")
+l.style.height=`calc(${Math.abs(o-(t?.clientHeight||0))}px - ${n} - ${i})`,e?.after(l)},u=(t,e)=>{if(!e.trans?.smart??1)return
 let o=(e?.trans?.dur?.[0]||e?.trans?.dur||600)/2
-a((()=>{t?.animate?.([{height:""},{height:`${t.clientHeight||0}px`}],o)}))},$=()=>{l=0
-for(let t of s){if("function"==typeof t){t()
+f((()=>{t?.animate?.([{height:""},{height:`${t.clientHeight||0}px`}],o)}))},d=()=>{r=0
+for(let t of l){if("function"==typeof t){t()
 continue}let e=t.out?t.out.clientHeight:0,o="inner"==t.relation
-if("prepend"==t.relation)u?.(t.in,t.out,e,t.ops),d(t.in,"in",t.ops,(()=>{t.out?.prepend(t.in),c?.(t.in,t.ops)}))
+if("prepend"==t.relation)c?.(t.in,t.out,e,t.ops),$(t.in,"in",t.ops,(()=>{t.out?.prepend(t.in),u?.(t.in,t.ops)}))
 else{if(["inner","outer"].includes(t.relation)){let e=t.out?.cloneNode(!0)
-e&&(t.out?.after(e),o&&(e.style.border="none",t.out.replaceChildren()),d(e,"out",t.ops,void 0,t.out,o))}u?.(t.in,t.out,e,t.ops),d(t.in,"in",t.ops,(()=>{"outer"==t.relation?t.out?.replaceWith(t.in):t.out?.appendChild(t.in),c?.(t.in,t.ops)}))}t.done?.(t.in)}f.forEach((t=>t())),f=[],s=[]},d=(e,o,n,i,r,s=!1,l)=>{if(e?.nodeType==Node.TEXT_NODE&&(e.replaceWith(document?.createElement("div")),e.textContent=e.textContent),e){const f=Array.isArray(n.trans?.dur)?n.trans?.dur["in"==o?0:1]||n.trans?.dur[0]:n.trans?.dur||0,u=n?.trans?.class||`${t}trans`
-if(e?.classList?.add(u),n.trans?.hooks?.[`${o}-start`]?.(e),"out"==o){if(!(r=r||e))return
-let t={};(n.trans?.smart??1)&&!s&&(t=p(r)),a((()=>{(n.trans?.smart??1)&&s&&r&&(t=p(r)),(n.trans?.smart??1)&&(e.style.position="fixed",e.style.width=t.w,e.style.left=t.left,e.style.top=t.top,e.style.margin="0"),f&&(e.style.transitionDuration=`${f}ms`),e.classList?.add("out")}))}else e?.classList?.add("in"),f&&(e.style.transitionDuration=`${f}ms`),i?.(),setTimeout((()=>{a((()=>{setTimeout((()=>a((()=>e?.classList?.remove(o)))),0)}))}),n.trans?.swap||0)
-setTimeout((()=>{a((()=>{"out"==o&&e?.remove(),e?.classList?.remove(u),n.trans?.hooks?.[`${o}-end`]?.(e),e.style.transitionDuration="","in"==o&&l?.(e)}))}),f+("in"==o&&n.trans?.swap||0))}},p=t=>{let e=getComputedStyle(t),o=t.getBoundingClientRect()
-return{w:`calc(${t.clientWidth}px - ${e.paddingLeft} - ${e.paddingRight})`,left:`calc(${o.left}px + ${m.scrollX}px)`,top:`calc(${o.top}px + ${m.scrollY}px)`}},h=(t,e)=>{let o=m.MFLD.st.get(t)
+e&&(t.out?.after(e),o&&(e.style.border="none",t.out.replaceChildren()),$(e,"out",t.ops,void 0,t.out,o))}c?.(t.in,t.out,e,t.ops),$(t.in,"in",t.ops,(()=>{"outer"==t.relation?t.out?.replaceWith(t.in):t.out?.appendChild(t.in),u?.(t.in,t.ops)}))}t.done?.(t.in)}a.forEach((t=>t())),a=[],l=[]},$=(e,o,s,n,i,l=!1,r)=>{if(e?.nodeType==Node.TEXT_NODE&&(e.replaceWith(document?.createElement("div")),e.textContent=e.textContent),e){const a=Array.isArray(s.trans?.dur)?s.trans?.dur["in"==o?0:1]||s.trans?.dur[0]:s.trans?.dur||0,c=s?.trans?.class||`${t}trans`
+if(e?.classList?.add(c),s.trans?.hooks?.[`${o}-start`]?.(e),"out"==o){if(!(i=i||e))return
+let t={};(s.trans?.smart??1)&&!l&&(t=h(i)),f((()=>{(s.trans?.smart??1)&&l&&i&&(t=h(i)),(s.trans?.smart??1)&&(e.style.position="fixed",e.style.width=t.w,e.style.left=t.left,e.style.top=t.top,e.style.margin="0"),a&&(e.style.transitionDuration=`${a}ms`),e.classList?.add("out")}))}else e?.classList?.add("in"),a&&(e.style.transitionDuration=`${a}ms`),n?.(),setTimeout((()=>{f((()=>{setTimeout((()=>f((()=>e?.classList?.remove(o)))),0)}))}),s.trans?.swap||0)
+setTimeout((()=>{f((()=>{"out"==o&&e?.remove(),e?.classList?.remove(c),s.trans?.hooks?.[`${o}-end`]?.(e),e.style.transitionDuration="","in"==o&&r?.(e)}))}),a+("in"==o&&s.trans?.swap||0))}},h=t=>{let e=getComputedStyle(t),o=t.getBoundingClientRect()
+return{w:`calc(${t.clientWidth}px - ${e.paddingLeft} - ${e.paddingRight})`,left:`calc(${o.left}px + ${m.scrollX}px)`,top:`calc(${o.top}px + ${m.scrollY}px)`}},p=(t,e)=>{let o=m.MFLD.st.get(t)
 return e?o?o.t(t,e):new y(t,e):o||new y(t,e)},m=window
-m.MFLD||(m.MFLD={st:new Map,mut:new Map,$st:new Proxy(h,{get:(t,e)=>t(e)?.value,set:(t,e,o)=>{let n=e.split(/[\.\[\]\?]{1,}/g).map((t=>parseFloat(t.trim())||t.trim())),i=t(n[0]),r=i.value
-for(let t of n.slice(1)||[])r=r[t]
-return r=o,i.update(r),!0}}),$fn:{}})
+m.MFLD||(m.MFLD={st:new Map,$st:new Proxy(p,{get:(t,e)=>t(e)?.value,set:(t,e,o)=>{let s=e.split(/[\.\[\]\?]{1,}/g).map((t=>parseFloat(t.trim())||t.trim())),n=t(s[0]),i=n.value
+for(let t of s.slice(1)||[])i=i[t]
+return i=o,n.update(i),!0}}),$fn:{},comp:{}})
 let g=t=>{if(!t)return 0
 if("number"==typeof t||!0===t)return t
 if(t instanceof Map||t instanceof Set)return g(Array.from(t.entries()||t))
@@ -35,53 +35,58 @@ i=new Map
 l=void 0
 u=new Set
 $=new Set
-p
 h
-constructor(t,e){return this.t(t,e)}t(t,e){if(this.name=t,this.p=e?.scope||document.currentScript||"global",m.MFLD.st.set(t,this),this.p instanceof Element){let t=m.MFLD.mut.get(this.p)||{toRemove:new Set,observer:null}
-t.observer||(t.observer=new MutationObserver((e=>{for(let o of e)if("childList"==o.type)for(let e of o.removedNodes)if(e instanceof Element)for(let o of t.toRemove)if(o.p==e){let e=this.p
-v(o),t.observer?.disconnect(),t.toRemove.delete(o),MFLD.mut.delete(e)}})),t.observer.observe(this.p?.parentElement,{childList:!0})),t.toRemove.add(this),MFLD.mut.set(this.p,t)}return e?.upstream?.map((t=>{let e=h(t)
-return this.u.add(e),e.$.add(this),e})),this.value=e?.value,this.o=e?.updater,this.m(),this}sub(t,e,n=!0){this.i.set(e||o(),t),n&&t?.(this.value)}update(t){this.h&&clearTimeout(this.h),this.h=setTimeout((()=>{a((()=>{let e="function"==typeof t?t?.(this.value):t,o=g(e)
+p
+constructor(t,e){return this.t(t,e)}t(t,e){return this.name=t,this.h=e?.scope||document.currentScript||"global",m.MFLD.st.set(t,this),e?.upstream?.map((t=>{let e=p(t)
+return this.u.add(e),e.$.add(this),e})),this.value=e?.value,this.o=e?.updater,this.m(),this}sub(t,e,s=!0){this.i.set(e||o(),t),s&&t?.(this.value)}update(t){this.p&&clearTimeout(this.p),this.p=setTimeout((()=>{f((()=>{let e="function"==typeof t?t?.(this.value):t,o=g(e)
 if(o!==this.l){this.value=e,this.l=o
 for(let t of this.$)t.m()
 for(let[t,e]of this?.i||[])e?.(this.value,t)}return this.value}))}),0)}m(){let t=this.o?.(Array.from(this.u)?.map((t=>t?.value))||[],this?.value)
-this.update(void 0===t?this.value:t)}}let v=t=>{m.MFLD.st.delete(t?.name||""),t=void 0},w=(e,o,n,s,l,f)=>{let u=async o=>{o?.preventDefault(),o?.stopPropagation(),l||(l=(o?.target)?.method||"get")
-let u=n?.fetch?.externals?.find((t=>"$origin"==t.domain&&s.startsWith(location.origin)||s?.startsWith(t.domain)))
-u||(u=s.startsWith(location.origin)?{domain:"$origin",scripts:"selected",styles:"selected"}:void 0)
-let c=f?.({$el:e,$st:k,$fn:N}),$="$form"==c?new FormData(e):c,d=await fetch(s,{...n?.fetch?.request||{},headers:{...n?.fetch?.request?.headers,MFLD:"true"},method:l,body:"$form"==c||"string"==typeof $?$:JSON.stringify($)}).catch((t=>{n?.fetch?.err?.(t)})),p=d?.status
-if(p&&0==n?.fetch?.onCode?.(p,d))return
-let h=await(d?.[n?.fetch?.resType||"text"]())
-for(let o of["append","prepend","inner","outer"]){let i=e.dataset[`${t}${o}`]
-if(void 0===i)continue
-let[r,s]=i?.split("->").map((t=>t.trim()))||[],l=(new DOMParser)?.parseFromString?.(h,"text/html"),f=l.querySelector(r||"body")
+this.update(void 0===t?this.value:t)}}let b=(t,e,o,s,n,i)=>{let l=e=>T(e,n,o,s,t,!0,i)
+"$mount"==e?l():t.addEventListener(e,l)},T=async(e,o,s,l,r,a,c)=>{e?.preventDefault(),e?.stopPropagation(),o||(o=(e?.target)?.method||"get")
+let u=s?.fetch?.externals?.find((t=>"$origin"==t.domain&&(l.startsWith(location.origin)||!l.match(/^(https?):\/\//))||l?.startsWith(t.domain)))
+u||(u=l.startsWith(location.origin)?{domain:"$origin",scripts:"selected",styles:"selected"}:void 0)
+let d=c?.({$el:r,$st:D,$fn:F}),$="$form"==d?new FormData(r):d,h=await fetch(l,{...s?.fetch?.request||{},headers:{...s?.fetch?.request?.headers,MFLD:"true"},method:o,body:"$form"==d||"string"==typeof $?$:JSON.stringify($)}).catch((t=>{s?.fetch?.err?.(t)})),p=h?.status
+if(p&&0==s?.fetch?.onCode?.(p,h))return
+let m=await(h?.[s?.fetch?.resType||"text"]())
+for(let e of["append","prepend","inner","outer"]){let o=r.dataset[`${t}${e}`]
+if(void 0===o)continue
+let[n,i]=o?.split("->").map((t=>t.trim()))||[],l=(new DOMParser)?.parseFromString?.(m,"text/html"),c=l.querySelector(n||"body")
 if(l){let t=[]
-u?.styles||l.querySelectorAll("style").forEach((t=>t.parentNode?.removeChild(t))),("all"==u?.scripts?l:f).querySelectorAll("script")?.forEach((e=>{["all","selected"].includes(u?.scripts||"")&&t.push(e),e.parentNode?.removeChild(e)})),a({in:f,out:s?document.querySelector(s):e,relation:o,ops:n,done:e=>{D(e)
+if(u?.styles&&"none"!=u?.styles||l.querySelectorAll("style").forEach((t=>t.parentNode?.removeChild(t))),"all"==u?.styles&&l.querySelectorAll("style").forEach((t=>c.appendChild(t))),("all"==u?.scripts?l:c).querySelectorAll("script")?.forEach((e=>{["all","selected"].includes(u?.scripts||"")&&t.push(e),e.parentNode?.removeChild(e)})),a)f({in:c,out:i?document.querySelector(i):r,relation:e,ops:s,done:e=>{k(e)
 for(let o of t){let t=document.createElement("script")
-t.textContent=o.textContent,e.appendChild(t)}}})}}let m=e.dataset?.[`${t}resolve`],g=i(m||"")?.func
-g?.({$el:e,$st:k,$fn:N,$body:h}),r(e,o,s)}
-"$mount"==o?u():e.addEventListener(o,u)}
-function b(t,e,o,n=!1){let i=n?"previousElementSibling":"nextElementSibling"
-return e?.(t)?t:b((o?.(t)||t)?.[i],e,o,n)}let M=(t,e,n)=>h(o(),{upstream:t,updater:()=>e?.({$el:n,$st:F,$fn:E}),scope:n}),T=(t,e,o)=>{M(o,(()=>e?.({$el:t,$st:F,$fn:E})),t)},x=(t,e,o)=>{let n=e=>{o?.({$el:t,$st:F,$fn:E}),r(t,e)}
-"$mount"==e?n():t.addEventListener(e,n)},S=(e,o,n,r,s,l)=>{let f,u,c=document.createElement("template"),$=(t=>{let e="TEMPLATE"
+t.textContent=o.textContent,e.appendChild(t)}}})
+else{document.body.appendChild(c)
+for(let e of t){let t=document.createElement("script")
+for(let o of e.attributes)t.setAttribute(o.name,o.value)
+t.textContent=e.textContent,c.before(t)}}}}let g=r.dataset?.[`${t}resolve`],y=n(g||"")?.func
+y?.({$el:r,$st:D,$fn:F,$body:m}),a&&i(r,e,l)}
+function v(t,e,o,s=!1){let n=s?"previousElementSibling":"nextElementSibling"
+return e?.(t)?t:v((o?.(t)||t)?.[n],e,o,s)}let w=(t,e,s)=>p(o(),{upstream:t,updater:()=>e?.({$el:s,$st:C,$fn:M}),scope:s}),x=(t,e,o)=>{w(o,(()=>e?.({$el:t,$st:C,$fn:M})),t)},E=(t,e,o)=>{let s=e=>{o?.({$el:t,$st:C,$fn:M}),i(t,e)}
+"$mount"==e?s():t.addEventListener(e,s)},S=(e,o,s,i,l,r)=>{let a,c,u=document.createElement("template"),d=(t=>{let e="TEMPLATE"
 if(t.tagName==e)return t
 let o=document.createElement(e)
-return o.content.appendChild(t.cloneNode(!0)),t.replaceWith(o),o})(e.cloneNode(!0)),p=o.match(/if|else/),h=o.match(/(else|elseif)(\s|$)/),m=[]
-if(c.classList.add(`${o}-start`),$.classList.add(`${o}-end`),e.before(c),e.after($),e.remove(),p){if(h){let e=b(c,(e=>e?.classList?.contains(`${t}if-end`)),null,!0)
-b(e,(t=>t==$),(e=>{e?.dataset?.[`${t}cstore`]&&m.push(e?.dataset?.[`${t}cstore`])}))}u=({$el:t,$st:e,$fn:o})=>{if(h)for(let t of m)if(e[t])return!1
-return"else"==h?.[0]||1==r?.({$el:t,$st:e,$fn:o})}}f=M([...s,...m],p?u:r,$),$.dataset[`${t}cstore`]=f.name,f.sub((t=>{void 0!==t&&a((()=>{b(c?.nextElementSibling,(t=>t?.classList?.contains(`${o}-end`)),(t=>d(t,"out",l,(()=>t?.remove())))),p&&!t||((t,e)=>{if(t instanceof Map)for(const[o,n]of t.entries())e(o,n)
+return o.content.appendChild(t.cloneNode(!0)),t.replaceWith(o),o})(e.cloneNode(!0)),h=o.match(/if|else/),p=o.match(/(else|elseif)(\s|$)/),m=[]
+if(u.classList.add(`${o}-start`),d.classList.add(`${o}-end`),e.before(u),e.after(d),e.remove(),h){if(p){let e=v(u,(e=>e?.classList?.contains(`${t}if-end`)),null,!0)
+v(e,(t=>t==d),(e=>{e?.dataset?.[`${t}cstore`]&&m.push(e?.dataset?.[`${t}cstore`])}))}c=({$el:t,$st:e,$fn:o})=>{if(p)for(let t of m)if(e[t])return!1
+return"else"==p?.[0]||1==i?.({$el:t,$st:e,$fn:o})}}a=w([...l,...m],h?c:i,d),d.dataset[`${t}cstore`]=a.name,a.sub((t=>{void 0!==t&&f((()=>{v(u?.nextElementSibling,(t=>t?.classList?.contains(`${o}-end`)),(t=>$(t,"out",r,(()=>t?.remove())))),h&&!t||((t,e)=>{if(t instanceof Map)for(const[o,s]of t.entries())e(o,s)
 else try{let o=Array.from(t||[])
 if(o?.length)o.forEach(e)
-else for(let o in t)e(o,t[o])}catch(e){console.error(`${t} is not iterable`)}})(o.match(/each/)?t:[t],((t,o)=>{let r=$.cloneNode(!0)
-if(!p){let s=$?.innerHTML?.replace(/\$:{([^}]*)}/g,((r,s)=>i(s,n[0],n[1])?.func?.({$el:e,$st:F,$fn:E,[n[0]]:t,[n[1]]:o})||""))||""
-r?.innerHTML&&(r.innerHTML=s)}for(let e of r.content.children)e?.innerHTML||(e.innerHTML=t),$.before(e),d(e,"in",l)}))}))}))},_={},A=["bind","sync","templ","if","elseif","else","each","get","head","post","put","delete","patch","promote"].map((e=>`${t}${e}`))
+else for(let o in t)e(o,t[o])}catch(e){console.error(`${t} is not iterable`)}})(o.match(/each/)?t:[t],((t,o)=>{let i=d.cloneNode(!0)
+if(!h){let l=d?.innerHTML?.replace(/\$:{([^}]*)}/g,((i,l)=>n(l,s[0],s[1])?.func?.({$el:e,$st:C,$fn:M,[s[0]]:t,[s[1]]:o})||""))||""
+i?.innerHTML&&(i.innerHTML=l)}for(let e of i.content.children)e?.innerHTML||(e.innerHTML=t),d.before(e),$(e,"in",r)}))}))}))},_={},A=["bind","sync","templ","if","elseif","else","each","get","head","post","put","delete","patch","promote"].map((e=>`${t}${e}`))
 m.addEventListener("popstate",(()=>{location.reload()}))
-let{$fn:E,$st:F}=m.MFLD,D=r=>{if(r?.nodeType==Node.TEXT_NODE)return
-let s=(r||document.body).querySelectorAll(`[data-${A.join("],[data-")}],a,form`)
-for(let r of s){let s=n(structuredClone(_),r)
-if(r.id||(r.id=o()),void 0!==r.dataset?.[`${t}promote`]){let[t,e,o,n]="A"==r.tagName?["get",r.href,void 0,"click"]:[r.method.toLowerCase(),r.action,()=>"$form","submit"]
-if(e){w(r,n,s,e,t,o)
-continue}}for(let o in r.dataset)if(A.includes(o))for(let n of r.dataset?.[o]?.split(";;")||[]){let l=!!o.match(/get|head|post|put|delete|patch/),f=n?.split(/\s*->\s*/g),a=l&&f.pop()||"",u=l||o.match(/sync/)?f.shift()?.match(/[^\(\)]{1,}/g)?.pop()?.split(e)?.map((t=>t.trim())):[]||[],c=f?.[0]||"",$=Array.from(new Set([...c?.matchAll(/\$st\.(\w{1,})/g)].map((t=>t[1])))),{func:d,as:p}=i(c)
-if(o.match(/each|templ|if|else/))S(r,o,p||[],d,$,s)
-else{u?.length||(u=[""])
-for(let e of u)o.match(/bind/)?T(r,d,$):o.match(/sync/)?x(r,e,d):w(r,e,s,a,o.replace(t,""),d)}}}},L={store:(store_name,store_ops)=>(store_ops?.hasOwnProperty("value")||store_ops?.hasOwnProperty("updater")||(store_ops={value:store_ops}),h(store_name,store_ops)),ustore:(store_name,store_ops)=>h(store_name,store_ops),funcs:funcs=>{for(let t in funcs)m.MFLD.$fn[t]=funcs[t]},config:(new_ops,profile_name)=>{return t=new_ops,void((e=profile_name)?_.profiles={..._.profiles,[e]:t}:_={..._,...t})
-var t,e},onTick:t=>{var e;(e=t)&&f.push(e)},register:t=>{"string"==typeof t&&(t=document.querySelector(t)),D(t)}},k=m.MFLD.$st,N=m.MFLD.$fn
-globalThis.Mfld||(globalThis.Mfld=L)
+let{$fn:M,$st:C}=m.MFLD,k=i=>{if(console.log("REGISTERING",i,i?.childNodes),i?.nodeType==Node.TEXT_NODE)return
+let l=(i||document.body).querySelectorAll(`[data-${A.join("],[data-")}],a,form`)
+for(let r of[i,...l]){let i=s(structuredClone(_),r)
+if(r.id||(r.id=o()),void 0!==r.dataset?.[`${t}promote`]){let[t,e,o,s]="A"==r.tagName?["get",r.href,void 0,"click"]:[r.method.toLowerCase(),r.action,()=>"$form","submit"]
+if(e){b(r,s,i,e,t,o)
+continue}}for(let o in r.dataset)if(A.includes(o))for(let s of r.dataset?.[o]?.split(";;")||[]){let l=!!o.match(/get|head|post|put|delete|patch/),a=s?.split(/\s*->\s*/g),f=l&&a.pop()||"",c=l||o.match(/sync/)?a.shift()?.match(/[^\(\)]{1,}/g)?.pop()?.split(e)?.map((t=>t.trim())):[]||[],u=a?.[0]||"",d=Array.from(new Set([...u?.matchAll(/\$st\.(\w{1,})/g)].map((t=>t[1])))),{func:$,as:h}=n(u)
+if(o.match(/each|templ|if|else/))S(r,o,h||[],$,d,i)
+else{c?.length||(c=[""])
+for(let e of c)o.match(/bind/)?x(r,$,d):o.match(/sync/)?E(r,e,$):b(r,e,i,f,o.replace(t,""),$)}}}},N={store:(store_name,store_ops)=>(store_ops?.hasOwnProperty("value")||store_ops?.hasOwnProperty("updater")||(store_ops={value:store_ops}),p(store_name,store_ops)),ustore:(store_name,store_ops)=>p(store_name,store_ops),funcs:funcs=>{for(let t in funcs)m.MFLD.$fn[t]=funcs[t]},config:(new_ops,profile_name)=>{return t=new_ops,void((e=profile_name)?_.profiles={..._.profiles,[e]:t}:_={..._,...t})
+var t,e},onTick:t=>{var e;(e=t)&&a.push(e)},register:t=>{"string"==typeof t&&(t=document.querySelector(t)),k(t)}},D=m.MFLD.$st,F=m.MFLD.$fn,I=(t,e)=>{m.MFLD.comp[t]=class extends HTMLElement{template
+constructor(){super(),e?.constructor?.bind(this)?.(),this.connected=e?.connected?.bind(this),this.disconnected=e?.disconnected?.bind(this),this.attributeChanged=e?.attributeChanged?.bind(this),this.template=e?.templ||document.getElementById(e?.selector||t),"TEMPLATE"!=this.template?.nodeName&&(this.template=null)}connectedCallback(){const t=this.attachShadow({mode:"open"}),e=this.template?.content.cloneNode(!0)
+if(e){t.append(e)
+for(let e of t.children)k(e)}}attributeChangedCallback(t,e,o){console.log("ATTR CHANGED"),this.attributeChanged?.(t,e,o)}disconnectedCallback(){this.disconnected?.()}},m.MFLD.comp[t]&&customElements.define(t,m.MFLD.comp[t])},L=async e=>{await T(void 0,"get",{fetch:{externals:[{domain:"$origin",scripts:"all",styles:"all"}]}},e,{dataset:{[`${t}append`]:"template -> body"}},!1)}
+globalThis.Mfld||(globalThis.Mfld=N),globalThis.$st||(globalThis.$st=D),globalThis.$fn||(globalThis.$fn=F),globalThis.makeComponent||(globalThis.makeComponent=I),globalThis.component||(globalThis.component=L)

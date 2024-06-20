@@ -24,9 +24,10 @@ export let _store = (name, ops)=> {
 /**!
  * @typedef {object} MFLDGlobal
  * @property {Map<string, Store<any>>} st
- * @property {Map<HTMLElement, { toRemove: Set<Store<any>>, observer: MutationObserver }>} mut
+ * property {Map<HTMLElement, { toRemove: Set<Store<any>>, observer: MutationObserver }>} mut
  * @property {<T>(name: string, ops?: import(".").StoreOptions<T> | undefined) => Store<T>} $st
  * @property {{[key: string]: Function}} $fn
+ * @property {{[key: string]: CustomElementConstructor}} comp
  */
 
 /**!
@@ -38,7 +39,7 @@ export let _glob = /** @type {MFLDWindowObj}*/(window);
 
 if(!_glob.MFLD) _glob.MFLD = {
     st: new Map(),
-    mut: new Map(),
+    // mut: new Map(),
     $st: new Proxy(_store, {
         get: (store, property)=> {
             return store(/** @type {string}*/(property))?.value;
@@ -56,6 +57,7 @@ if(!_glob.MFLD) _glob.MFLD = {
         }
     }),
     $fn: {},
+    comp: {}
 }
 
 /**
@@ -109,36 +111,36 @@ export class Store {
         this._scope = ops?.scope || document.currentScript || "global";
         _glob.MFLD.st.set(name, this);
 
-        //Watch for scope destroy
-        if(this._scope instanceof Element) {
-            let mutOb = _glob.MFLD.mut.get(/** @type {HTMLElement}*/(this._scope)) || { toRemove: new Set(), observer: /** @type {MutationObserver | null}*/(null) };
-            if(!mutOb.observer) {
-                mutOb.observer = new MutationObserver((muts)=> {
-                    for(let mut of muts) {
-                        if(mut.type == "childList") {
-                            for(let node of mut.removedNodes) {
-                                if(node instanceof Element) {
-                                    for(let store of mutOb.toRemove) {
-                                        if(store._scope == /** @type {HTMLElement}*/(node)) {
-                                            let scope = this._scope;
-                                            _destroy(store);
-                                            mutOb.observer?.disconnect();
-                                            mutOb.toRemove.delete(store);
-                                            // @ts-ignore
-                                            MFLD.mut.delete(scope)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-                /** @type {MutationObserver}*/(mutOb.observer).observe(/** @type {HTMLElement}*/(this._scope?.parentElement), { childList: true });
-            }
-            mutOb.toRemove.add(this);
-            // @ts-ignore
-            MFLD.mut.set(this._scope, mutOb);
-        }
+        // //Watch for scope destroy
+        // if(this._scope instanceof Element) {
+        //     let mutOb = _glob.MFLD.mut.get(/** @type {HTMLElement}*/(this._scope)) || { toRemove: new Set(), observer: /** @type {MutationObserver | null}*/(null) };
+        //     if(!mutOb.observer) {
+        //         mutOb.observer = new MutationObserver((muts)=> {
+        //             for(let mut of muts) {
+        //                 if(mut.type == "childList") {
+        //                     for(let node of mut.removedNodes) {
+        //                         if(node instanceof Element) {
+        //                             for(let store of mutOb.toRemove) {
+        //                                 if(store._scope == /** @type {HTMLElement}*/(node)) {
+        //                                     let scope = this._scope;
+        //                                     _destroy(store);
+        //                                     mutOb.observer?.disconnect();
+        //                                     mutOb.toRemove.delete(store);
+        //                                     // @ts-ignore
+        //                                     MFLD.mut.delete(scope)
+        //                                 }
+        //                             }
+        //                         }
+        //                     }
+        //                 }
+        //             }
+        //         });
+        //         /** @type {MutationObserver}*/(mutOb.observer).observe(/** @type {HTMLElement}*/(this._scope?.parentElement), { childList: true });
+        //     }
+        //     mutOb.toRemove.add(this);
+        //     // @ts-ignore
+        //     MFLD.mut.set(this._scope, mutOb);
+        // }
         
         (ops?.upstream?.map(s=> {
             let S = _store(s);

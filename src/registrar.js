@@ -31,6 +31,7 @@ export let {$fn, $st} = _glob.MFLD;
  * @param {HTMLElement | null} [parent] 
  */
 export let _register = (parent)=> {
+    console.log("REGISTERING", parent, parent?.childNodes)
     if(parent?.nodeType == Node.TEXT_NODE) return;
 
     /** @type {NodeListOf<HTMLElement>} */
@@ -38,7 +39,7 @@ export let _register = (parent)=> {
         `[data-${_modes.join(`],[data-`)}],a,form`
     );
 
-    for(let el of els) {
+    for(let el of [/** @type {HTMLElement}*/(parent), ...els]) {
         let _op_overrides = _getOpOverrides(structuredClone(_ops), el);
         if(!el.id) el.id = _id();
 

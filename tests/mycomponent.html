@@ -1,0 +1,12 @@
+<script type="module">
+    import { makeComponent } from "../dist/dev.mfld.js";
+    makeComponent("new-component");
+</script>
+
+<template id="new-component">
+    <div>This is my template!!!</div>
+    <div data-mf_templ="$st.store1 as s">
+        <div>Store 1: $:{s}</div>
+    </div>
+    <slot></slot>
+</template>

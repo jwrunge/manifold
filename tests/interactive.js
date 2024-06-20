@@ -1,4 +1,12 @@
-import { Mfld, $st, $fn } from "../dist/dev.mfld.js";
+import { Mfld, $st, $fn, makeComponent, component } from "../dist/dev.mfld.js";
+
+makeComponent("test-component", {
+    connected() {
+        console.log("THIS", this)
+    }
+});
+
+component("/tests/mycomponent.html");
 
 function sendAlert(val) {
     alert("VALUE IS " + val)
