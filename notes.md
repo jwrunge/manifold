@@ -2,8 +2,8 @@
 
 - History API - set up map of states to reference on popstate / routing
 - Checkbox not responding on false -- preventing update?
-- Components
 - Throbber support
+- Supporting props: loop over observedAttributes and replace $:{} like in templs?
 
 - Common scaffolding
 - Fix transition spacer
