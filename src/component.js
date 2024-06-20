@@ -12,10 +12,10 @@ import { ATTR_PREFIX } from "./util";
  *  selector?: string,
  *  constructor?: Function, 
  *  connected?: Function, 
- *  observedAttributes?: string[],
  *  disconnected?: Function, 
  *  adopted?: Function,
- *  attributeChanged?: Function 
+ *  attributeChanged?: Function ,
+ *  observedAttributes?: Array<string>
  * }} [ops]
  */
 export let _makeComponent = (name, ops)=> {
@@ -25,6 +25,7 @@ export let _makeComponent = (name, ops)=> {
             super();
             ops?.constructor?.bind(this)?.();
             this.connected = ops?.connected?.bind(this);
+            this.adopted = ops?.adopted?.bind(this);
             this.disconnected = ops?.disconnected?.bind(this);
             this.attributeChanged = ops?.attributeChanged?.bind(this);
             this.template = ops?.templ || /** @type {HTMLTemplateElement}*/(document.getElementById(ops?.selector || name));
@@ -33,6 +34,7 @@ export let _makeComponent = (name, ops)=> {
         connectedCallback() {
             const   shadow = this.attachShadow({ mode: ops?.shadow || "closed" }),
                     template = this.template?.content.cloneNode(true);
+
             if(template) {
                 shadow.append(template);
                 for(let child of shadow.children) {
@@ -53,6 +55,13 @@ export let _makeComponent = (name, ops)=> {
         disconnectedCallback() {
             this.disconnected?.();
         }
+        adoptedCallback() {
+            this.adopted?.();
+        }
+
+        static get observedAttributes() {
+            return ops?.observedAttributes || [];
+        }
     }
 
     if(_glob.MFLD.comp[name]) customElements.define(name, _glob.MFLD.comp[name]);
@@ -65,7 +74,7 @@ export let _component = async (src)=> {
         { 
             fetch: { 
                 externals: [{ 
-                    domain: "$origin", scripts: "all", styles: "all" 
+                    domain: "$origin", scripts: "all", styles: "selected" 
                 }]
             }
         },

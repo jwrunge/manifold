@@ -11,12 +11,14 @@
   <h1><span data-mf_sync="on(click)-> alert('working')">Reactivity test</span></h1>
 
   <!-- <test-component></test-component> -->
-  <new-component data-mf_if="$st.store1 == 'OK'">
-    <div data-mf_each="$st.store1 as l, i">
-      <div>This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
-    </div>
-  </new-component>
-  <template data-mf_else>
+  <mfld-default data-mf_if="$st.store1 == 'OK'" data-mf_trans_dur="300">
+    <new-component>
+      <div data-mf_each="$st.store1 as l, i">
+        <div>This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
+      </div>
+    </new-component>
+  </mfld-default>
+  <template data-mf_else data-mf_trans_dur="500">
     <new-component>
       <div>ELSE</div>
       <div data-mf_bind="$el.innerText = $st.store1"></div>
@@ -111,9 +113,9 @@
     <div class="clickable" data-mf_sync="on(click)-> alert('working')">This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
   </template>
 
-  <div data-mf_if="()=>{ return $st.store1 == 'OK'; }" data-mf_trans_dur="[1000, 4000]">
+  <mfld-default data-mf_if="()=>{ return $st.store1 == 'OK'; }" data-mf_trans_dur="[1000, 4000]">
     <div>,/;mn bk,jbbkkjlbikujbuibbbbbbbb</div>
-  </div>
+  </mfld-default>
   <template data-mf_elseif='$st.store1 == "!OK"'>
     <div>elif</div>
   </template>
