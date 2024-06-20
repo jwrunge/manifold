@@ -7,8 +7,8 @@ import { _register, _setOptions } from "./registrar.js";
 /**!
  * @typedef {object} ExternalOptions
  * @property {string} domain - The domain name these settings apply to
- * @property {boolean} [scripts] - Allow scripts from this domain to execute
- * @property {boolean} [styles] - Allow styles from this domain to apply
+ * @property {"all" | "selected" | "none"} [scripts] - Allow scripts from this domain to execute
+ * @property {"all" | "selected" | "none"} [styles] - Allow styles from this domain to apply
  */
 
 /**!

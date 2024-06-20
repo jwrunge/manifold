@@ -48,8 +48,6 @@ export let _register = (parent)=> {
                 ["get", /** @type {HTMLAnchorElement}*/(el).href, undefined, "click"] : 
                 [/** @type {HTMLFormElement}*/(el).method.toLowerCase(), /** @type {HTMLFormElement}*/(el).action, ()=> "$form", "submit"];
 
-            console.log("PROMOTE", el, href, trigger)
-
             if(href) {
                 _handleFetch(el, trigger, _op_overrides, href, mode, input);
                 continue;
