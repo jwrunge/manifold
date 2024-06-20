@@ -31,7 +31,6 @@ export let {$fn, $st} = _glob.MFLD;
  * @param {HTMLElement | null} [parent] 
  */
 export let _register = (parent)=> {
-    console.log("REGISTERING", parent, parent?.childNodes)
     if(parent?.nodeType == Node.TEXT_NODE) return;
 
     /** @type {NodeListOf<HTMLElement>} */

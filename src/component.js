@@ -7,11 +7,14 @@ import { ATTR_PREFIX } from "./util";
  * @param {string} name 
  * @param {{ 
  *  href?: string,
+ *  shadow?: "open" | "closed",
  *  templ?: HTMLTemplateElement,
  *  selector?: string,
  *  constructor?: Function, 
  *  connected?: Function, 
+ *  observedAttributes?: string[],
  *  disconnected?: Function, 
+ *  adopted?: Function,
  *  attributeChanged?: Function 
  * }} [ops]
  */
@@ -28,17 +31,23 @@ export let _makeComponent = (name, ops)=> {
             if(this.template?.nodeName != "TEMPLATE") this.template = null;
         }
         connectedCallback() {
-            const   shadow = this.attachShadow({ mode: 'open' }),
+            const   shadow = this.attachShadow({ mode: ops?.shadow || "closed" }),
                     template = this.template?.content.cloneNode(true);
             if(template) {
                 shadow.append(template);
                 for(let child of shadow.children) {
-                    _register(/** @type {HTMLElement}*/(child));
+                    if(child.nodeName == "SLOT") {
+                        for(let slotChild of /** @type {HTMLSlotElement}*/(child).assignedNodes()) {
+                            _register(/** @type {HTMLElement}*/(slotChild));
+                        }
+                    }
+                    else if(child.nodeName != "TEMPLATE") { 
+                        _register(/** @type {HTMLElement}*/(child));
+                    }
                 }
             }
         }
         attributeChangedCallback(attr, oldVal, newVal) {
-            console.log("ATTR CHANGED")
             this.attributeChanged?.(attr, oldVal, newVal);
         }
         disconnectedCallback() {

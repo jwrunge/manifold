@@ -11,11 +11,17 @@
   <h1><span data-mf_sync="on(click)-> alert('working')">Reactivity test</span></h1>
 
   <!-- <test-component></test-component> -->
-  <new-component>
+  <new-component data-mf_if="$st.store1 == 'OK'">
     <div data-mf_each="$st.store1 as l, i">
       <div>This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
     </div>
   </new-component>
+  <template data-mf_else>
+    <new-component>
+      <div>ELSE</div>
+      <div data-mf_bind="$el.innerText = $st.store1"></div>
+    </new-component>
+  </template>
 
   <!-- <model-viewer 
     alt="Neil Armstrong's Spacesuit from the Smithsonian Digitization Programs Office and National Air and Space Museum" 

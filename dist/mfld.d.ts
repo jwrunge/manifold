@@ -1,7 +1,7 @@
 declare module "mfld" {
+    let P: any;
     let F: any;
-    let D: any;
-    namespace N {
+    namespace L {
         /**!
         * - Create or overwrite a _typed_ global Manifold store by passing `store_ops` (`MfldOps`) -> *returns `Store\<T\>`*
         * - Retrieve an untyped reference to the store specified by name by omitting `store_ops` -> *returns `Store\<any\>`*
@@ -46,7 +46,7 @@ declare module "mfld" {
          */
         function register(t: any): void;
     }
-    function L(e: any): Promise<void>;
-    function I(t: any, e: any): void;
-    export { F as $fn, D as $st, N as Mfld, L as component, I as makeComponent };
+    function N(e: any): Promise<void>;
+    function D(t: any, e: any): void;
+    export { P as $fn, F as $st, L as Mfld, N as component, D as makeComponent };
 }
