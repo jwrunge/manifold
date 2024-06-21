@@ -2,7 +2,7 @@ import { _fetchAndInsert } from "./fetch";
 import { _register } from "./registrar";
 import { ATTR_PREFIX } from "./util";
 
-interface ComponentOptions {
+export interface ComponentOptions {
   href?: string;
   shadow?: "open" | "closed";
   templ?: HTMLTemplateElement;

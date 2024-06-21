@@ -35,7 +35,7 @@ export let _register = (parent?: HTMLElement | null): void => {
                 [(el as HTMLFormElement).method.toLowerCase(), (el as HTMLFormElement).action, () => "$form", "submit"];
 
             if(href) {
-                _handleFetch(el, trigger, _op_overrides, href, mode, input);
+                _handleFetch(el, trigger, _op_overrides, href, mode, input, (el: HTMLElement)=> _register(el));
                 continue;
             }
         }

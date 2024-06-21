@@ -1,4 +1,5 @@
 import { MfldOps } from "./common_types";
+import { RegisteredElement } from "./registered_element";
 import { _store } from "./store";
 export let ATTR_PREFIX = "mf_";
 export let _commaSepRx = /, {0,}/g;
@@ -48,10 +49,10 @@ export let _parseFunction = (condition: string, valArg = "$val", keyArg = "$key"
     }
 }
 
-export function _handlePushState(el: HTMLElement, ev?: Event, href?: string) {
+export function _handlePushState(el: RegisteredElement, ev?: Event, href?: string) {
     ev?.preventDefault();
 
-    let pushState = el.dataset?.[`${ATTR_PREFIX}pushstate`];
+    let pushState = el._dataset("pushstate");
     let push = href;
     switch(pushState) {
         case "": break;

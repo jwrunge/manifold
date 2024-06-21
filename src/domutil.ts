@@ -1,4 +1,5 @@
 import { $fn, $st } from "./common_types";
+import { RegisteredElement } from "./registered_element";
 import { _store, Store } from "./store";
 import { _id } from "./util";
 
@@ -41,10 +42,10 @@ export const _iterateSiblings = (
 };
 
 // Registers an internal store with given options
-export const _registerInternalStore = (upstream?: string[], func?: Function, $el?: HTMLElement): Store<any> => {
+export const _registerInternalStore = (upstream?: string[], func?: Function, $el?: RegisteredElement): Store<any> => {
     return _store(_id(), {
         upstream,
         updater: () => func?.({ $el, $st, $fn }),
-        scope: $el,
+        // scope: $el,
     });
 };

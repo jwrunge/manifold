@@ -14,10 +14,10 @@ export let Mfld = {
     config: (new_ops: MfldOps, profile_name: string)=> _setOptions(new_ops, profile_name),
     onTick: (cb: Function)=> _addToNextTickQueue(cb),
     register: (parent: HTMLElement | string | null)=> _register( typeof parent == "string" ? document.querySelector(parent) as HTMLElement | null : parent),
+    makeComponent: _makeComponent,
+    component: _component
 };
 
 export let $st = MFLD.$st;
 export let $fn = MFLD.$fn;
-export let makeComponent = _makeComponent;
-export let component = _component;
 

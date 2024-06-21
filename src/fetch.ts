@@ -1,8 +1,7 @@
 import { _handlePushState, _parseFunction, ATTR_PREFIX } from "./util";
 import { _scheduleUpdate } from "./updates";
-import { _register } from "./registrar";
 import { _store } from "./store";
-import { $fn, $st } from "./index";
+import { $fn, $st } from "./common_types";
 import { ExternalOptions, MfldOps } from "./common_types";
 
 export const _handleFetch = (
@@ -11,9 +10,10 @@ export const _handleFetch = (
   fetchOps: MfldOps,
   href: string,
   method?: string,
-  func?: Function
+  func?: Function,
+  complete?: Function,
 ): void => {
-  const ev = (e?: Event) => _fetchAndInsert(e, method, fetchOps, href, el, true, func);
+  const ev = (e?: Event) => _fetchAndInsert(e, method, fetchOps, href, el, true, func, complete);
 
   if(trigger === "$mount") ev();
   else el.addEventListener(trigger, ev);
@@ -26,7 +26,8 @@ export const _fetchAndInsert = async (
   href: string,
   el: HTMLElement | { dataset: { [key: string]: string } },
   domUpdate: boolean,
-  func?: Function
+  func?: Function,
+  complete?: Function,
 ): Promise<void> => {
   e?.preventDefault();
   e?.stopPropagation();
@@ -89,7 +90,7 @@ export const _fetchAndInsert = async (
         relation: instruction,
         ops: fetchOps,
         done: (el) => {
-          _register(el);
+          complete?.(el);
           for (let s of scripts) {
             let n = document.createElement("script");
             n.textContent = s.textContent;
