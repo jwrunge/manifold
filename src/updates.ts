@@ -1,43 +1,32 @@
-/** @typedef {import("./index.js").MfldOps} MfldOps */
+import type { MfldOps } from "./common_types";
+import { ATTR_PREFIX } from "./util";
 
-import { _glob } from "./store.js";
-import { ATTR_PREFIX } from "./util.js";
+type DomWorkOrder = {
+    in: HTMLElement | null;
+    out: HTMLElement | null;
+    relation: "append" | "prepend" | "inner" | "outer";
+    ops: Partial<MfldOps>;
+    done: (el: HTMLElement | null) => void;
+}
 
-/**
- * @typedef {Object} DomWorkOrder
- * @property {HTMLElement} in - The input HTMLElement
- * @property {HTMLElement} out - The output HTMLElement
- * @property {"append" | "prepend" | "inner" | "outer"} relation - The relation between the input and output elements
- * @property {Partial<MfldOps>} ops - The fetch options for the operation
- * @property {(el: HTMLElement | null) => void} done - The callback function to be executed when the operation is done
- */
-
-/** @type {(DomWorkOrder | Function)[]} */ let workArray = [];
+let workArray: (DomWorkOrder | Function)[] = [];
 let cancelAnimationFrame = 0;
-/** @type {Map<string, (any | ((any)=> any))>} */
-
-// Next tick queue
-/**
- * @type {Function[]}
- */
-let _nextTickQueue = [];
-
-/** @type {HTMLElement | null} */
-let spacer;
+let _nextTickQueue: Function[] = [];
+let spacer: HTMLElement | null;
 let spacerHeight = "";
 
-export let _addToNextTickQueue = (fn)=> {
+export let _addToNextTickQueue = (fn: Function)=> {
     fn && _nextTickQueue.push(fn);
 }
 
-export let _scheduleUpdate = (update)=> {
+export let _scheduleUpdate = (update: DomWorkOrder | Function)=> {
     workArray.push(update);
     if(!cancelAnimationFrame) {
         cancelAnimationFrame = requestAnimationFrame(_runUpdates);
     }
 }
 
-let _addSpacer = (inEl, wrapper, wrapperHeight, ops)=> {
+let _addSpacer = (inEl: HTMLElement | null, wrapper: HTMLElement | null, wrapperHeight: number, ops: Partial<MfldOps>)=> {
     if(!(ops.trans?.smart ?? true)) return;
     let { paddingTop, paddingBottom } = wrapper instanceof Element ? getComputedStyle(wrapper) : { paddingTop: 0, paddingBottom: 0 };
     let spacer = document.createElement("div");
@@ -45,9 +34,9 @@ let _addSpacer = (inEl, wrapper, wrapperHeight, ops)=> {
     wrapper?.after(spacer);
 }
 
-let _adjustSizing = (inEl, ops)=> {
+let _adjustSizing = (inEl: HTMLElement | null, ops: Partial<MfldOps>)=> {
     if(!ops.trans?.smart ?? true) return;
-    let dur = (ops?.trans?.dur?.[0] || ops?.trans?.dur || 600)/2
+    let dur = (typeof ops?.trans?.dur == "number" ? ops?.trans?.dur : ops?.trans?.dur?.[0] || 0)/2
     _scheduleUpdate(()=> {
         spacer?.remove();
         inEl?.animate?.([
@@ -70,29 +59,31 @@ let _runUpdates = ()=> {
         let _getDimensionsAfterUpdate = order.relation == "inner";
 
         if(order.relation == "prepend") {
-            _addSpacer?.(order.in, order.out, wrapperHeight, order.ops);
+            _addSpacer?.(order?.in, order?.out, wrapperHeight, order.ops);
             _applyTransition(order.in, "in", order.ops, ()=> {
-                order.out?.prepend(order.in);
-                _adjustSizing?.(order.in, order.ops);
+                if(order?.in) order.out?.prepend(order.in);
+                _adjustSizing?.(order?.in, order.ops);
             });
         }
         else {
             if(["inner", "outer"].includes(order.relation)) {
-                let container = /** @type {HTMLElement}*/(order.out?.cloneNode(true));
+                let container = order.out?.cloneNode(true) as HTMLElement | null;
                 if(container) {
                     order.out?.after(container);
                     if(_getDimensionsAfterUpdate) {
                         container.style.border = "none";
-                        order.out.replaceChildren();
+                        order?.out?.replaceChildren();
                     }
-                    _applyTransition(container, "out", order.ops, undefined, order.out, _getDimensionsAfterUpdate);
+                    _applyTransition(container, "out", order.ops, undefined, order?.out, _getDimensionsAfterUpdate);
                 }
             }
 
             _addSpacer?.(order.in, order.out, wrapperHeight, order.ops);
             _applyTransition(order.in, "in", order.ops, ()=> {
-                if(order.relation == "outer") order.out?.replaceWith(order.in)
-                else order.out?.appendChild(order.in);
+                if(order.in) {
+                    if(order.relation == "outer") order.out?.replaceWith(order.in)
+                    else order.out?.appendChild(order.in);
+                }
                 _adjustSizing?.(order.in, order.ops);
             });
         }
@@ -105,17 +96,15 @@ let _runUpdates = ()=> {
     workArray = [];
 }
 
-/**
- * @param {HTMLElement} el 
- * @param {"in" | "out"} dir 
- * @param {Partial<MfldOps>} ops 
- * @param {Function} [fn] 
- * @param {HTMLElement} [refElement]
- * @param {boolean} [_getDimensionsAfterUpdate]
- * @param {Function} [after]
- * @returns 
- */
-export let _applyTransition = (el, dir, ops, fn, refElement, _getDimensionsAfterUpdate = false, after)=> {
+export let _applyTransition = (
+    el: HTMLElement | null, 
+    dir: "in" | "out", 
+    ops: Partial<MfldOps>, 
+    fn?: Function, 
+    refElement?: HTMLElement | null, 
+    _getDimensionsAfterUpdate = false, 
+    after?: Function
+)=> {
     if(el?.nodeType == Node.TEXT_NODE) {
         el.replaceWith(document?.createElement("div"));
         el.textContent = el.textContent;
@@ -130,7 +119,7 @@ export let _applyTransition = (el, dir, ops, fn, refElement, _getDimensionsAfter
         if(dir == "out") {
             refElement = refElement || el;
             if(!refElement) return;
-            let dimensions = {};
+            let dimensions = {} as { w: string, left: string, top: string };
             if((ops.trans?.smart ?? true) && !_getDimensionsAfterUpdate) {
                 dimensions = _getDimensions(refElement);
             }
@@ -176,12 +165,12 @@ export let _applyTransition = (el, dir, ops, fn, refElement, _getDimensionsAfter
     }
 }
 
-let _getDimensions = (refElement)=> {
+let _getDimensions = (refElement: HTMLElement)=> {
     let style = getComputedStyle(refElement);
     let rect = refElement.getBoundingClientRect();
     return {
         w: `calc(${(refElement).clientWidth}px - ${style.paddingLeft} - ${style.paddingRight})`,
-        left: `calc(${rect.left}px + ${_glob.scrollX}px)`,
-        top: `calc(${rect.top}px + ${_glob.scrollY}px)`
+        left: `calc(${rect.left}px + ${window.scrollX}px)`,
+        top: `calc(${rect.top}px + ${window.scrollY}px)`
     };
 }

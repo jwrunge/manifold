@@ -15,7 +15,7 @@
     "type": "module",
     "types": "./dist/mfld.d.ts",
     "scripts": {
-        "build": "rollup -c && node util/generate_d.ts.js",
+        "build": "rollup -c",
         "example": "npm run build & sirv tests --port 5000 --dev true ",
         "dev": "npm run build & sirv --port 5000 --dev true --single tests/interactive.html",
         "version": "node ./util/updateVersion.js",
@@ -25,9 +25,11 @@
     },
     "devDependencies": {
         "@rollup/plugin-terser": "^0.4.4",
+        "@rollup/plugin-typescript": "^11.1.6",
         "rollup": "^4.5.0",
         "sirv-cli": "^2.0.2",
         "terser": "^5.24.0",
+        "tslib": "^2.6.3",
         "typescript": "^5.4.5"
     }
 }

@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+      "lib": ["DOM", "DOM.iterable", "ESNext"],
+      "module": "ESNext",
+      "target": "ESNext",
+      "moduleResolution": "bundler",
+      "moduleDetection": "force",
+      "noEmit": false,
+      "strict": true,
+      "outDir": "dist",
+      "sourceMap": true,
+    },
+    "files": ["src/index.ts"]
+  }

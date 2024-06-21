@@ -1,4 +1,4 @@
-import { Mfld, $st, $fn, makeComponent, component } from "../dist/dev.mfld.js";
+import { Mfld, makeComponent, component } from "../dist/dev.mfld.js";
 
 makeComponent("test-component", {
     connected() {

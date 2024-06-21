@@ -1,5 +1,5 @@
-import { _store } from "./store.js";
-
+import { MfldOps } from "./common_types";
+import { _store } from "./store";
 export let ATTR_PREFIX = "mf_";
 export let _commaSepRx = /, {0,}/g;
 
@@ -7,17 +7,7 @@ export let _id = ()=> {
     return `${Date.now()}.${Math.floor(Math.random() * 100_000)}`;
 }
 
-/** 
- * @template T
- * @typedef {import("./store.js").Store<T>} Store 
- */
-
-/**
- * @param {import(".").MfldOps} ops
- * @param {HTMLElement} el
- * @returns {import(".").MfldOps}
- */
-export let _getOpOverrides = (ops, el)=> {
+export let _getOpOverrides = (ops: Partial<MfldOps>, el: HTMLElement)=> {
     let overrides = ops.profiles?.[el.dataset?.override || ""];
     let res = { ...ops, ...overrides };
     
@@ -27,12 +17,11 @@ export let _getOpOverrides = (ops, el)=> {
             if(set.startsWith(`${ATTR_PREFIX}${key}_`)) {
                 try {
                     let prop = set.split("_")[2];
-                    /** @type {any} */
-                    let val = el.dataset[set];
+                    let val: any = el.dataset[set];
                     if(val?.match(/\{|\[/)) val = JSON.parse(val);
-                    else if(parseInt(val)) val = parseInt(val);
+                    else if(parseInt(val || "")) val = parseInt(val);
                     if(Array.isArray(val)) val = val.map(v=> parseInt(v) || v);
-                    res[key][prop] = val;
+                    (res as any)[key][prop] = val;
                 }
                 catch(e) {
                     console.error(e);
@@ -44,19 +33,13 @@ export let _getOpOverrides = (ops, el)=> {
     return res;
 }
 
-/**
- * @param {string} condition 
- * @param {string} [valArg] 
- * @param {string} [keyArg] 
- * @returns {{ func?: Function, as?: string[] }}
- */
-export let _parseFunction = (condition, valArg, keyArg)=> {
+export let _parseFunction = (condition: string, valArg = "$val", keyArg = "$key"): { func?: Function, as?: string[]}=> {
     try {
         let [fnStr, asStr] = condition?.split(/\s{1,}as\s{1,}/) || [condition, "value"],
             fn = fnStr?.match(/^\s{0,}(function)?\(.{0,}\)(=>)?\s{0,}/) ? `(${fnStr})()` : fnStr,
-            fnText = `let {$el, $st, $fn, ${valArg || "$val"}, ${keyArg || "$key"}, $body} = ops;return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
+            fnText = `let {$el, $st, $fn, ${valArg}, ${keyArg}, $body} = ops;return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
             as = asStr?.split?.(_commaSepRx)?.map?.(s=> s.trim()) || ["value"] || [];
-        let func = new Function("ops", fnText);
+        let func: Function | undefined = new Function("ops", fnText);
         return { func, as };
     }
     catch(e) {
@@ -65,16 +48,10 @@ export let _parseFunction = (condition, valArg, keyArg)=> {
     }
 }
 
-/**
- * @param {HTMLElement} el 
- * @param {Event} [ev]
- * @param {string} [href]
- */
-export function _handlePushState(el, ev, href) {
+export function _handlePushState(el: HTMLElement, ev?: Event, href?: string) {
     ev?.preventDefault();
 
     let pushState = el.dataset?.[`${ATTR_PREFIX}pushstate`];
-    /** @type {string | undefined} */
     let push = href;
     switch(pushState) {
         case "": break;
