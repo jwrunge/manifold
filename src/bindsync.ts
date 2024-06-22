@@ -1,5 +1,5 @@
 import { $fn, $st } from "./common_types";
-import { _registerInternalStore } from "./domutil";
+import { _registerInternalStore } from "./util";
 import { RegisteredElement } from "./registered_element";
 import { _handlePushState } from "./util";
 
@@ -15,8 +15,7 @@ export let _handleSync = (el: RegisteredElement, trigger: string, func?: Functio
     let ev = (e?: Event): void => {
         func?.({$el: el, $st, $fn});
         if(e) _handlePushState(el, e);
-        RegisteredElement
     }
     if(trigger === "$mount") ev();
-    else RegisteredElement._addListener(trigger, ev);
+    else el._addListener(trigger, ev);
 }

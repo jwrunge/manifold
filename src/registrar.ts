@@ -5,9 +5,10 @@ import { _handleFetch } from "./fetch";
 import { _handleBind, _handleSync } from "./bindsync";
 import { _handleTemplates } from "./templates";
 import type { MfldOps } from "./common_types";
+import { RegisteredElement } from "./registered_element";
 
 let _ops: Partial<MfldOps> = {};
-let _modes = ["bind", "sync", "templ", "if", "elseif", "else", "each", "get", "head", "post", "put", "delete", "patch", "promote"].map(m => `${ATTR_PREFIX}${m}`);
+let _modes = ["bind", "sync", "templ", "if", "elseif", "else", "each", "get", "head", "post", "put", "delet e", "patch", "promote"].map(m => `${ATTR_PREFIX}${m}`);
 
 export let _setOptions = (newops: Partial<MfldOps>, profileName?: string): void => {
     if(profileName) _ops.profiles = { ..._ops.profiles, [profileName]: newops };
@@ -25,14 +26,13 @@ export let _register = (parent?: HTMLElement | null): void => {
         `[data-${_modes.join(`],[data-`)}],a,form`
     );
 
-    for (let el of [parent, ...els] as HTMLElement[]) {
+    for (let el of [parent, ...els].map(e=> new RegisteredElement({element: e as HTMLElement}))) {
         let _op_overrides = _getOpOverrides(structuredClone(_ops), el);
-        if(!el.id) el.id = _id();
 
-        if(el.dataset?.[`${ATTR_PREFIX}promote`] !== undefined) {
-            let [mode, href, input, trigger] = el.tagName == "A" ?
-                ["get", (el as HTMLAnchorElement).href, undefined, "click"] :
-                [(el as HTMLFormElement).method.toLowerCase(), (el as HTMLFormElement).action, () => "$form", "submit"];
+        if(el._dataset?.("promote")) {
+            let [mode, href, input, trigger] = el._el.tagName == "A" ?
+                ["get", (el._el as HTMLAnchorElement).href, undefined, "click"] :
+                [(el._el as HTMLFormElement).method.toLowerCase(), (el._el as HTMLFormElement).action, () => "$form", "submit"];
 
             if(href) {
                 _handleFetch(el, trigger, _op_overrides, href, mode, input, (el: HTMLElement)=> _register(el));
@@ -40,11 +40,11 @@ export let _register = (parent?: HTMLElement | null): void => {
             }
         }
 
-        for (let mode in el.dataset) {
+        for (let mode in el._el.dataset) {
             if(!_modes.includes(mode)) continue;
 
-            for (let setting of el.dataset?.[mode]?.split(";;") || []) {
-                let isFetch = /get|head|post|put|delete|patch/.test(mode) ? true : false,
+            for (let setting of el._dataset(mode)?.split(";;") || []) {
+                let isFetch = /get|head|post|put|delet e|patch/.test(mode) ? true : false,
                     parts = setting?.split(/\s*->\s*/g),
                     href = isFetch ? parts.pop() || "" : "",
                     triggers = isFetch || /sync/.test(mode) ? parts.shift()?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s => s.trim()) : [] || [],

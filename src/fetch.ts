@@ -1,11 +1,12 @@
 import { _handlePushState, _parseFunction, ATTR_PREFIX } from "./util";
 import { _scheduleUpdate } from "./updates";
 import { _store } from "./store";
-import { $fn, $st } from "./common_types";
+import { $fn, $st, FetchInsertionMode } from "./common_types";
 import { ExternalOptions, MfldOps } from "./common_types";
+import { RegisteredElement } from "./registered_element";
 
-export const _handleFetch = (
-  el: HTMLElement,
+export let _handleFetch = (
+  el: RegisteredElement,
   trigger: string,
   fetchOps: MfldOps,
   href: string,
@@ -13,18 +14,18 @@ export const _handleFetch = (
   func?: Function,
   complete?: Function,
 ): void => {
-  const ev = (e?: Event) => _fetchAndInsert(e, method, fetchOps, href, el, true, func, complete);
+  let ev = (e?: Event) => _fetchAndInsert(e, method, fetchOps, href, el, true, func, complete);
 
   if(trigger === "$mount") ev();
-  else el.addEventListener(trigger, ev);
+  else el._addListener(trigger, ev);
 };
 
-export const _fetchAndInsert = async (
+export let _fetchAndInsert = async (
   e: Event | undefined,
   method: string | undefined,
   fetchOps: MfldOps,
   href: string,
-  el: HTMLElement | { dataset: { [key: string]: string } },
+  el: RegisteredElement | { _dataset: (val: string)=> string },
   domUpdate: boolean,
   func?: Function,
   complete?: Function,
@@ -48,7 +49,9 @@ export const _fetchAndInsert = async (
   }
 
   let input = func ? func({ $el: el, $st, $fn }) : undefined;
-  let body: FormData | string | undefined = input === "$form" ? new FormData(el as HTMLFormElement) : input;
+  let body: FormData | string | undefined = input === "$form"
+    ? new FormData((el as RegisteredElement)._el as HTMLFormElement) 
+    : input;
 
   let data = await fetch(href, {
     ...(fetchOps.fetch?.request || {}),
@@ -67,52 +70,54 @@ export const _fetchAndInsert = async (
 
   let resp = await data?.[fetchOps.fetch?.resType || "text"]();
 
-  for (let instruction of ["append", "prepend", "inner", "outer"] as const) {
-    let ds = el.dataset[`${ATTR_PREFIX}${instruction}`];
-    if(ds === undefined) continue;
+  for(let instruction of ["append", "prepend", "inner", "outer"]) {
+    let ds = el._dataset(instruction);
+    if(!ds) continue;
     let [selector, toReplace] = ds.split("->").map(s => s.trim());
 
     let fullMarkup = new DOMParser().parseFromString(resp, 'text/html');
-    let inEl = fullMarkup.querySelector<HTMLElement>(selector || "body");
+    let inEl = new RegisteredElement({ parent: fullMarkup, query: selector || "body" });
 
     if(fullMarkup) {
       let scripts: HTMLScriptElement[] = [];
       if(!externalPermissions?.styles || externalPermissions.styles === "none") fullMarkup.querySelectorAll("style").forEach(s => s.parentNode?.removeChild(s));
-      if(externalPermissions?.styles === "all") fullMarkup.querySelectorAll("style").forEach(s => inEl?.appendChild(s));
-      (externalPermissions?.scripts === "all" ? fullMarkup : inEl)?.querySelectorAll("script").forEach(s => {
+      if(externalPermissions?.styles === "all") fullMarkup.querySelectorAll("style").forEach(s => inEl?._append(s, false));
+      (externalPermissions?.scripts === "all" ? fullMarkup : inEl._el)?.querySelectorAll("script").forEach(s => {
         if(["all", "selected"].includes(externalPermissions?.scripts || "")) scripts.push(s as HTMLScriptElement);
         s.parentNode?.removeChild(s);
       });
 
-      if(domUpdate && inEl) _scheduleUpdate({
-        in: inEl,
-        out: toReplace ? document.querySelector<HTMLElement>(toReplace) : el as HTMLElement,
-        relation: instruction,
-        ops: fetchOps,
-        done: (el) => {
-          complete?.(el);
+      if(inEl) {
+        if(domUpdate) _scheduleUpdate({
+          in: inEl,
+          out: toReplace ? new RegisteredElement({query: toReplace}) : el as RegisteredElement,
+          relation: instruction as FetchInsertionMode,
+          ops: fetchOps,
+          done: (el) => {
+            complete?.(el);
+            for (let s of scripts) {
+              let n = document.createElement("script");
+              n.textContent = s.textContent;
+              el?._append(n, false);
+            }
+          },
+        });
+        else {
+          document.body.appendChild(inEl._el);
           for (let s of scripts) {
             let n = document.createElement("script");
+            for (let attr of s.attributes) n.setAttribute(attr.name, attr.value);
             n.textContent = s.textContent;
-            el?.appendChild(n);
+            inEl._el.before(n);
           }
-        },
-      });
-      else if(inEl) {
-        document.body.appendChild(inEl);
-        for (let s of scripts) {
-          let n = document.createElement("script");
-          for (let attr of s.attributes) n.setAttribute(attr.name, attr.value);
-          n.textContent = s.textContent;
-          inEl.before(n);
         }
       }
     }
   }
 
-  let resolveTxt = el.dataset?.[`${ATTR_PREFIX}resolve`];
+  let resolveTxt = el._dataset("resolve");
   let resolveFunc = _parseFunction(resolveTxt || "")?.func;
   resolveFunc?.({ $el: el, $st, $fn, $body: resp });
 
-  if(domUpdate) _handlePushState(el as HTMLElement, e, href);
+  if(domUpdate) _handlePushState(el as RegisteredElement, e, href);
 };

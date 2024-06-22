@@ -1,4 +1,5 @@
 import { _fetchAndInsert } from "./fetch";
+import { RegisteredElement } from "./registered_element";
 import { _register } from "./registrar";
 import { ATTR_PREFIX } from "./util";
 
@@ -17,7 +18,7 @@ export interface ComponentOptions {
 
 export let _makeComponent = (name: string, ops?: ComponentOptions): void => {
   MFLD.comp[name] = class extends HTMLElement {
-    template: HTMLTemplateElement | null = null;
+    template: RegisteredElement | null = null;
 
     connected?: Function
     adopted?: Function
@@ -31,13 +32,14 @@ export let _makeComponent = (name: string, ops?: ComponentOptions): void => {
       this.adopted = ops?.adopted?.bind(this);
       this.disconnected = ops?.disconnected?.bind(this);
       this.attributeChanged = ops?.attributeChanged?.bind(this);
-      this.template = ops?.templ || (document.getElementById(ops?.selector || name) as HTMLTemplateElement);
-      if(this.template?.nodeName != "TEMPLATE") this.template = null;
+      this.template = new RegisteredElement({
+        element: ops?.templ || (document.getElementById(ops?.selector || name) as HTMLTemplateElement)
+      });
     }
 
     connectedCallback(): void {
-      const shadow = this.attachShadow({ mode: ops?.shadow || "closed" }),
-            template = this.template?.content.cloneNode(true);
+      let shadow = this.attachShadow({ mode: ops?.shadow || "closed" }),
+            template = (this.template?._el as HTMLTemplateElement).content.cloneNode(true);
 
       if(template) {
         shadow.append(template);
@@ -85,7 +87,7 @@ export let _component = async (src: string): Promise<void> => {
       }
     },
     src,
-    { dataset: { [`${ATTR_PREFIX}append`]: "template -> body" } },
+    { _dataset: (_: string) => "template -> body" },
     false
   )
 }

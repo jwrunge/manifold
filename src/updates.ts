@@ -1,12 +1,13 @@
-import type { MfldOps } from "./common_types";
+import type { FetchInsertionMode, MfldOps } from "./common_types";
+import { RegisteredElement } from "./registered_element";
 import { ATTR_PREFIX } from "./util";
 
 type DomWorkOrder = {
-    in: HTMLElement | null;
-    out: HTMLElement | null;
-    relation: "append" | "prepend" | "inner" | "outer";
+    in: RegisteredElement;
+    out: RegisteredElement;
+    relation: FetchInsertionMode;
     ops: Partial<MfldOps>;
-    done: (el: HTMLElement | null) => void;
+    done: (el: RegisteredElement) => void;
 }
 
 let workArray: (DomWorkOrder | Function)[] = [];
@@ -26,7 +27,7 @@ export let _scheduleUpdate = (update: DomWorkOrder | Function)=> {
     }
 }
 
-let _addSpacer = (inEl: HTMLElement | null, wrapper: HTMLElement | null, wrapperHeight: number, ops: Partial<MfldOps>)=> {
+let _addSpacer = (inEl: RegisteredElement, wrapper: HTMLElement | null, wrapperHeight: number, ops: Partial<MfldOps>)=> {
     if(!(ops.trans?.smart ?? true)) return;
     let { paddingTop, paddingBottom } = wrapper instanceof Element ? getComputedStyle(wrapper) : { paddingTop: 0, paddingBottom: 0 };
     let spacer = document.createElement("div");
@@ -97,11 +98,11 @@ let _runUpdates = ()=> {
 }
 
 export let _applyTransition = (
-    el: HTMLElement | null, 
+    el: RegisteredElement, 
     dir: "in" | "out", 
     ops: Partial<MfldOps>, 
     fn?: Function, 
-    refElement?: HTMLElement | null, 
+    refElement?: RegisteredElement, 
     _getDimensionsAfterUpdate = false, 
     after?: Function
 )=> {
@@ -111,8 +112,8 @@ export let _applyTransition = (
     }
 
     if(el) {
-        const dur = Array.isArray(ops.trans?.dur) ? ops.trans?.dur[dir == "in" ? 0 : 1] || ops.trans?.dur[0] : ops.trans?.dur || 0;
-        const transClass = ops?.trans?.class || `${ATTR_PREFIX}trans`;
+        let dur = Array.isArray(ops.trans?.dur) ? ops.trans?.dur[dir == "in" ? 0 : 1] || ops.trans?.dur[0] : ops.trans?.dur || 0;
+        let transClass = ops?.trans?.class || `${ATTR_PREFIX}trans`;
         el?.classList?.add(transClass);
         ops.trans?.hooks?.[`${dir}-start`]?.(el);
 
@@ -163,14 +164,4 @@ export let _applyTransition = (
         }, 
         dur + (dir == "in" ? ops.trans?.swap || 0 : 0));
     }
-}
-
-let _getDimensions = (refElement: HTMLElement)=> {
-    let style = getComputedStyle(refElement);
-    let rect = refElement.getBoundingClientRect();
-    return {
-        w: `calc(${(refElement).clientWidth}px - ${style.paddingLeft} - ${style.paddingRight})`,
-        left: `calc(${rect.left}px + ${window.scrollX}px)`,
-        top: `calc(${rect.top}px + ${window.scrollY}px)`
-    };
 }

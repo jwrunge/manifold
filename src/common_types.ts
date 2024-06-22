@@ -11,7 +11,7 @@ declare global {
       }
     }
 
-    const MFLD: typeof window.MFLD;
+    let MFLD: typeof window.MFLD;
 }
 
 if(!window.MFLD) window.MFLD = {
@@ -44,6 +44,8 @@ export let { $fn, $st } = MFLD;
 /***
  * OPTIONS
  */
+export type FetchInsertionMode = "append" | "prepend" | "inner" | "outer";
+
 export type MfldOps = {
   profiles?: { [ key: string ]: Partial<MfldOps> }
   fetch?: FetchOptions
