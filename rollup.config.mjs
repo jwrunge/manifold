@@ -1,8 +1,8 @@
 import typescript from '@rollup/plugin-typescript';
 import terser from '@rollup/plugin-terser';
+import dts from "rollup-plugin-dts";
 
 const input = 'src/index.ts';
-
 const plugins = [
     typescript(),
     terser({
@@ -30,10 +30,18 @@ function output(details) {
 export default [
     {
         input,
-        output: output([
-            { sourcemap: false },
-            { sourcemap: true, prefix: "dev" }
-        ]),
+        output: [...output([
+            { prefix: "", sourcemap: false },
+            { prefix: "dev", sourcemap: true },
+        ])],
         plugins
     },
-];
+    {
+        input: "./dist/types/index.d.ts",
+        output: {
+            file: "dist/mfld.d.ts",
+            format: "es",
+            plugins: [ dts() ]
+        }
+    }
+]

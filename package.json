@@ -1,6 +1,6 @@
 {
     "name": "mfld",
-    "version": "0.1.0",
+    "version": "0.2.2",
     "main": "dist/slim.mfld.js",
     "exports": {
         ".": {
@@ -27,6 +27,7 @@
         "@rollup/plugin-terser": "^0.4.4",
         "@rollup/plugin-typescript": "^11.1.6",
         "rollup": "^4.5.0",
+        "rollup-plugin-dts": "^6.1.1",
         "sirv-cli": "^2.0.2",
         "terser": "^5.24.0",
         "typescript": "^5.4.5"
