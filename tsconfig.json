@@ -7,10 +7,9 @@
       "moduleDetection": "force",
       "noEmit": false,
       "strict": true,
-      "outDir": "dist",
       "sourceMap": true,
       "declaration": true,
-      "declarationDir": "dist/types"
+      "declarationDir": "types_output"
     },
     "files": ["src/index.ts"]
   }

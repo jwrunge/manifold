@@ -173,4 +173,4 @@ out
 # Finder (MacOS) folder config
 .DS_Store
 
-types-output
+types_output

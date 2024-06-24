@@ -1,7 +1,7 @@
 import { Mfld } from "../dist/dev.manifold.js";
 
 Mfld.makeComponent("test-component", {
-    connected() {
+    onconnect() {
         console.log("THIS", this)
     }
 });
@@ -56,7 +56,7 @@ Mfld.config({
     },
     fetch: {
         externals: [
-            { domain: "http://localhost", scripts: true, styles: false }
+            { domain: "http://localhost", scripts: "all", styles: "none" }
         ]
     }
 });
@@ -75,7 +75,7 @@ const store3 = Mfld.store("store3", { value: "one" });
 const store2 = Mfld.store("store2", { 
     value: { values: ["one", "two"]},
     upstream: ["store1", "store3"],
-    updater: async ([Store1, Store3], Mfldr)=> {
+    updater: ([Store1, Store3], Mfldr)=> {
         if(Mfldr.values) {
             Mfldr.values[1] = Store1;
             Mfldr.values[0] = Store3;

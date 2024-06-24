@@ -4,35 +4,35 @@ import { RegisteredElement } from "./registered_element";
 import { _register } from "./registrar";
 
 export interface ComponentOptions {
-  href?: string;
-  shadow?: "open" | "closed";
-  templ?: HTMLTemplateElement;
-  selector?: string;
-  constructor?: () => void;
-  connected?: () => void;
-  disconnected?: () => void;
-  adopted?: () => void;
-  attributeChanged?: (attrName: string, oldVal: string | null, newVal: string | null) => void;
-  observedAttributes?: Array<string>;
-  options?: MfldOps;
+  href: string;
+  shadow: "open" | "closed";
+  templ: HTMLTemplateElement;
+  selector: string;
+  onconstruct: () => void;
+  onconnect: () => void;
+  ondisconnect: () => void;
+  onadopted: () => void;
+  onAttributeChanged: (attrName: string, oldVal: string | null, newVal: string | null) => void;
+  observedAttributes: Array<string>;
+  options: Partial<MfldOps>;
 }
 
-export let _makeComponent = (name: string, ops?: ComponentOptions): void => {
+export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): void => {
   MFLD.comp[name] = class extends HTMLElement {
     template: RegisteredElement | null = null;
 
-    connected?: Function
-    adopted?: Function
-    disconnected?: Function
-    attributeChanged?: Function
+    onconnect?: Function
+    onadopted?: Function
+    ondisconnect?: Function
+    onAttributeChanged?: Function
 
     constructor() {
       super();
-      ops?.constructor?.bind(this)?.();
-      this.connected = ops?.connected?.bind(this);
-      this.adopted = ops?.adopted?.bind(this);
-      this.disconnected = ops?.disconnected?.bind(this);
-      this.attributeChanged = ops?.attributeChanged?.bind(this);
+      ops?.onconstruct?.bind(this)?.();
+      this.onconnect = ops?.onconnect?.bind(this);
+      this.onadopted = ops?.onadopted?.bind(this);
+      this.ondisconnect = ops?.ondisconnect?.bind(this);
+      this.onAttributeChanged = ops?.onAttributeChanged?.bind(this);
       this.template = new RegisteredElement({
         ops: ops?.options || {},
         element: ops?.templ || (document.getElementById(ops?.selector || name) as HTMLTemplateElement)
@@ -58,15 +58,15 @@ export let _makeComponent = (name: string, ops?: ComponentOptions): void => {
     }
 
     attributeChangedCallback(attr: string, oldVal: string | null, newVal: string | null): void {
-      this.attributeChanged?.(attr, oldVal, newVal);
+      this.onAttributeChanged?.(attr, oldVal, newVal);
     }
 
     disconnectedCallback(): void {
-      this.disconnected?.();
+      this.ondisconnect?.();
     }
 
     adoptedCallback(): void {
-      this.adopted?.();
+      this.onadopted?.();
     }
 
     static get observedAttributes(): Array<string> {

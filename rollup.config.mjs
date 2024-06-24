@@ -2,7 +2,19 @@ import typescript from '@rollup/plugin-typescript';
 import terser from '@rollup/plugin-terser';
 import dts from "rollup-plugin-dts";
 
-const input = 'src/index.ts';
+function cleanHiddenProps() {
+    return {
+        generateBundle(options, bundle) {
+            let fname = options.file.replace(/^.*?\//, "");
+            const outputFile = bundle[fname];
+            const content = outputFile.code;
+            const modifiedContent = content.replace(/^\s{0,}_.*?$\n/gm, "");
+            outputFile.code = modifiedContent;
+        }
+    }
+}
+
+const input = 'src/index.ts'
 const plugins = [
     typescript(),
     terser({
@@ -31,17 +43,26 @@ export default [
     {
         input,
         output: [...output([
-            { prefix: "", sourcemap: false },
+            { sourcemap: false },
             { prefix: "dev", sourcemap: true },
         ])],
         plugins
     },
     {
-        input: "./dist/types/index.d.ts",
-        output: {
-            file: "dist/mfld.d.ts",
-            format: "es",
-            plugins: [ dts() ]
-        }
+        input: "./dist/types_output/index.d.ts",
+        output: [
+            {
+                file: "dist/manifold.d.ts",
+                format: "es",
+            },
+            {
+                file: "dist/dev.manifold.d.ts",
+                format: "es",
+            },
+        ],
+        plugins: [ 
+            dts(),
+            cleanHiddenProps(),
+        ]
     }
 ]

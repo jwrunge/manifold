@@ -2,18 +2,8 @@
     "name": "mfld",
     "version": "0.2.2",
     "main": "dist/slim.mfld.js",
-    "exports": {
-        ".": {
-            "import": "./dist/mfld.js",
-            "types": "./dist/mfld.d.ts"
-        },
-        "./dev": {
-            "import": "./dist/dev.mfld.js",
-            "types": "./dist/mfld.d.ts"
-        }
-    },
     "type": "module",
-    "types": "./dist/mfld.d.ts",
+    "types": "./dist/manifold.d.ts",
     "scripts": {
         "build": "rollup -c",
         "example": "npm run build & sirv tests --port 5000 --dev true ",

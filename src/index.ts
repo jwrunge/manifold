@@ -11,7 +11,7 @@ export let Mfld = {
     },
     ustore: (store_name: string, store_ops: StoreOptions<any>)=> _store(store_name, store_ops),
     funcs: (funcs: { [key: string]: MfldFunc })=> { for(let key in funcs) MFLD.$fn[key] = funcs[key]; },
-    config: (new_ops: MfldOps, profile_name: string)=> _setOptions(new_ops, profile_name),
+    config: (new_ops: MfldOps, profile_name?: string)=> _setOptions(new_ops, profile_name),
     onTick: (cb: Function)=> _addToNextTickQueue(cb),
     register: (parent: HTMLElement | string | null)=> _register( typeof parent == "string" ? document.querySelector(parent) as HTMLElement | null : parent),
     makeComponent: _makeComponent,
