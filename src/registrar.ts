@@ -8,7 +8,7 @@ import type { MfldOps } from "./common_types";
 import { RegisteredElement } from "./registered_element";
 
 let _ops: Partial<MfldOps> = {};
-let _modes = ["bind", "sync", "templ", "if", "elseif", "else", "each", "get", "head", "post", "put", "delet e", "patch", "promote"].map(m => `${ATTR_PREFIX}${m}`);
+let _modes = ["bind", "sync", "templ", "if", "elseif", "else", "each", "get", "head", "post", "put", "delete", "patch", "promote"].map(m => `${ATTR_PREFIX}${m}`);
 
 export let _setOptions = (newops: Partial<MfldOps>, profileName?: string): void => {
     if(profileName) _ops.profiles = { ..._ops.profiles, [profileName]: newops };
@@ -26,7 +26,7 @@ export let _register = (parent?: HTMLElement | null): void => {
         `[data-${_modes.join(`],[data-`)}],a,form`
     );
 
-    for (let el of [parent, ...els].map(e=> new RegisteredElement({element: e as HTMLElement}))) {
+    for (let el of [parent, ...els].map(e=> new RegisteredElement({element: e as HTMLElement, ops: _ops}))) {
         let _op_overrides = _getOpOverrides(structuredClone(_ops), el);
 
         if(el._dataset?.("promote")) {
@@ -40,8 +40,10 @@ export let _register = (parent?: HTMLElement | null): void => {
             }
         }
 
-        for (let mode in el._el.dataset) {
+        for (let mode in el?._getDataset()) {
             if(!_modes.includes(mode)) continue;
+
+            console.log("GOT MODE", mode, el, _op_overrides)
 
             for (let setting of el._dataset(mode)?.split(";;") || []) {
                 let isFetch = /get|head|post|put|delet e|patch/.test(mode) ? true : false,
@@ -52,6 +54,8 @@ export let _register = (parent?: HTMLElement | null): void => {
                     dependencyList = Array.from(new Set([...funcStr?.matchAll(/\$st\.(\w{1,})/g)].map(m => m[1])));
 
                 let { func, as } = _parseFunction(funcStr);
+
+                console.log("SETTINGS", func, "AS", as, "DL", dependencyList, "TRIGGERS", triggers)
 
                 if(/each|templ|if|else/.test(mode)) _handleTemplates(el, mode, as || [], func, dependencyList, _op_overrides);
                 else {

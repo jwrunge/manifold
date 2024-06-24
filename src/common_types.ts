@@ -68,7 +68,7 @@ export type ExternalOptions = {
 
 export type TransitionOptions = {
   class?: string
-  dur?: [number, number] | number
+  dur?: [number, number]
   swap?: number
   smart?: boolean
   hooks?: { [ key in HookKey ]?: (el: HTMLElement) => void }

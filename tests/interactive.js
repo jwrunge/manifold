@@ -1,12 +1,12 @@
-import { Mfld, makeComponent, component } from "../dist/dev.mfld.js";
+import { Mfld } from "../dist/dev.manifold.js";
 
-makeComponent("test-component", {
+Mfld.makeComponent("test-component", {
     connected() {
         console.log("THIS", this)
     }
 });
 
-component("/tests/mycomponent.html");
+Mfld.component("/tests/mycomponent.html");
 
 function sendAlert(val) {
     alert("VALUE IS " + val)
@@ -177,10 +177,10 @@ const DESCENDANT = Mfld.store("descendant", {
 // }, 10_000)
 
 setTimeout(()=> {
-    store3.update("two")
+    store1.update("two")
 }, 1000)
 setTimeout(()=> {
-    store3.update("three")
+    store1.update("three")
 }, 3000)
 // setTimeout(()=> {
 //     store3.update("four")

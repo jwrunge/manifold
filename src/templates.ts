@@ -1,9 +1,35 @@
 import { type MfldOps, $fn, $st } from "./common_types";
-import { _iterable, _iterateSiblings, _registerInternalStore } from "./util";
+import { _registerInternalStore } from "./util";
 import { RegisteredElement } from "./registered_element";
 import { _register } from "./registrar";
-import { _applyTransition, _scheduleUpdate } from "./updates";
+import { _scheduleUpdate } from "./updates";
 import { _parseFunction, ATTR_PREFIX } from "./util";
+
+// Iterates over an element's siblings until a condition is met
+let _iterateSiblings = (
+  sib?: HTMLElement | null, 
+  breakFn?: ((sib?: HTMLElement | null) => boolean | undefined) | null, 
+  cb?: ((sib?: HTMLElement | null) => void) | null, 
+  reverse: boolean = false
+): HTMLElement | null | undefined => {
+  let dir = reverse ? "previousElementSibling" : "nextElementSibling";
+  return breakFn?.(sib) ? sib : _iterateSiblings(cb?.(sib) || sib?.[dir as keyof typeof sib] as HTMLElement, breakFn, cb, reverse);
+};
+
+// Iterates over an iterable object or an object's properties
+export let _iterable = <T>(obj: Iterable<T> | { [key: string]: T }, cb: (value: T, key: string | number) => void): void => {
+  if(obj instanceof Map) {
+      for (let[key, value] of obj.entries()) cb(value, key);
+  } else {
+      try {
+          let arr = Array.isArray(obj) ? obj : Array.from(obj as Array<any>);
+          if(arr.length) arr.forEach(cb);
+          else for (let key in obj) cb((obj as any)[key], key);
+      } catch (e) {
+          console.error(`${obj} is not iterable`);
+      }
+  }
+};
 
 export let _handleTemplates = (
   el: RegisteredElement,
@@ -13,7 +39,8 @@ export let _handleTemplates = (
   dependencyList: string[],
   ops: MfldOps
 ): void => {
-  let startElement = new RegisteredElement({ classes: [`${mode}-start`] }),
+  return;
+  let startElement = new RegisteredElement({ classes: [`${mode}-start`], ops }),
     templ = el._asTempl([`${mode}-end`]),
     templStore,
     conditional = mode.match(/if|else/),
@@ -27,6 +54,8 @@ export let _handleTemplates = (
   if(conditional) {
     // Get upstream conditions
     if(conditionalSub) {
+      console.log("START ELEMENT", startElement);
+      console.log("TEMPL", templ);
       let first = _iterateSiblings(startElement._el, (sib) => sib?.classList?.contains(`${ATTR_PREFIX}if-end`), null, true);
       _iterateSiblings(first, sib => sib == templ._el, sib => {
         if(sib?.dataset?.[`${ATTR_PREFIX}cstore`]) prevConditions.push(sib.dataset[`${ATTR_PREFIX}cstore`] || "");
@@ -51,7 +80,7 @@ export let _handleTemplates = (
     if(val === undefined) return;
     _scheduleUpdate(() => {
       _iterateSiblings(startElement._el.nextElementSibling as HTMLElement, sib => sib?.classList?.contains(`${mode}-end`), sib => {
-        if(sib) _applyTransition(new RegisteredElement({ element: sib as HTMLElement }), "out", ops, () => sib.remove());
+        new RegisteredElement({ element: sib as HTMLElement, ops })._transition("out");
       });
 
       if(conditional && !val) return;
@@ -63,10 +92,10 @@ export let _handleTemplates = (
           if(item.innerHTML) item.innerHTML = html;
         }
 
-        for (let element of Array.from(item.content.children)) {
+        for (let element of Array.from(item.content.children) as HTMLElement[]) {
           if(!element.innerHTML) element.innerHTML = String(val);
-          templ._el.before(element);
-          _applyTransition(new RegisteredElement({element: element as HTMLElement}), "in", ops);
+          templ._position(element, "before", false);
+          new RegisteredElement({element: element as HTMLElement, ops})._transition("in");
         }
       });
     });

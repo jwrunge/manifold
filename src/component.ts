@@ -1,7 +1,7 @@
+import { MfldOps } from "./common_types";
 import { _fetchAndInsert } from "./fetch";
 import { RegisteredElement } from "./registered_element";
 import { _register } from "./registrar";
-import { ATTR_PREFIX } from "./util";
 
 export interface ComponentOptions {
   href?: string;
@@ -14,6 +14,7 @@ export interface ComponentOptions {
   adopted?: () => void;
   attributeChanged?: (attrName: string, oldVal: string | null, newVal: string | null) => void;
   observedAttributes?: Array<string>;
+  options?: MfldOps;
 }
 
 export let _makeComponent = (name: string, ops?: ComponentOptions): void => {
@@ -33,6 +34,7 @@ export let _makeComponent = (name: string, ops?: ComponentOptions): void => {
       this.disconnected = ops?.disconnected?.bind(this);
       this.attributeChanged = ops?.attributeChanged?.bind(this);
       this.template = new RegisteredElement({
+        ops: ops?.options || {},
         element: ops?.templ || (document.getElementById(ops?.selector || name) as HTMLTemplateElement)
       });
     }
@@ -76,18 +78,18 @@ export let _makeComponent = (name: string, ops?: ComponentOptions): void => {
 }
 
 export let _component = async (src: string): Promise<void> => {
-  await _fetchAndInsert(
-    undefined,
-    "get",
-    {
-      fetch: {
-        externals: [{
-          domain: "$origin", scripts: "all", styles: "selected"
-        }]
-      }
-    },
-    src,
-    { _dataset: (_: string) => "template -> body" },
-    false
-  )
+  // await _fetchAndInsert(
+  //   undefined,
+  //   "get",
+  //   {
+  //     fetch: {
+  //       externals: [{
+  //         domain: "$origin", scripts: "all", styles: "selected"
+  //       }]
+  //     }
+  //   },
+  //   src,
+  //   { _dataset: (_: string) => "template -> body" },
+  //   false
+  // )
 }

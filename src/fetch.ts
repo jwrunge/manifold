@@ -76,12 +76,12 @@ export let _fetchAndInsert = async (
     let [selector, toReplace] = ds.split("->").map(s => s.trim());
 
     let fullMarkup = new DOMParser().parseFromString(resp, 'text/html');
-    let inEl = new RegisteredElement({ parent: fullMarkup, query: selector || "body" });
+    let inEl = new RegisteredElement({ parent: fullMarkup, query: selector || "body", ops: fetchOps });
 
     if(fullMarkup) {
       let scripts: HTMLScriptElement[] = [];
       if(!externalPermissions?.styles || externalPermissions.styles === "none") fullMarkup.querySelectorAll("style").forEach(s => s.parentNode?.removeChild(s));
-      if(externalPermissions?.styles === "all") fullMarkup.querySelectorAll("style").forEach(s => inEl?._append(s, false));
+      if(externalPermissions?.styles === "all") fullMarkup.querySelectorAll("style").forEach(s => inEl?._position(s, "append", false));
       (externalPermissions?.scripts === "all" ? fullMarkup : inEl._el)?.querySelectorAll("script").forEach(s => {
         if(["all", "selected"].includes(externalPermissions?.scripts || "")) scripts.push(s as HTMLScriptElement);
         s.parentNode?.removeChild(s);
@@ -90,7 +90,7 @@ export let _fetchAndInsert = async (
       if(inEl) {
         if(domUpdate) _scheduleUpdate({
           in: inEl,
-          out: toReplace ? new RegisteredElement({query: toReplace}) : el as RegisteredElement,
+          out: toReplace ? new RegisteredElement({query: toReplace, ops: fetchOps}) : el as RegisteredElement,
           relation: instruction as FetchInsertionMode,
           ops: fetchOps,
           done: (el) => {
@@ -98,7 +98,7 @@ export let _fetchAndInsert = async (
             for (let s of scripts) {
               let n = document.createElement("script");
               n.textContent = s.textContent;
-              el?._append(n, false);
+              el?._position(n, "append", false);
             }
           },
         });
