@@ -1,5 +1,6 @@
 import { $fn, $st } from ".";
 import { MfldOps } from "./common_types";
+import { _store } from "./store";
 import { _scheduleUpdate } from "./updates";
 import { _id, ATTR_PREFIX } from "./util";
 
@@ -26,9 +27,9 @@ export class RegisteredElement {
         else if(recipe.query) this._el = (recipe.parent || document).querySelector(recipe.query) as HTMLElement;
         else this._el = document.createElement(recipe.create || "TEMPLATE");
         
+        elementReg.get(this._el)?._cleanUp();
         elementReg.set(this._el, this);
         this._classes(["_mfld", ...recipe.classes || []]);
-        // if(!this._el.id) this._el.id = _id();
 
         this._ops = recipe.ops;
         return this;
@@ -59,9 +60,24 @@ export class RegisteredElement {
         return func;
     }
 
-    _addFunc(func: Function, key?: string, val?: string, body?: boolean) {
-        this._funcs?.add(()=> func({$el: this._el, $st, $fn, key, val, body}));
+    _addFunc(func: Function) {
+        this._funcs?.add(func);
         return func;
+    }
+
+    _callFunc(func: Function, key: string, val: any, body: any) {
+        return func?.({$el: this._el, $st, $fn, key, val, body})
+    }
+
+    _registerInternalStore(upstream: string[], ) {
+        let id = _id();
+        this._dataset("cstore", id);
+
+        return _store(id, {
+            upstream,
+            updater: () => func?.({ $el, $st, $fn }),
+            // scope: $el,
+        });
     }
 
     _position(el: HTMLElement, mode: "after" | "before" | "append" | "prepend" | "appendChild" = "append", clone = true) {

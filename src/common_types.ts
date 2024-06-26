@@ -1,3 +1,4 @@
+import { RegisteredElement } from "./registered_element";
 import { _store } from "./store";
 
 declare global {
@@ -19,7 +20,7 @@ if(!window.MFLD) window.MFLD = {
     mut: new Map(),
     $st: new Proxy(_store, {
         get: (store, property: string | symbol) => {
-            return typeof property === "string" ? store(property)?.value : undefined;
+          return typeof property === "string" ? store(property)?.value : undefined;
         },
         set: (store, property: string | symbol, value) => {
             if(typeof property === "string") {
@@ -80,7 +81,7 @@ export type HookKey = "in-start" | "in-end" | "out-start" | "out-end"
  * STORES
  */
 
-export type UpdaterFunction<T> = (upstreamValues: any[], value: T) => T;
+export type UpdaterFunction<T> = (value: T | (()=> T)) => T;
 export type ValueDeterminer<T> = (currentValue?: T) => T | undefined;
 export type UpdateFunction<T> = (value: T | ValueDeterminer<T>) => T | undefined;
 export type SubDeterminer<T> = (value: T) => void;
@@ -88,9 +89,8 @@ export type SubFunction<T> = (value: SubDeterminer<T>) => void;
 
 export interface StoreOptions<T> {
   value?: T;
-  upstream?: string[];
   updater?: UpdaterFunction<T>;
-  scope?: HTMLElement | SVGScriptElement | "global";
+  scope?: RegisteredElement;
 }
 
 export interface Store<T> {

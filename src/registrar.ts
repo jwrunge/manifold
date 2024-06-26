@@ -43,25 +43,20 @@ export let _register = (parent?: HTMLElement | null): void => {
         for (let mode in el?._getDataset()) {
             if(!_modes.includes(mode)) continue;
 
-            console.log("GOT MODE", mode, el, _op_overrides)
-
             for (let setting of el._dataset(mode)?.split(";;") || []) {
-                let isFetch = /get|head|post|put|delet e|patch/.test(mode) ? true : false,
+                let isFetch = /get|head|post|put|delete|patch/.test(mode) ? true : false,
                     parts = setting?.split(/\s*->\s*/g),
                     href = isFetch ? parts.pop() || "" : "",
                     triggers = isFetch || /sync/.test(mode) ? parts.shift()?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s => s.trim()) : [] || [],
-                    funcStr = parts?.[0] || "",
-                    dependencyList = Array.from(new Set([...funcStr?.matchAll(/\$st\.(\w{1,})/g)].map(m => m[1])));
+                    funcStr = parts?.[0] || "";
 
-                let { func, as } = _parseFunction(funcStr);
+                let { func, as, dependencyList } = _parseFunction(funcStr);
 
-                console.log("SETTINGS", func, "AS", as, "DL", dependencyList, "TRIGGERS", triggers)
-
-                if(/each|templ|if|else/.test(mode)) _handleTemplates(el, mode, as || [], func, dependencyList, _op_overrides);
+                if(/each|templ|if|else/.test(mode)) _handleTemplates(el, mode, as || [], func, dependencyList || [], _op_overrides);
                 else {
                     if(!triggers?.length) triggers = [""];
                     for (let trigger of triggers) {
-                        if(/bind/.test(mode)) _handleBind(el, func, dependencyList);
+                        if(/bind/.test(mode)) _handleBind(el, func || (()=> {}), dependencyList);
                         else if(/sync/.test(mode)) _handleSync(el, trigger, func);
                         else _handleFetch(el, trigger, _op_overrides, href, mode.replace(ATTR_PREFIX, ""), func);
                     }

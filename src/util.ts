@@ -35,16 +35,18 @@ export let _getOpOverrides = (ops: Partial<MfldOps>, el: RegisteredElement)=> {
     return res;
 }
 
-export let _parseFunction = (condition: string, valArg = "$val", keyArg = "$key"): { func?: Function, as?: string[]}=> {
+export let _parseFunction = (condition: string, valArg = "$val", keyArg = "$key"): { func?: Function, as?: string[], dependencyList?: string[]}=> {
     try {
+        console.log(condition, condition?.split(/\s{1,}as\s{1,}/) || [condition, "value"])
         let [fnStr, asStr] = condition?.split(/\s{1,}as\s{1,}/) || [condition, "value"],
             fn = fnStr?.match(/^\s{0,}(function)?\(.{0,}\)(=>)?\s{0,}/) ? `(${fnStr})()` : fnStr,
-            fnText = `let {$el, $st, $fn, ${valArg}, ${keyArg}, $body} = ops;return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
-            as = asStr?.split?.(_commaSepRx)?.map?.(s=> s.trim()) || ["value"] || [];
-        
-    console.log("FN TEXT", fnText, as, condition)
+            fnText = `let {$cur, $el, $st, $fn, ${valArg}, ${keyArg}, $body} = ops;return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
+            as = asStr?.split?.(_commaSepRx)?.map?.(s=> s.trim()) || ["value"] || [],
+            dependencyList = Array.from(new Set([...fnStr?.matchAll(/\$st\.(\w{1,})/g)].map(m => m[1])));
+    
+    if(!fn) return {};
     let func: Function | undefined = new Function("ops", fnText);
-        return { func, as };
+        return { func, as, dependencyList };
     }
     catch(e) {
         console.error(e);
@@ -74,8 +76,7 @@ export let _registerInternalStore = (upstream?: string[], func?: Function, $el?:
     console.log("REGISTERING", upstream, func, $el?._el)
 
     return _store(id, {
-        upstream,
         updater: () => func?.({ $el, $st, $fn }),
-        // scope: $el,
+        scope: $el,
     });
 };

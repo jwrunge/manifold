@@ -1,44 +1,43 @@
-import { UpdaterFunction, StoreOptions } from "./common_types";
+import { StoreOptions, $st, $fn } from "./common_types";
+import { RegisteredElement } from "./registered_element";
 import { _scheduleUpdate } from "./updates";
-import { _id } from "./util";
+import { _id, _parseFunction } from "./util";
 
 export type SubFunction = (value: any, ref?: string) => void;
 
 function _hashAny(input: any): any {
-    if(!input) return 0;
-    if(typeof input === 'number' || input === true) return input;
+    if(!input || !isNaN(input) || input === true) return input;
     if(input instanceof Map || input instanceof Set) return _hashAny(Array.from(input.entries() || input));
 
     let hash = 0;
-    for (let char of new TextEncoder().encode(input?.toString() || "")) 
+    for(let char of new TextEncoder().encode(input?.toString() || "")) 
         hash = ((hash << 5) - hash) + char;
     return hash;
 }
 
 export class Store<T> {
-    _updater?: UpdaterFunction<T>;
+    _updater?: Function;
     _subscriptions: Map<string, SubFunction> = new Map();
     _storedHash?: string;
     _upstreamStores: Set<Store<any>> = new Set();
     _downstreamStores: Set<Store<any>> = new Set();
-    _scope: HTMLElement | SVGScriptElement | string | "global";
+    _scope?: RegisteredElement;
     _updateTimeout?: any;
     name: string;
     value: T;
 
     constructor(name: string, ops?: StoreOptions<T>) {
         this.name = name;
-        this._scope = "global";
-        this.value = undefined as any; // Initial value as undefined
-        this._modify(name, ops);
+        MFLD.st.set(name, this);
+        this._scope = ops?.scope;
+        this.value = typeof ops?.value !== "function" ? ops?.value as any : undefined; // Initial value as undefined
+        this._modify(ops);
     }
 
-    _modify(name: string, ops?: StoreOptions<T>): Store<T> {
-        this.name = name;
-        this._scope = ops?.scope || document.currentScript || "global";
-        MFLD.st.set(name, this);
+    _modify(ops?: StoreOptions<T>): Store<T> {
+        let { func, dependencyList } = _parseFunction((ops?.updater || typeof ops?.value === "function" ? ops?.value : null)?.toString() || "");
 
-        (ops?.upstream?.map(s => {
+        (dependencyList?.map(s => {
             let S = _store(s);
             this._upstreamStores.add(S);
             S._downstreamStores.add(this);
@@ -46,7 +45,7 @@ export class Store<T> {
         }) || []);
 
         this.value = ops?.value as T;
-        this._updater = ops?.updater;
+        this._updater = func;
         this._auto_update();
         return this;
     }
@@ -78,16 +77,12 @@ export class Store<T> {
     }
 
     _auto_update(): void {
-        let newVal = this._updater?.(
-            Array.from(this._upstreamStores).map(S => S.value) || [], 
-            this.value
-        );
-
+        let newVal = this._updater?.({ $cur: this.value, $st, $fn, $el: this._scope?._el });
         this.update(newVal === undefined ? this.value : newVal);
     }
 }
 
 export function _store<T>(name: string, ops?: StoreOptions<T>): Store<T> {
     let found_store = MFLD.st.get(name) as Store<any>;
-    return ops ? (found_store ? found_store._modify(name, ops) : new Store(name, ops)) : (found_store || new Store(name, ops));
+    return ops ? (found_store ? found_store._modify(ops) : new Store(name, ops)) : (found_store || new Store(name, ops));
 }

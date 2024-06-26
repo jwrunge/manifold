@@ -1,4 +1,4 @@
-import { Mfld } from "../dist/dev.manifold.js";
+import { $st, Mfld } from "../dist/dev.manifold.js";
 
 Mfld.makeComponent("test-component", {
     onconnect() {
@@ -63,32 +63,17 @@ Mfld.config({
 
 Mfld.register(document.body);
 
-let val = Mfld.store("value", {
-    value: /** @type {Map<number, string>}*/(new Map()),
-    upstream: ["store1", "store2"],
-    updater: (_, val)=> val.set(32, (val?.get(32) || "") + "...") || new Map()
-})
+let val = Mfld.store("value", "OK")
 
-let store1 = Mfld.store("store1", { value: "My text" });
+let store1 = Mfld.store("store1", "My text");
 
 const store3 = Mfld.store("store3", { value: "one" });
-const store2 = Mfld.store("store2", { 
-    value: { values: ["one", "two"]},
-    upstream: ["store1", "store3"],
-    updater: ([Store1, Store3], Mfldr)=> {
-        if(Mfldr.values) {
-            Mfldr.values[1] = Store1;
-            Mfldr.values[0] = Store3;
-        }
-        return Mfldr;
-    }
-});
+const store2 = Mfld.store("store2", ()=> $st.store1?.toUpperCase());
 const store4 = Mfld.store("store4", {
     value: 1,
-    upstream: ["store2"],
-    updater: ([Store2])=> {
+    updater: ()=> {
         let val;
-        switch(Store2.values?.[0]) {
+        switch($st.store2.values?.[0]) {
             case "one": val = 1; break;
             case "two": val = 2; break;
             case "three": val = 3; break;
@@ -100,12 +85,11 @@ const store4 = Mfld.store("store4", {
     }
 });
 
-const DESCENDANT = Mfld.store("descendant", {
-    upstream: ["store3", "store1", "store2"],
-    updater: (stores)=> {
-        return `"VALUE OF STORE 3: ${stores[0]}"`;
-    }
-})
+// const DESCENDANT = Mfld.store("descendant", {
+//     updater: (stores)=> {
+//         return `"VALUE OF STORE 3: ${$st.store3}"`;
+//     }
+// })
 
 // // Sequence test - Even though later stores depend on multiple earlier stores, updates to the earlier stores SHOULD NOT result in multiple updates to the later stores
 // for(let i=0; i<5; i++) {
