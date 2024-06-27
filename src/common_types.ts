@@ -28,7 +28,7 @@ if(!window.MFLD) window.MFLD = {
                     S = store(propParts[0] as string),
                     ret = S.value;
 
-                for (let part of propParts.slice(1) || []) ret = (ret as any)[part];
+                for(let part of propParts.slice(1) || []) ret = (ret as any)[part];
                 ret = value;
                 S.update(ret);
             }
@@ -88,9 +88,11 @@ export type SubDeterminer<T> = (value: T) => void;
 export type SubFunction<T> = (value: SubDeterminer<T>) => void;
 
 export interface StoreOptions<T> {
+  name?: string;
   value?: T;
   updater?: UpdaterFunction<T>;
   scope?: RegisteredElement;
+  dependencyList?: string[];
 }
 
 export interface Store<T> {

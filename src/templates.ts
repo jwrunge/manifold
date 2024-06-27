@@ -19,12 +19,12 @@ let _iterateSiblings = (
 // Iterates over an iterable object or an object's properties
 export let _iterable = <T>(obj: Iterable<T> | { [key: string]: T }, cb: (value: T, key: string | number) => void): void => {
   if(obj instanceof Map) {
-      for (let[key, value] of obj.entries()) cb(value, key);
+      for(let[key, value] of obj.entries()) cb(value, key);
   } else {
       try {
           let arr = Array.isArray(obj) ? obj : Array.from(obj as Array<any>);
           if(arr.length) arr.forEach(cb);
-          else for (let key in obj) cb((obj as any)[key], key);
+          else for(let key in obj) cb((obj as any)[key], key);
       } catch (e) {
           console.error(`${obj} is not iterable`);
       }
@@ -54,8 +54,6 @@ export let _handleTemplates = (
   if(conditional) {
     // Get upstream conditions
     if(conditionalSub) {
-      console.log("START ELEMENT", startElement);
-      console.log("TEMPL", templ);
       let first = _iterateSiblings(startElement._el, (sib) => sib?.classList?.contains(`${ATTR_PREFIX}if-end`), null, true);
       _iterateSiblings(first, sib => sib == templ._el, sib => {
         if(sib?.dataset?.[`${ATTR_PREFIX}cstore`]) prevConditions.push(sib.dataset[`${ATTR_PREFIX}cstore`] || "");
@@ -65,7 +63,7 @@ export let _handleTemplates = (
     // Create function
     newFunc = () => {
       if(conditionalSub) {
-        for (let d of prevConditions) {
+        for(let d of prevConditions) {
           if($st[d]) return false;
         }
       }
@@ -92,7 +90,7 @@ export let _handleTemplates = (
           if(item.innerHTML) item.innerHTML = html;
         }
 
-        for (let element of Array.from(item.content.children) as HTMLElement[]) {
+        for(let element of Array.from(item.content.children) as HTMLElement[]) {
           if(!element.innerHTML) element.innerHTML = String(val);
           templ._position(element, "before", false);
           new RegisteredElement({element: element as HTMLElement, ops})._transition("in");

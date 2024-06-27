@@ -2,7 +2,7 @@ import { $fn, $st } from ".";
 import { MfldOps } from "./common_types";
 import { RegisteredElement } from "./registered_element";
 import { _store, Store } from "./store";
-export let ATTR_PREFIX = "mf_";
+export let ATTR_PREFIX = "data-mf-";
 export let _commaSepRx = /, {0,}/g;
 
 export let _id = ()=> {
@@ -14,12 +14,13 @@ export let _getOpOverrides = (ops: Partial<MfldOps>, el: RegisteredElement)=> {
     let res = { ...ops, ...overrides };
     
     // ad hoc overrides
-    for(let set in el._getDataset()) {
+    for(let set of el._el.attributes) {
         for(let key of ["fetch", "trans"]) {
-            if(set.startsWith(`${ATTR_PREFIX}${key}_`)) {
+            let name = set.name;
+            if(name.startsWith(`${ATTR_PREFIX}${key}_`)) {
                 try {
-                    let prop = set.split("_")[2];
-                    let val: any = el._dataset(set);
+                    let prop = name.split("_")[2];
+                    let val: any = set.value;
                     if(val?.match(/\{|\[/)) val = JSON.parse(val);
                     else if(parseInt(val || "")) val = parseInt(val);
                     if(Array.isArray(val)) val = val.map(v=> parseInt(v) || v);
@@ -37,7 +38,6 @@ export let _getOpOverrides = (ops: Partial<MfldOps>, el: RegisteredElement)=> {
 
 export let _parseFunction = (condition: string, valArg = "$val", keyArg = "$key"): { func?: Function, as?: string[], dependencyList?: string[]}=> {
     try {
-        console.log(condition, condition?.split(/\s{1,}as\s{1,}/) || [condition, "value"])
         let [fnStr, asStr] = condition?.split(/\s{1,}as\s{1,}/) || [condition, "value"],
             fn = fnStr?.match(/^\s{0,}(function)?\(.{0,}\)(=>)?\s{0,}/) ? `(${fnStr})()` : fnStr,
             fnText = `let {$cur, $el, $st, $fn, ${valArg}, ${keyArg}, $body} = ops;return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
@@ -72,8 +72,6 @@ export function _handlePushState(el: RegisteredElement, ev?: Event, href?: strin
 export let _registerInternalStore = (upstream?: string[], func?: Function, $el?: RegisteredElement): Store<any> => {
     let id = _id();
     $el?._dataset("cstore", id);
-
-    console.log("REGISTERING", upstream, func, $el?._el)
 
     return _store(id, {
         updater: () => func?.({ $el, $st, $fn }),

@@ -95,7 +95,7 @@ export let _fetchAndInsert = async (
           ops: fetchOps,
           done: (el) => {
             complete?.(el);
-            for (let s of scripts) {
+            for(let s of scripts) {
               let n = document.createElement("script");
               n.textContent = s.textContent;
               el?._position(n, "append", false);
@@ -104,9 +104,9 @@ export let _fetchAndInsert = async (
         });
         else {
           document.body.appendChild(inEl._el);
-          for (let s of scripts) {
+          for(let s of scripts) {
             let n = document.createElement("script");
-            for (let attr of s.attributes) n.setAttribute(attr.name, attr.value);
+            for(let attr of s.attributes) n.setAttribute(attr.name, attr.value);
             n.textContent = s.textContent;
             inEl._el.before(n);
           }

@@ -27,6 +27,7 @@ export class Store<T> {
     value: T;
 
     constructor(name: string, ops?: StoreOptions<T>) {
+        console.log("CREATING STORE", name)
         this.name = name;
         MFLD.st.set(name, this);
         this._scope = ops?.scope;
@@ -35,17 +36,17 @@ export class Store<T> {
     }
 
     _modify(ops?: StoreOptions<T>): Store<T> {
-        let { func, dependencyList } = _parseFunction((ops?.updater || typeof ops?.value === "function" ? ops?.value : null)?.toString() || "");
-
-        (dependencyList?.map(s => {
+        console.log("DEPENDENCY LIST", ops?.dependencyList);
+        (ops?.dependencyList?.map(s => {
             let S = _store(s);
+            console.log("STORE DEPENDENCY", s, S)
             this._upstreamStores.add(S);
             S._downstreamStores.add(this);
             return S;
         }) || []);
 
         this.value = ops?.value as T;
-        this._updater = func;
+        this._updater = ops?.updater;
         this._auto_update();
         return this;
     }
@@ -56,6 +57,7 @@ export class Store<T> {
     }
 
     update(value: T | ((value: T) => T)): void {
+        console.log("UPDATING STORE", this.name, value)
         if(this._updateTimeout) clearTimeout(this._updateTimeout);
         this._updateTimeout = setTimeout(() => {
             _scheduleUpdate(() => {
@@ -66,9 +68,9 @@ export class Store<T> {
                     this.value = newValue;
                     this._storedHash = newHash.toString();
 
-                    for (let ds of this._downstreamStores) ds._auto_update();
+                    for(let ds of this._downstreamStores) ds._auto_update();
 
-                    for (let [ref, sub] of this._subscriptions) sub(this.value, ref);
+                    for(let [ref, sub] of this._subscriptions) sub(this.value, ref);
                 }
 
                 return this.value;
@@ -77,6 +79,7 @@ export class Store<T> {
     }
 
     _auto_update(): void {
+        console.log("UPDATING STORE", this.name, this.value)
         let newVal = this._updater?.({ $cur: this.value, $st, $fn, $el: this._scope?._el });
         this.update(newVal === undefined ? this.value : newVal);
     }

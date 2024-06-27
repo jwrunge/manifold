@@ -4,7 +4,7 @@ import { _store } from "./store";
 import { _scheduleUpdate } from "./updates";
 import { _id, ATTR_PREFIX } from "./util";
 
-export let elementReg = new WeakMap<HTMLElement, RegisteredElement>();
+export let elementReg = new Map<HTMLElement, RegisteredElement>();
 
 type RegisteredElementRecipe = {
     parent?: Document | HTMLElement;
@@ -35,14 +35,10 @@ export class RegisteredElement {
         return this;
     }
 
-    _getDataset() {
-        return this._el?.dataset || {};
-    }
-
     _dataset(key: string, value?: string) {
-        if(value) this._el.dataset[`${ATTR_PREFIX}${key}`] = value;
-        let val = this._el?.dataset[`${ATTR_PREFIX}${key}`];
-        return val || val !== undefined ? "T" : "";
+        if(value) this._el.setAttribute(`${ATTR_PREFIX}${key}`, value);
+        let val = this._el?.getAttribute(`${ATTR_PREFIX}${key}`);
+        return val;
     }
 
     _classes(classes: string | string[], remove = false) {
@@ -60,8 +56,8 @@ export class RegisteredElement {
         return func;
     }
 
-    _addFunc(func: Function) {
-        this._funcs?.add(func);
+    _addFunc(func?: Function) {
+        if(func) this._funcs?.add(func);
         return func;
     }
 
@@ -69,15 +65,22 @@ export class RegisteredElement {
         return func?.({$el: this._el, $st, $fn, key, val, body})
     }
 
-    _registerInternalStore(upstream: string[], ) {
+    _registerInternalStore(func?: Function, dependencyList?: string[], sub?: (val: any)=> void) {
         let id = _id();
         this._dataset("cstore", id);
+        this._addFunc(func);
 
-        return _store(id, {
-            upstream,
-            updater: () => func?.({ $el, $st, $fn }),
-            // scope: $el,
+        console.log("REGISTERING INTERNAL WIHT DEPENDENCY LIST", dependencyList)
+        let S = _store(id, {
+            updater: () => func?.({ $el: this._el, $st, $fn }),
+            dependencyList,
+            scope: this,
         });
+
+        console.log("Registered internal store", S);
+
+        if(sub) S.sub(sub);
+        return S;
     }
 
     _position(el: HTMLElement, mode: "after" | "before" | "append" | "prepend" | "appendChild" = "append", clone = true) {
