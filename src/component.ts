@@ -89,7 +89,7 @@ export let _component = async (src: string): Promise<void> => {
   //     }
   //   },
   //   src,
-  //   { _dataset: (_: string) => "template -> body" },
+  //   { _attribute: (_: string) => "template -> body" },
   //   false
   // )
 }

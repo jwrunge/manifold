@@ -67,7 +67,7 @@ let _runUpdates = ()=> {
                 let container = order.out?._position(order.out?._el, "after");
                 if(order.relation == "inner") {
                     container.style.border = "none";
-                    order?.out?._empty();
+                    order?.out?._el?.replaceChildren();
                 }
                 order.out._transition("out");
             }
@@ -86,72 +86,3 @@ let _runUpdates = ()=> {
     _nextTickQueue = [];
     workArray = [];
 }
-
-// export let _applyTransition = (
-//     el: RegisteredElement, 
-//     dir: "in" | "out", 
-//     ops: Partial<MfldOps>, 
-//     fn?: Function, 
-//     refElement?: RegisteredElement, 
-//     _getDimensionsAfterUpdate = false, 
-//     after?: Function
-// )=> {
-//     if(el?.nodeType == Node.TEXT_NODE) {
-//         el.replaceWith(document?.createElement("div"));
-//         el.textContent = el.textContent;
-//     }
-
-//     if(el) {
-//         let dur = Array.isArray(ops.trans?.dur) ? ops.trans?.dur[dir == "in" ? 0 : 1] || ops.trans?.dur[0] : ops.trans?.dur || 0;
-//         let transClass = ops?.trans?.class || `${ATTR_PREFIX}trans`;
-//         el?.classList?.add(transClass);
-//         ops.trans?.hooks?.[`${dir}-start`]?.(el);
-
-//         if(dir == "out") {
-//             refElement = refElement || el;
-//             if(!refElement) return;
-//             let dimensions = {} as { w: string, left: string, top: string };
-//             if((ops.trans?.smart ?? true) && !_getDimensionsAfterUpdate) {
-//                 dimensions = _getDimensions(refElement);
-//             }
-
-//             _scheduleUpdate(()=> {
-//                 if((ops.trans?.smart ?? true) && _getDimensionsAfterUpdate && refElement) {
-//                     dimensions = _getDimensions(refElement);
-//                 }
-
-//                 if(ops.trans?.smart ?? true) {
-//                     el.style.position = "fixed";
-//                     el.style.width = dimensions.w;
-//                     el.style.left = dimensions.left;
-//                     el.style.top = dimensions.top;
-//                     el.style.margin = "0";
-//                 }
-//                 if(dur) el.style.transitionDuration = `${dur}ms`;
-
-//                 el.classList?.add("out");
-//             })
-//         }
-//         else {
-//             el?.classList?.add("in");
-//             if(dur) el.style.transitionDuration = `${dur}ms`;
-//             fn?.();
-//             setTimeout(()=> {
-//                 _scheduleUpdate(()=> {
-//                     setTimeout(()=> _scheduleUpdate(()=> el?.classList?.remove(dir)), 0);
-//                 });
-//             }, ops.trans?.swap || 0);
-//         }
-        
-//         setTimeout(()=> {
-//             _scheduleUpdate(()=> {
-//                 if(dir == "out") el?.remove();
-//                 el?.classList?.remove(transClass);
-//                 ops.trans?.hooks?.[`${dir}-end`]?.(el);
-//                 el.style.transitionDuration = "";
-//                 if(dir == "in") after?.(el);
-//             });
-//         }, 
-//         dur + (dir == "in" ? ops.trans?.swap || 0 : 0));
-//     }
-// }

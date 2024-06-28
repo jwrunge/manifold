@@ -1,4 +1,4 @@
-import { _handlePushState, _parseFunction, ATTR_PREFIX } from "./util";
+import { _handlePushState, _parseFunction } from "./util";
 import { _scheduleUpdate } from "./updates";
 import { _store } from "./store";
 import { $fn, $st, FetchInsertionMode } from "./common_types";
@@ -25,7 +25,7 @@ export let _fetchAndInsert = async (
   method: string | undefined,
   fetchOps: MfldOps,
   href: string,
-  el: RegisteredElement | { _dataset: (val: string)=> string },
+  el: RegisteredElement | { _attribute: (val: string)=> string },
   domUpdate: boolean,
   func?: Function,
   complete?: Function,
@@ -71,7 +71,7 @@ export let _fetchAndInsert = async (
   let resp = await data?.[fetchOps.fetch?.resType || "text"]();
 
   for(let instruction of ["append", "prepend", "inner", "outer"]) {
-    let ds = el._dataset(instruction);
+    let ds = el._attribute(instruction);
     if(!ds) continue;
     let [selector, toReplace] = ds.split("->").map(s => s.trim());
 
@@ -115,7 +115,7 @@ export let _fetchAndInsert = async (
     }
   }
 
-  let resolveTxt = el._dataset("resolve");
+  let resolveTxt = el._attribute("resolve");
   let resolveFunc = _parseFunction(resolveTxt || "")?.func;
   resolveFunc?.({ $el: el, $st, $fn, $body: resp });
 

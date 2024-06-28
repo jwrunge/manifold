@@ -44,7 +44,7 @@
 
   <p>This is an example of dynamic text! The current store value is: 
     <span 
-      data-mf-bind="()=> { console.log($el, $st.store1); $el.innerText = $st.store1?.toUpperCase() } ;; $el.style.backgroundColor = $st.store1 === 'My text' ? 'green' : 'blue'"
+      data-mf-bind="()=> { $el.innerText = $st.store1?.toUpperCase() } ;; $el.style.backgroundColor = $st.store1 === 'My text' ? 'green' : 'blue'"
     >Here is a default value.</span>
   </p>
   <p>Here is text that can be HTML: <span data-mf-bind="$el.innerHTML = $st.store1">Here is a default value.</span></p>

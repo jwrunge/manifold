@@ -1,7 +1,6 @@
 import { StoreOptions, $st, $fn } from "./common_types";
 import { RegisteredElement } from "./registered_element";
 import { _scheduleUpdate } from "./updates";
-import { _id, _parseFunction } from "./util";
 
 export type SubFunction = (value: any, ref?: string) => void;
 
@@ -17,7 +16,7 @@ function _hashAny(input: any): any {
 
 export class Store<T> {
     _updater?: Function;
-    _subscriptions: Map<string, SubFunction> = new Map();
+    _subscriptions: Set<SubFunction> = new Set();
     _storedHash?: string;
     _upstreamStores: Set<Store<any>> = new Set();
     _downstreamStores: Set<Store<any>> = new Set();
@@ -27,7 +26,6 @@ export class Store<T> {
     value: T;
 
     constructor(name: string, ops?: StoreOptions<T>) {
-        console.log("CREATING STORE", name)
         this.name = name;
         MFLD.st.set(name, this);
         this._scope = ops?.scope;
@@ -36,10 +34,8 @@ export class Store<T> {
     }
 
     _modify(ops?: StoreOptions<T>): Store<T> {
-        console.log("DEPENDENCY LIST", ops?.dependencyList);
         (ops?.dependencyList?.map(s => {
             let S = _store(s);
-            console.log("STORE DEPENDENCY", s, S)
             this._upstreamStores.add(S);
             S._downstreamStores.add(this);
             return S;
@@ -51,13 +47,12 @@ export class Store<T> {
         return this;
     }
 
-    sub(sub: (value: T) => void, ref?: string, immediate: boolean = true): void {
-        this._subscriptions.set(ref || _id(), sub);
+    sub(sub: (value: T) => void, immediate: boolean = true): void {
+        this._subscriptions.add(sub);
         if(immediate) sub(this.value);
     }
 
     update(value: T | ((value: T) => T)): void {
-        console.log("UPDATING STORE", this.name, value)
         if(this._updateTimeout) clearTimeout(this._updateTimeout);
         this._updateTimeout = setTimeout(() => {
             _scheduleUpdate(() => {
@@ -69,8 +64,7 @@ export class Store<T> {
                     this._storedHash = newHash.toString();
 
                     for(let ds of this._downstreamStores) ds._auto_update();
-
-                    for(let [ref, sub] of this._subscriptions) sub(this.value, ref);
+                    for(let sub of Array.from(this._subscriptions)) sub(this.value);
                 }
 
                 return this.value;
@@ -79,7 +73,6 @@ export class Store<T> {
     }
 
     _auto_update(): void {
-        console.log("UPDATING STORE", this.name, this.value)
         let newVal = this._updater?.({ $cur: this.value, $st, $fn, $el: this._scope?._el });
         this.update(newVal === undefined ? this.value : newVal);
     }

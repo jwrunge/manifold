@@ -3,18 +3,22 @@ declare class Store$1<T> {
     name: string;
     value: T;
     constructor(name: string, ops?: StoreOptions<T>);
-    sub(sub: (value: T) => void, ref?: string, immediate?: boolean): void;
+    sub(sub: (value: T) => void, immediate?: boolean): void;
     update(value: T | ((value: T) => T)): void;
 }
 
 type RegisteredElementRecipe = {
     parent?: Document | HTMLElement;
-    element?: HTMLElement;
+    element?: HTMLElement | null;
     query?: string;
     create?: string;
     classes?: string[];
+        ref: RegisteredElement;
+        mode?: Positions;
+    };
     ops: MfldOps;
 };
+type Positions = "before" | "after" | "append" | "prepend" | "appendChild";
 declare class RegisteredElement {
     constructor(recipe: RegisteredElementRecipe);
         w: string;

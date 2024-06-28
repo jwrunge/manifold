@@ -1,6 +1,5 @@
 import { type MfldOps, $fn, $st } from "./common_types";
-import { _registerInternalStore } from "./util";
-import { RegisteredElement } from "./registered_element";
+import { _transition, RegisteredElement } from "./registered_element";
 import { _register } from "./registrar";
 import { _scheduleUpdate } from "./updates";
 import { _parseFunction, ATTR_PREFIX } from "./util";
@@ -13,7 +12,7 @@ let _iterateSiblings = (
   reverse: boolean = false
 ): HTMLElement | null | undefined => {
   let dir = reverse ? "previousElementSibling" : "nextElementSibling";
-  return breakFn?.(sib) ? sib : _iterateSiblings(cb?.(sib) || sib?.[dir as keyof typeof sib] as HTMLElement, breakFn, cb, reverse);
+  return (!sib || breakFn?.(sib)) ? sib : _iterateSiblings(cb?.(sib) || sib?.[dir as keyof typeof sib] as HTMLElement, breakFn, cb, reverse);
 };
 
 // Iterates over an iterable object or an object's properties
@@ -39,63 +38,69 @@ export let _handleTemplates = (
   dependencyList: string[],
   ops: MfldOps
 ): void => {
-  return;
-  let startElement = new RegisteredElement({ classes: [`${mode}-start`], ops }),
-    templ = el._asTempl([`${mode}-end`]),
-    templStore,
+  let templ = el._asTempl([`${mode}-end`]),
+    startElement = new RegisteredElement({ classes: [`${mode}-start`], ops, _position: { ref: templ, mode: "before" }}),
+    newFunc,
     conditional = mode.match(/if|else/),
-    conditionalSub = mode.match(/(else|elseif)(\s|$)/), // Whole word match to allow for exact checks later on (otherwise else is greedy)
-    newFunc: Function | undefined = undefined,
+    conditionalSub = mode.match(/else/),
     prevConditions: string[] = [];
-
-  templ._el.before(startElement._el);
 
   // Handle conditional elements
   if(conditional) {
     // Get upstream conditions
     if(conditionalSub) {
-      let first = _iterateSiblings(startElement._el, (sib) => sib?.classList?.contains(`${ATTR_PREFIX}if-end`), null, true);
+      // Get all previous condition stores to derive this condition's value
+      let first = _iterateSiblings(startElement._el, (sib) => sib?.classList?.contains(`if-end`), null, true);
       _iterateSiblings(first, sib => sib == templ._el, sib => {
-        if(sib?.dataset?.[`${ATTR_PREFIX}cstore`]) prevConditions.push(sib.dataset[`${ATTR_PREFIX}cstore`] || "");
+        let storeRef = sib?.getAttribute(`${ATTR_PREFIX}cstore`);
+        if(storeRef) prevConditions.push(storeRef);
       });
     }
 
-    // Create function
-    newFunc = () => {
+    // Inject previous conditions into this conditions determiner
+    newFunc = templ._addFunc(() => {
       if(conditionalSub) {
         for(let d of prevConditions) {
           if($st[d]) return false;
         }
       }
-      return conditionalSub?.[0] === "else" ? true : func?.({ el, $st, $fn }) === true;
-    };
+      return mode == "else" ? true : func?.({ el, $st, $fn }) === true;
+    });
   }
 
-  templStore = _registerInternalStore([...dependencyList, ...prevConditions], conditional ? newFunc : func, templ);
-
-  // Clear old elements
-  templStore.sub(val => {
+  // Subscription function - on change, update the template
+  let sub = (val: any) => {
     if(val === undefined) return;
+
     _scheduleUpdate(() => {
+      // Transition out all elements from the previous condition
       _iterateSiblings(startElement._el.nextElementSibling as HTMLElement, sib => sib?.classList?.contains(`${mode}-end`), sib => {
-        new RegisteredElement({ element: sib as HTMLElement, ops })._transition("out");
+        _transition(sib as HTMLElement, "out", ops, func);
       });
 
-      if(conditional && !val) return;
+      if(conditional && !val) return; // Handle no value for conditional templates
 
-      _iterable(mode.match(/each/) ? val : [val], (val, key) => {
+      // Iterate over all values (only one if not each) and transition them in
+      _iterable(mode == "each" ? val : [val], (val, key) => {
         let item = templ._el.cloneNode(true) as HTMLTemplateElement;
         if(!conditional) {
           let html = templ._el.innerHTML.replace(/\$:{([^}]*)}/g, (_, cap) => _parseFunction(cap, as[0], as[1]).func?.({ $el: el, $st, $fn, [as[0]]: val, [as[1]]: key }) || "") || "";
           if(item.innerHTML) item.innerHTML = html;
         }
 
+        // Iterate over the template's children and transition them in
         for(let element of Array.from(item.content.children) as HTMLElement[]) {
           if(!element.innerHTML) element.innerHTML = String(val);
-          templ._position(element, "before", false);
+          templ._position(element, "before");
           new RegisteredElement({element: element as HTMLElement, ops})._transition("in");
         }
       });
     });
-  });
-};
+  }
+
+  templ._registerInternalStore(
+    conditional ? newFunc : func, 
+    [...dependencyList, ...prevConditions],
+    sub
+  )
+}

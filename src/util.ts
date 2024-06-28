@@ -1,7 +1,6 @@
-import { $fn, $st } from ".";
 import { MfldOps } from "./common_types";
 import { RegisteredElement } from "./registered_element";
-import { _store, Store } from "./store";
+import { _store } from "./store";
 export let ATTR_PREFIX = "data-mf-";
 export let _commaSepRx = /, {0,}/g;
 
@@ -10,11 +9,11 @@ export let _id = ()=> {
 }
 
 export let _getOpOverrides = (ops: Partial<MfldOps>, el: RegisteredElement)=> {
-    let overrides = ops.profiles?.[el._dataset("override") || ""];
+    let overrides = ops.profiles?.[el._attribute("override") || ""];
     let res = { ...ops, ...overrides };
     
     // ad hoc overrides
-    for(let set of el._el.attributes) {
+    for(let set of el._el?.attributes || []) {
         for(let key of ["fetch", "trans"]) {
             let name = set.name;
             if(name.startsWith(`${ATTR_PREFIX}${key}_`)) {
@@ -55,9 +54,9 @@ export let _parseFunction = (condition: string, valArg = "$val", keyArg = "$key"
 }
 
 export function _handlePushState(el: RegisteredElement, ev?: Event, href?: string) {
-    ev?.preventDefault();
+    ev?.preventDefault?.();
 
-    let pushState = el?._dataset("pushstate");
+    let pushState = el?._attribute("pushstate");
     let push = href;
     switch(pushState) {
         case "": break;
@@ -67,14 +66,3 @@ export function _handlePushState(el: RegisteredElement, ev?: Event, href?: strin
 
     history.pushState(null, "", push);
 }
-
-// Registers an internal store with given options
-export let _registerInternalStore = (upstream?: string[], func?: Function, $el?: RegisteredElement): Store<any> => {
-    let id = _id();
-    $el?._dataset("cstore", id);
-
-    return _store(id, {
-        updater: () => func?.({ $el, $st, $fn }),
-        scope: $el,
-    });
-};

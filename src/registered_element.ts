@@ -1,5 +1,5 @@
-import { $fn, $st } from ".";
-import { MfldOps } from "./common_types";
+import { MfldOps, $fn, $st } from "./common_types";
+import { _register } from "./registrar";
 import { _store } from "./store";
 import { _scheduleUpdate } from "./updates";
 import { _id, ATTR_PREFIX } from "./util";
@@ -8,11 +8,22 @@ export let elementReg = new Map<HTMLElement, RegisteredElement>();
 
 type RegisteredElementRecipe = {
     parent?: Document | HTMLElement;
-    element?: HTMLElement;
+    element?: HTMLElement | null;
     query?: string;
     create?: string,
     classes?: string[],
+    _position?: {
+        ref: RegisteredElement,
+        mode?: Positions,
+    },
     ops: MfldOps,
+}
+
+type Positions = "before" | "after" | "append" | "prepend" | "appendChild";
+
+export let _transition = (el: HTMLElement, dir: "in" | "out", ops: MfldOps, fn?: Function, after?: Function) => {
+    if(elementReg.get(el)) elementReg.get(el)?._transition(dir, fn, after);
+    else new RegisteredElement({ element: el, ops })._transition(dir, fn, after);
 }
 
 export class RegisteredElement {
@@ -23,37 +34,40 @@ export class RegisteredElement {
     _ops: MfldOps;
 
     constructor(recipe: RegisteredElementRecipe) {
-        if(recipe.element) this._el = recipe.element;
-        else if(recipe.query) this._el = (recipe.parent || document).querySelector(recipe.query) as HTMLElement;
-        else this._el = document.createElement(recipe.create || "TEMPLATE");
+        let el: HTMLElement | null;
+        if(recipe.element) el = recipe.element;
+        else if(recipe.query) el = (recipe.parent || document).querySelector(recipe.query) as HTMLElement;
+        else el = document.createElement(recipe.create || "TEMPLATE");
         
+        this._el = el;
         elementReg.get(this._el)?._cleanUp();
         elementReg.set(this._el, this);
         this._classes(["_mfld", ...recipe.classes || []]);
 
+        if(recipe._position) recipe._position.ref._position(el, recipe._position.mode, false);
         this._ops = recipe.ops;
         return this;
     }
 
-    _dataset(key: string, value?: string) {
-        if(value) this._el.setAttribute(`${ATTR_PREFIX}${key}`, value);
+    _attribute(key: string, value?: string) {
+        if(value) this._el?.setAttribute(`${ATTR_PREFIX}${key}`, value);
         let val = this._el?.getAttribute(`${ATTR_PREFIX}${key}`);
-        return val;
+        return val ?? null;
     }
 
-    _classes(classes: string | string[], remove = false) {
-        if(classes !instanceof Array) classes = [classes as any];
-        for(let cls of classes) this._el.classList[remove ? "remove" : "add"]?.(cls);
+    _classes(classes: string[], remove = false) {
+        for(let cls of classes) this._el?.classList[remove ? "remove" : "add"]?.(cls);
     }
 
     _query(query: string, all = true) {
         // @ts-ignore
-        return this._el["querySelector".concat(all ? "All" : "")](query) as NodeListOf<HTMLElement> | null;
+        return this._el?.["querySelector".concat(all ? "All" : "")](query) as NodeListOf<HTMLElement> | HTMLElement | null;
     }
 
     _addListener(trigger: string, func: any) {
-        this._listeners?.set(trigger, func);
-        return func;
+        let F = ()=> func({$el: this._el, $st, $fn})
+        this._el?.addEventListener(trigger, F);
+        this._listeners?.set(trigger, F);
     }
 
     _addFunc(func?: Function) {
@@ -61,36 +75,32 @@ export class RegisteredElement {
         return func;
     }
 
-    _callFunc(func: Function, key: string, val: any, body: any) {
-        return func?.({$el: this._el, $st, $fn, key, val, body})
-    }
-
     _registerInternalStore(func?: Function, dependencyList?: string[], sub?: (val: any)=> void) {
         let id = _id();
-        this._dataset("cstore", id);
+        this._attribute("cstore", id);
         this._addFunc(func);
 
-        console.log("REGISTERING INTERNAL WIHT DEPENDENCY LIST", dependencyList)
         let S = _store(id, {
             updater: () => func?.({ $el: this._el, $st, $fn }),
             dependencyList,
             scope: this,
         });
 
-        console.log("Registered internal store", S);
-
-        if(sub) S.sub(sub);
+        if(sub) {
+            this._addFunc(sub);
+            S.sub(sub);
+        }
         return S;
     }
 
-    _position(el: HTMLElement, mode: "after" | "before" | "append" | "prepend" | "appendChild" = "append", clone = true) {
+    _position(el: HTMLElement, mode: Positions = "append", clone = true) {
         let newEl = clone ? el.cloneNode(true) : el;
-        this._el[mode]?.(newEl);
+        this._el?.[mode]?.(newEl);
         return newEl as HTMLElement;
     }
 
     _empty() {
-        this._el.replaceChildren();
+        this._el?.replaceChildren();
     }
 
     _replaceWith(el: RegisteredElement) {
@@ -99,8 +109,12 @@ export class RegisteredElement {
     }
 
     _asTempl(classes: string[] = []) {
-        let templ = new RegisteredElement({classes, ops: this._ops});
-        templ._position(this._el);
+        if(this._el?.tagName == "TEMPLATE") {
+            this._classes(classes);
+            return this;
+        }
+        let templ = new RegisteredElement({classes, ops: this._ops, _position: {ref: this}});
+        (templ._el as HTMLTemplateElement).content?.append(this._el.cloneNode(true));
         this._replaceWith(templ);
         return templ;
     }
@@ -116,58 +130,72 @@ export class RegisteredElement {
         };
     }
 
-    _transition(dir: "in" | "out", fn?: Function, after?: Function) {
-        let ops = this._ops;
-        let dur = ops.trans?.dur?.[dir == "in" ? "shift" : "pop"]?.() || 0;
-        if(dur) this._el.style.transitionDuration = `${dur}ms`;
-        let transClass = ops?.trans?.class || `${ATTR_PREFIX}trans`;
-        ops.trans?.hooks?.[`${dir}-start`]?.(this._el);
-
-        if(dir == "out") {
-            _scheduleUpdate(()=> {
-                this._classes("out");
-                let dimensions;
-                if(ops.trans?.smart ?? true) {
-                    dimensions = this._dimensions();
-                    Object.assign(
-                        this._el.style, 
-                        { 
-                            position: "fixed", 
-                            width: dimensions.w, 
-                            left: dimensions.left, 
-                            top: dimensions.top, 
-                            margin: "0" 
-                        }
-                    );
-                }
-            })
-        }
-        else {
-            this._classes("in");
-            fn?.();
-            setTimeout(()=> {
-                _scheduleUpdate(()=> {
-                    setTimeout(()=> _scheduleUpdate(()=> this._classes(dir, true)), 0);
-                });
-            }, ops.trans?.swap || 0);
-        }
-
-        setTimeout(()=> {
-            _scheduleUpdate(()=> {
-                if(dir == "out") this._cleanUp();
-                else this._classes(transClass, true);
-                ops.trans?.hooks?.[`${dir}-end`]?.(this._el);
-                this._el.style.transitionDuration = "";
-                if(dir == "in") after?.(this);
-            });
-        }, 
-        dur + (dir == "in" && ops.trans?.swap || 0));
+    _transition(dir: "in" | "out", fn?: Function | null, after?: Function) {
+        _scheduleUpdate(()=> {
+            if(dir == "out") this._cleanUp();
+        });
     }
 
+    // _transition(dir: "in" | "out", fn?: Function | null, after?: Function) {
+    //     let el = this._el,
+    //         ops = this._ops,
+    //         dur = ops.trans?.dur?.[dir == "in" ? "shift" : "pop"]?.() || 0;
+
+    //     if(dur && el) el.style.transitionDuration = `${dur}ms`;
+    //     let transClass = ops?.trans?.class || `${ATTR_PREFIX}trans`;
+    //     ops.trans?.hooks?.[`${dir}-start`]?.(el);
+
+    //     if(dir == "out") {
+    //         _scheduleUpdate(()=> {
+    //             this._classes(["out"]);
+    //             let dimensions;
+    //             if(ops.trans?.smart ?? true) {
+    //                 dimensions = this._dimensions();
+    //                 Object.assign(
+    //                     el.style, 
+    //                     { 
+    //                         position: "fixed", 
+    //                         width: dimensions.w, 
+    //                         left: dimensions.left, 
+    //                         top: dimensions.top, 
+    //                         margin: "0" 
+    //                     }
+    //                 );
+    //             }
+    //         })
+    //     }
+    //     else {
+    //         this._classes(["in"]);
+    //         fn?.();
+    //         setTimeout(()=> {
+    //             _scheduleUpdate(()=> {
+    //                 this._classes([dir], true);
+    //             });
+    //         }, ops.trans?.swap || 0);
+    //     }
+
+    //     setTimeout(()=> {
+    //         _scheduleUpdate(()=> {
+    //             if(dir == "out") this._cleanUp();
+    //             else {
+    //                 this._classes([transClass], true);
+    //                 console.log("REGISTERING", this._el)
+    //                 _register(this._el, true);
+    //             }
+    //             ops.trans?.hooks?.[`${dir}-end`]?.(el);
+    //             el.style.transitionDuration = "";
+    //             if(dir == "in") after?.(this);
+    //         });
+    //     }, 
+    //     dur + (dir == "in" && ops.trans?.swap || 0));
+    // }
+
     _cleanUp() {
+        let el = this._el;
+
         // Clear listeners and funcs
         this._listeners?.forEach((func, trigger) => {
-            this._el?.removeEventListener(trigger, func);
+            el?.removeEventListener(trigger, func);
         });
 
         this._funcs?.forEach((func) => {
@@ -175,15 +203,15 @@ export class RegisteredElement {
         });
 
         // Clear children
-        this._query("._mfld", true)?.forEach(child => {
+        (this._query("._mfld", true) as NodeListOf<HTMLElement>)?.forEach(child => {
             elementReg.get(child as HTMLElement)?._cleanUp();
         });
 
         //Clear references
-        this._el.remove();
+        el.remove();
         // @ts-ignore
-        this._funcs = this._listeners = this._el = null;
+        this._funcs = this._listeners = el = null;
 
-        if(this._el) elementReg.delete(this._el);
+        if(el) elementReg.delete(el);
     }
 }
