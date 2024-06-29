@@ -23,7 +23,7 @@ export let _getOpOverrides = (ops: Partial<MfldOps>, el: RegisteredElement)=> {
                     if(val?.match(/\{|\[/)) val = JSON.parse(val);
                     else if(parseInt(val || "")) val = parseInt(val);
                     if(Array.isArray(val)) val = val.map(v=> parseInt(v) || v);
-                    (res as any)[key][prop] = val;
+                    if((res as any)?.[key]?.[prop]) (res as any)[key][prop] = val;
                 }
                 catch(e) {
                     console.error(e);

@@ -63,8 +63,8 @@ export type FetchOptions = {
 
 export type ExternalOptions = {
   domain: string;
-  scripts?: "all" | "selected" | "none";
-  styles?: "all" | "selected" | "none";
+  script?: "all" | "selected" | "none";
+  style?: "all" | "selected" | "none";
 }
 
 export type TransitionOptions = {

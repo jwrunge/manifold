@@ -21,9 +21,13 @@ type RegisteredElementRecipe = {
 
 type Positions = "before" | "after" | "append" | "prepend" | "appendChild";
 
-export let _transition = (el: HTMLElement, dir: "in" | "out", ops: MfldOps, fn?: Function, after?: Function) => {
-    if(elementReg.get(el)) elementReg.get(el)?._transition(dir, fn, after);
-    else new RegisteredElement({ element: el, ops })._transition(dir, fn, after);
+export let _registerElement = (el: HTMLElement, ops: MfldOps) => {
+    return elementReg.get(el) || new RegisteredElement("REGISTER ELEMENT FN",{ element: el, ops });
+}
+
+export let _transition = (el: HTMLElement, dir: "in" | "out", ops: MfldOps, fn?: Function | null, after?: Function | null) => {
+    console.log("TRANSITIONING", dir);
+    (elementReg.get(el) || new RegisteredElement("TRANSITION "+dir,{ element: el, ops }))?._transition(dir, fn, after);
 }
 
 export class RegisteredElement {
@@ -33,15 +37,18 @@ export class RegisteredElement {
     _funcs: Set<Function> | null = new Set();
     _ops: MfldOps;
 
-    constructor(recipe: RegisteredElementRecipe) {
+    constructor(from: string, recipe: RegisteredElementRecipe) {
         let el: HTMLElement | null;
         if(recipe.element) el = recipe.element;
         else if(recipe.query) el = (recipe.parent || document).querySelector(recipe.query) as HTMLElement;
         else el = document.createElement(recipe.create || "TEMPLATE");
         
         this._el = el;
-        elementReg.get(this._el)?._cleanUp();
+
+        elementReg.get(this._el)?._cleanUp(false);
         elementReg.set(this._el, this);
+        console.log("CREATING regel from", from, this._el, elementReg.get(this._el), elementReg.size)
+
         this._classes(["_mfld", ...recipe.classes || []]);
 
         if(recipe._position) recipe._position.ref._position(el, recipe._position.mode, false);
@@ -99,10 +106,6 @@ export class RegisteredElement {
         return newEl as HTMLElement;
     }
 
-    _empty() {
-        this._el?.replaceChildren();
-    }
-
     _replaceWith(el: RegisteredElement) {
         this._el?.replaceWith(el._el);
         this._cleanUp();
@@ -113,7 +116,7 @@ export class RegisteredElement {
             this._classes(classes);
             return this;
         }
-        let templ = new RegisteredElement({classes, ops: this._ops, _position: {ref: this}});
+        let templ = new RegisteredElement("As TeMPL", {classes, ops: this._ops, _position: {ref: this}});
         (templ._el as HTMLTemplateElement).content?.append(this._el.cloneNode(true));
         this._replaceWith(templ);
         return templ;
@@ -130,9 +133,13 @@ export class RegisteredElement {
         };
     }
 
-    _transition(dir: "in" | "out", fn?: Function | null, after?: Function) {
+    _transition(dir: "in" | "out", fn?: Function | null, after?: Function | null) {
         _scheduleUpdate(()=> {
-            if(dir == "out") this._cleanUp();
+            if(dir == "out") {
+                console.log("OUT", this._el)
+                this._cleanUp();
+            }
+            after?.();
         });
     }
 
@@ -190,12 +197,12 @@ export class RegisteredElement {
     //     dur + (dir == "in" && ops.trans?.swap || 0));
     // }
 
-    _cleanUp() {
-        let el = this._el;
+    _cleanUp(removeElement = true) {
+        console.log("CLEANING", this._el, elementReg.get(this._el), elementReg.size -1)
 
         // Clear listeners and funcs
         this._listeners?.forEach((func, trigger) => {
-            el?.removeEventListener(trigger, func);
+            this._el?.removeEventListener(trigger, func);
         });
 
         this._funcs?.forEach((func) => {
@@ -207,11 +214,12 @@ export class RegisteredElement {
             elementReg.get(child as HTMLElement)?._cleanUp();
         });
 
-        //Clear references
-        el.remove();
-        // @ts-ignore
-        this._funcs = this._listeners = el = null;
+        this._funcs = this._listeners = null;
 
-        if(el) elementReg.delete(el);
+        //Clear references
+        if(removeElement) this._el.remove();
+        elementReg.delete(this._el);
     }
 }
+
+window.reg = elementReg;

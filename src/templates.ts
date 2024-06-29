@@ -39,12 +39,13 @@ export let _handleTemplates = (
   ops: MfldOps
 ): void => {
   let templ = el._asTempl([`${mode}-end`]),
-    startElement = new RegisteredElement({ classes: [`${mode}-start`], ops, _position: { ref: templ, mode: "before" }}),
+    startElement = new RegisteredElement("FROM START EL", { classes: [`${mode}-start`], ops, _position: { ref: templ, mode: "before" }}),
     newFunc,
     conditional = mode.match(/if|else/),
     conditionalSub = mode.match(/else/),
     prevConditions: string[] = [];
 
+  console.log("RUNNING TEMPL HANDLER")
   // Handle conditional elements
   if(conditional) {
     // Get upstream conditions
@@ -78,22 +79,24 @@ export let _handleTemplates = (
         _transition(sib as HTMLElement, "out", ops, func);
       });
 
-      if(conditional && !val) return; // Handle no value for conditional templates
+      _scheduleUpdate(()=> {
+        if(conditional && !val) return; // Handle no value for conditional templates
 
-      // Iterate over all values (only one if not each) and transition them in
-      _iterable(mode == "each" ? val : [val], (val, key) => {
-        let item = templ._el.cloneNode(true) as HTMLTemplateElement;
-        if(!conditional) {
-          let html = templ._el.innerHTML.replace(/\$:{([^}]*)}/g, (_, cap) => _parseFunction(cap, as[0], as[1]).func?.({ $el: el, $st, $fn, [as[0]]: val, [as[1]]: key }) || "") || "";
-          if(item.innerHTML) item.innerHTML = html;
-        }
+        // Iterate over all values (only one if not each) and transition them in
+        _iterable(mode == "each" ? val : [val], (val, key) => {
+          let item = templ._el.cloneNode(true) as HTMLTemplateElement;
+          if(!conditional) {
+            let html = templ._el.innerHTML.replace(/\$:{([^}]*)}/g, (_, cap) => _parseFunction(cap, as[0], as[1]).func?.({ $el: el, $st, $fn, [as[0]]: val, [as[1]]: key }) || "") || "";
+            if(item.innerHTML) item.innerHTML = html;
+          }
 
-        // Iterate over the template's children and transition them in
-        for(let element of Array.from(item.content.children) as HTMLElement[]) {
-          if(!element.innerHTML) element.innerHTML = String(val);
-          templ._position(element, "before");
-          new RegisteredElement({element: element as HTMLElement, ops})._transition("in");
-        }
+          // Iterate over the template's children and transition them in
+          for(let element of Array.from(item.content.children) as HTMLElement[]) {
+            if(!element.innerHTML) element.innerHTML = String(val);
+            templ._position(element, "before");
+            _transition(element, "in", ops)//, null, ()=> _register(element, true));
+          }
+        });
       });
     });
   }

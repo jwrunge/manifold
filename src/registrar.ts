@@ -2,7 +2,7 @@ import { _commaSepRx, _getOpOverrides, _handlePushState, _parseFunction, ATTR_PR
 import { _handleFetch } from "./fetch";
 import { _handleTemplates } from "./templates";
 import { MfldOps, $fn, $st } from "./common_types";
-import { RegisteredElement } from "./registered_element";
+import { _registerElement } from "./registered_element";
 
 let _ops: Partial<MfldOps> = {};
 let _modes = ["bind", "sync", "templ", "if", "elseif", "else", "each", "get", "head", "post", "put", "delete", "patch", "promote"];
@@ -16,18 +16,16 @@ window.addEventListener("popstate", () => {
     location.reload();
 });
 
-export let _register = (parent?: HTMLElement | null, stop= false): void => {
-    if(parent?.nodeType == Node.TEXT_NODE) return;
+export let _register = (parent?: HTMLElement | null, noparent = false): void => {
+    if(!parent || parent?.nodeType == Node.TEXT_NODE) return;
 
     let suffix = ":not(._mfld)";
-    let els: NodeListOf<HTMLElement> = (parent || document.body).querySelectorAll(
+    let els: NodeListOf<HTMLElement> = (parent).querySelectorAll(
         `[${ATTR_PREFIX}${_modes.join(`]${suffix},[${ATTR_PREFIX}`)}]${suffix}`
     );
 
-    for(let el of [parent, ...els].map(e=> new RegisteredElement({element: e as HTMLElement, ops: _ops}))) {
+    for(let el of (noparent ? [...els] : [parent, ...els]).map(e=> _registerElement(e as HTMLElement, _ops))) {
         let _op_overrides = _getOpOverrides(structuredClone(_ops), el);
-
-        if(stop) return;
 
         for(let mode of _modes) {
             // Early exit

@@ -14,8 +14,9 @@ export let _handleFetch = (
   func?: Function,
   complete?: Function,
 ): void => {
-  let ev = (e?: Event) => _fetchAndInsert(e, method, fetchOps, href, el, true, func, complete);
+  console.log("HANDLING FETCH")
 
+  let ev = (e?: Event) => _fetchAndInsert(e, method, fetchOps, href, el, true, func, complete);
   if(trigger === "$mount") ev();
   else el._addListener(trigger, ev);
 };
@@ -25,7 +26,7 @@ export let _fetchAndInsert = async (
   method: string | undefined,
   fetchOps: MfldOps,
   href: string,
-  el: RegisteredElement | { _attribute: (val: string)=> string },
+  el: RegisteredElement,
   domUpdate: boolean,
   func?: Function,
   complete?: Function,
@@ -44,7 +45,7 @@ export let _fetchAndInsert = async (
 
   if(!externalPermissions) {
     externalPermissions = href.startsWith(location.origin)
-      ? { domain: "$origin", scripts: "selected", styles: "selected" }
+      ? { domain: "$origin", script: "selected", style: "selected" }
       : undefined;
   }
 
@@ -72,47 +73,33 @@ export let _fetchAndInsert = async (
 
   for(let instruction of ["append", "prepend", "inner", "outer"]) {
     let ds = el._attribute(instruction);
-    if(!ds) continue;
+    if(ds == null) continue;
     let [selector, toReplace] = ds.split("->").map(s => s.trim());
 
     let fullMarkup = new DOMParser().parseFromString(resp, 'text/html');
-    let inEl = new RegisteredElement({ parent: fullMarkup, query: selector || "body", ops: fetchOps });
+    let inEl = new RegisteredElement("FETCH IN EL",{ parent: fullMarkup, query: selector || "body", ops: fetchOps });
 
-    if(fullMarkup) {
-      let scripts: HTMLScriptElement[] = [];
-      if(!externalPermissions?.styles || externalPermissions.styles === "none") fullMarkup.querySelectorAll("style").forEach(s => s.parentNode?.removeChild(s));
-      if(externalPermissions?.styles === "all") fullMarkup.querySelectorAll("style").forEach(s => inEl?._position(s, "append", false));
-      (externalPermissions?.scripts === "all" ? fullMarkup : inEl._el)?.querySelectorAll("script").forEach(s => {
-        if(["all", "selected"].includes(externalPermissions?.scripts || "")) scripts.push(s as HTMLScriptElement);
-        s.parentNode?.removeChild(s);
-      });
+    let [ styles, scripts ] = ["style", "script"].map(tag => Array.from(
+      (externalPermissions?.[tag as keyof ExternalOptions] == "all" ? fullMarkup : inEl._el)?.querySelectorAll(tag)
+    )) as [HTMLStyleElement[], HTMLScriptElement[]];
 
-      if(inEl) {
-        if(domUpdate) _scheduleUpdate({
-          in: inEl,
-          out: toReplace ? new RegisteredElement({query: toReplace, ops: fetchOps}) : el as RegisteredElement,
-          relation: instruction as FetchInsertionMode,
-          ops: fetchOps,
-          done: (el) => {
-            complete?.(el);
-            for(let s of scripts) {
-              let n = document.createElement("script");
-              n.textContent = s.textContent;
-              el?._position(n, "append", false);
-            }
-          },
-        });
-        else {
-          document.body.appendChild(inEl._el);
-          for(let s of scripts) {
-            let n = document.createElement("script");
-            for(let attr of s.attributes) n.setAttribute(attr.name, attr.value);
-            n.textContent = s.textContent;
-            inEl._el.before(n);
-          }
-        }
-      }
+    switch(externalPermissions?.style) {
+      case "all": styles.forEach(s => inEl?._position(s, "append", false)); break;
+      default: styles.forEach(s => s.parentNode?.removeChild(s));
     }
+
+    for(let script of scripts) script.parentNode?.removeChild(script);
+
+    if(inEl) inEl._transition("in", null, ()=> {
+      complete?.(el);
+      for(let s of scripts) {
+        let n = document.createElement("script");
+        n.textContent = s.textContent;
+        el?._el?.append(n);
+      }
+    });
+
+    (toReplace ? new RegisteredElement("FETCH OUTEL",{query: toReplace, ops: fetchOps}) : el as RegisteredElement)._transition("out");
   }
 
   let resolveTxt = el._attribute("resolve");

@@ -20,7 +20,7 @@ type RegisteredElementRecipe = {
 };
 type Positions = "before" | "after" | "append" | "prepend" | "appendChild";
 declare class RegisteredElement {
-    constructor(recipe: RegisteredElementRecipe);
+    constructor(from: string, recipe: RegisteredElementRecipe);
         w: string;
         left: string;
         top: string;
@@ -64,8 +64,8 @@ type FetchOptions = {
 };
 type ExternalOptions = {
     domain: string;
-    scripts?: "all" | "selected" | "none";
-    styles?: "all" | "selected" | "none";
+    script?: "all" | "selected" | "none";
+    style?: "all" | "selected" | "none";
 };
 type TransitionOptions = {
     class?: string;

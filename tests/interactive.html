@@ -8,110 +8,6 @@
   <title>Reactivity Test</title>
 </head>
 <body>
-  <h1><span data-mf-sync="on(click)-> alert('working')">Reactivity test</span></h1>
-
-  <!-- <test-component></test-component> -->
-  <mfld-default data-mf-if="$st.store1 == 'OK'" data-mf-trans_dur="300">
-    <new-component>
-      <div data-mf-each="$st.store1 as l, i">
-        <div>This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
-      </div>
-    </new-component>
-  </mfld-default>
-  <template data-mf-else data-mf-trans_dur="500">
-    <new-component>
-      <div>ELSE</div>
-      <div data-mf-bind="$el.innerText = $st.store1"></div>
-    </new-component>
-  </template>
-
-  <!-- <model-viewer 
-    alt="Neil Armstrong's Spacesuit from the Smithsonian Digitization Programs Office and National Air and Space Museum" 
-    src="tests/NeilArmstrong.glb" ar environment-image="tests/moon_1k.hdr" 
-    poster="tests/NeilArmstrong.webp" 
-    shadow-intensity="1" 
-    data-mf-bind="$el.cameraControls = $st.store1 == 'OK' ? true : undefined" touch-action="pan-y">
-  </model-viewer> -->
-
-  <p data-mf-templ="$st.store1?.toUpperCase()"></p>
-  <div data-mf-templ="$st.store1?.toUpperCase() as v">
-    <!-- <input data-mf-bind="$:{v}-> value" data-mf-sync="on(click)-> console.log(value)"> -->
-     <div style="margin-top: 5rem">$:{v}</div>
-     $:{v.toLowerCase()}<br>
-     $:{`1234` + v.slice(0, 1).toUpperCase() + v.slice(1).toLowerCase()}<br>
-     <input type="text" data-mf-bind="$el.value = $st.store1" data-mf-sync="on(change, keyup)-> console.log($el.value)">
-  </div>
-
-  <p>This is an example of dynamic text! The current store value is: 
-    <span 
-      data-mf-bind="()=> { $el.innerText = $st.store1?.toUpperCase() } ;; $el.style.backgroundColor = $st.store1 === 'My text' ? 'green' : 'blue'"
-    >Here is a default value.</span>
-  </p>
-  <p>Here is text that can be HTML: <span data-mf-bind="$el.innerHTML = $st.store1">Here is a default value.</span></p>
-  <p>Store 2 nested: <span data-mf-bind="$el.innerHTML = $st.store2?.values?.[1]">Here is a default value.</span></p>
-  <p>Checkbox set to checked? <span data-mf-bind="$el.innerText = $st.store2?.values?.[0]"></span></p>
-  <p>Store 4 value: <span data-mf-bind="$el.innerText = $st.store4"></span></p>
-  <p>Checked store checked? <span data-mf-bind="$el.innerText = $st.checkedStore">Unknown</span></p>
-  <p>Value of Mass Store 99: <span data-mf-bind="$el.innerText = $st.mass_store99">Unknown</span></p>
-  <!-- <div data-secret="THIS IS A SECRET" data-mf-sync="on($mount)-> $fn.sendAlert($el.dataset.secret)"></div> -->
-
-  <!-- Content -->
-  <div class="sync-grid">
-    <label>On keyup:</label> <input data-mf-bind="$el.value = $st.store1" data-mf-sync="on(keyup, change) -> $st.store1 = $el.value">
-    <label>Bind only:</label> <input data-mf-bind="$el.value = $st.store1">
-    <label for="cb">Sync checkbox:</label> <input id="cb" type="checkbox" data-mf-bind="$el.checked = $st.store1" data-mf-sync="on(change) -> $st.checkedStore = $el.checked || false">
-    <label for="cb2">Bind checkbox:</label> <input id="cb2" type="checkbox" data-mf-bind="$el.checked = $fn.isChecked($st.store1)">
-    
-    <!-- Select (with dynamic options) -->
-    <label>Dyn select</label>
-    <select data-mf-bind="$el.value = $st.store1" data-mf-sync="on(change) -> $st.store1 = $el.value">
-      <!-- Dynamic frontend replace -->
-      <!-- <template id="select-ops" data-mf-each="$st.store1 as l, i">
-        <!- Dynamic options ->
-        <option value="$:{l}">$:{i}: $:{l}</option>
-      </template> -->
-
-      <!-- Default / fallback options (replaced if dynamic options work) -->
-      <mf-default data-mf-template="select-ops">
-        <option value="" default>Blank</option>
-        <option value="My text">Initial Value</option>
-        <option value="<span class='colorful'>Another update</span>">Show update text</option>
-        <option value="We're at 4k">Show 4k text</option>
-      </mf-default>
-
-      <!-- Always-present options -->
-      <option value="Last one">Last one</option>
-    </select>
-
-    <!-- <label>Dyn div</label> -->
-    <!-- <mf-default data-mf-if="showDiv(store1)">
-      Div is shown.
-    </mf-default>
-    <template data-mf-else-if="showDiv(store1)">Else if</template>
-    <template data-mf-else>Else</template> -->
-  </div>
-
-  <!-- <select data-mf-bind="()=> 2 -> value">
-    <option value="1">One</option>
-    <option value="2">Two</option>
-    <option value="3">Three</option>
-    <template data-mf-each="$st.store1 as letter, index">
-      <option value="$:{index}">$:{index}: $:{letter}</option>
-    </template>
-  </select> -->
-
-  <button data-mf-post="on(click) -> {name: 'Jake', age: 36} -> /tests/header.html">JSON Sender</button>
-
-  <form action="/tests/header.html" method="post" data-mf-inner="h2->h1" data-mf-promote data-mf-pushstate>
-    <label>Name: <input type="text" name="name" autocomplete="name" required></label>
-    <label>Age: <input type="number" name="age"></label>
-    <button type="submit">SUBMIT</button>
-  </form>
-
-  <template data-mf-each="$st.store1 as l, i">
-    <div class="clickable" data-mf-sync="on(click)-> alert('working')">This is letter $:{i + 30}: $:{l.toLowerCase()}</div>
-  </template>
-
   <mfld-default data-mf-if="()=>{ return $st.store1 == 'OK'; }" data-mf-trans_dur="[1000, 4000]">
     <div>,/;mn bk,jbbkkjlbikujbuibbbbbbbb</div>
   </mfld-default>
@@ -121,15 +17,6 @@
   <template data-mf-else>
     <div>ELSE</div>
   </template>
-
-  <div class="special-insert" data-mf-get="on(click) -> /tests/interactive.html" data-mf-inner=".sync-grid -> header">Default insert</div>
-  <nav data-mf-post="on(click) -> ()=> $st.store1?.toUpperCase() + JSON.stringify($st.store2 || {}) -> /tests/header.html" data-mf-inner="header -> h1" data-mf-transsmart="true" data-mf-transdur="300" data-mf-pushstate>
-    <p>This is some default nav content.</p>
-  </nav>
-
-  <div class="trans" data-mf-bind="$fn.specialStyling($st.store1, $el)"></div>
-  <a href="tests/header.html" data-mf-promote data-mf-pushstate="whatevs" data-mf-outer="header" data-mf-fetch_externals='[{"domain": "$origin", "scripts": "all", "styles": "all"}]'>TO HEADER</a>
-
   <!-- Store script -->
   <script src="./tests/interactive.js" type="module"></script>
 </body>

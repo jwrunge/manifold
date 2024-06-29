@@ -33,7 +33,7 @@ export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): voi
       this.onadopted = ops?.onadopted?.bind(this);
       this.ondisconnect = ops?.ondisconnect?.bind(this);
       this.onAttributeChanged = ops?.onAttributeChanged?.bind(this);
-      this.template = new RegisteredElement({
+      this.template = new RegisteredElement("COMPONENT", {
         ops: ops?.options || {},
         element: ops?.templ || (document.getElementById(ops?.selector || name) as HTMLTemplateElement)
       });
