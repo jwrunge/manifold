@@ -1,6 +1,4 @@
-import { RegisteredElement } from "./registered_element";
 import { _store } from "./store";
-import { MfldTemplElement } from "./templ";
 
 declare global {
     interface Window {
@@ -92,7 +90,7 @@ export interface StoreOptions<T> {
   name?: string;
   value?: T;
   updater?: UpdaterFunction<T>;
-  scope?: RegisteredElement;
+  scope?: HTMLElement;
   dependencyList?: string[];
   internal?: boolean;
 }

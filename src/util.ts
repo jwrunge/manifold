@@ -1,26 +1,24 @@
 import { $fn, $st } from ".";
 import { MfldOps } from "./common_types";
-import { RegisteredElement } from "./registered_element";
 import { _store } from "./store";
-export let ATTR_PREFIX = "data-mf-";
+export let ATTR_PREFIX = "mf-";
 export let _commaSepRx = /, {0,}/g;
 
 export let _id = ()=> {
     return `${Date.now()}.${Math.floor(Math.random() * 100_000)}`;
 }
 
-export let _getOpOverrides = (ops: Partial<MfldOps>, el: RegisteredElement)=> {
-    let overrides = ops.profiles?.[el._attribute("override") || ""];
+export let _getOpOverrides = (ops: Partial<MfldOps>, el: HTMLElement)=> {
+    let overrides = ops.profiles?.[el.getAttribute("override") || ""];
     let res = { ...ops, ...overrides };
     
     // ad hoc overrides
-    for(let set of el._el?.attributes || []) {
+    for(let name in el?.attributes || []) {
         for(let key of ["fetch", "trans"]) {
-            let name = set.name;
             if(name.startsWith(`${ATTR_PREFIX}${key}_`)) {
                 try {
                     let prop = name.split("_")[2];
-                    let val: any = set.value;
+                    let val: any = el.getAttribute(key);
                     if(val?.match(/\{|\[/)) val = JSON.parse(val);
                     else if(parseInt(val || "")) val = parseInt(val);
                     if(Array.isArray(val)) val = val.map(v=> parseInt(v) || v);
@@ -54,10 +52,10 @@ export let _parseFunction = (condition: string, valArg = "$val", keyArg = "$key"
     }
 }
 
-export function _handlePushState(el: RegisteredElement, ev?: Event, href?: string) {
-    ev?.preventDefault?.();
+export function _handlePushState(el: HTMLElement, ev?: Event, href?: string) {
+    ev?.preventDefault();
 
-    let pushState = el?._attribute("pushstate");
+    let pushState = el?.getAttribute("pushstate");
     let push = href;
     switch(pushState) {
         case "": break;
@@ -69,12 +67,10 @@ export function _handlePushState(el: RegisteredElement, ev?: Event, href?: strin
 }
 
 export function _registerInternalStore(el: HTMLElement, func?: Function, dependencyList?: string[], sub?: (val: any)=> void) {
-    let id = _id();
-    let S = _store(id, {
+    let S = _store(_id(), {
         updater: () => func?.({ $el: el, $st, $fn }),
         dependencyList,
         internal: true,
-        // scope: el,
     });
 
     if(sub) S.sub(sub);

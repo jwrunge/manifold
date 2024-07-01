@@ -1,38 +1,9 @@
-type SubFunction$1 = (value: any, ref?: string) => void;
-declare class Store$1<T> {
-    name: string;
-    value: T;
-    constructor(name: string, ops?: StoreOptions<T>);
-    sub(sub: (value: T) => void, immediate?: boolean): void;
-    update(value: T | ((value: T) => T)): void;
-}
-
-type RegisteredElementRecipe = {
-    parent?: Document | HTMLElement;
-    element?: HTMLElement | null;
-    query?: string;
-    create?: string;
-    classes?: string[];
-        ref: RegisteredElement;
-        mode?: Positions;
-    };
-    ops: MfldOps;
-};
-type Positions = "before" | "after" | "append" | "prepend" | "appendChild";
-declare class RegisteredElement {
-    constructor(from: string, recipe: RegisteredElementRecipe);
-        w: string;
-        left: string;
-        top: string;
-    };
-}
-
 declare global {
     interface Window {
         MFLD: {
-            st: Map<string, Store<any>>;
+            st: Map<string, Store$1<any>>;
             mut: Map<HTMLElement, {
-                toRemove: Set<Store<any>>;
+                toRemove: Set<Store$1<any>>;
                 observer: MutationObserver;
             }>;
             $st: {
@@ -48,6 +19,12 @@ declare global {
     }
     let MFLD: typeof window.MFLD;
 }
+declare let $fn: {
+    [key: string]: Function;
+};
+declare let $st: {
+    [key: string]: any;
+};
 type MfldOps = {
     profiles?: {
         [key: string]: Partial<MfldOps>;
@@ -84,19 +61,19 @@ type UpdaterFunction<T> = (value: T | (() => T)) => T;
 type ValueDeterminer<T> = (currentValue?: T) => T | undefined;
 type UpdateFunction<T> = (value: T | ValueDeterminer<T>) => T | undefined;
 type SubDeterminer<T> = (value: T) => void;
-type SubFunction<T> = (value: SubDeterminer<T>) => void;
+type SubFunction$1<T> = (value: SubDeterminer<T>) => void;
 interface StoreOptions<T> {
     name?: string;
     value?: T;
     updater?: UpdaterFunction<T>;
-    scope?: RegisteredElement;
+    scope?: HTMLElement;
     dependencyList?: string[];
     internal?: boolean;
 }
-interface Store<T> {
+interface Store$1<T> {
     readonly value: T;
     update: UpdateFunction<T>;
-    sub: SubFunction<T>;
+    sub: SubFunction$1<T>;
 }
 type MfldFunc = (val: any, el?: HTMLElement) => void;
 
@@ -114,23 +91,29 @@ interface ComponentOptions {
     options: Partial<MfldOps>;
 }
 
-declare let Mfld: {
-    store: <T>(store_name: string, store_ops: StoreOptions<T> | T) => Store$1<T>;
-    ustore: (store_name: string, store_ops: StoreOptions<any>) => Store$1<any>;
+type SubFunction = (value: any, ref?: string) => void;
+declare class Store<T> {
+    name: string;
+    value: T;
+    constructor(name: string, ops?: StoreOptions<T>);
+    sub(sub: (value: T) => void, immediate?: boolean): void;
+    update(value: T | ((value: T) => T)): void;
+}
+
+declare let onTick: (fn: Function) => void;
+
+declare let _setOptions: (newops: Partial<MfldOps>, profileName?: string) => void;
+
+declare let store: {
+    make: <T>(store_name: string, store_ops: StoreOptions<T> | T) => Store<T>;
+    untyped: (store_name: string, store_ops: StoreOptions<any>) => Store<any>;
     funcs: (funcs: {
         [key: string]: MfldFunc;
     }) => void;
-    config: (new_ops: MfldOps, profile_name?: string) => void;
-    onTick: (cb: Function) => void;
-    register: (parent: HTMLElement | string | null) => void;
-    makeComponent: (name: string, ops?: Partial<ComponentOptions> | undefined) => void;
-    component: (src: string) => Promise<void>;
 };
-declare let $st: {
-    [key: string]: any;
-};
-declare let $fn: {
-    [key: string]: Function;
+declare let component: {
+    make: (name: string, ops?: Partial<ComponentOptions> | undefined) => void;
+    register: (src: string) => Promise<void>;
 };
 
-export { $fn, $st, Mfld };
+export { $fn, $st, component, _setOptions as config, onTick, store };

@@ -1,6 +1,5 @@
 import { MfldOps } from "./common_types";
 import { _fetchAndInsert } from "./fetch";
-import { RegisteredElement } from "./registered_element";
 import { _register } from "./registrar";
 
 export interface ComponentOptions {
@@ -19,7 +18,7 @@ export interface ComponentOptions {
 
 export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): void => {
   MFLD.comp[name] = class extends HTMLElement {
-    template: RegisteredElement | null = null;
+    template: HTMLElement | null = null;
 
     onconnect?: Function
     onadopted?: Function
@@ -33,15 +32,12 @@ export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): voi
       this.onadopted = ops?.onadopted?.bind(this);
       this.ondisconnect = ops?.ondisconnect?.bind(this);
       this.onAttributeChanged = ops?.onAttributeChanged?.bind(this);
-      this.template = new RegisteredElement("COMPONENT", {
-        ops: ops?.options || {},
-        element: ops?.templ || (document.getElementById(ops?.selector || name) as HTMLTemplateElement)
-      });
+      this.template = document.getElementById(ops?.selector || name) as HTMLTemplateElement || document.createElement("template");
     }
 
     connectedCallback(): void {
       let shadow = this.attachShadow({ mode: ops?.shadow || "closed" }),
-            template = (this.template?._el as HTMLTemplateElement).content.cloneNode(true);
+            template = (this.template as HTMLTemplateElement).content.cloneNode(true);
 
       if(template) {
         shadow.append(template);

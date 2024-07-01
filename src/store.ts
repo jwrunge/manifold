@@ -1,5 +1,4 @@
 import { StoreOptions, $st, $fn } from "./common_types";
-import { RegisteredElement } from "./registered_element";
 import { _scheduleUpdate } from "./updates";
 
 export type SubFunction = (value: any, ref?: string) => void;
@@ -20,7 +19,7 @@ export class Store<T> {
     _storedHash?: any;
     _upstreamStores: Set<Store<any>> = new Set();
     _downstreamStores: Set<Store<any>> = new Set();
-    _scope?: RegisteredElement;
+    _scope?: HTMLElement;
     name: string;
     value: T;
 

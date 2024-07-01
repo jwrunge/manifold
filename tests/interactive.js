@@ -1,5 +1,4 @@
-import { $st, Mfld } from "../dist/dev.manifold.js";
-
+import { $st, store } from "../dist/dev.manifold.js";
 // Mfld.makeComponent("test-component", {
 //     onconnect() {
 //         console.log("THIS", this)
@@ -61,7 +60,7 @@ import { $st, Mfld } from "../dist/dev.manifold.js";
 //     }
 // });
 
-Mfld.register(document.body);
+// Mfld.register(document.body);
 
 // let val = Mfld.store("value", "OK")
 

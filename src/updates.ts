@@ -7,7 +7,7 @@ let cancelAnimationFrame = 0;
 let _nextTickQueue: Function[] = [];
 let RECURSE_LIMIT = 100;
 
-export let _addToNextTickQueue = (fn: Function)=> {
+export let onTick = (fn: Function)=> {
     fn && _nextTickQueue.push(fn);
 }
 
@@ -61,7 +61,7 @@ function _runUpdates(_: number, recursed = 0) {
         }
         if(hasUpstream) newUpdateSet.add(store);
         else {
-            let newVal = store._updater?.({ $cur: store.value, $st, $fn, $el: store._scope?._el });
+            let newVal = store._updater?.({ $cur: store.value, $st, $fn, $el: store._scope });
             store.update(newVal === undefined ? store.value : newVal);
         }
     }
@@ -108,4 +108,13 @@ function _runUpdates(_: number, recursed = 0) {
         _nextTickQueue.forEach(fn => fn());
         _nextTickQueue = [];
     }
+}
+
+export function _transition(el: HTMLElement, dir: "in" | "out", fn?: Function | null, after?: Function | null) {
+    _scheduleUpdate(()=> {
+        if(dir == "out") {
+            el.remove();
+        }
+        after?.();
+    });
 }

@@ -1,9 +1,8 @@
 import { $fn, $st } from "./common_types";
 import { _fetchAndInsert } from "./fetch";
-import { _transition } from "./registered_element";
 import { _register } from "./registrar";
 import { Store } from "./store";
-import { _scheduleUpdate } from "./updates";
+import { _scheduleUpdate, _transition } from "./updates";
 import { _parseFunction, _registerInternalStore } from "./util";
 
 let _templAttributes = ["if", "elseif", "else", "eval", "each"];
@@ -74,7 +73,7 @@ function _handleAttribute(self: MfldTemplElement, mode: string, detail: string |
         let container = document.createElement("span");
         _swapInnerHTML(container, self);
         self.before(container);
-        _transition(container, "out", {});
+        _transition(container, "out");
 
         if(isConditional && !val) return; // Handle no value for conditional templates
 
@@ -90,7 +89,7 @@ function _handleAttribute(self: MfldTemplElement, mode: string, detail: string |
 
             // Transition in
             self.append(item.content);
-            _transition(self, "in", {});
+            _transition(self, "in");
         });
     }
 
@@ -125,7 +124,7 @@ export class MfldTemplElement extends HTMLElement {
         for(let attr of _templAttributes) {
             let val = this.getAttribute(attr);
             if(val != null) {
-                if(found) console.error(`MFLD: Multiple templ directives '${found}' and '${attr}'; '${found}' ignored`);
+                if(found) console.error(`MFLD: Multiple templ statements '${found}' and '${attr}'; '${found}' ignored`);
                 found = attr;
             }
             val !== null && _handleAttribute(this, attr, val);
