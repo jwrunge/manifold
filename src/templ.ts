@@ -121,8 +121,13 @@ export class MfldTemplElement extends HTMLElement {
         })();
 
         // Initialize attributes in order of execution
+        let found = "";
         for(let attr of _templAttributes) {
             let val = this.getAttribute(attr);
+            if(val != null) {
+                if(found) console.error(`MFLD: Multiple templ directives '${found}' and '${attr}'; '${found}' ignored`);
+                found = attr;
+            }
             val !== null && _handleAttribute(this, attr, val);
         }
     }

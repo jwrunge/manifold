@@ -21,13 +21,12 @@ export class Store<T> {
     _upstreamStores: Set<Store<any>> = new Set();
     _downstreamStores: Set<Store<any>> = new Set();
     _scope?: RegisteredElement;
-    _updateTimeout?: any;
     name: string;
     value: T;
 
     constructor(name: string, ops?: StoreOptions<T>) {
         this.name = name;
-        if(ops?.internal) MFLD.st.set(name, this);
+        MFLD.st.set(name, this);
         this._scope = ops?.scope;
         this.value = typeof ops?.value !== "function" ? ops?.value as any : undefined; // Initial value as undefined
         this._modify(ops);
@@ -53,8 +52,7 @@ export class Store<T> {
     }
 
     update(value: T | ((value: T) => T)): void {
-        if(this._updateTimeout) clearTimeout(this._updateTimeout);
-        this._updateTimeout = setTimeout(() => {
+        setTimeout(() => {
             let newValue = typeof value === "function" ? (value as Function)(this.value) : value;
             let newHash = _hashAny(newValue);
 
