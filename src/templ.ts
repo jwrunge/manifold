@@ -3,23 +3,43 @@ import { _fetchAndInsert } from "./fetch";
 import { _transition } from "./registered_element";
 import { _register } from "./registrar";
 import { Store } from "./store";
-import { _iterable } from "./templates";
 import { _scheduleUpdate } from "./updates";
 import { _parseFunction, _registerInternalStore } from "./util";
 
 let _templAttributes = ["if", "elseif", "else", "eval", "each"];
+let _innerHTML: keyof Element = "innerHTML";
+
+let _swapInnerHTML = (el: HTMLElement, newEl: HTMLElement) => {
+    el[_innerHTML] = newEl[_innerHTML];
+    newEl[_innerHTML] = "";
+}
+
+let _iterable = <T>(obj: Iterable<T> | { [key: string]: T }, cb: (value: T, key: string | number) => void): void => {
+    if(obj instanceof Map) {
+        for(let[key, value] of obj.entries()) cb(value, key);
+    } else {
+        try {
+            let arr = Array.isArray(obj) ? obj : Array.from(obj as Array<any>);
+            if(arr.length) arr.forEach(cb);
+            else for(let key in obj) cb((obj as any)[key], key);
+        } catch (e) {
+            console.error(`MFLD: ${obj} is not iterable`);
+        }
+    }
+};
 
 function _handleAttribute(self: MfldTemplElement, mode: string, detail: string | null) {
     let { func, as, dependencyList } = _parseFunction(detail ||""),
         prevConditions: string[] = [],
-        isConditional = mode.match(/if|else/);
+        isConditional = mode.match(/if|else/),
+        modFunc;
     
     as = as || ["$val", "$key"];
 
     // Handle elses
     if(mode.match(/else/)) {
-        let prev = self as MfldTemplElement;
-        let recurseCount = 0;
+        let prev = self as MfldTemplElement,
+            recurseCount = 0;
 
         // Loop backward to find previous if/elseif conditions
         while(prev = prev?.previousElementSibling as MfldTemplElement) {
@@ -28,7 +48,7 @@ function _handleAttribute(self: MfldTemplElement, mode: string, detail: string |
             attrToGet && prevConditions.push(prev._stores.get(attrToGet)?.name || "");
 
             if(recurseCount++ > 100) {
-                console.error("MFLD: Infinite loop detected");
+                console.error("MFLD: No if start found");
                 break;
             }
             if(prev.getAttribute("if")) break; 
@@ -37,49 +57,54 @@ function _handleAttribute(self: MfldTemplElement, mode: string, detail: string |
         dependencyList = [ ...(dependencyList || []), ...prevConditions ];
 
         // Inject previous conditions into this conditions determiner
-        func = () => {
+        modFunc = () => {
             for(let d of prevConditions) {
                 if($st[d]) return false;
             }
             return mode == "else" ? true : func?.({ $st, $fn }) === true;
         };
     }
+    else modFunc = func;
 
     // Subscription function - on change, update the template
     let sub = (val: any) => {
         if(val === undefined) return;   // Never update on undefined
+
+        // Transition out all elements from the previous condition
+        let container = document.createElement("span");
+        _swapInnerHTML(container, self);
+        self.before(container);
+        _transition(container, "out", {});
+
         if(isConditional && !val) return; // Handle no value for conditional templates
 
-        _scheduleUpdate(() => {
-            // Transition out all elements from the previous condition
-            for(let el of self.querySelectorAll(":not(template)")) _transition(el as HTMLElement, "out", {}, func);
+        // Iterate over all values (only one if not each) and transition them in
+        _iterable(mode == "each" ? val : [val], (val: any, key: any) => {
+            let item = self._templ?.cloneNode(true) as HTMLTemplateElement;
+            if(!isConditional) {
+                item.innerHTML = (item[_innerHTML] as string)?.replace(
+                    /\$:{([^}]*)}/g, (_, cap) => _parseFunction(cap, as[0], as[1]).func?.({ $st, $fn, [as[0]]: val, [as[1]]: key }) ?? ""
+                ) 
+                || String(val);
+            }
 
-            _scheduleUpdate(()=> {
-                // Iterate over all values (only one if not each) and transition them in
-                _iterable(mode == "each" ? val : [val], (val, key) => {
-                    let item = self._templ?.cloneNode(true) as HTMLTemplateElement;
-                    if(!isConditional) {
-                        let html = item.innerHTML.replace(/\$:{([^}]*)}/g, (_, cap) => _parseFunction(cap, as[0], as[1]).func?.({ $st, $fn, [as[0]]: val, [as[1]]: key }) || "") || "";
-                        if(item.innerHTML) item.innerHTML = html;
-                    }
-
-                    // Iterate over the template's children and transition them in
-                    for(let element of Array.from(item.content.children) as HTMLElement[]) {
-                        if(!element.innerHTML) element.innerHTML = String(val);
-                        self.append(element);
-                        _transition(element, "in", {})//, null, ()=> _register(element, true));
-                    }
-                });
-            });
+            // Transition in
+            self.append(item.content);
+            _transition(self, "in", {});
         });
     }
 
-    _registerInternalStore(
+    // Register the store
+    let S = _registerInternalStore(
         self,
-        func, 
+        modFunc, 
         dependencyList,
         sub
-    )
+    );
+
+    // Track details for cleanup
+    if(modFunc) self._funcs.add(modFunc);
+    self._stores.set(mode, S);
 }
 
 export class MfldTemplElement extends HTMLElement {
@@ -91,7 +116,7 @@ export class MfldTemplElement extends HTMLElement {
         // Convert to template
         this._templ = this.querySelector("template") || (()=> {
             let T = document.createElement("template");
-            for(let child of this.children) T.content.appendChild(child);
+            _swapInnerHTML(T, this)
             return T;
         })();
 
@@ -102,13 +127,9 @@ export class MfldTemplElement extends HTMLElement {
         }
     }
 
-    attributeChangedCallback(attr: string, _: string | null, newVal: string | null): void {
-        _handleAttribute(this, attr, newVal);
-    }
-
     disconnectedCallback(): void {
         // for(let store of this._stores) store.destroy();
-        for(let func of this._funcs) func = null;
+        this._funcs.forEach(func=> func = null);
     }
 
     static get observedAttributes() {

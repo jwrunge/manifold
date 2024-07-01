@@ -41,8 +41,6 @@ export let _scheduleUpdate = (update: Function | Store<any>)=> {
 // }
 
 function _runUpdates(_: number, recursed = 0) {
-    if(recursed == 0) console.log("RUNNING UPDATES")
-    else console.log("RECURSING", recursed)
     if(recursed > RECURSE_LIMIT) {
         console.error("MFLD: Recursion limit reached - check for circular refrences.");
         return;
@@ -65,7 +63,6 @@ function _runUpdates(_: number, recursed = 0) {
         else {
             let newVal = store._updater?.({ $cur: store.value, $st, $fn, $el: store._scope?._el });
             store.update(newVal === undefined ? store.value : newVal);
-            console.log("Updating", store.name)
         }
     }
 

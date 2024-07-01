@@ -91,6 +91,7 @@ interface StoreOptions<T> {
     updater?: UpdaterFunction<T>;
     scope?: RegisteredElement;
     dependencyList?: string[];
+    internal?: boolean;
 }
 interface Store<T> {
     readonly value: T;

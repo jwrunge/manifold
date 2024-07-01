@@ -1,6 +1,5 @@
 import { _commaSepRx, _getOpOverrides, _handlePushState, _parseFunction, ATTR_PREFIX } from "./util";
 import { _handleFetch } from "./fetch";
-import { _handleTemplates } from "./templates";
 import { MfldOps, $fn, $st } from "./common_types";
 import { _registerElement } from "./registered_element";
 
@@ -53,7 +52,6 @@ export let _register = (parent?: HTMLElement | null, noparent = false): void => 
 
                 if(!triggers) {
                     if(mode == "bind") el._registerInternalStore(func, dependencyList);
-                    else _handleTemplates(el, mode, as || [], func, dependencyList || [], _op_overrides);
                     continue;
                 }
 

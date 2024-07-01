@@ -94,6 +94,7 @@ export interface StoreOptions<T> {
   updater?: UpdaterFunction<T>;
   scope?: RegisteredElement;
   dependencyList?: string[];
+  internal?: boolean;
 }
 
 export interface Store<T> {

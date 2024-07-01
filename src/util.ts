@@ -73,6 +73,7 @@ export function _registerInternalStore(el: HTMLElement, func?: Function, depende
     let S = _store(id, {
         updater: () => func?.({ $el: el, $st, $fn }),
         dependencyList,
+        internal: true,
         // scope: el,
     });
 

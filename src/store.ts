@@ -27,7 +27,7 @@ export class Store<T> {
 
     constructor(name: string, ops?: StoreOptions<T>) {
         this.name = name;
-        MFLD.st.set(name, this);
+        if(ops?.internal) MFLD.st.set(name, this);
         this._scope = ops?.scope;
         this.value = typeof ops?.value !== "function" ? ops?.value as any : undefined; // Initial value as undefined
         this._modify(ops);
@@ -61,8 +61,6 @@ export class Store<T> {
             if(newHash !== this._storedHash) {
                 this.value = newValue;
                 this._storedHash = newHash;
-
-                console.log("CHANGE DETECTED -- broadcasting", this.name, newHash, this._storedHash)
 
                 for(let ds of this._downstreamStores) ds._auto_update();
                 for(let sub of Array.from(this._subscriptions)) sub(this.value);
