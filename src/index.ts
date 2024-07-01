@@ -3,6 +3,7 @@ import { _addToNextTickQueue } from "./updates";
 import { _register, _setOptions } from "./registrar";
 import { _makeComponent, _component } from "./component";
 import { MfldFunc, MfldOps, StoreOptions } from "./common_types";
+import "./templ.ts";
 
 export let Mfld = {
     store: <T>(store_name: string, store_ops: StoreOptions<T> | T)=> {

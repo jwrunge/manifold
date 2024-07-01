@@ -1,5 +1,6 @@
 import { RegisteredElement } from "./registered_element";
 import { _store } from "./store";
+import { MfldTemplElement } from "./templ";
 
 declare global {
     interface Window {

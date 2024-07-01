@@ -1,3 +1,4 @@
+import { $fn, $st } from ".";
 import { MfldOps } from "./common_types";
 import { RegisteredElement } from "./registered_element";
 import { _store } from "./store";
@@ -65,4 +66,16 @@ export function _handlePushState(el: RegisteredElement, ev?: Event, href?: strin
     }
 
     history.pushState(null, "", push);
+}
+
+export function _registerInternalStore(el: HTMLElement, func?: Function, dependencyList?: string[], sub?: (val: any)=> void) {
+    let id = _id();
+    let S = _store(id, {
+        updater: () => func?.({ $el: el, $st, $fn }),
+        dependencyList,
+        // scope: el,
+    });
+
+    if(sub) S.sub(sub);
+    return S;
 }

@@ -26,7 +26,6 @@ export let _registerElement = (el: HTMLElement, ops: MfldOps) => {
 }
 
 export let _transition = (el: HTMLElement, dir: "in" | "out", ops: MfldOps, fn?: Function | null, after?: Function | null) => {
-    console.log("TRANSITIONING", dir);
     (elementReg.get(el) || new RegisteredElement("TRANSITION "+dir,{ element: el, ops }))?._transition(dir, fn, after);
 }
 
@@ -47,7 +46,7 @@ export class RegisteredElement {
 
         elementReg.get(this._el)?._cleanUp(false);
         elementReg.set(this._el, this);
-        console.log("CREATING regel from", from, this._el, elementReg.get(this._el), elementReg.size)
+        // console.log("CREATING regel from", from, this._el, elementReg.get(this._el), elementReg.size)
 
         this._classes(["_mfld", ...recipe.classes || []]);
 
@@ -136,7 +135,6 @@ export class RegisteredElement {
     _transition(dir: "in" | "out", fn?: Function | null, after?: Function | null) {
         _scheduleUpdate(()=> {
             if(dir == "out") {
-                console.log("OUT", this._el)
                 this._cleanUp();
             }
             after?.();
@@ -198,7 +196,7 @@ export class RegisteredElement {
     // }
 
     _cleanUp(removeElement = true) {
-        console.log("CLEANING", this._el, elementReg.get(this._el), elementReg.size -1)
+        // console.log("CLEANING", this._el, elementReg.get(this._el), elementReg.size -1)
 
         // Clear listeners and funcs
         this._listeners?.forEach((func, trigger) => {
@@ -221,5 +219,3 @@ export class RegisteredElement {
         elementReg.delete(this._el);
     }
 }
-
-window.reg = elementReg;

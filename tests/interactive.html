@@ -8,7 +8,17 @@
   <title>Reactivity Test</title>
 </head>
 <body>
-  <mfld-default data-mf-if="()=>{ return $st.store1 == 'OK'; }" data-mf-trans_dur="[1000, 4000]">
+  <mf-templ
+    if="()=>{ return $st.store1 == 'OK'; }"
+  >
+    <nav>
+      <button data-mf-on:click="()=>{ $st.store1 = 'OK'; }">OK</button>
+      <button data-mf-on:click="()=>{ $st.store1 = '!OK'; }">!OK</button>
+      <button data-mf-on:click="()=>{ $st.store1 = 'OK'; }">OK</button>
+      <button data-mf-on:click="()=>{ $st.store1 = '!OK'; }">!OK</button>
+    </nav>
+  </mf-templ>
+  <!-- <mfld-default data-mf-if="()=>{ return $st.store1 == 'OK'; }" data-mf-trans_dur="[1000, 4000]">
     <div>,/;mn bk,jbbkkjlbikujbuibbbbbbbb</div>
   </mfld-default>
   <template data-mf-elseif='$st.store1 == "!OK"'>
@@ -16,7 +26,7 @@
   </template>
   <template data-mf-else>
     <div>ELSE</div>
-  </template>
+  </template> -->
   <!-- Store script -->
   <script src="./tests/interactive.js" type="module"></script>
 </body>

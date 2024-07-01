@@ -17,7 +17,7 @@ function _hashAny(input: any): any {
 export class Store<T> {
     _updater?: Function;
     _subscriptions: Set<SubFunction> = new Set();
-    _storedHash?: string;
+    _storedHash?: any;
     _upstreamStores: Set<Store<any>> = new Set();
     _downstreamStores: Set<Store<any>> = new Set();
     _scope?: RegisteredElement;
@@ -55,26 +55,25 @@ export class Store<T> {
     update(value: T | ((value: T) => T)): void {
         if(this._updateTimeout) clearTimeout(this._updateTimeout);
         this._updateTimeout = setTimeout(() => {
-            _scheduleUpdate(() => {
-                let newValue = typeof value === "function" ? (value as Function)(this.value) : value;
-                let newHash = _hashAny(newValue);
+            let newValue = typeof value === "function" ? (value as Function)(this.value) : value;
+            let newHash = _hashAny(newValue);
 
-                if(newHash !== this._storedHash) {
-                    this.value = newValue;
-                    this._storedHash = newHash.toString();
+            if(newHash !== this._storedHash) {
+                this.value = newValue;
+                this._storedHash = newHash;
 
-                    for(let ds of this._downstreamStores) ds._auto_update();
-                    for(let sub of Array.from(this._subscriptions)) sub(this.value);
-                }
+                console.log("CHANGE DETECTED -- broadcasting", this.name, newHash, this._storedHash)
 
-                return this.value;
-            });
+                for(let ds of this._downstreamStores) ds._auto_update();
+                for(let sub of Array.from(this._subscriptions)) sub(this.value);
+            }
+
+            return this.value;
         }, 0);
     }
 
     _auto_update(): void {
-        let newVal = this._updater?.({ $cur: this.value, $st, $fn, $el: this._scope?._el });
-        this.update(newVal === undefined ? this.value : newVal);
+        _scheduleUpdate(this);
     }
 }
 

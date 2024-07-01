@@ -14,7 +14,6 @@ export let _handleFetch = (
   func?: Function,
   complete?: Function,
 ): void => {
-  console.log("HANDLING FETCH")
 
   let ev = (e?: Event) => _fetchAndInsert(e, method, fetchOps, href, el, true, func, complete);
   if(trigger === "$mount") ev();

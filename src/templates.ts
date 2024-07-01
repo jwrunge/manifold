@@ -39,48 +39,59 @@ export let _handleTemplates = (
   ops: MfldOps
 ): void => {
   let templ = el._asTempl([`${mode}-end`]),
-    startElement = new RegisteredElement("FROM START EL", { classes: [`${mode}-start`], ops, _position: { ref: templ, mode: "before" }}),
     newFunc,
     conditional = mode.match(/if|else/),
     conditionalSub = mode.match(/else/),
     prevConditions: string[] = [];
 
-  console.log("RUNNING TEMPL HANDLER")
+  // Add the start element to the DOM
+  if(!conditional || mode == "if") {
+    let startElement = document.createElement("template");// new RegisteredElement("FROM START EL", { classes: [`${mode}-start`], ops, _position: { ref: templ, mode: "before" }}),
+    startElement.classList.add(`${mode}-start`);
+    templ._position(startElement, "before");
+  }
+
   // Handle conditional elements
   if(conditional) {
-    // Get upstream conditions
-    if(conditionalSub) {
-      // Get all previous condition stores to derive this condition's value
-      let first = _iterateSiblings(startElement._el, (sib) => sib?.classList?.contains(`if-end`), null, true);
-      _iterateSiblings(first, sib => sib == templ._el, sib => {
+    // Get all previous condition stores to derive this condition's value
+    _iterateSiblings(templ._el, 
+      (sib) => sib?.classList?.contains(`if-start`), 
+      sib=> {
         let storeRef = sib?.getAttribute(`${ATTR_PREFIX}cstore`);
         if(storeRef) prevConditions.push(storeRef);
-      });
-    }
+      }, 
+      true
+    );
 
     // Inject previous conditions into this conditions determiner
     newFunc = templ._addFunc(() => {
       if(conditionalSub) {
         for(let d of prevConditions) {
+          if($st[d]) console.log(mode, "RETURNING FALSE BASED ON CONDITION", d);
           if($st[d]) return false;
         }
       }
+      console.log(mode, mode == "else" ? "RETURNING IMPLICIT TRUE" : "RETURNING " + (func?.({ el, $st, $fn }) === true));
       return mode == "else" ? true : func?.({ el, $st, $fn }) === true;
     });
   }
 
   // Subscription function - on change, update the template
   let sub = (val: any) => {
-    if(val === undefined) return;
+    if(val === undefined) return;   // Never update on undefined
+    if(conditional && !val) return; // Handle no value for conditional templates
 
     _scheduleUpdate(() => {
       // Transition out all elements from the previous condition
-      _iterateSiblings(startElement._el.nextElementSibling as HTMLElement, sib => sib?.classList?.contains(`${mode}-end`), sib => {
-        _transition(sib as HTMLElement, "out", ops, func);
-      });
+      let start = _iterateSiblings(
+        templ._el.previousElementSibling as HTMLElement, 
+        sib => sib?.classList?.contains(`if-start`), 
+        sib => { if(sib?.nodeName != "TEMPLATE") _transition(sib as HTMLElement, "out", ops, func) },
+        true
+      );
 
       _scheduleUpdate(()=> {
-        if(conditional && !val) return; // Handle no value for conditional templates
+        let ifend = start?.nextElementSibling as HTMLElement; //Delay to next update to ensure all elements are removed
 
         // Iterate over all values (only one if not each) and transition them in
         _iterable(mode == "each" ? val : [val], (val, key) => {
@@ -93,7 +104,8 @@ export let _handleTemplates = (
           // Iterate over the template's children and transition them in
           for(let element of Array.from(item.content.children) as HTMLElement[]) {
             if(!element.innerHTML) element.innerHTML = String(val);
-            templ._position(element, "before");
+            // templ._position(element, "before");
+            ifend.before(element);
             _transition(element, "in", ops)//, null, ()=> _register(element, true));
           }
         });
