@@ -2,7 +2,7 @@ import { $fn, $st } from "./common_types";
 import { _fetchAndInsert } from "./fetch";
 import { _register } from "./registrar";
 import { Store } from "./store";
-import { _scheduleUpdate, _transition } from "./updates";
+import { _transition } from "./updates";
 import { _parseFunction, _registerInternalStore } from "./util";
 
 let _templAttributes = ["if", "elseif", "else", "eval", "each"];
@@ -67,14 +67,13 @@ function _handleAttribute(self: MfldTemplElement, mode: string, detail: string |
 
     // Subscription function - on change, update the template
     let sub = (val: any) => {
-        console.log("RUNNING SUB", val)
         if(val === undefined) return;   // Never update on undefined
 
         // Transition out all elements from the previous condition
         let container = document.createElement("span");
         _swapInnerHTML(container, self);
         self.before(container);
-        _transition(container, "out");
+        _transition(container, "out", ()=> container.remove());
 
         if(isConditional && !val) return; // Handle no value for conditional templates
 
@@ -90,7 +89,7 @@ function _handleAttribute(self: MfldTemplElement, mode: string, detail: string |
 
             // Transition in
             self.append(item.content);
-            _transition(self, "in", ()=> _register(self, true));
+            _transition(self, "in", ()=> _register(self, true, as[1], as[0]));
         });
     }
 
@@ -124,6 +123,7 @@ export class MfldTemplElement extends HTMLElement {
         let found = "";
         for(let attr of _templAttributes) {
             let val = this.getAttribute(attr);
+
             if(val != null) {
                 if(found) console.error(`MFLD: Multiple templ statements '${found}' and '${attr}'; '${found}' ignored`);
                 found = attr;

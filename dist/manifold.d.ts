@@ -1,11 +1,24 @@
+type SubFunction$1 = (value: any, ref?: string) => void;
+declare class Store$1<T> {
+    name: string;
+    value: T;
+    constructor(name: string, ops?: StoreOptions<T>);
+    sub(sub: (value: T) => void, immediate?: boolean): void;
+    update(value: T | ((value: T) => T)): void;
+}
+
+declare class RegisteredElement {
+    constructor(el: HTMLElement);
+    addListener(event: string, listener: Function): void;
+    addInternalStore(store: Store$1<any>): void;
+    cleanUp(): void;
+}
+
 declare global {
     interface Window {
         MFLD: {
-            st: Map<string, Store$1<any>>;
-            mut: Map<HTMLElement, {
-                toRemove: Set<Store$1<any>>;
-                observer: MutationObserver;
-            }>;
+            st: Map<string, Store<any>>;
+            els: Map<HTMLElement, RegisteredElement>;
             $st: {
                 [key: string]: any;
             };
@@ -64,7 +77,7 @@ type UpdaterFunction<T> = (value: T | (() => T)) => T;
 type ValueDeterminer<T> = (currentValue?: T) => T | undefined;
 type UpdateFunction<T> = (value: T | ValueDeterminer<T>) => T | undefined;
 type SubDeterminer<T> = (value: T) => void;
-type SubFunction$1<T> = (value: SubDeterminer<T>) => void;
+type SubFunction<T> = (value: SubDeterminer<T>) => void;
 interface StoreOptions<T> {
     name?: string;
     value?: T;
@@ -73,10 +86,10 @@ interface StoreOptions<T> {
     dependencyList?: string[];
     internal?: boolean;
 }
-interface Store$1<T> {
+interface Store<T> {
     readonly value: T;
     update: UpdateFunction<T>;
-    sub: SubFunction$1<T>;
+    sub: SubFunction<T>;
 }
 type MfldFunc = (val: any, el?: HTMLElement) => void;
 
@@ -94,22 +107,13 @@ interface ComponentOptions {
     options: Partial<MfldOps>;
 }
 
-type SubFunction = (value: any, ref?: string) => void;
-declare class Store<T> {
-    name: string;
-    value: T;
-    constructor(name: string, ops?: StoreOptions<T>);
-    sub(sub: (value: T) => void, immediate?: boolean): void;
-    update(value: T | ((value: T) => T)): void;
-}
-
 declare let onTick: (fn: Function) => void;
 
 declare let _setOptions: (newops: Partial<MfldOps>, profileName?: string) => void;
 
 declare let store: {
-    make: <T>(store_name: string, store_ops: StoreOptions<T> | T) => Store<T>;
-    untyped: (store_name: string, store_ops: StoreOptions<any>) => Store<any>;
+    make: <T>(store_name: string, store_ops: StoreOptions<T> | T) => Store$1<T>;
+    untyped: (store_name: string, store_ops: StoreOptions<any>) => Store$1<any>;
     funcs: (funcs: {
         [key: string]: MfldFunc;
     }) => void;

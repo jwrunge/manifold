@@ -1,6 +1,8 @@
 <script type="module">
-    import { makeComponent } from "../dist/dev.mfld.js";
-    makeComponent("new-component");
+    alert("About to make component")
+    import { component } from "../dist/dev.mfld.js";
+    component.make("new-component");
+    console.log("MAKING COMPONENT")
 </script>
 
 <template id="new-component">

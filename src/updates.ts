@@ -16,7 +16,7 @@ export let _scheduleUpdate = (update: Function | Store<any>)=> {
     else updateSet.add(update);
 
     if(!cancelAnimationFrame) {
-        cancelAnimationFrame = requestAnimationFrame(_runUpdates);
+        cancelAnimationFrame = requestAnimationFrame(()=> _runUpdates());
     }
 }
 
@@ -40,13 +40,15 @@ export let _scheduleUpdate = (update: Function | Store<any>)=> {
 //     });
 // }
 
-function _runUpdates(_: number, recursed = 0) {
+function _runUpdates(recursed = 0) {
+    if(!recursed) console.log("%cRunning batched updates", "background: yellow; color: red;", performance.now())
     if(recursed > RECURSE_LIMIT) {
-        console.error("MFLD: Recursion limit reached - check for circular refrences.");
+        console.error("MFLD: Recursion limit reached - check for circular references.");
         return;
     }
     cancelAnimationFrame = 0;
-    
+    recursed++;
+
     for(let order of workArray) order();
 
     let newUpdateSet: Set<Store<any>> = new Set();
@@ -61,7 +63,7 @@ function _runUpdates(_: number, recursed = 0) {
         }
         if(hasUpstream) newUpdateSet.add(store);
         else {
-            let newVal = store._updater?.({ $cur: store.value, $st, $fn, $el: store._scope });
+            let newVal = store._updater?.({ $st, $fn, $el: store._scope });
             store.update(newVal === undefined ? store.value : newVal);
         }
     }
@@ -98,11 +100,11 @@ function _runUpdates(_: number, recursed = 0) {
     if(newUpdateSet.size) {
         // Run again if there are still updates to be made
         updateSet = newUpdateSet;
-        _runUpdates(0, recursed + 1);
+        _runUpdates(recursed);
     }
     else {
         // If there should still be updates, force them
-        if(updateSet.size) _runUpdates(0, recursed + 1);
+        if(updateSet.size) _runUpdates(recursed);
 
         // Run next tick functions and wrap up
         _nextTickQueue.forEach(fn => fn());
@@ -110,12 +112,10 @@ function _runUpdates(_: number, recursed = 0) {
     }
 }
 
-export function _transition(el: HTMLElement, dir: "in" | "out", after?: Function | null) {
-    if(dir == 'in') console.log("RUNNING TRANSITION")
+export function _transition(el: HTMLElement | null, dir: "in" | "out", after?: Function | null) {
     _scheduleUpdate(()=> {
-        console.log("RUNNING UPDATE")
         if(dir == "out") {
-            el.remove();
+            // el?.remove();
         }
         after?.();
     });

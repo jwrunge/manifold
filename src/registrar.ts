@@ -1,7 +1,7 @@
 import { _commaSepRx, _getOpOverrides, _handlePushState, _parseFunction, _registerInternalStore, ATTR_PREFIX } from "./util";
 import { _handleFetch } from "./fetch";
 import { MfldOps, $fn, $st } from "./common_types";
-import { Store } from "./store";
+import { RegisteredElement } from "./registered_element";
 
 let _ops: Partial<MfldOps> = {};
 let _modes = ["bind", "sync", "get", "head", "post", "put", "delete", "patch", "promote"];
@@ -15,79 +15,45 @@ window.addEventListener("popstate", () => {
     location.reload();
 });
 
-export class RegisterdElement {
-    el: HTMLElement | null = null;
-    listeners: { [key: string]: EventListenerObject } = {};
-    stores: { [key: string]: Store<any> } = {};
-
-    constructor(el: HTMLElement) {
-        this.el = el;
-    }
-
-    addListener(event: string, listener: EventListenerObject) {
-        this.listeners[event] = listener;
-        this.el?.addEventListener(event, listener);
-    }
-
-    addInternalStore(name: string, store: Store<any>) {
-        this.stores[name] = store;
-    }
-
-    cleanUp() {
-        for(let [event, listener] of Object.entries(this.listeners)) {
-            this.el?.removeEventListener(event, listener);
-        }
-
-        // for(let store of Object.values(this.stores)) {
-        //     store.();
-        // }
-
-        this.el?.remove();
-        this.el = null
-    }
-}
-
-export let _register = (parent?: HTMLElement | null, noparent = false): void => {
+export let _register = (parent?: HTMLElement | null, noparent = false, key?: string, val?: string): void => {
     if(!parent || parent?.nodeType == Node.TEXT_NODE) return;
 
     let els: NodeListOf<HTMLElement> = (parent).querySelectorAll(
         `[${ATTR_PREFIX}${_modes.join(`],[${ATTR_PREFIX}`)}]`
     );
 
-    for(let el of (noparent ? [...els] : [parent, ...els])) {
-        console.log("Registering", el);
+    for(let el of (noparent ? [...els] : [parent, ...els]).map(e=> window.MFLD.els.get(e) || new RegisteredElement(e))) {
+        if(el._registered) continue;
+        el._registered = true; 
 
-        if(el.classList.contains("_mfld")) continue;
-        el.classList.add("_mfld");
+        let _op_overrides = _getOpOverrides(structuredClone(_ops), el._el as HTMLElement);
 
-        let _op_overrides = _getOpOverrides(structuredClone(_ops), el);
-
-        for(let attr of el.attributes) {
+        for(let attr of el._el?.attributes || []) {
             if(!attr.name.startsWith(ATTR_PREFIX) || attr.value === null) continue;
             let _strippedMode = attr.name.replace(ATTR_PREFIX, "");
 
             // Handle promote
             if(_strippedMode == "promote") {
-                let [mode, href, input, trigger] = el.tagName == "A" ?
-                    ["get", (el as HTMLAnchorElement).href, undefined, "click"] :
-                    [(el as HTMLFormElement).method?.toLowerCase(), (el as HTMLFormElement).action, () => "$form", "submit"];
+                let [mode, href, input, trigger] = el._el?.tagName == "A" ?
+                    ["get", (el._el as HTMLAnchorElement).href, undefined, "click"] :
+                    [(el._el as HTMLFormElement).method?.toLowerCase(), (el._el as HTMLFormElement).action, () => "$form", "submit"];
                 if(href) _handleFetch(el, trigger, _op_overrides, href, mode, input, (el: HTMLElement)=> _register(el));
                 continue;
             }
 
             // Handle attribute parsing
-            for(let setting of el.getAttribute(attr.name)?.split(";;") || [""]) {
+            for(let setting of el._el?.getAttribute(attr.name)?.split(";;") || [""]) {
                 let isFetch = !/bind|sync/.test(attr.name) ? true : false,
                     parts = setting?.split(/\s*->\s*/g),
                     href = isFetch ? parts.pop() || "" : "",
                     triggers = (isFetch || _strippedMode == "sync") ? (parts.shift()?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s => s.trim()) || []) : null,
                     funcStr = parts?.[0] || "";
 
-                let { func, as, dependencyList } = _parseFunction(funcStr);
+                let { func, dependencyList } = _parseFunction(funcStr);
                 // el._addFunc(func);
 
                 if(!triggers) { 
-                    _registerInternalStore(el, func, dependencyList); 
+                    el.addInternalStore(_registerInternalStore(el._el as HTMLElement, func, dependencyList)); 
                     continue;
                 }
 
@@ -95,12 +61,12 @@ export let _register = (parent?: HTMLElement | null, noparent = false): void => 
                 for(let trigger of triggers) {
                     if(_strippedMode == "sync") {
                         let ev = (e?: Event): void => {
-                            func?.({$el: el, $st, $fn});
-                            _handlePushState(el, e);
+                            func?.({$el: el._el, $st, $fn});
+                            _handlePushState(el._el as HTMLElement, e);
                         }
 
                         if(trigger === "$mount") ev();
-                        else el.addEventListener(trigger, ev);
+                        else el._el?.addEventListener(trigger, ev);
                     }
                     else _handleFetch(el, trigger, _op_overrides, href, _strippedMode, func);
                 }

@@ -10,7 +10,7 @@
 <body>
   <h3>Loop</h3>
   <mf-templ each="$st.store1 as val, key">
-    <div mf-sync="on(click)-> ()=>{ alert($st.store1[$key]); }" class="clickable">
+    <div mf-sync="on(click) -> alert($st.store1)" class="clickable">
       <span>$:{key}: $:{val}</span>
     </div>
   </mf-templ>
@@ -43,6 +43,7 @@
   <mf-templ else>
     ELSE
   </mf-templ>
+
   <!-- <mfld-default data-mf-if="()=>{ return $st.store1 == 'OK'; }" data-mf-trans_dur="[1000, 4000]">
     <div>,/;mn bk,jbbkkjlbikujbuibbbbbbbb</div>
   </mfld-default>
@@ -67,6 +68,9 @@
     <input type="number" name="age">
     <button type="submit">SUBMIT</button>
   </form>
+
+  <h3>Component</h3>
+  <new-component></new-component>
 
   <script src="./tests/interactive.js" type="module"></script>
   <script>

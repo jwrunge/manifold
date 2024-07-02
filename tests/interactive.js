@@ -1,11 +1,13 @@
-import { $st, store } from "../dist/dev.manifold.js";
+import { $st, store, component } from "../dist/dev.manifold.js";
 // Mfld.makeComponent("test-component", {
 //     onconnect() {
 //         console.log("THIS", this)
 //     }
 // });
 
-// Mfld.component("/tests/mycomponent.html");
+setTimeout(()=> {
+    component.register("/tests/mycomponent.html");
+}, 1000);
 
 // function sendAlert(val) {
 //     alert("VALUE IS " + val)

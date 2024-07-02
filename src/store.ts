@@ -41,7 +41,7 @@ export class Store<T> {
 
         this.value = ops?.value as T;
         this._updater = ops?.updater;
-        this._auto_update();
+        _scheduleUpdate(this);
         return this;
     }
 
@@ -59,16 +59,10 @@ export class Store<T> {
                 this.value = newValue;
                 this._storedHash = newHash;
 
-                for(let ds of this._downstreamStores) ds._auto_update();
+                for(let ds of this._downstreamStores) _scheduleUpdate(ds);
                 for(let sub of Array.from(this._subscriptions)) sub(this.value);
             }
-
-            return this.value;
         }, 0);
-    }
-
-    _auto_update(): void {
-        _scheduleUpdate(this);
     }
 }
 

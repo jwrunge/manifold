@@ -1,11 +1,12 @@
 import { _handlePushState, _parseFunction } from "./util";
-import { _scheduleUpdate, _transition } from "./updates";
+import { _transition } from "./updates";
 import { _store } from "./store";
 import { $fn, $st } from "./common_types";
 import { ExternalOptions, MfldOps } from "./common_types";
+import { RegisteredElement } from "./registered_element";
 
 export let _handleFetch = (
-	el: HTMLElement,
+	el: RegisteredElement,
 	trigger: string,
 	fetchOps: MfldOps,
 	href: string,
@@ -13,9 +14,9 @@ export let _handleFetch = (
 	func?: Function,
 	complete?: Function,
 ): void => {
-	let ev = (e?: Event) => _fetchAndInsert(e, method, fetchOps, href, el, true, func, complete);
+	let ev = (e?: Event) => _fetchAndInsert(e, method, fetchOps, href, null, el, true, func, complete);
 	if(trigger === "$mount") ev();
-	else el.addEventListener(trigger, ev);
+	else el.addListener(trigger, ev as Function);
 };
 
 let _handlePermissions = (ops: MfldOps, href: string, fullMarkup: Document, inEl: HTMLElement)=> {
@@ -50,7 +51,8 @@ export let _fetchAndInsert = async (
 	method: string | undefined,
 	fetchOps: MfldOps,
 	href: string,
-	el: HTMLElement,
+	specifiedInstruction: string | null,
+	el: RegisteredElement | null,
 	domUpdate: boolean,
 	func?: Function,
 	complete?: Function,
@@ -60,7 +62,7 @@ export let _fetchAndInsert = async (
 	// Handle fetch body
 	let input = func ? func({ $el: el, $st, $fn }) : undefined,
 		body: FormData | string | undefined = input === "$form"
-			? new FormData(el as HTMLFormElement) 
+			? new FormData(el?._el as HTMLFormElement) 
 			: input,
 		// Get response
 		data = await fetch(href, {
@@ -83,8 +85,8 @@ export let _fetchAndInsert = async (
 	if(code && fetchOps.fetch?.onCode?.(code, data) === false) return;
 
 	// Handle response insertion
-	for(let instruction of ["append", "prepend", "insert", "replace"]) {
-		let ds = el.getAttribute(instruction);
+	for(let instruction of specifiedInstruction ? [""] : ["append", "prepend", "insert", "replace"]) {
+		let ds = specifiedInstruction || el?._el?.getAttribute(instruction);
 		if(ds == null) continue;
 
 		let [selector, toReplace] = ds.split("->").map(s => s.trim()),
@@ -92,22 +94,35 @@ export let _fetchAndInsert = async (
 			inEl = fullMarkup.querySelector(selector) as HTMLElement,
 			scripts = _handlePermissions(fetchOps, href, fullMarkup, inEl);
 
-		if(inEl) _transition(inEl, "in", ()=> {
-			complete?.(el);
-			for(let s of scripts) {
-				let n = document.createElement("script");
-				n.textContent = (s).textContent;
-				el?.append(n);
-			}
-		});
+		if(inEl) {
+			if(domUpdate) {
+				_transition(inEl, "in", ()=> {
+					complete?.(el);
+					for(let s of scripts) {
+						let n = document.createElement("script");
+						n.textContent = s.textContent;
+						el?._el?.append(n);
+					}
+				});
 
-		_transition(toReplace ? el.querySelector(toReplace) as HTMLElement : el, "out");
+				if(el?._el) _transition(toReplace ? el?._el?.querySelector(toReplace) as HTMLElement : el._el, "out");
+			}
+			else {
+				document.body.append(inEl);
+				for(let s of scripts) {
+					let n = document.createElement("script");
+					for (let attr of s.attributes) n.setAttribute(attr.name, attr.value);
+					n.textContent = s.textContent;
+					inEl.before(n);
+				}
+			}
+		}
 	}
 
 	// Resolve callback
-	let resolveTxt = el.getAttribute("resolve"),
+	let resolveTxt = el?._el?.getAttribute("resolve"),
 		resolveFunc = _parseFunction(resolveTxt || "")?.func;
 	resolveFunc?.({ $el: el, $st, $fn, $body: resp });
 
-	if(domUpdate) _handlePushState(el as HTMLElement, e, href);
+	if(domUpdate) _handlePushState(el?._el as HTMLElement, e, href);
 };

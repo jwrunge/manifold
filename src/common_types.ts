@@ -1,10 +1,11 @@
+import { RegisteredElement } from "./registered_element";
 import { _store } from "./store";
 
 declare global {
     interface Window {
       MFLD: {
         st: Map<string, Store<any>>;
-        mut: Map<HTMLElement, { toRemove: Set<Store<any>>, observer: MutationObserver }>;
+        els: Map<HTMLElement, RegisteredElement>;
         $st: { [key: string]: any }; // Proxy type for dynamic property access
         $fn: { [key: string]: Function };
         comp: { [key: string]: CustomElementConstructor };
@@ -16,7 +17,7 @@ declare global {
 
 if(!window.MFLD) window.MFLD = {
     st: new Map(),
-    mut: new Map(),
+    els: new Map(),
     $st: new Proxy(_store, {
         get: (store, property: string | symbol) => {
           return typeof property === "string" ? store(property)?.value : undefined;
