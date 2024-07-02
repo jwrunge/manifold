@@ -1,15 +1,13 @@
 <script type="module">
-    alert("About to make component")
-    import { component } from "../dist/dev.mfld.js";
+    import { component } from "../dist/dev.manifold.js";
     component.make("new-component");
-    console.log("MAKING COMPONENT")
 </script>
 
 <template id="new-component">
     <div>This is my template!!!</div>
-    <div data-mf-templ="$st.store1 as s">
+    <mf-templ eval="$st.store1 as s">
         <div>Store 1: $:{s}</div>
-    </div>
+    </mf-templ>
     <slot></slot>
 
     <style>

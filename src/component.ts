@@ -45,9 +45,11 @@ export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): voi
                 for(let child of Array.from(shadow.children)) {
                     if(child.nodeName == "SLOT") {
                         for(let slotChild of (child as HTMLSlotElement).assignedNodes()) {
-                        _register(slotChild as HTMLElement);
+                            console.log("REGISTERING", slotChild);
+                            _register(slotChild as HTMLElement);
                         }
                     } else if(child.nodeName != "TEMPLATE") {
+                        console.log("REGISTERING", child);
                         _register(child as HTMLElement);
                     }
                 }
