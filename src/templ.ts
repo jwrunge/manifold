@@ -67,6 +67,7 @@ function _handleAttribute(self: MfldTemplElement, mode: string, detail: string |
 
     // Subscription function - on change, update the template
     let sub = (val: any) => {
+        console.log("RUNNING SUB", val)
         if(val === undefined) return;   // Never update on undefined
 
         // Transition out all elements from the previous condition

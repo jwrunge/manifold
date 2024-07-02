@@ -111,7 +111,9 @@ function _runUpdates(_: number, recursed = 0) {
 }
 
 export function _transition(el: HTMLElement, dir: "in" | "out", after?: Function | null) {
+    if(dir == 'in') console.log("RUNNING TRANSITION")
     _scheduleUpdate(()=> {
+        console.log("RUNNING UPDATE")
         if(dir == "out") {
             el.remove();
         }
