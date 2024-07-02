@@ -89,7 +89,7 @@ function _handleAttribute(self: MfldTemplElement, mode: string, detail: string |
 
             // Transition in
             self.append(item.content);
-            _transition(self, "in");
+            _transition(self, "in", ()=> _register(self, true));
         });
     }
 

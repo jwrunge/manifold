@@ -1,6 +1,7 @@
 import { _commaSepRx, _getOpOverrides, _handlePushState, _parseFunction, _registerInternalStore, ATTR_PREFIX } from "./util";
 import { _handleFetch } from "./fetch";
 import { MfldOps, $fn, $st } from "./common_types";
+import { Store } from "./store";
 
 let _ops: Partial<MfldOps> = {};
 let _modes = ["bind", "sync", "get", "head", "post", "put", "delete", "patch", "promote"];
@@ -14,17 +15,52 @@ window.addEventListener("popstate", () => {
     location.reload();
 });
 
+export class RegisterdElement {
+    el: HTMLElement | null = null;
+    listeners: { [key: string]: EventListenerObject } = {};
+    stores: { [key: string]: Store<any> } = {};
+
+    constructor(el: HTMLElement) {
+        this.el = el;
+    }
+
+    addListener(event: string, listener: EventListenerObject) {
+        this.listeners[event] = listener;
+        this.el?.addEventListener(event, listener);
+    }
+
+    addInternalStore(name: string, store: Store<any>) {
+        this.stores[name] = store;
+    }
+
+    cleanUp() {
+        for(let [event, listener] of Object.entries(this.listeners)) {
+            this.el?.removeEventListener(event, listener);
+        }
+
+        // for(let store of Object.values(this.stores)) {
+        //     store.();
+        // }
+
+        this.el?.remove();
+        this.el = null
+    }
+}
+
 export let _register = (parent?: HTMLElement | null, noparent = false): void => {
     console.log("Registering", parent);
     if(!parent || parent?.nodeType == Node.TEXT_NODE) return;
-    if(parent?.classList.contains("_mfld")) noparent = true;
 
-    let suffix = ":not(._mfld)";
     let els: NodeListOf<HTMLElement> = (parent).querySelectorAll(
-        `[${ATTR_PREFIX}${_modes.join(`]${suffix},[${ATTR_PREFIX}`)}]${suffix}`
+        `[${ATTR_PREFIX}${_modes.join(`],[${ATTR_PREFIX}`)}]`
     );
 
     for(let el of (noparent ? [...els] : [parent, ...els])) {
+        if(el.classList.contains("_mfld")) continue;
+        el.classList.add("_mfld");
+
+        let regEl = new RegisterdElement(el);
+
         console.log("Registering", el);
         let _op_overrides = _getOpOverrides(structuredClone(_ops), el);
 

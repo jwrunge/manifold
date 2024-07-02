@@ -110,7 +110,7 @@ function _runUpdates(_: number, recursed = 0) {
     }
 }
 
-export function _transition(el: HTMLElement, dir: "in" | "out", fn?: Function | null, after?: Function | null) {
+export function _transition(el: HTMLElement, dir: "in" | "out", after?: Function | null) {
     _scheduleUpdate(()=> {
         if(dir == "out") {
             el.remove();

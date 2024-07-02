@@ -10,7 +10,7 @@
 <body>
   <h3>Loop</h3>
   <mf-templ each="$st.store1 as val, key">
-    <div data-mf-on:click="()=>{ $st.store1[key] = 'OK!'; }" class="clickable">
+    <div mf-sync="on(click)-> ()=>{ alert($st.store1[$key]); }" class="clickable">
       <span>$:{key}: $:{val}</span>
     </div>
   </mf-templ>
@@ -54,8 +54,27 @@
   </template> -->
   <!-- Store script -->
   <button mf-bind="$el.innerHTML = $st.store1" mf-sync="on(click) -> alert($st.store1)" mf-get="on(click) -> /tests/header.html" mf-inner="header">SWAP ME</button>
-  <button mf-post="on(click) -> JSON.stringify({ data: $st.store1 }) -> /tests/header.html" mf-inner="header">POST ME</button>
+  <button mf-post="on(click) -> ()=> { alert('clicked'); return { data: $st.store1 }; } -> /tests/header.html" mf-inner="header">POST ME</button>
+
+  <form method="POST" action="/tests/header.html" mf-promote>
+    <input type="text" name="name">
+    <input type="number" name="age">
+    <button type="submit">SUBMIT</button>
+  </form>
+
+  <form mf-post="on(submit) -> send($st.store1) -> /tests/header.html">
+    <input type="text" name="name" mf-sync="on(keyup) -> $st.store1 = $el.value">
+    <input type="number" name="age">
+    <button type="submit">SUBMIT</button>
+  </form>
+
   <script src="./tests/interactive.js" type="module"></script>
+  <script>
+    function send(data) {
+      console.log("DATA", data)
+      return { sending: data.toUpperCase() };
+    }
+  </script>
 </body>
 </html>
 

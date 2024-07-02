@@ -25,6 +25,9 @@ declare let $fn: {
 declare let $st: {
     [key: string]: any;
 };
+/***
+ * OPTIONS
+ */
 type MfldOps = {
     profiles?: {
         [key: string]: Partial<MfldOps>;

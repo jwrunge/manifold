@@ -1,7 +1,7 @@
 import { _handlePushState, _parseFunction } from "./util";
 import { _scheduleUpdate, _transition } from "./updates";
 import { _store } from "./store";
-import { $fn, $st, FetchInsertionMode } from "./common_types";
+import { $fn, $st } from "./common_types";
 import { ExternalOptions, MfldOps } from "./common_types";
 
 export let _handleFetch = (
@@ -69,7 +69,7 @@ export let _fetchAndInsert = async (
 				...fetchOps.fetch?.request?.headers,
 				"MFLD": "true",
 			},
-			method: (e?.target as HTMLFormElement)?.method || "get",
+			method: method || (e?.target as HTMLFormElement)?.method || "get",
 			body: input === "$form" || typeof body === "string" ? body : JSON.stringify(body),
 		}).catch(error => {
 			fetchOps.fetch?.err?.(error);
@@ -92,7 +92,7 @@ export let _fetchAndInsert = async (
 			inEl = fullMarkup.querySelector(selector) as HTMLElement,
 			scripts = _handlePermissions(fetchOps, href, fullMarkup, inEl);
 
-		if(inEl) _transition(inEl, "in", null, ()=> {
+		if(inEl) _transition(inEl, "in", ()=> {
 			complete?.(el);
 			for(let s of scripts) {
 				let n = document.createElement("script");
