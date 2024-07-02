@@ -5,9 +5,7 @@ import { $st, store, component } from "../dist/dev.manifold.js";
 //     }
 // });
 
-setTimeout(()=> {
-    component.register("/tests/mycomponent.html");
-}, 1000);
+component.register("/tests/mycomponent.html");
 
 // function sendAlert(val) {
 //     alert("VALUE IS " + val)
