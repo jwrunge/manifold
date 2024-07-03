@@ -1,4 +1,4 @@
-import { StoreOptions, $st, $fn } from "./common_types";
+import { StoreOptions } from "./common_types";
 import { _scheduleUpdate } from "./updates";
 
 export type SubFunction = (value: any, ref?: string) => void;

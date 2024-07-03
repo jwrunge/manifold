@@ -70,7 +70,9 @@
   </form>
 
   <h3>Component</h3>
-  <new-component></new-component>
+  <new-component test="$st.store1[0]" test2="$st.store1.toUpperCase()">
+    <p mf-bind="()=> { console.log('ops:', ops); console.log('RUNNING TEST 2:', $st, $el, $test2, $st.store1); return $el.innerText = $test2 + ' ' + $test}" id="TEST2"></p>
+  </new-component>
 
   <script src="./tests/interactive.js" type="module"></script>
   <script>

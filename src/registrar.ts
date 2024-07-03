@@ -2,6 +2,7 @@ import { _commaSepRx, _getOpOverrides, _handlePushState, _parseFunction, _regist
 import { _handleFetch } from "./fetch";
 import { MfldOps, $fn, $st } from "./common_types";
 import { RegisteredElement } from "./registered_element";
+import { Store } from "./store";
 
 let _ops: Partial<MfldOps> = {};
 let _modes = ["bind", "sync", "get", "head", "post", "put", "delete", "patch", "promote"];
@@ -17,22 +18,26 @@ window.addEventListener("popstate", () => {
 
 type RegisterOptions = {
     noparent?: boolean;
-    fnCtx?: { key: string, func: Function }[];
+    fnCtx?: { key: string, store: Store<any> }[];
 }
 
 export let _register = (parent?: HTMLElement | null, ops?: RegisterOptions): void => {
     if(!parent || parent?.nodeType == Node.TEXT_NODE) return;
 
-    console.log("Registering", parent)
-
     let els: NodeListOf<HTMLElement> = (parent).querySelectorAll(
         `[${ATTR_PREFIX}${_modes.join(`],[${ATTR_PREFIX}`)}]`
     );
 
-    for(let el of (ops?.noparent ? [...els] : [parent, ...els]).map(e=> window.MFLD.els.get(e) || new RegisteredElement(e, ops?.fnCtx))) {
-        if(ops?.fnCtx?.length) for(let ctx of ops?.fnCtx || []) el._fnCtx.add(ctx);
+    for(let el of (ops?.noparent ? [...els] : [parent, ...els])
+        .filter(e=> {
+            if(e === parent) return true;
+            let closestComponent = e.closest("._mf-component");
+            return (!closestComponent || closestComponent === parent);
+        })
+        .map(e=> window.MFLD.els.get(e) || new RegisteredElement(e, ops?.fnCtx))
+    ) {
         if(el._registered) continue;
-        el._registered = true; 
+        el._registered = true;
 
         let _op_overrides = _getOpOverrides(structuredClone(_ops), el._el as HTMLElement);
 
@@ -57,11 +62,11 @@ export let _register = (parent?: HTMLElement | null, ops?: RegisterOptions): voi
                     triggers = (isFetch || _strippedMode == "sync") ? (parts.shift()?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s => s.trim()) || []) : null,
                     funcStr = parts?.[0] || "";
 
-                let { func, dependencyList } = _parseFunction(funcStr, Array.from(el._fnCtx)?.map(ctx=> `$${ctx.key}`) || []);
+                let { func, dependencyList } = _parseFunction(funcStr, [], Array.from(el._fnCtx) || []);
                 // el._addFunc(func);
 
                 if(!triggers) { 
-                    el.addInternalStore(_registerInternalStore(el._el as HTMLElement, func, dependencyList)); 
+                    el.addInternalStore(_registerInternalStore(el._el as HTMLElement, func, dependencyList, undefined, Array.from(el._fnCtx))); 
                     continue;
                 }
 
@@ -83,4 +88,4 @@ export let _register = (parent?: HTMLElement | null, ops?: RegisterOptions): voi
     }
 }
 
-_register(document.body);
+setTimeout(()=> _register(document.body), 0);

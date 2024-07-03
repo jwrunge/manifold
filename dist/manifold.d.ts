@@ -9,11 +9,11 @@ declare class Store$1<T> {
 
 declare class RegisteredElement {
         key: string;
-        func: Function;
+        store: Store$1<any>;
     }>;
     constructor(el: HTMLElement, fnCtx?: {
         key: string;
-        func: Function;
+        store: Store$1<any>;
     }[]);
     addListener(event: string, listener: Function): void;
     addInternalStore(store: Store$1<any>): void;
@@ -126,7 +126,7 @@ declare let store: {
 };
 declare let component: {
     make: (name: string, ops?: Partial<ComponentOptions> | undefined) => void;
-    register: (src: string) => Promise<void>;
+    register: (name: string, src: string, ops?: Partial<ComponentOptions> | undefined) => Promise<void>;
 };
 
 export { $fn, $st, component, _setOptions as config, onTick, store };

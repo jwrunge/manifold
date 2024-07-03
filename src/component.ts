@@ -1,8 +1,9 @@
 import { MfldOps } from "./common_types";
 import { _fetchAndInsert } from "./fetch";
 import { _register } from "./registrar";
+import { Store } from "./store";
 import { _scheduleUpdate } from "./updates";
-import { _parseFunction } from "./util";
+import { _parseFunction, _registerInternalStore } from "./util";
 
 export interface ComponentOptions {
   href: string;
@@ -22,7 +23,7 @@ export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): voi
     if(MFLD.comp[name]) return;
     MFLD.comp[name] = class extends HTMLElement {
         template: HTMLElement | null = null;
-        context: { key: string, func: Function }[] = [];
+        context: { key: string, store: Store<any> }[] = [];
         deps: Set<string> = new Set();
 
         onConnect?: Function
@@ -38,6 +39,7 @@ export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): voi
             this.onDisconnect = ops?.onDisconnect?.bind(this);
             this.onAttributeChanged = ops?.onAttributeChanged?.bind(this);
             this.template = document.getElementById(ops?.selector || name) as HTMLTemplateElement || document.createElement("template");
+            if(!this.classList.contains("_mf-component")) this.classList.add("_mf-component");
         }
 
         connectedCallback(): void {
@@ -46,17 +48,18 @@ export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): voi
             
             // Internal data
             for(let attr of this.attributes) {
+                if(["id", "class"].includes(attr.name)) continue;
                 let { func, dependencyList } = _parseFunction(attr.value);
                 if(func) {
                     for(let dep of dependencyList || []) this.deps.add(dep);
-                    this.context.push({ key: attr.name, func });
+                    let store = _registerInternalStore(this, func, Array.from(this.deps));
+                    this.context.push({ key: attr.name, store });
                 }
             }
 
             if(template) {
                 shadow.append(template);
                 for(let child of Array.from(shadow.children)) {
-                    console.log("FOUND CHILD", child)
                     if(child.nodeName == "SLOT") {
                         for(let slotChild of (child as HTMLSlotElement).assignedNodes()) {
                             _register(slotChild as HTMLElement, { fnCtx: this.context });
@@ -80,18 +83,17 @@ export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): voi
     if(MFLD.comp[name]) customElements.define(name, MFLD.comp[name]);
 }
 
-export let _component = async (src: string): Promise<void> => {
-    await _fetchAndInsert(
+export let _component = async (name: string, src: string, ops?: Partial<ComponentOptions>): Promise<void> => {
+    document.querySelectorAll(name).forEach(el=> el.classList.add("_mf-component"));
+    _fetchAndInsert(
         undefined,
         "get",
-        { fetch: {
-            externals: [{
-                domain: "$origin", script: "all", style: "selected"
-            }]
-        } },
+        {},
         src,
         "template -> body",
         null,
         false
-    );
+    ).then(()=> {
+        _makeComponent(name, ops);
+    });
 }

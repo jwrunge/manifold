@@ -1,6 +1,6 @@
 import { $fn, $st } from ".";
 import { MfldOps } from "./common_types";
-import { _store } from "./store";
+import { _store, Store } from "./store";
 export let ATTR_PREFIX = "mf-";
 export let _commaSepRx = /, {0,}/g;
 
@@ -34,15 +34,16 @@ export let _getOpOverrides = (ops: Partial<MfldOps>, el: HTMLElement)=> {
     return res;
 }
 
-export let _parseFunction = (condition: string, additionalProps: string[] = []): { func?: Function, as?: string[], dependencyList?: string[]}=> {
+export let _parseFunction = (condition: string, additionalProps: string[] = [], registerAsStoreLookups: { key: string, store: Store<any> }[] = []): { func?: Function, as?: string[], dependencyList?: string[] }=> {
     try {
         let [fnStr, asStr] = condition?.split(/\s{1,}as\s{1,}/) || [condition, "value"],
+            insertLookups = registerAsStoreLookups?.map?.(l=> `let $${l.key}=$st["${l.store.name}"]; console.log($${l.key})`)?.join(";") || "",
             fn = fnStr?.match(/^\s{0,}(function)?\(.{0,}\)(=>)?\s{0,}/) ? `(${fnStr})()` : fnStr,
-            fnText = `let {$el,$st,$fn,$body${additionalProps?.length ? ","+additionalProps.join(",") : ""}}=ops;console.log(ops);return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
+            fnText = `console.log(ops);let {$el,$st,$fn,$body${additionalProps?.length ? ","+additionalProps.join(",") : ""}}=ops;${insertLookups};return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
             as = asStr?.split?.(_commaSepRx)?.map?.(s=> s.trim()) || ["value"] || [],
             dependencyList = Array.from(new Set([...fnStr?.matchAll(/\$st\.(\w{1,})/g)].map(m => m[1])));
     
-    console.log("FN", fnText)
+    console.log("FUNCTION TEXT", insertLookups, fnText)
     if(!fn) return {};
     let func: Function | undefined = new Function("ops", fnText);
         return { func, as, dependencyList };
@@ -67,10 +68,11 @@ export function _handlePushState(el: HTMLElement, ev?: Event, href?: string) {
     history.pushState(null, "", push);
 }
 
-export function _registerInternalStore(el: HTMLElement, func?: Function, dependencyList?: string[], sub?: (val: any)=> void, additionalProps?: { key: string, func: Function }[]) {
+export function _registerInternalStore(el: HTMLElement, func?: Function, dependencyList?: string[], sub?: (val: any)=> void, additionalProps?: { key: string, store: Store<any> }[]) {
+    let ops = { $el: el, $st, $fn } as any;
     let S = _store(_id(), {
-        updater: () => func?.({ $el: el, $st, $fn, ...additionalProps?.map(p=> { return { [`${p.key}`]: p.func?.() }})}),
-        dependencyList,
+        updater: () => func?.(ops),
+        dependencyList: [...dependencyList || [], ...(additionalProps || []).map(p=> p.store.name)],
         internal: true,
     });
 
