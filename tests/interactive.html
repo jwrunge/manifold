@@ -11,14 +11,14 @@
   <h3>Loop</h3>
   <mf-templ each="$st.store1 as val, key">
     <div mf-sync="on(click) -> alert($st.store1)" class="clickable">
-      <span>$:{key}: $:{val}</span>
+      <span>{$key}: {$val} {another}</span>
     </div>
   </mf-templ>
 
   <h3>Templ</h3>
   <mf-templ eval="$st.store1 as val">
     <div data-mf-on:click="()=>{ $st.store1[key] = 'OK!'; }" class="clickable">
-      <span>$:{val}</span>
+      <span>{$val}</span>
     </div>
   </mf-templ>
 

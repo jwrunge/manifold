@@ -15,14 +15,22 @@ window.addEventListener("popstate", () => {
     location.reload();
 });
 
-export let _register = (parent?: HTMLElement | null, noparent = false, key?: string, val?: string): void => {
+type RegisterOptions = {
+    noparent?: boolean;
+    fnCtx?: { key: string, func: Function }[];
+}
+
+export let _register = (parent?: HTMLElement | null, ops?: RegisterOptions): void => {
     if(!parent || parent?.nodeType == Node.TEXT_NODE) return;
+
+    console.log("Registering", parent)
 
     let els: NodeListOf<HTMLElement> = (parent).querySelectorAll(
         `[${ATTR_PREFIX}${_modes.join(`],[${ATTR_PREFIX}`)}]`
     );
 
-    for(let el of (noparent ? [...els] : [parent, ...els]).map(e=> window.MFLD.els.get(e) || new RegisteredElement(e))) {
+    for(let el of (ops?.noparent ? [...els] : [parent, ...els]).map(e=> window.MFLD.els.get(e) || new RegisteredElement(e, ops?.fnCtx))) {
+        if(ops?.fnCtx?.length) for(let ctx of ops?.fnCtx || []) el._fnCtx.add(ctx);
         if(el._registered) continue;
         el._registered = true; 
 
@@ -37,7 +45,7 @@ export let _register = (parent?: HTMLElement | null, noparent = false, key?: str
                 let [mode, href, input, trigger] = el._el?.tagName == "A" ?
                     ["get", (el._el as HTMLAnchorElement).href, undefined, "click"] :
                     [(el._el as HTMLFormElement).method?.toLowerCase(), (el._el as HTMLFormElement).action, () => "$form", "submit"];
-                if(href) _handleFetch(el, trigger, _op_overrides, href, mode, input, (el: HTMLElement)=> _register(el));
+                if(href) _handleFetch(el, trigger, _op_overrides, href, mode, input, (el: HTMLElement)=> _register(el, { fnCtx: ops?.fnCtx}));
                 continue;
             }
 
@@ -49,7 +57,7 @@ export let _register = (parent?: HTMLElement | null, noparent = false, key?: str
                     triggers = (isFetch || _strippedMode == "sync") ? (parts.shift()?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s => s.trim()) || []) : null,
                     funcStr = parts?.[0] || "";
 
-                let { func, dependencyList } = _parseFunction(funcStr);
+                let { func, dependencyList } = _parseFunction(funcStr, Array.from(el._fnCtx)?.map(ctx=> `$${ctx.key}`) || []);
                 // el._addFunc(func);
 
                 if(!triggers) { 

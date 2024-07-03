@@ -8,7 +8,13 @@ declare class Store$1<T> {
 }
 
 declare class RegisteredElement {
-    constructor(el: HTMLElement);
+        key: string;
+        func: Function;
+    }>;
+    constructor(el: HTMLElement, fnCtx?: {
+        key: string;
+        func: Function;
+    }[]);
     addListener(event: string, listener: Function): void;
     addInternalStore(store: Store$1<any>): void;
     cleanUp(): void;
@@ -99,9 +105,9 @@ interface ComponentOptions {
     templ: HTMLTemplateElement;
     selector: string;
     onconstruct: () => void;
-    onconnect: () => void;
-    ondisconnect: () => void;
-    onadopted: () => void;
+    onConnect: () => void;
+    onDisconnect: () => void;
+    onAdopted: () => void;
     onAttributeChanged: (attrName: string, oldVal: string | null, newVal: string | null) => void;
     observedAttributes: Array<string>;
     options: Partial<MfldOps>;

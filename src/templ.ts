@@ -82,14 +82,14 @@ function _handleAttribute(self: MfldTemplElement, mode: string, detail: string |
             let item = self._templ?.cloneNode(true) as HTMLTemplateElement;
             if(!isConditional) {
                 item.innerHTML = (item[_innerHTML] as string)?.replace(
-                    /\$:{([^}]*)}/g, (_, cap) => _parseFunction(cap, as[0], as[1]).func?.({ $st, $fn, [as[0]]: val, [as[1]]: key }) ?? ""
+                    /{(\$[^}]*)}/g, (_, cap) => _parseFunction(cap, as.map(a=> `$${a}`)).func?.({ $st, $fn, [`$${as[0]}`]: val, [`$${as[1]}`]: key }) ?? ""
                 ) 
                 || String(val);
             }
 
             // Transition in
             self.append(item.content);
-            _transition(self, "in", ()=> _register(self, true, as[1], as[0]));
+            _transition(self, "in", ()=> _register(self, { noparent: true }));
         });
     }
 
