@@ -95,7 +95,6 @@ export let _parseFunction = (condition: string, additionalProps: string[] = [], 
                 ...[...fnStr?.matchAll(/\$st\.(\w{1,})/g)].map(m => m[1]),
                 ...[...fnStr?.matchAll(/\$var\.(\w{1,})/g)].map(m => registerAsStoreLookups.find(r=> r.key == m[1])?.store || ""),
             ]));
-    console.log("FUNCTION", fnText)
     if(!fn) return {};
     let func: Function | undefined = new Function("ops", fnText);
         return { func, as, dependencyList };

@@ -41,7 +41,7 @@ export let _scheduleUpdate = (update: Function | Store<any>)=> {
 // }
 
 function _runUpdates(recursed = 0) {
-    if(!recursed) console.log("%cRunning batched updates", "background: yellow; color: red;", performance.now())
+    // if(!recursed) console.log("%cRunning batched updates", "background: yellow; color: red;", performance.now())
     if(recursed > RECURSE_LIMIT) {
         console.error("MFLD: Recursion limit reached - check for circular references.");
         return;

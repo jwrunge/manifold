@@ -33,12 +33,9 @@ export let _register = (parent?: HTMLElement | null, ops?: RegisterOptions): voi
         if(raw_el !== parent) {
             let closestComponent: HTMLElement | null = raw_el.closest("._mf-component");
             if(closestComponent && closestComponent !== parent) {
-                console.log("SKIPPING REGISTRATION - registered in component", raw_el);
                 continue;
             }
         }
-
-        console.log("CONTINUING REGISTRATION", raw_el)
 
         // Create registered eliment and ensure there is no double-registration
         let el = window.MFLD.els.get(raw_el) || new RegisteredElement(raw_el, ops?.fnCtx);
@@ -72,7 +69,6 @@ export let _register = (parent?: HTMLElement | null, ops?: RegisterOptions): voi
                 // el._addFunc(func);
 
                 if(!triggers) { 
-                    console.log("HANDLING BIND", el._fnCtx)
                     el.addInternalStore(_registerInternalStore(el._el as HTMLElement, func, dependencyList, undefined)); 
                     continue;
                 }

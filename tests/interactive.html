@@ -9,20 +9,18 @@
 </head>
 <body>
   <h3>Loop</h3>
-  <mf-templ each="$st.store1 as val, key">
+  <mf-templ each="$st.store1 as val, key" mf-sync="on(click) -> alert('BONG')">
     <div mf-sync="on(click) -> alert($st.store1)" class="clickable">
       <span>{$key}: {$val} {another}</span>
     </div>
   </mf-templ>
 
   <h3>Templ</h3>
-  <mf-templ eval="$st.store1 as val">
-    <div data-mf-on:click="()=>{ $st.store1[key] = 'OK!'; }" class="clickable">
-      <span>{$val}</span>
+  <mf-templ d="$st.store1">
+    <div data-mf-on:click="()=>{ $var.d = 'OK!'; }" class="clickable">
+      <span mf-bind="$el.innerHTML = $var.d"></span>
     </div>
   </mf-templ>
-
-  <p>RAW VAL: <mf-templ eval="$st.store1"></mf-templ></p>
 
   <h3>Conditionals</h3>
   <mf-templ

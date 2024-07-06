@@ -1,16 +1,8 @@
+import { _makeComponent, MfldComponent } from "./component";
 import { _fetchAndInsert } from "./fetch";
 import { _register } from "./registrar";
-import { Store } from "./store";
 import { _transition } from "./updates";
 import { _parseFunction, _registerInternalStore, $st, $fn } from "./util";
-
-let _templAttributes = ["if", "elseif", "else", "eval", "each"];
-let _innerHTML: keyof Element = "innerHTML";
-
-let _swapInnerHTML = (el: HTMLElement, newEl: HTMLElement) => {
-    el[_innerHTML] = newEl[_innerHTML];
-    newEl[_innerHTML] = "";
-}
 
 let _iterable = <T>(obj: Iterable<T> | { [key: string]: T }, cb: (value: T, key: string | number) => void): void => {
     if(obj instanceof Map) {
@@ -26,24 +18,24 @@ let _iterable = <T>(obj: Iterable<T> | { [key: string]: T }, cb: (value: T, key:
     }
 };
 
-export function _handleTemplAttribute(self: MfldTemplElement, mode: string, detail: string | null) {
-    let { func, as, dependencyList } = _parseFunction(detail ||""),
-        prevConditions: string[] = [],
-        isConditional = mode.match(/if|else/),
+export let _swapInnerHTML = (el: HTMLElement, newEl: HTMLElement) => {
+    el.innerHTML = newEl.innerHTML;
+    newEl.innerHTML = "";
+}
+
+export function _handleTemplAttribute(self: MfldComponent, mode: string, func: Function, deps: Set<string>, as: string[] = ["$val", "$key"]): void {
+    let isConditional = mode.match(/if|else/),
+        prevConditions: Set<string> = new Set(),
         modFunc;
     
-    as = as || ["$val", "$key"];
-
     // Handle elses
     if(mode.match(/else/)) {
-        let prev = self as MfldTemplElement,
+        let prev = self as MfldComponent,
             recurseCount = 0;
 
         // Loop backward to find previous if/elseif conditions
-        while(prev = prev?.previousElementSibling as MfldTemplElement) {
-            let attrToGet = "if";
-            prev.getAttribute("if") ? attrToGet = "if" : prev.getAttribute("elseif") ? attrToGet = "elseif" : attrToGet = "";
-            attrToGet && prevConditions.push(prev._stores.get(attrToGet)?.name || "");
+        while(prev = prev?.previousElementSibling as MfldComponent) {
+            for(let dep of prev.conditionalDeps) deps.add(dep);
 
             if(recurseCount++ > 100) {
                 console.error("MFLD: No if start found");
@@ -51,8 +43,6 @@ export function _handleTemplAttribute(self: MfldTemplElement, mode: string, deta
             }
             if(prev.getAttribute("if")) break; 
         }
-
-        dependencyList = [ ...(dependencyList || []), ...prevConditions ];
 
         // Inject previous conditions into this conditions determiner
         modFunc = () => {
@@ -78,9 +68,9 @@ export function _handleTemplAttribute(self: MfldTemplElement, mode: string, deta
 
         // Iterate over all values (only one if not each) and transition them in
         _iterable(mode == "each" ? val : [val], (val: any, key: any) => {
-            let item = self._templ?.cloneNode(true) as HTMLTemplateElement;
+            let item = self.template?.cloneNode(true) as HTMLTemplateElement;
             if(!isConditional) {
-                item.innerHTML = (item[_innerHTML] as string)?.replace(
+                item.innerHTML = (item.innerHTML as string)?.replace(
                     /{(\$[^}]*)}/g, (_, cap) => _parseFunction(cap, as.map(a=> `$${a}`)).func?.({ $st, $fn, [`$${as[0]}`]: val, [`$${as[1]}`]: key }) ?? ""
                 ) 
                 || String(val);
@@ -93,53 +83,10 @@ export function _handleTemplAttribute(self: MfldTemplElement, mode: string, deta
     }
 
     // Register the store
-    let S = _registerInternalStore(
+    _registerInternalStore(
         self,
         modFunc, 
-        dependencyList,
+        Array.from(deps),
         sub
     );
-
-    // Track details for cleanup
-    if(modFunc) self._funcs.add(modFunc);
-    self._stores.set(mode, S);
 }
-
-export class MfldTemplElement extends HTMLElement {
-    _templ: HTMLTemplateElement | null = null;
-    _funcs: Set<Function | null> = new Set();
-    _stores: Map<string, Store<any>> = new Map();
-
-    connectedCallback(): void {
-        // Convert to template
-        this._templ = this.querySelector("template") || (()=> {
-            let T = document.createElement("template");
-            _swapInnerHTML(T, this)
-            return T;
-        })();
-
-        // Initialize attributes in order of execution
-        let found = "";
-        for(let attr of _templAttributes) {
-            let val = this.getAttribute(attr);
-
-            if(val != null) {
-                if(found) console.error(`MFLD: Multiple templ statements '${found}' and '${attr}'; '${found}' ignored`);
-                found = attr;
-            }
-            val !== null && _handleTemplAttribute(this, attr, val);
-        }
-    }
-
-    disconnectedCallback(): void {
-        // for(let store of this._stores) store.destroy();
-        this._funcs.forEach(func=> func = null);
-    }
-
-    static get observedAttributes() {
-        return _templAttributes;
-    }
-}
-
-// @ts-ignore
-if(!window.templ) window.templ = customElements.define("mf-templ", MfldTemplElement);
