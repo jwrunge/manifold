@@ -1,46 +1,4 @@
-import { RegisteredElement } from "./registered_element";
 import { _store } from "./store";
-
-declare global {
-    interface Window {
-      MFLD: {
-        st: Map<string, Store<any>>;
-        els: Map<HTMLElement, RegisteredElement>;
-        $st: { [key: string]: any }; // Proxy type for dynamic property access
-        $fn: { [key: string]: Function };
-        comp: { [key: string]: CustomElementConstructor };
-      }
-    }
-
-    let MFLD: typeof window.MFLD;
-}
-
-if(!window.MFLD) window.MFLD = {
-    st: new Map(),
-    els: new Map(),
-    $st: new Proxy(_store, {
-        get: (store, property: string | symbol) => {
-          return typeof property === "string" ? store(property)?.value : undefined;
-        },
-        set: (store, property: string | symbol, value) => {
-            if(typeof property === "string") {
-                let propParts = property.split(/[\.\[\]\?]{1,}/g).map(s => parseFloat(s.trim()) || s.trim()),
-                    S = store(propParts[0] as string),
-                    ret = S.value;
-
-                for(let part of propParts.slice(1) || []) ret = (ret as any)[part];
-                ret = value;
-                S.update(ret);
-            }
-
-            return true;
-        }
-    }),
-    $fn: {},
-    comp: {}
-};
-
-export let { $fn, $st } = MFLD;
 
 /***
  * OPTIONS

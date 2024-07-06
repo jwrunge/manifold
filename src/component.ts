@@ -7,7 +7,7 @@ import { _parseFunction, _registerInternalStore } from "./util";
 
 export interface ComponentOptions {
   href: string;
-  shadow: "open" | "closed";
+  shadow: "open" | "closed" | false;
   templ: HTMLTemplateElement;
   selector: string;
   onconstruct: () => void;
@@ -23,7 +23,7 @@ export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): voi
     if(MFLD.comp[name]) return;
     MFLD.comp[name] = class extends HTMLElement {
         template: HTMLElement | null = null;
-        context: { key: string, store: Store<any> }[] = [];
+        context: Set<{ key: string, store: string}> = new Set();
         deps: Set<string> = new Set();
 
         onConnect?: Function
@@ -43,23 +43,34 @@ export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): voi
         }
 
         connectedCallback(): void {
-            let shadow = this.attachShadow({ mode: ops?.shadow || "closed" }),
+            let shadow = ops?.shadow != false ? this.attachShadow({ mode: ops?.shadow || "closed" }) : null,
                 template = (this.template as HTMLTemplateElement).content.cloneNode(true);
             
+            // Get previous context
+            let containingComponent = (this.parentNode as HTMLElement)?.closest("._mf-component");
+            console.log("THIS", this, "CONTAINER", containingComponent)
+            if(containingComponent) this.context = (containingComponent as typeof this)?.context || new Map();
+
+            console.log((containingComponent as typeof this)?.context || new Map())
+
             // Internal data
             for(let attr of this.attributes) {
-                if(["id", "class"].includes(attr.name)) continue;
-                let { func, dependencyList } = _parseFunction(attr.value);
+                if(["id", "class", "if", "elseif", "else", "each"].includes(attr.name)) continue;
+                let { func, dependencyList } = _parseFunction(attr.value, [], Array.from(this.context));
                 if(func) {
                     for(let dep of dependencyList || []) this.deps.add(dep);
+                    for(let dep of this.context) this.deps.add(dep.store);
+                    console.log("REGISTERING WITH DEPS", this.deps)
                     let store = _registerInternalStore(this, func, Array.from(this.deps));
-                    this.context.push({ key: attr.name, store });
+                    this.context.add({ key: attr.name, store: store.name });
                 }
             }
 
+            console.log("CONSTRUCTING WITH CONTEXT", this.context)
+
             if(template) {
-                shadow.append(template);
-                for(let child of Array.from(shadow.children)) {
+                shadow?.append(template);
+                for(let child of Array.from(shadow?.children || this.children)) {
                     if(child.nodeName == "SLOT") {
                         for(let slotChild of (child as HTMLSlotElement).assignedNodes()) {
                             _register(slotChild as HTMLElement, { fnCtx: this.context });

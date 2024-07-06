@@ -1,4 +1,4 @@
-import { $fn, $st } from "./common_types";
+import { $fn, $st } from "./util";
 import { Store } from "./store";
 
 let workArray: (Function)[] = [];

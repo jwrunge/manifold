@@ -70,8 +70,29 @@
   </form>
 
   <h3>Component</h3>
+  <!-- Component template -->
+  <template id="new-component">
+    <div>This is my template!!!</div>
+    <mf-templ eval="$st.store1 as s">
+        <div>Store 1: {$s}</div>
+    </mf-templ>
+    <slot></slot>
+
+    <style>
+        div {
+            color: red;
+        }
+    </style>
+  </template>
+
   <new-component test="$st.store1[0]" test2="$st.store1.toUpperCase()">
-    <p mf-bind="()=> { console.log('ops:', ops); console.log('RUNNING TEST 2:', $st, $el, $test2, $st.store1); return $el.innerText = $test2 + ' ' + $test}" id="TEST2"></p>
+    <p mf-bind="$el.innerText = $var.test2 + ' ' + $var.test" id="TEST2"></p>
+    <!-- <mf-templ each="$test2 as val">
+      <div>{$val}</div>
+    </mf-templ> -->
+    <new-component third="()=> { console.log('RUNNING THIRD', $var, $var.test2); return $var.test }">
+        <p mf-bind="$el.innerText = $var.third ;; $el.dataset.test = $var.test"></p>
+    </new-component>
   </new-component>
 
   <script src="./tests/interactive.js" type="module"></script>

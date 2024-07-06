@@ -1,9 +1,8 @@
-import { $fn, $st } from "./common_types";
 import { _fetchAndInsert } from "./fetch";
 import { _register } from "./registrar";
 import { Store } from "./store";
 import { _transition } from "./updates";
-import { _parseFunction, _registerInternalStore } from "./util";
+import { _parseFunction, _registerInternalStore, $st, $fn } from "./util";
 
 let _templAttributes = ["if", "elseif", "else", "eval", "each"];
 let _innerHTML: keyof Element = "innerHTML";
@@ -27,7 +26,7 @@ let _iterable = <T>(obj: Iterable<T> | { [key: string]: T }, cb: (value: T, key:
     }
 };
 
-function _handleAttribute(self: MfldTemplElement, mode: string, detail: string | null) {
+export function _handleTemplAttribute(self: MfldTemplElement, mode: string, detail: string | null) {
     let { func, as, dependencyList } = _parseFunction(detail ||""),
         prevConditions: string[] = [],
         isConditional = mode.match(/if|else/),
@@ -128,7 +127,7 @@ export class MfldTemplElement extends HTMLElement {
                 if(found) console.error(`MFLD: Multiple templ statements '${found}' and '${attr}'; '${found}' ignored`);
                 found = attr;
             }
-            val !== null && _handleAttribute(this, attr, val);
+            val !== null && _handleTemplAttribute(this, attr, val);
         }
     }
 

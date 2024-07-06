@@ -1,7 +1,6 @@
-import { _handlePushState, _parseFunction } from "./util";
+import { _handlePushState, _parseFunction, $st, $fn } from "./util";
 import { _transition } from "./updates";
 import { _store } from "./store";
-import { $fn, $st } from "./common_types";
 import { ExternalOptions, MfldOps } from "./common_types";
 import { RegisteredElement } from "./registered_element";
 

@@ -1,49 +1,3 @@
-type SubFunction$1 = (value: any, ref?: string) => void;
-declare class Store$1<T> {
-    name: string;
-    value: T;
-    constructor(name: string, ops?: StoreOptions<T>);
-    sub(sub: (value: T) => void, immediate?: boolean): void;
-    update(value: T | ((value: T) => T)): void;
-}
-
-declare class RegisteredElement {
-        key: string;
-        store: Store$1<any>;
-    }>;
-    constructor(el: HTMLElement, fnCtx?: {
-        key: string;
-        store: Store$1<any>;
-    }[]);
-    addListener(event: string, listener: Function): void;
-    addInternalStore(store: Store$1<any>): void;
-    cleanUp(): void;
-}
-
-declare global {
-    interface Window {
-        MFLD: {
-            st: Map<string, Store<any>>;
-            els: Map<HTMLElement, RegisteredElement>;
-            $st: {
-                [key: string]: any;
-            };
-            $fn: {
-                [key: string]: Function;
-            };
-            comp: {
-                [key: string]: CustomElementConstructor;
-            };
-        };
-    }
-    let MFLD: typeof window.MFLD;
-}
-declare let $fn: {
-    [key: string]: Function;
-};
-declare let $st: {
-    [key: string]: any;
-};
 /***
  * OPTIONS
  */
@@ -80,10 +34,6 @@ type HookKey = "in-start" | "in-end" | "out-start" | "out-end";
  * STORES
  */
 type UpdaterFunction<T> = (value: T | (() => T)) => T;
-type ValueDeterminer<T> = (currentValue?: T) => T | undefined;
-type UpdateFunction<T> = (value: T | ValueDeterminer<T>) => T | undefined;
-type SubDeterminer<T> = (value: T) => void;
-type SubFunction<T> = (value: SubDeterminer<T>) => void;
 interface StoreOptions<T> {
     name?: string;
     value?: T;
@@ -92,16 +42,11 @@ interface StoreOptions<T> {
     dependencyList?: string[];
     internal?: boolean;
 }
-interface Store<T> {
-    readonly value: T;
-    update: UpdateFunction<T>;
-    sub: SubFunction<T>;
-}
 type MfldFunc = (val: any, el?: HTMLElement) => void;
 
 interface ComponentOptions {
     href: string;
-    shadow: "open" | "closed";
+    shadow: "open" | "closed" | false;
     templ: HTMLTemplateElement;
     selector: string;
     onconstruct: () => void;
@@ -113,13 +58,67 @@ interface ComponentOptions {
     options: Partial<MfldOps>;
 }
 
+type SubFunction = (value: any, ref?: string) => void;
+declare class Store<T> {
+    name: string;
+    value: T;
+    constructor(name: string, ops?: StoreOptions<T>);
+    sub(sub: (value: T) => void, immediate?: boolean): void;
+    update(value: T | ((value: T) => T)): void;
+}
+declare function _store<T>(name: string, ops?: StoreOptions<T>): Store<T>;
+
 declare let onTick: (fn: Function) => void;
 
 declare let _setOptions: (newops: Partial<MfldOps>, profileName?: string) => void;
 
+declare class RegisteredElement {
+        key: string;
+        store: string;
+    }>;
+    constructor(el: HTMLElement, fnCtx?: Set<{
+        key: string;
+        store: string;
+    }>);
+    addListener(event: string, listener: Function): void;
+    addInternalStore(store: Store<any>): void;
+    cleanUp(): void;
+}
+
+declare global {
+    interface Window {
+        MFLD: {
+            st: Map<string, Store<any>>;
+            els: Map<HTMLElement, RegisteredElement>;
+            $st: {
+                [key: string]: any;
+            };
+            $fn: {
+                [key: string]: Function;
+            };
+            comp: {
+                [key: string]: CustomElementConstructor;
+            };
+            stProx?: typeof stProx;
+        };
+    }
+    let MFLD: typeof window.MFLD;
+}
+declare let $st: {
+    [key: string]: any;
+};
+declare let $fn: {
+    [key: string]: Function;
+};
+
+declare function stProx(map?: {
+    key: string;
+    store: string;
+}[]): typeof _store;
+
 declare let store: {
-    make: <T>(store_name: string, store_ops: StoreOptions<T> | T) => Store$1<T>;
-    untyped: (store_name: string, store_ops: StoreOptions<any>) => Store$1<any>;
+    make: <T>(store_name: string, store_ops: StoreOptions<T> | T) => Store<T>;
+    untyped: (store_name: string, store_ops: StoreOptions<any>) => Store<any>;
     funcs: (funcs: {
         [key: string]: MfldFunc;
     }) => void;

@@ -19,4 +19,4 @@ export let component = {
 
 export { onTick } from "./updates";
 export { _setOptions as config } from "./registrar";
-export { $st, $fn } from "./common_types";
+export { $st, $fn } from "./util";

@@ -1,11 +1,37 @@
-import { $fn, $st } from ".";
 import { MfldOps } from "./common_types";
+import { RegisteredElement } from "./registered_element";
 import { _store, Store } from "./store";
+
+declare global {
+    interface Window {
+      MFLD: {
+        st: Map<string, Store<any>>;
+        els: Map<HTMLElement, RegisteredElement>;
+        $st: { [key: string]: any }; // Proxy type for dynamic property access
+        $fn: { [key: string]: Function };
+        comp: { [key: string]: CustomElementConstructor };
+        stProx?: typeof stProx;
+      }
+    }
+
+    let MFLD: typeof window.MFLD;
+}
+
+if(!window.MFLD) window.MFLD = {
+    st: new Map(),
+    els: new Map(),
+    $st: stProx(),
+    $fn: {},
+    comp: {},
+};
+
 export let ATTR_PREFIX = "mf-";
 export let _commaSepRx = /, {0,}/g;
+let { $st, $fn } = window.MFLD;
+export { $st, $fn };
 
 export let _id = ()=> {
-    return `${Date.now()}.${Math.floor(Math.random() * 100_000)}`;
+    return `${Date.now()}_${Math.floor(Math.random() * 100_000)}`;
 }
 
 export let _getOpOverrides = (ops: Partial<MfldOps>, el: HTMLElement)=> {
@@ -34,16 +60,42 @@ export let _getOpOverrides = (ops: Partial<MfldOps>, el: HTMLElement)=> {
     return res;
 }
 
-export let _parseFunction = (condition: string, additionalProps: string[] = [], registerAsStoreLookups: { key: string, store: Store<any> }[] = []): { func?: Function, as?: string[], dependencyList?: string[] }=> {
+export function stProx(map?: {key: string, store: string}[]) {
+    return new Proxy(_store, {
+        get: (store, property: string | symbol) => {
+            if(map) property = map.find(m=> m.key == property)?.store || property;
+            return typeof property === "string" ? store(property)?.value : undefined;
+        },
+        set: (store, property: string | symbol, value) => {
+            if(typeof property === "string") {
+                let propParts = property.split(/[\.\[\]\?]{1,}/g).map(s => parseFloat(s.trim()) || s.trim());
+                if(map) propParts[0] = map.find(m=> m.key == propParts[0])?.store || propParts[0];
+                let S = store(propParts[0] as string),
+                    ret = S.value;
+
+                for(let part of propParts.slice(1) || []) ret = (ret as any)[part];
+                ret = value;
+                S.update(ret);
+            }
+
+            return true;
+        }
+    })
+}
+if(!window.MFLD.stProx) window.MFLD.stProx = stProx;
+
+export let _parseFunction = (condition: string, additionalProps: string[] = [], registerAsStoreLookups: { key: string, store: string }[] = []): { func?: Function, as?: string[], dependencyList?: string[] }=> {
     try {
         let [fnStr, asStr] = condition?.split(/\s{1,}as\s{1,}/) || [condition, "value"],
-            insertLookups = registerAsStoreLookups?.map?.(l=> `let $${l.key}=$st["${l.store.name}"]; console.log($${l.key})`)?.join(";") || "",
+            insertLookups = registerAsStoreLookups ? `let $var = MFLD?.stProx?.(${JSON.stringify(registerAsStoreLookups)});` : "",
             fn = fnStr?.match(/^\s{0,}(function)?\(.{0,}\)(=>)?\s{0,}/) ? `(${fnStr})()` : fnStr,
-            fnText = `console.log(ops);let {$el,$st,$fn,$body${additionalProps?.length ? ","+additionalProps.join(",") : ""}}=ops;${insertLookups};return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
+            fnText = `let {$el,$st,$fn,$body${additionalProps?.length ? ","+additionalProps.join(",") : ""}}=ops;${insertLookups};return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
             as = asStr?.split?.(_commaSepRx)?.map?.(s=> s.trim()) || ["value"] || [],
-            dependencyList = Array.from(new Set([...fnStr?.matchAll(/\$st\.(\w{1,})/g)].map(m => m[1])));
-    
-    console.log("FUNCTION TEXT", insertLookups, fnText)
+            dependencyList = Array.from(new Set([
+                ...[...fnStr?.matchAll(/\$st\.(\w{1,})/g)].map(m => m[1]),
+                ...[...fnStr?.matchAll(/\$var\.(\w{1,})/g)].map(m => registerAsStoreLookups.find(r=> r.key == m[1])?.store || ""),
+            ]));
+    console.log("FUNCTION", fnText)
     if(!fn) return {};
     let func: Function | undefined = new Function("ops", fnText);
         return { func, as, dependencyList };
@@ -68,11 +120,11 @@ export function _handlePushState(el: HTMLElement, ev?: Event, href?: string) {
     history.pushState(null, "", push);
 }
 
-export function _registerInternalStore(el: HTMLElement, func?: Function, dependencyList?: string[], sub?: (val: any)=> void, additionalProps?: { key: string, store: Store<any> }[]) {
+export function _registerInternalStore(el: HTMLElement, func?: Function, dependencyList?: string[], sub?: (val: any)=> void) {
     let ops = { $el: el, $st, $fn } as any;
     let S = _store(_id(), {
         updater: () => func?.(ops),
-        dependencyList: [...dependencyList || [], ...(additionalProps || []).map(p=> p.store.name)],
+        dependencyList: dependencyList,
         internal: true,
     });
 

@@ -6,7 +6,8 @@ import { $st, store, component } from "../dist/dev.manifold.js";
 // });
 
 store.make("store1", "My text");
-component.register("new-component", "/tests/mycomponent.html");
+// component.register("new-component", "/tests/mycomponent.html");
+component.make("new-component");
 
 // function sendAlert(val) {
 //     alert("VALUE IS " + val)
