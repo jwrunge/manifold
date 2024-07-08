@@ -128,4 +128,4 @@ declare let component: {
     get: (name: string, src: string, ops?: Partial<ComponentOptions> | undefined) => Promise<void>;
 };
 
-export { $fn, $st, component, _setOptions as config, onTick, store };
+export { $fn, $st, Store, component, _setOptions as config, onTick, store };
