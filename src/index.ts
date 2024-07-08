@@ -1,7 +1,6 @@
 import { _store, Store } from "./store";
-import { _makeComponent, _component } from "./component";
+import { _makeComponent, _fetchComponent } from "./component";
 import { MfldFunc, StoreOptions } from "./common_types";
-import "./templ";
 
 export let store = {
     make: <T>(store_name: string, store_ops: StoreOptions<T> | T)=> {
@@ -14,7 +13,7 @@ export let store = {
 
 export let component = {
     make: _makeComponent,
-    register: _component
+    get: _fetchComponent
 };
 
 export { onTick } from "./updates";

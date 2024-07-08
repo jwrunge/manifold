@@ -84,20 +84,24 @@ export function stProx(map?: {key: string, store: string}[]) {
 }
 if(!window.MFLD.stProx) window.MFLD.stProx = stProx;
 
-export let _parseFunction = (condition: string, additionalProps: string[] = [], registerAsStoreLookups: { key: string, store: string }[] = []): { func?: Function, as?: string[], dependencyList?: string[] }=> {
+export let _parseFunction = (condition: string, registerAsStoreLookups: { key: string, store: string }[] = [], conditionalDependencies: string[] = [], additionalParams: string[] = []): { func?: Function, as?: string[], dependencyList?: string[] }=> {
     try {
-        let [fnStr, asStr] = condition?.split(/\s{1,}as\s{1,}/) || [condition, "value"],
-            insertLookups = registerAsStoreLookups ? `let $var = MFLD?.stProx?.(${JSON.stringify(registerAsStoreLookups)});` : "",
+        let [fnStr, asStr] = condition?.split(/\s{1,}as\s{1,}/) || [condition, "value"],    // Separate func string from iterator values
+            // Handle lookups for scoped stores
+            insertLookups = `let $var = MFLD?.stProx?.(${JSON.stringify(registerAsStoreLookups)});`,
+            // Handle previous conditions for subconditions
+            prevConditions = conditionalDependencies?.length ? `for(let dep of ${JSON.stringify(conditionalDependencies)}){if($st[dep]) return false;}` : "",
             fn = fnStr?.match(/^\s{0,}(function)?\(.{0,}\)(=>)?\s{0,}/) ? `(${fnStr})()` : fnStr,
-            fnText = `let {$el,$st,$fn,$body${additionalProps?.length ? ","+additionalProps.join(",") : ""}}=ops;${insertLookups};return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
+            fnText = `let {$el,$st,$fn,$body${additionalParams ? "," + additionalParams.join(",") : ""}}=ops;${insertLookups}${prevConditions}return ${fn}`,    // Take $el as a reference to the element; assign global refs to $fn and $st
             as = asStr?.split?.(_commaSepRx)?.map?.(s=> s.trim()) || ["value"] || [],
             dependencyList = Array.from(new Set([
                 ...[...fnStr?.matchAll(/\$st\.(\w{1,})/g)].map(m => m[1]),
                 ...[...fnStr?.matchAll(/\$var\.(\w{1,})/g)].map(m => registerAsStoreLookups.find(r=> r.key == m[1])?.store || ""),
             ]));
-    if(!fn) return {};
-    let func: Function | undefined = new Function("ops", fnText);
-        return { func, as, dependencyList };
+
+        if(!fn) return {};
+        let func: Function | undefined = new Function("ops", fnText);
+            return { func, as, dependencyList };
     }
     catch(e) {
         console.error(e);

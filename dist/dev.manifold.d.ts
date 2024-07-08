@@ -44,6 +44,16 @@ interface StoreOptions<T> {
 }
 type MfldFunc = (val: any, el?: HTMLElement) => void;
 
+type SubFunction = (value: any, ref?: string) => void;
+declare class Store<T> {
+    name: string;
+    value: T;
+    constructor(name: string, ops?: StoreOptions<T>);
+    sub(sub: (value: T) => void, immediate?: boolean): void;
+    update(value: T | ((value: T) => T)): void;
+}
+declare function _store<T>(name: string, ops?: StoreOptions<T>): Store<T>;
+
 interface ComponentOptions {
     href: string;
     shadow: "open" | "closed" | false;
@@ -57,16 +67,6 @@ interface ComponentOptions {
     observedAttributes: Array<string>;
     options: Partial<MfldOps>;
 }
-
-type SubFunction = (value: any, ref?: string) => void;
-declare class Store<T> {
-    name: string;
-    value: T;
-    constructor(name: string, ops?: StoreOptions<T>);
-    sub(sub: (value: T) => void, immediate?: boolean): void;
-    update(value: T | ((value: T) => T)): void;
-}
-declare function _store<T>(name: string, ops?: StoreOptions<T>): Store<T>;
 
 declare let onTick: (fn: Function) => void;
 
@@ -125,7 +125,7 @@ declare let store: {
 };
 declare let component: {
     make: (name: string, ops?: Partial<ComponentOptions> | undefined) => void;
-    register: (name: string, src: string, ops?: Partial<ComponentOptions> | undefined) => Promise<void>;
+    get: (name: string, src: string, ops?: Partial<ComponentOptions> | undefined) => Promise<void>;
 };
 
 export { $fn, $st, component, _setOptions as config, onTick, store };

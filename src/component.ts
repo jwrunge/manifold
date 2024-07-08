@@ -1,9 +1,9 @@
 import { MfldOps } from "./common_types";
 import { _fetchAndInsert } from "./fetch";
 import { _register } from "./registrar";
-import { _handleTemplAttribute, _swapInnerHTML } from "./templ";
-import { _scheduleUpdate } from "./updates";
-import { _parseFunction, _registerInternalStore, ATTR_PREFIX } from "./util";
+import { Store } from "./store";
+import { _scheduleUpdate, _transition } from "./updates";
+import { $fn, $st, _parseFunction, _registerInternalStore, ATTR_PREFIX } from "./util";
 
 export interface ComponentOptions {
   href: string;
@@ -23,7 +23,8 @@ export interface MfldComponent extends HTMLElement {
     template: HTMLTemplateElement | null;
     context: Set<{ key: string, store: string}>;
     deps: Set<string>;
-    conditionalDeps: Set<string>;
+    eachController: Store<any> | null;
+    showController: Store<boolean> | null;
 
     onConnect?: Function
     onAdopted?: Function
@@ -37,7 +38,11 @@ export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): voi
         template: HTMLTemplateElement | null = null;
         context: Set<{ key: string, store: string}> = new Set();
         deps: Set<string> = new Set();
-        conditionalDeps: Set<string> = new Set();
+        shadow: ShadowRoot | null = null;
+        eachController: Store<any> | null = null;
+        eachAliases: string[] = [];
+        showController: Store<boolean> | null = null;
+        controller: Store<boolean> | null = null;
 
         onConnect?: Function
         onAdopted?: Function
@@ -59,61 +64,120 @@ export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): voi
                     _swapInnerHTML(T, this)
                     return T;
                 })();
-            if(!this.classList.contains("_mf-component")) this.classList.add("_mf-component");
+            if(!this.classList.contains("_mf-cmp")) this.classList.add("_mf-cmp");
         }
 
         connectedCallback(): void {
-            let shadow = ops?.shadow != false ? this.attachShadow({ mode: ops?.shadow || "closed" }) : null,
-                template = (this.template as HTMLTemplateElement).content.cloneNode(true);
+            if(ops?.shadow != false) this.shadow = this.attachShadow({ mode: ops?.shadow || "closed" });
             
             // Get previous context
-            let containingComponent = (this.parentNode as HTMLElement)?.closest?.("._mf-component");
+            let containingComponent = (this.parentNode as HTMLElement)?.closest?.("._mf-cmp");
             if(containingComponent) {
-                this.context = (containingComponent as typeof this)?.context || new Map();
+                this.context = (containingComponent as MfldComponent)?.context || new Map();
             }
 
-            // Internal data
+            // Internal data (if, else, elseif affects show store; each affects duplication; all others affect value replacement and bring $var lookups into scope)
             for(let attr of this.attributes) {
                 if(["id", "class"].includes(attr.name) || attr.name.startsWith(ATTR_PREFIX)) continue;
-                let { func, as, dependencyList } = _parseFunction(attr.value, [], Array.from(this.context));
-                if(func) {
-                    for(let dep of dependencyList || []) {
-                        this.deps.add(dep);
-                        if(["if", "else", "elseif", "each"].includes(attr.name)) this.conditionalDeps.add(dep);
-                    }
-                    for(let dep of this.context) {
-                        this.deps.add(dep.store);
-                        if(["if", "else", "elseif", "each"].includes(attr.name)) this.conditionalDeps.add(dep.store);
-                    }
+                let isConditional = ["if", "else", "elseif"].includes(attr.name),
+                    subConditional = ["else", "elseif"].includes(attr.name),
+                    store: Store<any> | null = null,
+                    prevConditions: string[] = [];
 
-                    let store = _registerInternalStore(this, func, Array.from(this.deps));
-                    this.context.add({ key: attr.name, store: store.name });
-
-                    if(attr.name.match(/if|else|each/)){
-                        _handleTemplAttribute(this, attr.name, func, this.deps, as);
+                // Get previous conditions
+                if(subConditional) {
+                    let prev = this as MfldComponent;
+                    while(prev = (prev)?.previousElementSibling as MfldComponent) {
+                        if(!prev.classList.contains("_mf-cmp")) break;
+                        if(prev.showController) prevConditions.push(prev.showController?.name);
+                        if(prev.getAttribute("if")) break; 
                     }
                 }
-            }
 
-            // Create from template
-            if(template) {
-                shadow?.append(template);
-                for(let child of Array.from(shadow?.children || this.children)) {
-                    if(child.nodeName == "SLOT") {
-                        for(let slotChild of (child as HTMLSlotElement).assignedNodes()) {
-                            _register(slotChild as HTMLElement, { fnCtx: this.context });
+                // Parse function and create dependency list
+                if(!attr.value || attr.name == "each") attr.value = "true";
+                let { func, as, dependencyList } = _parseFunction(attr.value, Array.from(this.context), prevConditions);
+                
+                if(isConditional){
+                    this.showController = _registerInternalStore(this, func, prevConditions);
+                }
+                else if(attr.name == "each") {
+                    this.eachAliases = as || ["val", "key"];
+                    this.eachController = _registerInternalStore(this, func, dependencyList);
+                }
+                else {
+                    for(let [searchIn, subprop] of [[dependencyList, ""],[this.context, 'store']]) {
+                        for(let dep of searchIn || []) {
+                            this.deps.add(subprop ? dep[subprop as keyof typeof dep] as string : dep as string);
                         }
-                    } else if(child.nodeName != "TEMPLATE") {
-                        _register(child as HTMLElement, { fnCtx: this.context });
                     }
+                    store = _registerInternalStore(this, func, Array.from(this.deps));
                 }
+
+                this.context.add({ key: attr.name, store: store?.name || "" });
             }
+
+            // Register controller
+            // this.controller = _registerInternalStore(
+            //     this, 
+            //     ()=> this._render(this.eachController?.value),
+            //     [ this.showController?.name, this.eachController?.name ].filter(s => s != null)
+            // );
+
+            this._render(this.eachController?.value);
+        }
+
+        _clear() {
+            // Transition out all elements from the previous condition
+            let container = document.createElement("span");
+            console.log("CLEARING", this.innerHTML, "SHADOW", this.shadow?.innerHTML)
+            // _swapInnerHTML(container, this);
+            // this.before(container);
+            // console.log("CLEARING", container.innerHTML)
+
+            _transition(container, "out", ()=> container.remove());
+        }
+
+        _render(val: any) {
+            this._clear();
+            if(this.showController?.value === false) return;
+
+            console.log("RENDERING")
+
+            let template = (this.template as HTMLTemplateElement).content.cloneNode(true) as HTMLTemplateElement;
+            this.shadow?.append(template);
+
+            // Iterate over all values (only one if not each) and transition them in
+            // _iterable(val, (val: any, key: any) => {
+            //     template.innerHTML = (this.template?.innerHTML || "")?.replace(
+            //         /{(\$[^}]*)}/g, (_, cap) => _parseFunction(cap, [], [], this.eachAliases.map(a=> `$${a}`)).func?.({ $st, $fn, [`$${this.eachAliases[0]}`]: val, [`$${this.eachAliases[1]}`]: key }) ?? ""
+            //     ) 
+            //     || String(val);
+
+            //     // Transition in
+            //     this.shadow.append(template.content);
+            //     _transition(this, "in", ()=> _register(this, { noparent: true }));
+            // });
+
+            // Register children
+            // for(let child of Array.from(this.rootNode?.children || this.children)) {
+            //     if(child.nodeName == "SLOT") {
+            //         for(let slotChild of (child as HTMLSlotElement).assignedNodes()) {
+            //             _register(slotChild as HTMLElement, { fnCtx: this.context });
+            //         }
+            //     } else if(child.nodeName != "TEMPLATE") {
+            //         _register(child as HTMLElement, { fnCtx: this.context });
+            //     }
+            // }
         }
 
         // Bind callbacks
         attributeChangedCallback = this.onAttributeChanged;
         adoptedCallback = this.onAdopted;
-        disconnectedCallback = this.onDisconnect;
+        disconnectedCallback(){
+            this.onDisconnect?.();
+            // Clean up children, stores, functions
+        }
         static get observedAttributes(): Array<string> {
             return ops?.observedAttributes || [];
         }
@@ -123,9 +187,28 @@ export let _makeComponent = (name: string, ops?: Partial<ComponentOptions>): voi
     if(MFLD.comp[name]) customElements.define(name, MFLD.comp[name]);
 }
 
+let _iterable = <T>(obj: Iterable<T> | { [key: string]: T }, cb: (value: T, key: string | number) => void): void => {
+    if(obj instanceof Map) {
+        for(let[key, value] of obj.entries()) cb(value, key);
+    } else {
+        try {
+            let arr = Array.isArray(obj) ? obj : Array.from(obj as Array<any>);
+            if(arr.length) arr.forEach(cb);
+            else for(let key in obj) cb((obj as any)[key], key);
+        } catch (e) {
+            console.error(`MFLD: ${obj} is not iterable`);
+        }
+    }
+};
+
+export let _swapInnerHTML = (el: HTMLElement, newEl: HTMLElement) => {
+    el.innerHTML = newEl.innerHTML;
+    newEl.innerHTML = "";
+}
+
 // HTTP get component
-export let _component = async (name: string, src: string, ops?: Partial<ComponentOptions>): Promise<void> => {
-    document.querySelectorAll(name).forEach(el=> el.classList.add("_mf-component"));
+export let _fetchComponent = async (name: string, src: string, ops?: Partial<ComponentOptions>): Promise<void> => {
+    document.querySelectorAll(name).forEach(el=> el.classList.add("_mf-cmp"));
     _fetchAndInsert(
         undefined,
         "get",

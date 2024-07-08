@@ -31,7 +31,7 @@ export let _register = (parent?: HTMLElement | null, ops?: RegisterOptions): voi
     for(let raw_el of ops?.noparent ? [...els] : [parent, ...els]) {
         // Scope registration to component scope
         if(raw_el !== parent) {
-            let closestComponent: HTMLElement | null = raw_el.closest("._mf-component");
+            let closestComponent: HTMLElement | null = (raw_el.parentNode as HTMLElement).closest("._mf-cmp");
             if(closestComponent && closestComponent !== parent) {
                 continue;
             }
@@ -65,7 +65,7 @@ export let _register = (parent?: HTMLElement | null, ops?: RegisterOptions): voi
                     triggers = (isFetch || _strippedMode == "sync") ? (parts.shift()?.match(/[^\(\)]{1,}/g)?.pop()?.split(_commaSepRx)?.map(s => s.trim()) || []) : null,
                     funcStr = parts?.[0] || "";
 
-                let { func, dependencyList } = _parseFunction(funcStr, [], Array.from(el._fnCtx) || []);
+                let { func, dependencyList } = _parseFunction(funcStr, Array.from(el._fnCtx) || []);
                 // el._addFunc(func);
 
                 if(!triggers) { 
