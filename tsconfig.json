@@ -1,15 +1,13 @@
 {
-    "compilerOptions": {
-      "lib": ["DOM", "DOM.iterable", "ESNext"],
-      "module": "ESNext",
-      "target": "ESNext",
-      "moduleResolution": "bundler",
-      "moduleDetection": "force",
-      "noEmit": false,
-      "strict": true,
-      "sourceMap": true,
-      "declaration": true,
-      "declarationDir": "types_output"
-    },
-    "files": ["src/index.ts"]
-  }
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.iterable", "ESNext"],
+    "module": "ESNext",
+    "target": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "noEmit": false,
+    "strict": true,
+    "sourceMap": true
+  },
+  "files": ["src/index.ts"]
+}

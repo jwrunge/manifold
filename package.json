@@ -8,21 +8,16 @@
         "build": "rollup -c",
         "example": "npm run build & sirv tests --port 5000 --dev true ",
         "dev": "npm run build & sirv --port 5000 --dev true --single tests/interactive.html",
-        "version": "node ./util/updateVersion.js",
-        "increment-patch": "node util/incrementPatchVersion.js",
-        "pub": "npm run build && npm run increment-patch && npm publish",
-        "test.gzip": "wsl gzip -c ./dist/mfld.js > ./dist/cu.gz"
+        "pub": "npm run build && npm publish",
+        "test.gzip": "gzip -c ./dist/mfld.js > ./dist/cu.gz"
     },
     "devDependencies": {
         "@rollup/plugin-terser": "^0.4.4",
-        "@rollup/plugin-typescript": "^11.1.6",
-        "rollup": "^4.5.0",
+        "@rollup/plugin-typescript": "^12.1.1",
+        "rollup": "^4.28.0",
         "rollup-plugin-dts": "^6.1.1",
         "sirv-cli": "^2.0.2",
-        "terser": "^5.24.0",
-        "typescript": "^5.4.5"
-    },
-    "dependencies": {
-        "ui-base": "^0.0.1"
+        "terser": "^5.36.0",
+        "typescript": "^5.7.2"
     }
 }
