@@ -15,7 +15,6 @@
         "@rollup/plugin-terser": "^0.4.4",
         "@rollup/plugin-typescript": "^12.1.1",
         "rollup": "^4.28.0",
-        "rollup-plugin-dts": "^6.1.1",
         "sirv-cli": "^2.0.2",
         "terser": "^5.36.0",
         "typescript": "^5.7.2"
