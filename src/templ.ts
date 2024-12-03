@@ -27,7 +27,7 @@
 //     let isConditional = mode.match(/if|else/),
 //         prevConditions: Set<string> = new Set(),
 //         modFunc;
-    
+
 //     // Handle elses
 //     if(mode.match(/else/)) {
 //         let prev = self as MfldComponent,
@@ -41,7 +41,7 @@
 //                 console.error("MFLD: No if start found");
 //                 break;
 //             }
-//             if(prev.getAttribute("if")) break; 
+//             if(prev.getAttribute("if")) break;
 //         }
 
 //         // Inject previous conditions into this conditions determiner
@@ -72,7 +72,7 @@
 //             if(!isConditional) {
 //                 item.innerHTML = (item.innerHTML as string)?.replace(
 //                     /{(\$[^}]*)}/g, (_, cap) => _parseFunction(cap, as.map(a=> `$${a}`)).func?.({ $st, $fn, [`$${as[0]}`]: val, [`$${as[1]}`]: key }) ?? ""
-//                 ) 
+//                 )
 //                 || String(val);
 //             }
 
@@ -85,7 +85,7 @@
 //     // Register the store
 //     _registerInternalStore(
 //         self,
-//         modFunc, 
+//         modFunc,
 //         Array.from(deps),
 //         sub
 //     );
