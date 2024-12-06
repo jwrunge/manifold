@@ -173,7 +173,7 @@ export let _makeComponent = (
       _transition(container, "out", () => container.remove());
     }
 
-    _render(val: any) {
+    _render(_val: any) {
       this._clear();
       if (this.showController?.value === false) return;
 
@@ -224,22 +224,22 @@ export let _makeComponent = (
   if (MFLD.comp[name]) customElements.define(name, MFLD.comp[name]);
 };
 
-let _iterable = <T>(
-  obj: Iterable<T> | { [key: string]: T },
-  cb: (value: T, key: string | number) => void
-): void => {
-  if (obj instanceof Map) {
-    for (let [key, value] of obj.entries()) cb(value, key);
-  } else {
-    try {
-      let arr = Array.isArray(obj) ? obj : Array.from(obj as Array<any>);
-      if (arr.length) arr.forEach(cb);
-      else for (let key in obj) cb((obj as any)[key], key);
-    } catch (e) {
-      console.error(`MFLD: ${obj} is not iterable`);
-    }
-  }
-};
+// let _iterable = <T>(
+//   obj: Iterable<T> | { [key: string]: T },
+//   cb: (value: T, key: string | number) => void
+// ): void => {
+//   if (obj instanceof Map) {
+//     for (let [key, value] of obj.entries()) cb(value, key);
+//   } else {
+//     try {
+//       let arr = Array.isArray(obj) ? obj : Array.from(obj as Array<any>);
+//       if (arr.length) arr.forEach(cb);
+//       else for (let key in obj) cb((obj as any)[key], key);
+//     } catch (e) {
+//       console.error(`MFLD: ${obj} is not iterable`);
+//     }
+//   }
+// };
 
 export let _swapInnerHTML = (el: HTMLElement, newEl: HTMLElement) => {
   el.innerHTML = newEl.innerHTML;

@@ -114,7 +114,7 @@ function _runUpdates(recursed = 0) {
 }
 
 export function _transition(
-  el: HTMLElement | null,
+  _el: HTMLElement | null,
   dir: "in" | "out",
   after?: Function | null
 ) {
