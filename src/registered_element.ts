@@ -18,7 +18,7 @@ export class RegisteredElement {
     this._el?.addEventListener(event, listener as any);
   }
 
-  addInternalStore(store: Store<any>) {
+  _addInternalStore(store: Store<any>) {
     this._stores.add(store);
   }
 

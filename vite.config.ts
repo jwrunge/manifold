@@ -5,8 +5,10 @@ export default defineConfig({
     minify: "terser",
     terserOptions: {
       mangle: {
+        eval: true,
+        module: true,
         properties: {
-          regex: /^_/,
+          regex: /^[#_].*/,
         },
       },
       compress: {

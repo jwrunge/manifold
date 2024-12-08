@@ -127,7 +127,7 @@ export let _register = (
         // el._addFunc(func);
 
         if (!triggers) {
-          el.addInternalStore(
+          el._addInternalStore(
             _registerInternalStore(
               el._el as HTMLElement,
               func,
