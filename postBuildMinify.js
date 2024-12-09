@@ -1,19 +1,17 @@
 import { minify } from "terser";
 import { readFile, writeFile } from "node:fs/promises";
 
-const mangle = /^[^#_].*/;
+const regex = /^[_#]/;
 
 const options = {
-  module: true,
-  toplevel: true,
-  keep_classnames: mangle,
-  keep_fnames: mangle,
-  mangle: true,
-  compress: {
-    drop_console: true,
-    dead_code: true,
-    unused: true,
-    collapse_vars: true,
+  compress: true,
+  mangle: {
+    properties: {
+      regex,
+    },
+    functions: {
+      regex,
+    },
   },
 };
 
