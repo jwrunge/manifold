@@ -1,18 +1,9 @@
 import { minify } from "terser";
 import { readFile, writeFile } from "node:fs/promises";
 
-const regex = /^[_#]/;
-
 const options = {
   compress: true,
-  mangle: {
-    properties: {
-      regex,
-    },
-    functions: {
-      regex,
-    },
-  },
+  mangle: true,
 };
 
 for (const file of ["manifold.es.js", "manifold.umd.js"]) {

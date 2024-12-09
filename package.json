@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && node ./postBuildMinify.js",
+    "build": "tsc && vite build",
+    "minify": "node ./postBuildMinify.js",
     "preview": "vite preview"
   },
   "devDependencies": {
