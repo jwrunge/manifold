@@ -10,6 +10,12 @@ dialog {
     border: none;
     box-shadow: var(--box-shadow);
 
+    transition: display .3s allow-discrete, overlay .3s allow-discrete;
+    animation: close .3s forwards;
+    &[open] {
+        animation: open .3s forwards;
+    }
+
     header {
         display: flex;
         justify-content: space-between;
@@ -48,11 +54,24 @@ dialog {
     }
 }
 
-dialog::backdrop {
-    background-color: darkorange;
-    background-image: linear-gradient(
-    130deg,#ff7a18,
-    #af002d 41.07%,
-    #319197 76.05%
-  );
+@keyframes open {
+    from {
+        opacity: 0;
+        transform: scale(0);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes close {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0);
+    }
 }

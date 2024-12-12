@@ -11,17 +11,17 @@
         <h1>Manifold</h1>
         <h2>No-nonsense front-end templating and reactivity</h2>
         <nav>
-            <a href="/dev/index.html">Quick Start</a>
+            <a id="quickstart">Quick Start</a>
             <a href="/dev/templating.html">Tutorials</a>
             <a href="/dev/reactivity.html">Docs</a>
         </nav>
     </section>
 
-    <dialog open>
+    <dialog id="howdy" onmousedown="backdropDismiss.bind(this)()">
         <header>
             <h2>Howdy</h2>
             <div class="buttons">
-                <button>Close</button>
+                <button onclick="closeHowdy()">Close</button>
             </div>
         </header>
         <section>
@@ -30,5 +30,25 @@
         </section>
         <footer>Whatevs</footer>
     </dialog>
+
+    <script>
+        const quickstart = document.getElementById('quickstart');
+        const howdyModal = document.getElementById('howdy');
+
+        quickstart.addEventListener('click', showHowdyModal);
+        
+        function showHowdyModal(e) {
+            e.preventDefault();
+            howdyModal.showModal();
+        }
+
+        function closeHowdy() {
+            howdyModal.close();
+        }
+
+        function backdropDismiss() {
+            event.target === this && this.close()
+        }
+    </script>
 </body>
 </html>
