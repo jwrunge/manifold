@@ -1,4 +1,4 @@
-import { $st, store, component } from "../dist/dev.manifold.js";
+import { $st, store, component } from "../../dist/dev.manifold.js";
 // Mfld.makeComponent("test-component", {
 //     onconnect() {
 //         console.log("THIS", this)
@@ -94,7 +94,7 @@ component.make("new-component");
 
 // // Sequence test - Even though later stores depend on multiple earlier stores, updates to the earlier stores SHOULD NOT result in multiple updates to the later stores
 // for(let i=0; i<5; i++) {
-//     Mfld.store(`mass_store${i}`, { 
+//     Mfld.store(`mass_store${i}`, {
 //         upstream: Array.from({length: i - 1 > 0 ? i - 1 : 0}).map((_, idx)=> `mass_store${idx}`),
 //         updater: (stores)=> {
 //             let sum = 0;
@@ -107,7 +107,7 @@ component.make("new-component");
 
 // // Large test
 // for(let i=0; i<1000; i++) {
-//     Mfld.store(`mass_store${i}`, { 
+//     Mfld.store(`mass_store${i}`, {
 //         upstream: [ `mass_store${i - 1}` ],
 //         updater: ([Previous])=> {
 //             return Previous * 2;
@@ -117,7 +117,7 @@ component.make("new-component");
 
 // // Load test
 // for(let i=0; i<100_000; i++) {
-//     Mfld.store(`mass_store${i}`, { 
+//     Mfld.store(`mass_store${i}`, {
 //         upstream: [ `mass_store${i - 1}` ],
 //         updater: ([Previous])=> {
 //             return Previous * 2;
@@ -127,7 +127,7 @@ component.make("new-component");
 
 // // Intensity test
 // for(let i=0; i<1_000; i++) {
-//     Mfld.store(`mass_store${i}`, { 
+//     Mfld.store(`mass_store${i}`, {
 //         upstream: Array.from({length: i - 1 > 0 ? i - 1 : 0}).map((_, idx)=> `mass_store${idx}`),
 //         updater: (stores)=> {
 //             let sum = 0;
@@ -190,4 +190,3 @@ component.make("new-component");
 //     store3.update("final");
 //     store4.update(1000)
 // }, 16000)
-

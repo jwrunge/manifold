@@ -1,0 +1,58 @@
+dialog {
+    position: fixed;
+    top: 0; left: 0;
+    right: 0; bottom: 0;
+    max-width: 90%;
+
+    border-radius: var(--border-radius);
+    background-color: var(--background);
+    color: var(--text-normal);
+    border: none;
+    box-shadow: var(--box-shadow);
+
+    header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        white-space: nowrap;
+
+        h2 {
+            margin: 0;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .buttons {
+            margin-left: 1rem;
+            display: flex;
+            gap: 1rem;
+        }
+    }
+
+    section {
+        p {
+            max-width: 50rem;
+            margin: 1rem auto;
+        }
+    }
+
+    footer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--medium);
+    }
+}
+
+dialog::backdrop {
+    background-color: darkorange;
+    background-image: linear-gradient(
+    130deg,#ff7a18,
+    #af002d 41.07%,
+    #319197 76.05%
+  );
+}
