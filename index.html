@@ -9,19 +9,20 @@
 <body>   
     <section class="fullpage-hero">
         <h1>Manifold</h1>
-        <h2>No-nonsense front-end templating and reactivity</h2>
+        <h2>Front-end templating and reactivity with no build requirement and no nonsense</h2>
         <nav>
-            <a id="quickstart">Quick Start</a>
+            <a class="modal-trigger" href="#quickstart">The Pitch</a>
+            <a class="modal-trigger" href="#quickstart">Quick Start</a>
             <a href="/dev/templating.html">Tutorials</a>
             <a href="/dev/reactivity.html">Docs</a>
         </nav>
     </section>
 
-    <dialog id="howdy" onmousedown="backdropDismiss.bind(this)()">
+    <dialog id="quickstart">
         <header>
             <h2>Howdy</h2>
             <div class="buttons">
-                <button onclick="closeHowdy()">Close</button>
+                <button class="closer">Close</button>
             </div>
         </header>
         <section>
@@ -31,24 +32,9 @@
         <footer>Whatevs</footer>
     </dialog>
 
-    <script>
-        const quickstart = document.getElementById('quickstart');
-        const howdyModal = document.getElementById('howdy');
-
-        quickstart.addEventListener('click', showHowdyModal);
-        
-        function showHowdyModal(e) {
-            e.preventDefault();
-            howdyModal.showModal();
-        }
-
-        function closeHowdy() {
-            howdyModal.close();
-        }
-
-        function backdropDismiss() {
-            event.target === this && this.close()
-        }
+    <script type="module">
+        import { registerModals } from '/dev/scripts/modals.js';
+        registerModals();
     </script>
 </body>
 </html>
