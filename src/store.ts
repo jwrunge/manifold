@@ -1,29 +1,39 @@
 type StoreOptions<T> = {
-	name?: string;
+	value?: T;
 	deps?: Store<unknown>[];
-	updater?: (value: T) => T;
+	updater?: () => T;
 	upstream?: Store<unknown>[];
 };
 
-export class Store<T> {
-	name: string;
+declare global {
+	interface Window {
+		mfld_stores: Map<string, WeakRef<Store<unknown>>>;
+	}
+}
+
+if (!window.mfld_stores)
+	window.mfld_stores = new Map<string, WeakRef<Store<unknown>>>();
+
+class Store<T> {
+	id: string;
 	value: T;
 	#updater?: (value: T) => T;
 	#upstream = new Set<WeakRef<Store<unknown>>>();
 	#deps = new Set<WeakRef<Store<unknown>>>();
 	#hash: number | null = null;
 
-	constructor(value: T, ops?: StoreOptions<T>) {
-		this.value = value;
+	constructor(ops?: StoreOptions<T>) {
 		return this._modify(ops);
 	}
 
 	_modify(ops?: StoreOptions<T>): Store<T> {
-		this.name = ops?.name || String(Date.now() + Math.random());
+		this.id = `${Date.now()}.${Math.random()}`;
 		this.#updater = ops?.updater;
 		for (const ups of ops?.upstream ?? [])
 			this.#upstream.add(new WeakRef(ups));
 		for (const dep of ops?.deps ?? []) this.#deps.add(new WeakRef(dep));
+		this.value = ops?.value as T;
+
 		// this.#scheduleUpdate();
 		return this;
 	}
@@ -46,22 +56,16 @@ export class Store<T> {
 		return changed;
 	}
 
-	_reEval() {
-		let hasUpstream = false;
+	_reEval(updateSet: Set<Store<unknown>>): boolean {
+		// Don't update if upstream store is in updateSet
 		for (let up of this.#upstream) {
-			if (up.deref()) {
-				hasUpstream = true;
-				break;
-			}
+			const upstream = up.deref();
+			if (upstream && updateSet.has(upstream)) return false;
 		}
 
-		if (hasUpstream) {
-			return true;
-		} else {
-			let newVal = this.#updater?.({ $st, $fn, $el: store._scope });
-			this.update(newVal as T);
-			return true;
-		}
+		// Update value and propagate changes
+		this.update(this.#updater?.({ $st, $fn, $el: store._scope }) as T);
+		return true;
 	}
 
 	update(value: T) {
@@ -77,4 +81,21 @@ export class Store<T> {
 	}
 }
 
-export function $<T>(name: string, ops?: StoreOptions<T>) {}
+export function $watch<T>(val: T | (() => T)): Store<T> {
+	const [updater, value] =
+		typeof val == "function" ? [val as () => T] : [undefined, val];
+
+	//Get upstream from function
+
+	return new Store<T>({
+		value,
+		updater,
+	});
+}
+
+export const $ = new Proxy(
+	{},
+	{
+		get: (_, key: string) => window.mfld_stores.get(key)?.deref(),
+	}
+);
