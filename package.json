@@ -14,5 +14,9 @@
 		"terser": "^5.37.0",
 		"typescript": "~5.7.2",
 		"vite": "^6.0.3"
+	},
+	"dependencies": {
+		"@biomejs/biome": "^1.9.4",
+		"biome-cfg": "github:jwrunge/biome-cfg"
 	}
 }

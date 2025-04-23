@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
-    "lib": ["DOM", "DOM.iterable", "ESNext"],
+    "lib": [
+      "DOM",
+      "DOM.iterable",
+      "ESNext"
+    ],
     "module": "ESNext",
     "target": "ESNext",
     "moduleResolution": "bundler",
@@ -9,5 +13,7 @@
     "strict": true,
     "sourceMap": true
   },
-  "files": ["src/index.ts"]
+  "include": [
+    "src/**/*"
+  ]
 }
