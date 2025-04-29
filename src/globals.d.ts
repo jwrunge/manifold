@@ -1,6 +1,6 @@
 declare global {
   interface Window {
-    $st: unknown
+    $st: Record<string, unknown>
   }
 }
 

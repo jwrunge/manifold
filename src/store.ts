@@ -5,22 +5,30 @@ type StoreOptions<T> = {
 	upstream?: Store<unknown>[];
 };
 
+type UpdaterPayload<T> = {
+	$st: Store<T>,
+	$fn: ()=> void,
+	$el: HTMLElement
+}
+
 declare global {
 	interface Window {
 		mfldStores: Map<string, WeakRef<Store<unknown>>>;
 	}
 }
 
-if (!window.mfldStores)
-{	window.mfldStores = new Map<string, WeakRef<Store<unknown>>>();
+if (!window.mfldStores) {
+	window.mfldStores = new Map<string, WeakRef<Store<unknown>>>();
 }
+
 class Store<T> {
 	id!: string;
 	value!: T;
-	#updater?: (value: T) => T;
-	#upstream = new Set<WeakRef<Store<unknown>>>();
-	#deps = new Set<WeakRef<Store<unknown>>>();
-	#hash: number | null = null;
+	private scope?: HTMLElement;
+	private updater?: (p: UpdaterPayload<T>) => T;
+	private upstream = new Set<WeakRef<Store<unknown>>>();
+	private deps = new Set<WeakRef<Store<unknown>>>();
+	private hash: number | null = null;
 
 	constructor(ops?: StoreOptions<T>) {
 		this._modify(ops);
@@ -28,10 +36,10 @@ class Store<T> {
 
 	_modify(ops?: StoreOptions<T>): Store<T> {
 		this.id = `${Date.now()}.${Math.random()}`;
-		this.#updater = ops?.updater;
+		this.updater = ops?.updater;
 		for (const ups of ops?.upstream ?? [])
-{			this.#upstream.add(new WeakRef(ups));
-}		for (const dep of ops?.deps ?? []) {this.#deps.add(new WeakRef(dep));
+{			this.upstream.add(new WeakRef(ups));
+}		for (const dep of ops?.deps ?? []) {this.deps.add(new WeakRef(dep));
 		}this.value = ops?.value as T;
 
 		// this.#scheduleUpdate();
@@ -51,20 +59,20 @@ class Store<T> {
 		for (const char of new TextEncoder().encode(input?.toString() || ""))
 {			h = (h << 5) - h + char;
 }
-		const changed = h !== this.#hash;
-		this.#hash = h;
+		const changed = h !== this.hash;
+		this.hash = h;
 		return changed;
 	}
 
 	_reEval(updateSet: Set<Store<unknown>>): boolean {
 		// Don't update if upstream store is in updateSet
-		for (const up of this.#upstream) {
+		for (const up of this.upstream) {
 			const upstream = up.deref();
 			if (upstream && updateSet.has(upstream)) {return false;}
 		}
 
 		// Update value and propagate changes
-		this.update(this.#updater?.({ $st, $fn, $el: store._scope }) as T);
+		this.update(this.updater?.({ $st, $fn, $el: this.scope }) as T);
 		return true;
 	}
 
@@ -74,7 +82,7 @@ class Store<T> {
 		if (this.#changed(newValue)) {
 			// scheduleUpdate
 			this.value = newValue;
-			for (const dep of this.#deps) {
+			for (const dep of this.deps) {
 				/*scheduleUpdate(*/ dep.deref()?._reEval; /*)*/
 			}
 		}
@@ -92,6 +100,8 @@ export function $watch<T>(val: T | (() => T)): Store<T> {
 		updater,
 	});
 }
+
+const $st: Record<string, Store<unknown>> = {};
 
 export const $ = new Proxy(
 	{},
