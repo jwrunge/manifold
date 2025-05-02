@@ -1,6 +1,9 @@
+import type { Store } from "./store";
+
 declare global {
   interface Window {
-    $st: unknown
+    $st: unknown,
+    mfldStores: Map<string, WeakRef<Store<unknown>>>;
   }
 }
 
