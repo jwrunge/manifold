@@ -9,11 +9,12 @@
 		"test": "vitest"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
-		"biome-cfg": "github:jwrunge/biome-cfg",
+		"@types/node": "^22.10.1",
 		"terser": "^5.37.0",
 		"typescript": "~5.7.2",
 		"vite": "^6.0.3",
-		"vitest": "^3.1.2"
+		"vitest": "^3.1.2",
+		"@biomejs/biome": "^1.9.4",
+		"biome-cfg": "github:jwrunge/biome-cfg"
 	}
 }
