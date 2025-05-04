@@ -1,6 +1,6 @@
-import { expect, test } from "vitest";
-import {Store} from "./store";
+import { test } from "vitest";
+import { Store } from "./reactivity";
 
 test("Test new store", () => {
-	const store1 = new Store({ value: 3 })
+	const store1 = new Store({ value: 3 });
 });

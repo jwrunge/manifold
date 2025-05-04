@@ -1,7 +1,13 @@
-import type { Store } from "./store";
+import type { Store } from "./reactivity";
 
 declare global {
-  interface Window {
-    mfldStores: Map<string, WeakRef<Store<unknown>>>;
-  }
+	interface Window {
+		nextTickQueue: (() => void)[];
+		mfldStores: Map<string, WeakRef<Store>>;
+		mfldFuncs: Map<string, WeakRef<() => void>>;
+	}
+
+	let nextTickQueue: (() => void)[];
+	let mfldStores: Map<string, WeakRef<Store>>;
+	let mfldFuncs: Map<string, WeakRef<() => void>>;
 }

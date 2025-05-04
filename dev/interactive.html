@@ -51,7 +51,7 @@
   <template data-mf-else>
     <div>ELSE</div>
   </template> -->
-  <!-- Store script -->
+  <!-- Reactivity script -->
   <button mf-bind="$el.innerHTML = $st.store1" mf-sync="on(click) -> alert($st.store1)" mf-get="on(click) -> /tests/header.html" mf-inner="header">SWAP ME</button>
   <button mf-post="on(click) -> ()=> { alert('clicked'); return { data: $st.store1 }; } -> /tests/header.html" mf-inner="header">POST ME</button>
 
@@ -72,7 +72,7 @@
   <template id="new-component">
     <div>This is my template!!!</div>
     <mf-templ eval="$st.store1 as s">
-        <div>Store 1: {$s}</div>
+        <div>Reactivity 1: {$s}</div>
     </mf-templ>
     <slot></slot>
 
