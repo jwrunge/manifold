@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	build: {
-		minify: false,
+		minify: true,
 		lib: {
 			entry: "src/reactivity.ts",
 			name: "Manifold",
