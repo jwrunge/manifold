@@ -13,44 +13,23 @@ type StoreOptions<T> = {
 	updater?: string | UpdaterFn<T>;
 	upstream?: Store[];
 	scope?: WeakRef<HTMLElement>;
-	id?: string;
 };
 
-const rxSeparateFnFromIterator = /\s+as\s+/;
-const rxMatchFn = /^\s*(function)?\(.*\)(=>)?\s*/;
-const rxCommaSeparator = /, */g;
-
-const registered = !!globalThis.mfld;
-
-window.mfld ??= {
-	ontick: [],
-	stores: new Map<string, WeakRef<Store>>(),
-	funcs: new Map<string, WeakRef<() => void>>(),
+globalThis.mfld ??= {
+	st: new WeakMap<HTMLScriptElement, Map<string, Store>>(),
+	fn: new WeakMap<HTMLScriptElement, Map<string, () => void>>(),
+	tick: [],
 };
 
-if (!registered) register();
+export const $st = new Proxy(mfld.st, {
+	get: (stores, property: string) => stores.get(property)?.deref(),
+	set: (stores, property: string, value) => {
+		stores.get(property)?.deref()?.update(value);
+		return true;
+	},
+});
 
-export const onTick = (fn: () => void) => {
-	fn && mfld.ontick.push(fn);
-};
-
-export const $watch = <T>(value: T, id?: string) => new Store({ value, id });
-export const $derive = <T>(updater: UpdaterFn<T> | string, id?: string) =>
-	new Store<T>({ updater, id });
-
-export const $st = new Proxy(mfld.stores, {
-	get: (stores, property: string) => stores.get(property)?.deref()?.value,
-	set: (stores, property: string, value) =>
-		!!stores.get(property)?.deref()?.update(value),
-}) as unknown as {
-	[K in keyof typeof mfld.stores]: (typeof mfld.stores)[K] extends WeakRef<
-		Store<infer T>
-	>
-		? T
-		: undefined;
-};
-
-export const $fn = new Proxy(mfld.funcs, {
+export const $fn = new Proxy(mfld.fn, {
 	get: (funcs, property: string) => funcs.get(property)?.deref(),
 	set: (funcs, property: string, value: () => void) => {
 		funcs.set(property, new WeakRef(value));
@@ -71,27 +50,23 @@ export class Store<T = unknown> {
 	static cancelAnim = 0;
 
 	constructor(ops: StoreOptions<T>) {
-		const { id, updater, upstream, value } = ops;
-		this.id = id ?? Math.random();
-		const [updateFn, remap, upstreamFromFn] = this.#parseFn(updater);
-		this.updater = updateFn;
-		this.#remap = remap;
-		for (const u of upstream ?? []) upstreamFromFn.add(new WeakRef(u));
-		for (const ups of upstreamFromFn) this.#upstream.add(ups);
-		this.value = value as T;
-		this._reEval();
-		mfld.stores.set(this.id.toString(), new WeakRef(this));
+		this.id = Math.random();
+		this.updater = ops.updater;
+		for (const ups of ops.upstream ?? [])
+			this.#upstream.add(new WeakRef(ups));
+		for (const dep of ops.deps ?? []) this.#deps.add(new WeakRef(dep));
+		this.value = ops.value;
 	}
 
 	#changed(input: unknown): boolean {
-		if (typeof input !== "object") return input !== this.value; // Direct compare primatives
-		if ([Map, Set].some(c => input instanceof c))
+		if (typeof input !== "object") return input === this.value; // Direct compare primatives
+		if ([Map, Set].some((c) => input instanceof c))
 			return this.#changed([
 				...(input as Map<unknown, unknown> | Set<unknown>).entries(),
 			]);
 
 		const h = Array.from(
-			new TextEncoder().encode(input?.toString() || ""),
+			new TextEncoder().encode(input?.toString() || "")
 		).reduce((hash, char) => (hash << 5) - hash + char, 0);
 
 		const changed = h !== this.#hash;
@@ -124,13 +99,14 @@ export class Store<T = unknown> {
 				$st,
 				$fn,
 				$el: this.#el,
-			}),
+			})
 		);
 	}
 
 	update(value?: T) {
 		if (value === undefined) return;
-		const newValue = typeof value === "function" ? value(this.value) : value;
+		const newValue =
+			typeof value === "function" ? value(this.value) : value;
 
 		if (this.#changed(newValue)) {
 			this.value = newValue;
@@ -142,12 +118,18 @@ export class Store<T = unknown> {
 
 		return this.value;
 	}
-}
 
-const runUpdates = (recursed = 0) => {
-	if (recursed + 1 > 100)
-		return console.log("MFLD recursion limit: check for circular updates.");
-	Store.cancelAnim = 0;
+	static #scheduleUpdate = (update: WeakRef<Store>) => {
+		Store.updateSet.add(update);
+		Store.cancelAnim ||= requestAnimationFrame(() => Store.#runUpdates());
+	};
+
+	static #runUpdates(recursed = 0) {
+		if (recursed + 1 > 100)
+			return console.log(
+				"MFLD recursion limit: check for circular updates."
+			);
+		Store.cancelAnim = 0;
 
 	const newUpdateSet: Set<WeakRef<Store>> = new Set();
 	for (const store of Store.updateSet) {
@@ -155,12 +137,11 @@ const runUpdates = (recursed = 0) => {
 		store.deref()?._reEval(newUpdateSet);
 	}
 
-	if (newUpdateSet.size) Store.updateSet = newUpdateSet;
-	else {
-		let fn: (() => void) | undefined;
-		// biome-ignore lint/suspicious/noAssignInExpressions: this is more concise
-		while ((fn = mfld.ontick.shift())) fn();
-	}
+		if (newUpdateSet.size) Store.updateSet = newUpdateSet;
+		else {
+			for (const fn of mfld.tick) fn();
+			mfld.tick = [];
+		}
 
 	runUpdates(recursed);
 };

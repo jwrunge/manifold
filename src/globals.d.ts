@@ -2,10 +2,8 @@ import type { Store } from "./reactivity";
 
 declare global {
 	var mfld: {
-		ontick: (() => void)[];
-		stores: Map<string, WeakRef<Store>>;
-		funcs: Map<string, WeakRef<() => void>>;
+		st: WeakMap<HTMLScriptElement, Map<string, Store>>;
+		fn: WeakMap<HTMLScriptElement, Map<string, () => void>>;
+		tick: (() => void)[];
 	};
-
-	var currentScript: HTMLScriptElement | undefined;
 }
