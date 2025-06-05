@@ -1,20 +1,18 @@
 {
-  "compilerOptions": {
-    "lib": [
-      "DOM",
-      "DOM.iterable",
-      "ESNext"
-    ],
-    "module": "ESNext",
-    "target": "ESNext",
-    "moduleResolution": "bundler",
-    "moduleDetection": "force",
-    "noEmit": true,
-    "strict": true,
-    "sourceMap": true
-  },
-  "include": [
-    "src/**/*",
-    "src/globals.d.ts"
-  ]
+	"compilerOptions": {
+		"lib": ["DOM", "DOM.iterable", "ESNext"],
+		"module": "ESNext",
+		"target": "ESNext",
+		"moduleResolution": "bundler",
+		"moduleDetection": "force",
+		"noEmit": true,
+		"strict": true,
+		"sourceMap": true
+	},
+	"include": [
+		// "src/**/*",
+		// "src/globals.d.ts"
+		"src/reactivity.ts",
+		"src/deepEquality.ts"
+	]
 }
