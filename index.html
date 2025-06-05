@@ -1,41 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/dev/assets/root.css">
-    <title>Document</title>
-</head>
-<body>   
-    <section class="fullpage-hero">
-        <h1>Manifold</h1>
-        <h2>Front-end templating and reactivity with no build requirement and no nonsense</h2>
-        <nav>
-            <a class="modal-trigger" href="#quickstart">The Pitch</a>
-            <a class="modal-trigger" href="#quickstart">Quick Start</a>
-            <a href="/dev/templating.html">Tutorials</a>
-            <a href="/dev/reactivity.html">Docs</a>
-        </nav>
-    </section>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="stylesheet" href="/dev/assets/root.css" />
+		<title>Document</title>
+	</head>
+	<body>
+		<section class="fullpage-hero">
+			<h1>Manifold</h1>
+			<h2>
+				Front-end templating and reactivity with no build requirement
+				and no nonsense
+			</h2>
+			<nav>
+				<a class="modal-trigger" href="#quickstart">The Pitch</a>
+				<a class="modal-trigger" href="#quickstart">Quick Start</a>
+				<a href="/dev/templating.html">Tutorials</a>
+				<a href="/dev/reactivity.html">Docs</a>
+			</nav>
+		</section>
 
-    <dialog id="quickstart">
-        <header>
-            <h2>Howdy</h2>
-            <div class="buttons">
-                <button class="closer">Close</button>
-            </div>
-        </header>
-        <section>
-            <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. In eaque doloribus aperiam velit quam recusandae quos saepe debitis maiores! Incidunt totam vero adipisci, dolor voluptate perferendis aspernatur illum nisi earum?</p>
-            <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. In eaque doloribus aperiam velit quam recusandae quos saepe debitis maiores! Incidunt totam vero adipisci, dolor voluptate perferendis aspernatur illum nisi earum?</p>
-        </section>
-        <footer>Whatevs</footer>
-    </dialog>
+		<dialog id="quickstart">
+			<header>
+				<h2>Howdy</h2>
+				<div class="buttons">
+					<button class="closer">Close</button>
+				</div>
+			</header>
+			<section>
+				<p>
+					Lorem ipsum dolor sit amet, consectetur adipisicing elit. In
+					eaque doloribus aperiam velit quam recusandae quos saepe
+					debitis maiores! Incidunt totam vero adipisci, dolor
+					voluptate perferendis aspernatur illum nisi earum?
+				</p>
+				<p>
+					Lorem ipsum dolor sit amet, consectetur adipisicing elit. In
+					eaque doloribus aperiam velit quam recusandae quos saepe
+					debitis maiores! Incidunt totam vero adipisci, dolor
+					voluptate perferendis aspernatur illum nisi earum?
+				</p>
+			</section>
+			<footer>Whatevs</footer>
+		</dialog>
 
-    <script type="module" class="mf-register">
-        import { registerModals } from '/dev/scripts/modals.js';
-        registerModals();
-    </script>
-    <script type="module" class="mf-register"></script>
-</body>
+		<script type="module" class="mf-register">
+			import { registerModals } from "/dev/scripts/modals.js";
+			registerModals();
+		</script>
+		<script type="module" class="mf-register"></script>
+	</body>
 </html>
