@@ -1,3 +1,5 @@
+import { isEqual } from "./equalityCheck.js";
+
 export class Store<T = unknown> {
 	#value: T;
 	#reactive: T; // proxied
@@ -11,69 +13,6 @@ export class Store<T = unknown> {
 	constructor(value: T) {
 		this.#value = value;
 		this.#reactive = Store.#watch(this.#value);
-	}
-
-	static #isEqual(a: any, b: any, checked = new WeakSet()): boolean {
-		if (a === b) return true;
-		if (!(a && b && [typeof a, typeof b].includes("object"))) return false;
-
-		if (checked.has(a) || checked.has(b)) return true; // Handle circular references
-		checked.add(a);
-		checked.add(b);
-
-		const classA = a.constructor;
-		const classB = b.constructor;
-		if (classA !== classB && !(classA === Object && classB === Object))
-			return false;
-
-		switch (classA) {
-			case Date:
-				return a.getTime() === b.getTime();
-			case RegExp:
-				return a.source === b.source && a.flags === b.flags;
-			case ArrayBuffer:
-				return false;
-			case URL:
-				return a.href === b.href;
-			case URLSearchParams:
-				return a.toString() !== b.toString();
-			case Error:
-				return a.name === b.name && a.message === b.message;
-			case Map:
-				if (a.size !== b.size) return false;
-				const aEntries = Array.from(
-					(a as Map<unknown, unknown>).entries()
-				).sort((x, y) => String(x[0]).localeCompare(String(y[0])));
-				const bEntries = Array.from(
-					(b as Map<unknown, unknown>).entries()
-				).sort((x, y) => String(x[0]).localeCompare(String(y[0])));
-				return Store.#isEqual(aEntries, bEntries, checked);
-			case Set:
-				if (a.size !== b.size) return false;
-				// Convert Set to sorted array of values for consistent comparison
-				const aValues = Array.from(a.values()).sort((x, y) =>
-					String(x).localeCompare(String(y))
-				);
-				const bValues = Array.from(b.values()).sort((x, y) =>
-					String(x).localeCompare(String(y))
-				);
-				return Store.#isEqual(aValues, bValues, checked);
-		}
-
-		const keysA = Object.keys(a);
-		const keysB = Object.keys(b);
-		if (keysA.length !== keysB.length) return false;
-
-		for (const key of keysA) {
-			if (
-				!Object.prototype.hasOwnProperty.call(b, key) ||
-				!Store.#isEqual(a[key], b[key], checked)
-			) {
-				return false;
-			}
-		}
-
-		return true;
 	}
 
 	static #watch = <T>(obj: T): T => {
@@ -105,7 +44,7 @@ export class Store<T = unknown> {
 					},
 					set(target, key, value, receiver) {
 						const oldValue = Reflect.get(target, key, receiver);
-						if (Store.#isEqual(oldValue, value)) return true;
+						if (isEqual(oldValue, value)) return true;
 
 						const result = Reflect.set(
 							target,
@@ -139,17 +78,14 @@ export class Store<T = unknown> {
 	};
 
 	get value(): T {
-		// When someone reads store.value, we track this dependency.
-		// This is simplified: in a real system, you'd track specific property access within the value object.
-		// For now, assume a read of `store.value` implies a dependency on the whole thing.
 		if (Store.#currentEffect) this.#downstream.add(Store.#currentEffect);
 		return this.#reactive;
 	}
 
 	set value(newValue: T) {
-		if (Store.#isEqual(this.#value, newValue)) return;
+		if (isEqual(this.#value, newValue)) return;
 
-		this.#value = newValue; // Update the internal raw value
+		this.#value = newValue;
 		this.#reactive =
 			typeof newValue === "object" && newValue !== null
 				? (Store.#watch(newValue as object) as T)
