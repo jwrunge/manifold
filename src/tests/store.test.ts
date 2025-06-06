@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { Store } from "./reactivity";
+import { Store } from "../reactivity";
 
 test("Test new store", async () => {
 	const myStore = new Store(0);

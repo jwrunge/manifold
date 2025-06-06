@@ -1,6 +1,6 @@
 export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 	if (a === b) return true;
-	if (!(a && b && [typeof a, typeof b].includes("object"))) return false;
+	if (!(a && b && typeof a == "object" && typeof b == "object")) return false;
 
 	if (checked.has(a) && checked.has(b)) return true; // Handle circular references
 	checked.add(a);
