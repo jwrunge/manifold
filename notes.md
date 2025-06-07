@@ -1,9 +1,9 @@
 # TO DO
 
-- History API - set up map of states to reference on popstate / routing
-- Throbber support
-- Supporting props: loop over observedAttributes and replace $:{} like in templs?
-- Fix transition spacer
+-   History API - set up map of states to reference on popstate / routing
+-   Throbber support
+-   Supporting props: loop over observedAttributes and replace $:{} like in templs?
+-   Fix transition spacer
 
 OK, so I think I've figured out the issue of scope and passing a reference to the calling script to the store creation function.
 
@@ -21,9 +21,9 @@ Stores are tied to elements in a WeakMap<HTMLElement, Store>?
 
 GOALS:
 
-- Separation of concerns -- don't muddy markup with logic (keep markup simple -- it's most effective when simple!)
-- Don't leak memory and don't accumulate global stores
-- Don't violate CSP
+-   Separation of concerns -- don't muddy markup with logic (keep markup simple -- it's most effective when simple!)
+-   Don't leak memory and don't accumulate global stores
+-   Don't violate CSP
 
 ```typescript
 import $ from "mfld";
@@ -74,12 +74,19 @@ Here are all the values:
     </mf-else>
 </mf-each>
 
-<example-template>
-
-</example-template>
+<mf-await data-impl="awaitFunc" data-as="arr">
+    ...
+</mf-await>
+<mf-then>
+    Handling data: ${arr}
+    <mf-each data-impl="list-values" >
+</mf-then>
+<mf-catch>
+    There was an error: ${error}
+</mf-catch>
 ```
 
 This is an MVVM library. Model - arbitrary data; view - arbitrary HTML. viewmodel is the $.element() registrar
 
 Associating "my-input" with input[x-impl=my-input]:
-These must be in the same FILE -- on run (must be top-level), 
+These must be in the same FILE -- on run (must be top-level),

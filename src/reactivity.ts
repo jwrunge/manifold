@@ -1,111 +1,159 @@
 import { isEqual } from "./equalityCheck";
 
-export class Store<T = unknown> {
-	#value: T;
-	#reactive: T; // proxied
-	#downstream = new Set<() => void>();
-	static #currentEffect: (() => void) | null = null;
-	static #effectMap = new WeakMap<
-		object,
-		Map<string | symbol, Set<() => void>>
-	>();
+let currentEffect: Effect | null = null;
 
-	constructor(value: T) {
-		this.#value = value;
-		this.#reactive = Store.#watch(this.#value);
+class Effect {
+	#cleanupFns: (() => void)[] = [];
+	#active = true;
+
+	constructor(private fn: () => void) {}
+
+	run() {
+		if (this.#active) {
+			this.#stopDependencies();
+			currentEffect = this;
+
+			try {
+				this.fn();
+			} finally {
+				currentEffect = null;
+			}
+		}
 	}
 
-	static #watch = <T>(obj: T): T => {
-		return !obj || typeof obj !== "object"
-			? obj
-			: new Proxy(obj, {
-					get(target, key, receiver) {
-						// Record dependency
-						if (Store.#currentEffect) {
-							let depsMap = Store.#effectMap.get(target);
-							if (!depsMap) {
-								depsMap = new Map();
-								Store.#effectMap.set(target, depsMap);
-							}
-							let dep = depsMap.get(key);
-							if (!dep) {
-								dep = new Set();
-								depsMap.set(key, dep);
-							}
-							dep.add(Store.#currentEffect);
-						}
+	addDependency(cleanup: () => void) {
+		this.#cleanupFns.push(cleanup);
+	}
 
-						const res = Reflect.get(target, key, receiver);
-						if (typeof res === "object" && res !== null) {
-							// Deeply observe nested objects
-							return Store.#watch(res);
-						}
-						return res;
-					},
-					set(target, key, value, receiver) {
-						const oldValue = Reflect.get(target, key, receiver);
-						if (isEqual(oldValue, value)) return true;
+	#stopDependencies() {
+		this.#cleanupFns.forEach((cleanup) => cleanup());
+		this.#cleanupFns = [];
+	}
 
-						const result = Reflect.set(
-							target,
-							key,
-							value,
-							receiver
-						);
-						if (result) {
-							// Trigger effects for dependents on specific property
-							for (const effect of Store.#effectMap
-								.get(target)
-								?.get(key) ?? [])
-								effect();
-						}
+	stop() {
+		this.#active = false;
+		this.#stopDependencies();
+	}
+}
 
-						return result;
-					},
-					deleteProperty(target, key) {
-						const hadProperty = Reflect.has(target, key);
-						const result = Reflect.deleteProperty(target, key);
-						if (result && hadProperty) {
-							// Trigger effects for dependents on specific property
-							for (const effect of Store.#effectMap
-								.get(target)
-								?.get(key) ?? [])
-								effect();
-						}
-						return result;
-					},
-			  });
+export class Store<T = unknown> {
+	#value!: T;
+	#reactive!: T; // proxied
+	#derive?: () => T;
+	#downstream = new Set<Effect>();
+
+	static #proxyInstances = new WeakSet<object>();
+	static #effectMap = new WeakMap<
+		object,
+		Map<string | symbol, Set<Effect>>
+	>();
+
+	constructor(value: T | (() => T)) {
+		if (typeof value === "function") {
+			this.#derive = value as () => T;
+			const deriveEffect = new Effect(() => {
+				this.#updateInternalValue(this.#derive!());
+			});
+
+			this.#downstream.add(deriveEffect);
+			deriveEffect.run();
+		} else {
+			this.#updateInternalValue(value);
+		}
+	}
+
+	#updateInternalValue(newValue: T) {
+		if (isEqual(this.#value, newValue)) return;
+		this.#value = newValue;
+		this.#reactive = Store.#observable(newValue);
+		for (const effect of new Set(this.#downstream)) effect.run();
+	}
+
+	static #track(target: object, key: string | symbol) {
+		if (currentEffect) {
+			let deps = Store.#effectMap.get(target);
+			if (!deps) {
+				deps = new Map();
+				Store.#effectMap.set(target, deps);
+			}
+			let effects = deps.get(key);
+			if (!effects) {
+				effects = new Set();
+				deps.set(key, effects);
+			}
+			effects.add(currentEffect);
+			currentEffect.addDependency(() => {
+				if (currentEffect) effects?.delete(currentEffect);
+				if (effects?.size === 0) {
+					deps.delete(key);
+					if (deps.size === 0) {
+						Store.#effectMap.delete(target);
+					}
+				}
+			});
+		}
+	}
+
+	static #trigger(target: object, key: string | symbol) {
+		const deps = Store.#effectMap.get(target);
+		if (!deps) return;
+		const effectsToRun = deps.get(key);
+		if (effectsToRun) {
+			new Set(effectsToRun).forEach((effect) => effect.run());
+		}
+	}
+
+	static #observable = <T>(obj: T): T => {
+		if (!obj || typeof obj !== "object" || Store.#proxyInstances.has(obj))
+			return obj;
+
+		const proxy = new Proxy(obj, {
+			get(target, key, receiver) {
+				Store.#track(target, key);
+				return Store.#observable(Reflect.get(target, key, receiver));
+			},
+			set(target, key, value, receiver) {
+				if (isEqual(Reflect.get(target, key, receiver), value))
+					return true;
+
+				const result = Reflect.set(target, key, value, receiver);
+				if (result) Store.#trigger(target, key);
+
+				return result;
+			},
+			deleteProperty(target, key) {
+				const hadProperty = Reflect.has(target, key);
+				const result = Reflect.deleteProperty(target, key);
+				if (result && hadProperty) Store.#trigger(target, key);
+				return result;
+			},
+		});
+
+		Store.#proxyInstances.add(proxy);
+		return proxy;
 	};
 
 	get value(): T {
-		// When someone reads store.value, we track this dependency.
-		// This is simplified: in a real system, you'd track specific property access within the value object.
-		// For now, assume a read of `store.value` implies a dependency on the whole thing.
-		if (Store.#currentEffect) this.#downstream.add(Store.#currentEffect);
+		if (currentEffect) {
+			this.#downstream.add(currentEffect);
+			currentEffect.addDependency(() => {
+				this.#downstream.delete(currentEffect!);
+			});
+		}
+
 		return this.#reactive;
 	}
 
 	set value(newValue: T) {
-		if (isEqual(this.#value, newValue)) return;
-
-		this.#value = newValue; // Update the internal raw value
-		this.#reactive =
-			typeof newValue === "object" && newValue !== null
-				? (Store.#watch(newValue as object) as T)
-				: newValue;
-
-		// Trigger effects for dependents on whole store value
-		for (const effect of this.#downstream) effect();
+		if (this.#derive)
+			throw new Error("Cannot set value on a derived store.");
+		if (!isEqual(this.#value, newValue))
+			this.#updateInternalValue(newValue);
 	}
 
-	// A simplified 'effect' or 'reaction' runner
-	// In a full system, this would manage cleanup of dependencies.
 	effect(fn: () => void) {
-		const effectRunner = () => {
-			Store.#currentEffect = effectRunner;
-			fn(); // This will trigger 'get' traps and register dependencies
-			Store.#currentEffect = null;
-		};
-		effectRunner();
+		const effect = new Effect(fn);
+		effect.run();
+		return () => effect.stop();
 	}
 }

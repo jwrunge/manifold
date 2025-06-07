@@ -288,3 +288,165 @@ test("Promise equality tests", async () => {
 		["promise"]
 	);
 });
+
+test("Class instance equality tests", async () => {
+	class TestClass {
+		constructor(public name: string) {}
+	}
+	class OtherClass {
+		constructor(public name: string, public age?: number) {}
+	}
+
+	class YetAnotherClass {
+		constructor(public name: string) {}
+	}
+
+	const instanceA = new TestClass("test");
+	const instanceB = new TestClass("test");
+	const instanceC = new TestClass("different");
+	const instanceD = new OtherClass("test", 30);
+	const instanceE = new OtherClass("test");
+	const instanceF = new YetAnotherClass("test");
+
+	expect(isEqual(instanceA, instanceB)).toBe(true);
+	expect(isEqual(instanceA, instanceC)).toBe(false);
+	expect(isEqual(instanceA, instanceD)).toBe(false);
+	expect(isEqual(instanceA, instanceD)).toBe(false);
+	expect(isEqual(instanceA, instanceE)).toBe(false);
+	expect(isEqual(instanceD, instanceE)).toBe(false);
+	expect(isEqual(instanceA, instanceF)).toBe(false); // These are essentially the same, but different classes
+	runAllWildcardTests((val) => expect(isEqual(instanceA, val)).toBe(false));
+});
+
+test("Set of classes equality tests", async () => {
+	class TestClass {
+		constructor(public name: string) {}
+	}
+
+	const instanceA = new TestClass("test");
+	const instanceB = new TestClass("test");
+	const instanceC = new TestClass("different");
+
+	expect(isEqual(new Set([instanceA]), new Set([instanceB]))).toBe(true);
+	expect(isEqual(new Set([instanceA, instanceB]), new Set([instanceA]))).toBe(
+		false
+	);
+	expect(isEqual(new Set([instanceA, instanceA]), new Set([instanceA]))).toBe(
+		true
+	);
+	expect(isEqual(new Set([instanceA]), new Set([instanceC]))).toBe(false);
+	runAllWildcardTests((val) =>
+		expect(isEqual(new Set([instanceA, instanceB, instanceC]), val)).toBe(
+			false
+		)
+	);
+});
+
+test("ArrayBuffer equality tests", async () => {
+	const bufferA = new ArrayBuffer(8);
+	const bufferB = new ArrayBuffer(8);
+	const bufferC = new ArrayBuffer(16);
+	expect(isEqual(bufferA, bufferB)).toBe(true);
+	expect(isEqual(bufferA, bufferC)).toBe(false);
+	runAllWildcardTests((val) => expect(isEqual(bufferA, val)).toBe(false));
+});
+
+test("DataView equality tests", async () => {
+	const buffer = new ArrayBuffer(8);
+	const viewA = new DataView(buffer);
+	const viewB = new DataView(buffer);
+	const viewC = new DataView(new ArrayBuffer(16));
+	expect(isEqual(viewA, viewB)).toBe(true);
+	expect(isEqual(viewA, viewC)).toBe(false);
+	runAllWildcardTests((val) => expect(isEqual(viewA, val)).toBe(false));
+});
+
+test("TypedArray equality tests", async () => {
+	const buffer = new ArrayBuffer(8);
+	const int8ArrayA = new Int8Array(buffer);
+	const int8ArrayB = new Int8Array(buffer);
+	const int8ArrayC = new Int8Array(new ArrayBuffer(16));
+	expect(isEqual(int8ArrayA, int8ArrayB)).toBe(true);
+	expect(isEqual(int8ArrayA, int8ArrayC)).toBe(false);
+	runAllWildcardTests((val) => expect(isEqual(int8ArrayA, val)).toBe(false));
+});
+
+test("Mixed TypedArray equality tests", async () => {
+	const buffer = new ArrayBuffer(8);
+	const buffer2 = new ArrayBuffer(16);
+
+	const int8ArrayA = new Int8Array(buffer);
+	const int16ArrayA = new Int16Array(buffer);
+	const float32ArrayA = new Float32Array(buffer);
+
+	const int8ArrayB = new Int8Array(buffer);
+	const int16ArrayB = new Int16Array(buffer);
+	const float32ArrayB = new Float32Array(buffer);
+
+	const int8ArrayC = new Int8Array(buffer2);
+	const int16ArrayC = new Int16Array(buffer2);
+	const float32ArrayC = new Float32Array(buffer2);
+
+	const uint8ArrayA = new Uint8Array(buffer);
+	const uint8ArrayB = new Uint8Array(buffer);
+	const uint8ArrayC = new Uint8Array(buffer2);
+
+	expect(isEqual(int8ArrayA, int8ArrayB)).toBe(true);
+	expect(isEqual(int16ArrayA, int16ArrayB)).toBe(true);
+	expect(isEqual(float32ArrayA, float32ArrayB)).toBe(true);
+
+	expect(isEqual(int8ArrayA, int16ArrayA)).toBe(true);
+	expect(isEqual(int8ArrayA, float32ArrayA)).toBe(true);
+	expect(isEqual(int16ArrayA, float32ArrayA)).toBe(true);
+
+	expect(isEqual(int8ArrayA, int8ArrayC)).toBe(false);
+	expect(isEqual(int16ArrayA, int16ArrayC)).toBe(false);
+	expect(isEqual(float32ArrayA, float32ArrayC)).toBe(false);
+	expect(isEqual(int8ArrayA, int16ArrayC)).toBe(false);
+
+	expect(isEqual(uint8ArrayA, uint8ArrayB)).toBe(true);
+	expect(isEqual(uint8ArrayA, uint8ArrayC)).toBe(false);
+	expect(isEqual(uint8ArrayA, int8ArrayA)).toBe(true);
+	expect(isEqual(uint8ArrayA, int16ArrayA)).toBe(true);
+
+	runAllWildcardTests((val) => {
+		expect(isEqual(int8ArrayA, val)).toBe(false);
+		expect(isEqual(int16ArrayA, val)).toBe(false);
+		expect(isEqual(float32ArrayA, val)).toBe(false);
+		expect(isEqual(uint8ArrayA, val)).toBe(false);
+	});
+});
+
+test("DataView, Uint8Array, ArrayBuffer, typed array intermixed equality tests", async () => {
+	const buffer = new ArrayBuffer(8);
+	const dataViewA = new DataView(buffer);
+	const dataViewB = new DataView(buffer);
+	const dataViewC = new DataView(new ArrayBuffer(16));
+	const uint8ArrayA = new Uint8Array(buffer);
+	const uint8ArrayB = new Uint8Array(buffer);
+	const uint8ArrayC = new Uint8Array(new ArrayBuffer(16));
+	const int8ArrayA = new Int8Array(buffer);
+	const int8ArrayB = new Int8Array(buffer);
+	const int8ArrayC = new Int8Array(new ArrayBuffer(16));
+
+	expect(isEqual(dataViewA, dataViewB)).toBe(true);
+	expect(isEqual(dataViewA, dataViewC)).toBe(false);
+	expect(isEqual(uint8ArrayA, uint8ArrayB)).toBe(true);
+	expect(isEqual(uint8ArrayA, uint8ArrayC)).toBe(false);
+	expect(isEqual(dataViewA, uint8ArrayA)).toBe(true);
+	expect(isEqual(dataViewA, uint8ArrayB)).toBe(true);
+	expect(isEqual(dataViewA, uint8ArrayC)).toBe(false);
+	expect(isEqual(uint8ArrayA, dataViewA)).toBe(true);
+
+	expect(isEqual(int8ArrayA, int8ArrayB)).toBe(true);
+	expect(isEqual(int8ArrayA, int8ArrayC)).toBe(false);
+	expect(isEqual(int8ArrayA, uint8ArrayA)).toBe(true);
+	expect(isEqual(int8ArrayA, uint8ArrayB)).toBe(true);
+	expect(isEqual(int8ArrayA, dataViewA)).toBe(true);
+
+	runAllWildcardTests((val) => {
+		expect(isEqual(dataViewA, val)).toBe(false);
+		expect(isEqual(uint8ArrayA, val)).toBe(false);
+		expect(isEqual(buffer, val)).toBe(false);
+	});
+});
