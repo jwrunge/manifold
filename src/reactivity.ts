@@ -1,4 +1,4 @@
-import { isEqual } from "./equalityCheck";
+import { isEqual } from "./equality";
 
 let currentEffect: Effect | null = null;
 
