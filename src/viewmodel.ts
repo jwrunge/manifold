@@ -1,14 +1,14 @@
-type DeepPartial<T> = {
+export type DeepPartial<T> = {
 	[P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
-type ElementKeys =
+export type ElementKeys =
 	| "element"
 	| keyof HTMLElementTagNameMap
 	| keyof SVGElementTagNameMap
 	| keyof MathMLElementTagNameMap;
 
-type ElementFrom<T extends ElementKeys> = T extends "element"
+export type ElementFrom<T extends ElementKeys> = (T extends "element"
 	? HTMLElement
 	: T extends keyof HTMLElementTagNameMap
 	? HTMLElementTagNameMap[T]
@@ -16,21 +16,16 @@ type ElementFrom<T extends ElementKeys> = T extends "element"
 	? SVGElementTagNameMap[T]
 	: T extends keyof MathMLElementTagNameMap
 	? MathMLElementTagNameMap[T]
-	: HTMLElement;
+	: HTMLElement) & {
+	class?: Record<string, string>;
+};
 
 export const viewmodel = <T extends ElementKeys = "element">(
 	type: T,
 	selector: string,
 	func: () => DeepPartial<ElementFrom<T>>
 ): void => {
-	const element = document.querySelector(selector) as ElementFrom<T> | null;
+	const element = document.querySelector(selector);
+	console.log(type, element, func);
 	return;
 };
-
-const m = viewmodel("div", "#mydiv", () => ({
-	class: "example-class",
-	id: "example-id",
-	dog: "YES",
-	style: { color: "red", fontSize: "16px", cow: "YES" },
-	textContent: "Hello, World!",
-}));

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { isEqual } from "../equalityCheck";
+import { isEqual } from "../equality";
 
 const wildcards = {
 	boolTrue: true,

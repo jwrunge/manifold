@@ -74,6 +74,7 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 	}
 
 	const [keysA, keysB] = [a, b].map((x) => Reflect.ownKeys(x));
+	if (!keysA || !keysB) return false;
 	if (keysA.length !== keysB.length) return false;
 
 	keysA.sort();
