@@ -1,13 +1,13 @@
 import { Store } from "./reactivity";
 import { viewmodel, ElementKeys, DeepPartial, ElementFrom } from "./viewmodel";
 
-type ProxyFunction<T extends ElementKeys> = (
+type ViewModelProxyFn<T extends ElementKeys> = (
 	selector: string,
 	func: () => DeepPartial<ElementFrom<T>>
 ) => void;
 
-type ViewModelProxy = {
-	[K in ElementKeys]: ProxyFunction<K>;
+type BaseProxy = {
+	[K in ElementKeys]: ViewModelProxyFn<K>;
 } & {
 	watch: <T>(value: T | (() => T)) => Store<T>;
 };
@@ -27,6 +27,6 @@ const proxyHandler: ProxyHandler<object> = {
 	},
 };
 
-const $: ViewModelProxy = new Proxy({}, proxyHandler) as ViewModelProxy; // Assert the type of the proxy
+const $: BaseProxy = new Proxy({}, proxyHandler) as BaseProxy; // Assert the type of the proxy
 
 export default $;

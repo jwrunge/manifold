@@ -21,11 +21,22 @@ export type ElementFrom<T extends ElementKeys> = (T extends "element"
 };
 
 export const viewmodel = <T extends ElementKeys = "element">(
-	type: T,
+	_type: T,
 	selector: string,
 	func: () => DeepPartial<ElementFrom<T>>
 ): void => {
-	const element = document.querySelector(selector);
-	console.log(type, element, func);
-	return;
+	const register = () => {
+		const element = document.querySelector(selector);
+		const props = func();
+
+		if (element)
+			for (const key in props)
+				(element as any)[key] = props[key as keyof typeof props];
+	};
+
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", register);
+	} else {
+		register();
+	}
 };
