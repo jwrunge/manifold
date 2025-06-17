@@ -4,6 +4,7 @@ import {
 	ElementKeys,
 } from "./elementTypes";
 import { State } from "./reactivity";
+import { templ } from "./templating";
 
 const applyProperty = (
 	element: ElementFrom<ElementKeys>,
@@ -37,44 +38,21 @@ export const viewmodel = <T extends ElementKeys = "element">(
 	_type: T,
 	selector: string,
 	func: () => DeepPartialWithTypedListeners<ElementFrom<T>>
-): Promise<ElementFrom<T> | null> => {
-	return new Promise((resolve) => {
-		const register = () => {
-			const element = document.querySelector(selector);
+): Promise<ElementFrom<T> | null> =>
+	templ(selector, (element: Element) => {
+		const props = func();
 
-			if (!element) {
-				console.warn(
-					`viewmodel: Element with selector "${selector}" not found.`
+		for (const key in props) {
+			const value = props[key as keyof typeof props];
+
+			if (key.startsWith("on")) {
+				(element as any)[key] = value as EventListener;
+			} else {
+				applyProperty(
+					element as ElementFrom<T>,
+					key as keyof Element,
+					value
 				);
-				resolve(null);
-				return;
 			}
-
-			State.prototype.effect(() => {
-				const props = func();
-
-				for (const key in props) {
-					const value = props[key as keyof typeof props];
-
-					if (key.startsWith("on")) {
-						(element as any)[key] = value as EventListener;
-					} else {
-						applyProperty(
-							element as ElementFrom<T>,
-							key as keyof Element,
-							value
-						);
-					}
-				}
-			});
-
-			resolve(element as ElementFrom<T> | null);
-		};
-
-		if (document.readyState === "loading") {
-			document.addEventListener("DOMContentLoaded", register);
-		} else {
-			register();
 		}
 	});
-};

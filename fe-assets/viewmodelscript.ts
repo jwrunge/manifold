@@ -10,12 +10,12 @@ let myStore2 = $.watch(() => {
 	};
 });
 
-myStore.effect(() => {
-	console.log("myStore changed:", myStore.value);
-});
-myStore2.effect(() => {
-	console.log("myStore2 changed:", myStore2.value);
-});
+// myStore.effect(() => {
+// 	console.log("myStore changed:", myStore.value);
+// });
+// myStore2.effect(() => {
+// 	console.log("myStore2 changed:", myStore2.value);
+// });
 
 setTimeout(() => {
 	myStore.value = 36;
@@ -29,20 +29,18 @@ setTimeout(() => {
 	}, 3000);
 }, 3000);
 
-const chickenInput = viewmodel("input", "#chickens-input", () => {
-	return {
-		value: chickenStore.value.toString(),
-		onchange: (e) => {
-			chickenStore.value = +e.target.value;
-		},
-		cow: "MOO",
-		style: {
-			border: `3px solid rgb(${chickenStore.value},0,0)`,
-			chicken: "BOK",
-		},
-		class: ["chicken-input", "input", `value-${chickenStore.value}`],
-	};
-});
+const chickenInput = viewmodel("input", "#chickens-input", () => ({
+	value: chickenStore.value.toString(),
+	onchange: (e) => {
+		chickenStore.value = +e.target.value;
+	},
+	cow: "MOO",
+	style: {
+		border: `3px solid rgb(${chickenStore.value},0,0)`,
+		chicken: "BOK",
+	},
+	class: ["chicken-input", "input", `value-${chickenStore.value}`],
+}));
 
 $.button("#chickens-bulk", () => {
 	return {
@@ -52,3 +50,5 @@ $.button("#chickens-bulk", () => {
 		},
 	};
 });
+
+$.each("#chicken-button-list", () => new Array(chickenStore.value).fill("BOK"));

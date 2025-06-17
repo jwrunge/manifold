@@ -63,7 +63,7 @@ export class State<T = unknown> {
 	#updateInternalValue(newValue: T) {
 		if (isEqual(this.#value, newValue)) return;
 		this.#value = newValue;
-		this.#reactive = State.#observable(newValue);
+		this.#reactive = State.#makeObservable(newValue);
 		for (const effect of this.#topLevelEffects) effect.run();
 	}
 
@@ -93,14 +93,17 @@ export class State<T = unknown> {
 		}
 	}
 
-	static #observable = <T>(obj: T): T => {
+	static #makeObservable = <T>(obj: T): T => {
 		if (!obj || typeof obj !== "object" || State.#proxyInstances.has(obj))
+			// Return if primitive or already proxied
 			return obj;
 
 		const proxy = new Proxy(obj, {
 			get(target, key, receiver) {
 				State.#track(target, key);
-				return State.#observable(Reflect.get(target, key, receiver));
+				return State.#makeObservable(
+					Reflect.get(target, key, receiver)
+				);
 			},
 			set(target, key, value, receiver) {
 				if (isEqual(Reflect.get(target, key, receiver), value))

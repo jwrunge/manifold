@@ -12,8 +12,17 @@
 		<h2>Test UI Hooks</h2>
 		<form>
 			<label for="chickens-input">Chickens:</label>
-			<input id="chickens-input" type="number" />
-			<button id="chickens-bulk">+ Lots o' chickens</button>
+			<input
+				id="chickens-input"
+				type="number"
+				class="html-class html-class2"
+			/>
+
+			<mf-each id="chicken-button-list" data-as="val, i">
+				<template>
+					<button id="chickens-bulk">+ Lots o' chickens ${i}</button>
+				</template>
+			</mf-each>
 		</form>
 	</body>
 </html>
