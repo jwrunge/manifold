@@ -35,7 +35,7 @@ const chickenInput = $.input("#chickens-input", () => {
 			chickenStore.value = +e.target!.value;
 		},
 		style: {
-			border: `1px solid rgb(${chickenStore.value},0,0)`,
+			border: `3px solid rgb(${chickenStore.value},0,0)`,
 		},
 	};
 });
