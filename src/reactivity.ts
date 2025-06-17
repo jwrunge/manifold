@@ -37,14 +37,14 @@ export class State<T = unknown> {
 	#value!: T;
 	#reactive!: T; // proxied
 	#derive?: () => T;
-	#effects = new Set<Effect>();
-
-	static currentEffect: Effect | null = null;
-	static #proxyInstances = new WeakSet<object>();
-	static #subscriptions = new WeakMap<
+	#topLevelEffects = new Set<Effect>();
+	static #granularEffects = new WeakMap<
 		object,
 		Map<string | symbol, Set<Effect>>
 	>();
+
+	static currentEffect: Effect | null = null;
+	static #proxyInstances = new WeakSet<object>();
 
 	constructor(value: T | (() => T)) {
 		if (typeof value === "function") {
@@ -52,7 +52,7 @@ export class State<T = unknown> {
 			const deriveEffect = new Effect(() =>
 				this.#updateInternalValue(this.#derive!())
 			);
-			this.#effects.add(deriveEffect);
+			this.#topLevelEffects.add(deriveEffect);
 			deriveEffect.run();
 		} else {
 			this.#updateInternalValue(value);
@@ -63,38 +63,32 @@ export class State<T = unknown> {
 		if (isEqual(this.#value, newValue)) return;
 		this.#value = newValue;
 		this.#reactive = State.#observable(newValue);
-		for (const effect of this.#effects) effect.run();
+		for (const effect of this.#topLevelEffects) effect.run();
 	}
 
 	static #track(target: object, key: string | symbol) {
-		if (State.currentEffect) {
-			let subs = State.#subscriptions.get(target);
+		const effect = State.currentEffect;
+
+		if (effect) {
+			let subs = State.#granularEffects.get(target);
 			if (!subs) {
 				subs = new Map();
-				State.#subscriptions.set(target, subs);
+				State.#granularEffects.set(target, subs);
 			}
 			let effects = subs.get(key);
 			if (!effects) {
 				effects = new Set();
 				subs.set(key, effects);
 			}
-			effects.add(State.currentEffect);
-			State.currentEffect.addDependency(() => {
-				if (State.currentEffect) effects?.delete(State.currentEffect);
+			effects.add(effect);
+
+			effect.addDependency(() => {
+				if (effect) effects?.delete(effect);
 				if (!effects.size) {
 					subs.delete(key);
-					if (!subs.size) State.#subscriptions.delete(target);
+					if (!subs.size) State.#granularEffects.delete(target);
 				}
 			});
-		}
-	}
-
-	static #trigger(target: object, key: string | symbol) {
-		const subs = State.#subscriptions.get(target);
-		if (!subs) return;
-		const effectsToRun = subs.get(key);
-		if (effectsToRun) {
-			new Set(effectsToRun).forEach((effect) => effect.run());
 		}
 	}
 
@@ -112,14 +106,12 @@ export class State<T = unknown> {
 					return true;
 
 				const result = Reflect.set(target, key, value, receiver);
-				if (result) State.#trigger(target, key);
+				if (result) {
+					const subs = State.#granularEffects.get(target);
+					const effectsToRun = subs?.get(key);
+					for (const effect of effectsToRun || []) effect.run();
+				}
 
-				return result;
-			},
-			deleteProperty(target, key) {
-				const hadProperty = Reflect.has(target, key);
-				const result = Reflect.deleteProperty(target, key);
-				if (result && hadProperty) State.#trigger(target, key);
 				return result;
 			},
 		});
@@ -130,9 +122,9 @@ export class State<T = unknown> {
 
 	get value(): T {
 		if (State.currentEffect) {
-			this.#effects.add(State.currentEffect);
+			this.#topLevelEffects.add(State.currentEffect);
 			State.currentEffect.addDependency(() => {
-				this.#effects.delete(State.currentEffect!);
+				this.#topLevelEffects.delete(State.currentEffect!);
 			});
 		}
 
@@ -140,14 +132,12 @@ export class State<T = unknown> {
 	}
 
 	set value(newValue: T) {
-		if (this.#derive) console.error("Cannot set value on a derived store.");
-		else if (!isEqual(this.#value, newValue))
-			this.#updateInternalValue(newValue);
+		if (!this.#derive) this.#updateInternalValue(newValue);
 	}
 
 	effect(fn: () => void) {
 		const effect = new Effect(fn);
 		effect.run();
-		return () => effect.stop();
+		return effect.stop;
 	}
 }

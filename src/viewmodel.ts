@@ -1,3 +1,5 @@
+import { State } from "./reactivity";
+
 export type DeepPartial<T> = {
 	[P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
@@ -20,15 +22,26 @@ export type ElementFrom<T extends ElementKeys> = (T extends "element"
 	class?: Record<string, string>;
 };
 
-const recursiveAssign = <T>(obj: T, key: keyof T, value: unknown) => {
-	if (typeof obj === "object" && obj !== null && key in obj) {
-		if (typeof obj[key] === "object" && obj[key] !== null) {
-			recursiveAssign(obj[key] as T, key, value);
-		} else {
-			(obj as any)[key] = value as T[keyof T];
+const applyProperty = (
+	element: ElementFrom<ElementKeys>,
+	key: keyof ElementFrom<ElementKeys>,
+	value: unknown
+) => {
+	if (typeof value === "object" && value !== null) {
+		if (key === "style") Object.assign(element.style, value);
+		else if (key === "class") {
+			for (const className in value) {
+				if ((value as any)[className]) {
+					element.classList.add(className);
+				} else {
+					element.classList.remove(className); // For falsey values
+				}
+			}
 		}
+	} else if (key in element || element.hasAttribute(key)) {
+		(element as any)[key] = value;
 	} else {
-		obj[key] = value as T[keyof T];
+		element.setAttribute(key, String(value));
 	}
 };
 
@@ -40,21 +53,32 @@ export const viewmodel = <T extends ElementKeys = "element">(
 	return new Promise((resolve) => {
 		const register = () => {
 			const element = document.querySelector(selector);
-			const props = func();
 
-			if (element)
+			if (!element) {
+				console.warn(
+					`viewmodel: Element with selector "${selector}" not found.`
+				);
+				resolve(null);
+				return;
+			}
+
+			State.prototype.effect(() => {
+				const props = func();
+
 				for (const key in props) {
 					const value = props[key as keyof typeof props];
 
-					if (key.startsWith("on"))
+					if (key.startsWith("on")) {
 						(element as any)[key] = value as EventListener;
-					else
-						recursiveAssign(
+					} else {
+						applyProperty(
 							element as ElementFrom<T>,
-							key as keyof ElementFrom<T>,
+							key as keyof Element,
 							value
 						);
+					}
 				}
+			});
 
 			resolve(element as ElementFrom<T> | null);
 		};
