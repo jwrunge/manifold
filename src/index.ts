@@ -1,5 +1,11 @@
+import {
+	DeepPartial,
+	DeepPartialWithTypedListeners,
+	ElementFrom,
+	ElementKeys,
+} from "./elementTypes";
 import { State } from "./reactivity";
-import { viewmodel, ElementKeys, DeepPartial, ElementFrom } from "./viewmodel";
+import { viewmodel } from "./viewmodel";
 
 type ViewModelProxyFn<T extends ElementKeys> = (
 	selector: string,
@@ -19,7 +25,7 @@ const proxyHandler: ProxyHandler<object> = {
 		} else {
 			return (
 				selector: string,
-				func: () => DeepPartial<ElementFrom<ElementKeys>>
+				func: () => DeepPartialWithTypedListeners<ElementFrom<T>>
 			): void => {
 				viewmodel(key as ElementKeys, selector, func);
 			};

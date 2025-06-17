@@ -45,6 +45,7 @@ export class State<T = unknown> {
 
 	static currentEffect: Effect | null = null;
 	static #proxyInstances = new WeakSet<object>();
+	static elementClassList = new WeakMap<Element, Set<string>>();
 
 	constructor(value: T | (() => T)) {
 		if (typeof value === "function") {

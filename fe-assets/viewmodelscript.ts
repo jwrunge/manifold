@@ -1,4 +1,5 @@
 import $ from "../src/index.ts";
+import { viewmodel } from "../src/viewmodel.ts";
 let myStore = $.watch(32);
 let chickenStore = $.watch(0);
 let myStore2 = $.watch(() => {
@@ -28,15 +29,18 @@ setTimeout(() => {
 	}, 3000);
 }, 3000);
 
-const chickenInput = $.input("#chickens-input", () => {
+const chickenInput = viewmodel("input", "#chickens-input", () => {
 	return {
 		value: chickenStore.value.toString(),
 		onchange: (e) => {
-			chickenStore.value = +e.target!.value;
+			chickenStore.value = +e.target.value;
 		},
+		cow: "MOO",
 		style: {
 			border: `3px solid rgb(${chickenStore.value},0,0)`,
+			chicken: "BOK",
 		},
+		class: ["chicken-input", "input", `value-${chickenStore.value}`],
 	};
 });
 
