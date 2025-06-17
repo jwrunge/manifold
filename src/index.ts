@@ -1,21 +1,21 @@
-import { Store } from "./reactivity";
+import { State } from "./reactivity";
 import { viewmodel, ElementKeys, DeepPartial, ElementFrom } from "./viewmodel";
 
 type ViewModelProxyFn<T extends ElementKeys> = (
 	selector: string,
 	func: () => DeepPartial<ElementFrom<T>>
-) => void;
+) => Promise<ElementFrom<T> | null>;
 
 type BaseProxy = {
 	[K in ElementKeys]: ViewModelProxyFn<K>;
 } & {
-	watch: <T>(value: T | (() => T)) => Store<T>;
+	watch: <T>(value: T | (() => T)) => State<T>;
 };
 
 const proxyHandler: ProxyHandler<object> = {
 	get(_: object, key: string | symbol): unknown {
 		if (key === "watch") {
-			return <T>(value: T | (() => T)): Store<T> => new Store(value);
+			return <T>(value: T | (() => T)): State<T> => new State(value);
 		} else {
 			return (
 				selector: string,

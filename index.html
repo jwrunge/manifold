@@ -6,56 +6,14 @@
 		<link rel="stylesheet" href="/fe-assets/style.css" />
 		<title>Manifold UI tests</title>
 	</head>
-	<script type="module">
-		// @ts-check
-		import $ from "./src/index.ts";
-		let myStore = $.watch(32);
-		let chickenStore = $.watch(0);
-		let myStore2 = $.watch(() => {
-			return {
-				name: "Jake",
-				age: myStore.value,
-				chickens: chickenStore.value,
-			};
-		});
-
-		myStore.effect((value) => {
-			console.log("myStore changed:", myStore.value);
-		});
-		myStore2.effect((value) => {
-			console.log("myStore2 changed:", myStore2.value);
-		});
-
-		setTimeout(() => {
-			myStore.value = 36;
-		}, 1000);
-
-		setTimeout(() => {
-			myStore.value = 37;
-
-			setInterval(() => {
-				myStore.value++;
-			}, 3000);
-		}, 3000);
-
-		$.input("#chickens-input", () => {
-			return {
-				value: chickenStore.value,
-				onchange: (e) => {
-					chickenStore.value = +e.target.value;
-				},
-				style: {
-					border: `1px solid rgb(${chickenStore.value},0,0)`,
-				},
-			};
-		});
-	</script>
+	<script type="module" src="/fe-assets/viewmodelscript.ts"></script>
 	<body>
 		<h1>Manifold</h1>
 		<h2>Test UI Hooks</h2>
 		<form>
 			<label for="chickens-input">Chickens:</label>
 			<input id="chickens-input" type="number" />
+			<button id="chickens-bulk">+ Lots o' chickens</button>
 		</form>
 	</body>
 </html>
