@@ -10,13 +10,6 @@ let myStore2 = $.watch(() => {
 	};
 });
 
-// myStore.effect(() => {
-// 	console.log("myStore changed:", myStore.value);
-// });
-// myStore2.effect(() => {
-// 	console.log("myStore2 changed:", myStore2.value);
-// });
-
 setTimeout(() => {
 	myStore.value = 36;
 }, 1000);
@@ -51,4 +44,6 @@ $.button("#chickens-bulk", () => {
 	};
 });
 
-$.each("#chicken-button-list", () => new Array(chickenStore.value).fill("BOK"));
+$.each("#chicken-button-list", () =>
+	new Array(chickenStore.value > 0 ? chickenStore.value : 0).fill("BOK")
+);

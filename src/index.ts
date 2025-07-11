@@ -5,7 +5,7 @@ import {
 	ElementKeys,
 } from "./elementTypes";
 import { State } from "./reactivity";
-import { templEach } from "./templating";
+import { templEach, initTemplating } from "./templating";
 import { viewmodel } from "./viewmodel";
 
 type ViewModelProxyFn<T extends ElementKeys> = (
@@ -18,6 +18,7 @@ type BaseProxy = {
 } & {
 	watch: <T>(value: T | (() => T)) => State<T>;
 	each: typeof templEach;
+	templating: typeof initTemplating;
 };
 
 const proxyHandler: ProxyHandler<object> = {
@@ -27,10 +28,14 @@ const proxyHandler: ProxyHandler<object> = {
 				return <T>(value: T | (() => T)): State<T> => new State(value);
 			case "each":
 				return templEach;
+			case "templating":
+				return initTemplating;
 			default:
 				return (
 					selector: string,
-					func: () => DeepPartialWithTypedListeners<ElementFrom<T>>
+					func: () => DeepPartialWithTypedListeners<
+						ElementFrom<ElementKeys>
+					>
 				): void => {
 					viewmodel(key as ElementKeys, selector, func);
 				};
@@ -41,3 +46,13 @@ const proxyHandler: ProxyHandler<object> = {
 const $: BaseProxy = new Proxy({}, proxyHandler) as BaseProxy; // Assert the type of the proxy
 
 export default $;
+
+// Export the new templating functionality
+export {
+	State,
+	ReactiveTemplating,
+	useState,
+	useVariable,
+	useComputed,
+	initTemplating,
+} from "./reactiveTemplating";
