@@ -3,7 +3,7 @@ import {
 	DeepPartialWithTypedListeners,
 	ElementFrom,
 	ElementKeys,
-} from "./elementTypes";
+} from "./_types.elements";
 import { State } from "./reactivity";
 import { templEach, initTemplating } from "./templating";
 import { viewmodel } from "./viewmodel";

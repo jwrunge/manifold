@@ -2,7 +2,7 @@ import {
 	DeepPartialWithTypedListeners,
 	ElementFrom,
 	ElementKeys,
-} from "./elementTypes";
+} from "./_types.elements";
 import { State } from "./reactivity";
 import { templ } from "./templating";
 

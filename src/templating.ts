@@ -1,4 +1,4 @@
-import { ElementFrom, ElementKeys } from "./elementTypes";
+import { ElementFrom, ElementKeys } from "./_types.elements";
 import { State } from "./reactivity";
 
 const extractKeyValNames = (element: HTMLElement): string[] => {
