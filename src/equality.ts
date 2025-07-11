@@ -2,14 +2,14 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 	if (a === b) return true;
 	if (!(a && b && typeof a == "object" && typeof b == "object")) return false;
 
-	if (checked.has(a) && checked.has(b)) return true; // Handle circular references
+	if (checked.has(a) && checked.has(b)) return true;
 	checked.add(a);
 	checked.add(b);
 
-	const isABufA = a instanceof ArrayBuffer || ArrayBuffer.isView(a);
-	const isABufB = b instanceof ArrayBuffer || ArrayBuffer.isView(b);
+	const isABuf = a instanceof ArrayBuffer || ArrayBuffer.isView(a);
+	const isBBuf = b instanceof ArrayBuffer || ArrayBuffer.isView(b);
 
-	if (isABufA && isABufB) {
+	if (isABuf && isBBuf) {
 		const aView =
 			a instanceof ArrayBuffer
 				? new Uint8Array(a)
@@ -18,23 +18,18 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 			b instanceof ArrayBuffer
 				? new Uint8Array(b)
 				: new Uint8Array(b.buffer, b.byteOffset, b.byteLength);
-
 		if (aView.length !== bView.length) return false;
 		for (let i = 0; i < aView.length; i++) {
 			if (aView[i] !== bView[i]) return false;
 		}
 		return true;
-	} else if (isABufA !== isABufB) {
-		return false;
-	}
+	} else if (isABuf !== isBBuf) return false;
 
-	const [classA, classB] = [a, b].map((x) => x.constructor);
+	const [classA, classB] = [a.constructor, b.constructor];
 	if (classA !== classB && !(classA === Object && classB === Object))
 		return false;
 
 	switch (classA) {
-		case Object:
-			break;
 		case Array:
 			if (a.length !== b.length) return false;
 			for (let i = 0; i < a.length; i++) {
@@ -46,9 +41,8 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 		case Map:
 			if (a.size !== b.size) return false;
 			for (const [key, valA] of a.entries()) {
-				if (!b.has(key) || !isEqual(valA, b.get(key), checked)) {
+				if (!b.has(key) || !isEqual(valA, b.get(key), checked))
 					return false;
-				}
 			}
 			return true;
 		case Set:
@@ -59,7 +53,7 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 			const bValues = Array.from(b.values()).sort((x, y) =>
 				String(x).localeCompare(String(y))
 			);
-			return isEqual(aValues, bValues, checked); // Recurse on sorted arrays
+			return isEqual(aValues, bValues, checked);
 		case URL:
 			return a.href === b.href;
 		case URLSearchParams:
@@ -73,8 +67,8 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 			return false;
 	}
 
-	const [keysA, keysB] = [a, b].map((x) => Reflect.ownKeys(x));
-	if (!keysA || !keysB) return false;
+	const keysA = Reflect.ownKeys(a);
+	const keysB = Reflect.ownKeys(b);
 	if (keysA.length !== keysB.length) return false;
 
 	keysA.sort();

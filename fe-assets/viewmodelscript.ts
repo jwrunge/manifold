@@ -25,7 +25,8 @@ setTimeout(() => {
 const chickenInput = viewmodel("input", "#chickens-input", () => ({
 	value: chickenStore.value.toString(),
 	onchange: (e) => {
-		chickenStore.value = +e.target.value;
+		const value = +e.target.value;
+		chickenStore.value = value > 0 ? value : 0;
 	},
 	cow: "MOO",
 	style: {

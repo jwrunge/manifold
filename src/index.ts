@@ -46,13 +46,3 @@ const proxyHandler: ProxyHandler<object> = {
 const $: BaseProxy = new Proxy({}, proxyHandler) as BaseProxy; // Assert the type of the proxy
 
 export default $;
-
-// Export the new templating functionality
-export {
-	State,
-	ReactiveTemplating,
-	useState,
-	useVariable,
-	useComputed,
-	initTemplating,
-} from "./reactiveTemplating";

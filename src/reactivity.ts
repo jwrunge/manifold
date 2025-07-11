@@ -24,7 +24,8 @@ class Effect {
 	}
 
 	#stopDependencies() {
-		while (this.#dependencies.shift()?.());
+		for (const cleanup of this.#dependencies) cleanup();
+		this.#dependencies.length = 0;
 	}
 
 	stop() {
@@ -45,7 +46,6 @@ export class State<T = unknown> {
 
 	static currentEffect: Effect | null = null;
 	static #proxyInstances = new WeakSet<object>();
-	static elementClassList = new WeakMap<Element, Set<string>>();
 
 	constructor(value: T | (() => T)) {
 		if (typeof value === "function") {
@@ -84,10 +84,10 @@ export class State<T = unknown> {
 			effects.add(effect);
 
 			effect.addDependency(() => {
-				if (effect) effects?.delete(effect);
-				if (!effects.size) {
-					subs.delete(key);
-					if (!subs.size) State.#granularEffects.delete(target);
+				effects?.delete(effect);
+				if (!effects?.size) {
+					subs?.delete(key);
+					if (!subs?.size) State.#granularEffects.delete(target);
 				}
 			});
 		}
@@ -95,7 +95,6 @@ export class State<T = unknown> {
 
 	static #makeObservable = <T>(obj: T): T => {
 		if (!obj || typeof obj !== "object" || State.#proxyInstances.has(obj))
-			// Return if primitive or already proxied
 			return obj;
 
 		const proxy = new Proxy(obj, {
@@ -108,14 +107,13 @@ export class State<T = unknown> {
 			set(target, key, value, receiver) {
 				if (isEqual(Reflect.get(target, key, receiver), value))
 					return true;
-
 				const result = Reflect.set(target, key, value, receiver);
 				if (result) {
-					const subs = State.#granularEffects.get(target);
-					const effectsToRun = subs?.get(key);
+					const effectsToRun = State.#granularEffects
+						.get(target)
+						?.get(key);
 					for (const effect of effectsToRun || []) effect.run();
 				}
-
 				return result;
 			},
 		});

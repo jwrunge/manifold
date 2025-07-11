@@ -8,97 +8,22 @@
 	</head>
 	<script type="module" src="/fe-assets/viewmodelscript.ts"></script>
 	<body>
-		<!-- Controls -->
-		<div class="section">
-			<h2>Controls</h2>
-			<div class="controls">
-				<button onclick="toggleMode()">Toggle Mode</button>
-				<button onclick="addItem()">Add Item</button>
-				<button onclick="removeItem()">Remove Item</button>
-				<button onclick="changeUser()">Change User</button>
-			</div>
-			<p>Current mode: <span id="current-mode">loading</span></p>
-			<p>Items count: <span id="items-count">0</span></p>
-		</div>
+		<h2>Test UI Hooks</h2>
+		<form>
+			<div><button id="chickens-bulk">Add 10 chickens</button></div>
+			<label for="chickens-input">Chickens:</label>
+			<input
+				id="chickens-input"
+				type="number"
+				class="html-class html-class2"
+				min="0"
+			/>
 
-		<!-- Conditional Rendering -->
-		<div class="section">
-			<h2>Conditional Rendering (if/else if/else)</h2>
-
-			<mf-templ if="$st.mode === 'loading'">
-				<div style="color: blue">🔄 Loading...</div>
-			</mf-templ>
-
-			<mf-templ elseif="$st.mode === 'error'">
-				<div style="color: red">❌ Error occurred!</div>
-			</mf-templ>
-
-			<mf-templ elseif="$st.mode === 'empty'">
-				<div style="color: orange">📭 No data available</div>
-			</mf-templ>
-
-			<mf-templ else>
-				<div style="color: green">✅ Data loaded successfully!</div>
-			</mf-templ>
-		</div>
-
-		<!-- List Rendering with Each -->
-		<div class="section">
-			<h2>List Rendering (each)</h2>
-
-			<h3>Array Example:</h3>
-			<mf-templ each="$st.items as item, index">
-				<div class="item">Item {$index}: {$item}</div>
-			</mf-templ>
-
-			<h3>Object Example:</h3>
-			<mf-templ each="$st.user as value, key">
-				<div class="item">{$key}: {$value}</div>
-			</mf-templ>
-		</div>
-
-		<!-- Nested Conditionals -->
-		<div class="section">
-			<h2>Nested Conditionals</h2>
-
-			<mf-templ if="$st.items.length > 0">
-				<div>
-					<h4>Items available:</h4>
-
-					<mf-templ if="$st.items.length === 1">
-						<p>You have exactly one item.</p>
-					</mf-templ>
-
-					<mf-templ elseif="$st.items.length < 5">
-						<p>You have a few items ({$st.items.length}).</p>
-					</mf-templ>
-
-					<mf-templ else>
-						<p>You have many items ({$st.items.length})!</p>
-					</mf-templ>
-				</div>
-			</mf-templ>
-
-			<mf-templ else>
-				<p>No items to display.</p>
-			</mf-templ>
-		</div>
-
-		<!-- Complex Expressions -->
-		<div class="section">
-			<h2>Complex Expressions</h2>
-
-			<mf-templ if="$st.user.age >= 18">
-				<p>Welcome, adult user {$st.user.name}!</p>
-			</mf-templ>
-
-			<mf-templ else>
-				<p>Hello, young user {$st.user.name}!</p>
-			</mf-templ>
-
-			<mf-templ if="$st.items.length > 0 && $st.mode === 'success'">
-				<p>Everything is working perfectly!</p>
-			</mf-templ>
-		</div>
+			<mf-each id="chicken-button-list" data-as="val, i">
+				<template>
+					<button id="chickens-bulk">+ Lots o' chickens ${i}</button>
+				</template>
+			</mf-each>
+		</form>
 	</body>
 </html>
