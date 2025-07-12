@@ -1,8 +1,18 @@
+const toUint8Array = (buf: ArrayBuffer | ArrayBufferView): Uint8Array =>
+	buf instanceof ArrayBuffer
+		? new Uint8Array(buf)
+		: new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+
+const compareArrays = <T>(a: T[], b: T[], checked: WeakSet<any>): boolean => {
+	if (a.length !== b.length) return false;
+	return a.every((item, i) => isEqual(item, b[i], checked));
+};
+
 export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 	if (a === b) return true;
 	if (!(a && b && typeof a == "object" && typeof b == "object")) return false;
-
 	if (checked.has(a) && checked.has(b)) return true;
+
 	checked.add(a);
 	checked.add(b);
 
@@ -10,19 +20,11 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 	const isBBuf = b instanceof ArrayBuffer || ArrayBuffer.isView(b);
 
 	if (isABuf && isBBuf) {
-		const aView =
-			a instanceof ArrayBuffer
-				? new Uint8Array(a)
-				: new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
-		const bView =
-			b instanceof ArrayBuffer
-				? new Uint8Array(b)
-				: new Uint8Array(b.buffer, b.byteOffset, b.byteLength);
-		if (aView.length !== bView.length) return false;
-		for (let i = 0; i < aView.length; i++) {
-			if (aView[i] !== bView[i]) return false;
-		}
-		return true;
+		const [aView, bView] = [toUint8Array(a), toUint8Array(b)];
+		return (
+			aView.length === bView.length &&
+			aView.every((byte, i) => byte === bView[i])
+		);
 	} else if (isABuf !== isBBuf) return false;
 
 	const [classA, classB] = [a.constructor, b.constructor];
@@ -31,11 +33,7 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 
 	switch (classA) {
 		case Array:
-			if (a.length !== b.length) return false;
-			for (let i = 0; i < a.length; i++) {
-				if (!isEqual(a[i], b[i], checked)) return false;
-			}
-			return true;
+			return compareArrays(a, b, checked);
 		case Date:
 			return a.getTime() === b.getTime();
 		case Map:
@@ -46,14 +44,12 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 			}
 			return true;
 		case Set:
-			if (a.size !== b.size) return false;
-			const aValues = Array.from(a.values()).sort((x, y) =>
-				String(x).localeCompare(String(y))
+			return (
+				a.size === b.size &&
+				[...a].every((item) =>
+					[...b].some((bItem) => isEqual(item, bItem, checked))
+				)
 			);
-			const bValues = Array.from(b.values()).sort((x, y) =>
-				String(x).localeCompare(String(y))
-			);
-			return isEqual(aValues, bValues, checked);
 		case URL:
 			return a.href === b.href;
 		case URLSearchParams:
@@ -74,14 +70,9 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 	keysA.sort();
 	keysB.sort();
 
-	for (const key of keysA) {
-		if (
-			!Reflect.getOwnPropertyDescriptor(b, key) ||
-			!isEqual(a[key], b[key], checked)
-		) {
-			return false;
-		}
-	}
-
-	return true;
+	return keysA.every(
+		(key) =>
+			Reflect.getOwnPropertyDescriptor(b, key) &&
+			isEqual(a[key], b[key], checked)
+	);
 };

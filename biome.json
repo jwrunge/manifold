@@ -1,13 +1,3 @@
 {
-  "extends": [
-    "biome-cfg"
-  ],
-
-  "linter": {
-    "rules": {
-      "correctness": {
-        "noUndeclaredVariables": "off"
-      }
-    }
-  }
+	"extends": ["biome-cfg"]
 }

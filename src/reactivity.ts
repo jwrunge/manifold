@@ -1,106 +1,94 @@
 import { isEqual } from "./equality";
 
-class Effect {
-	#dependencies: (() => void)[] = [];
-	#active = true;
-
-	constructor(private fn: () => void) {}
-
-	run() {
-		if (this.#active) {
-			this.#stopDependencies();
-			State.currentEffect = this;
-
-			try {
-				this.fn();
-			} finally {
-				State.currentEffect = null;
-			}
-		}
-	}
-
-	addDependency(cleanup: () => void) {
-		this.#dependencies.push(cleanup);
-	}
-
-	#stopDependencies() {
-		for (const cleanup of this.#dependencies) cleanup();
-		this.#dependencies.length = 0;
-	}
-
-	stop() {
-		this.#active = false;
-		this.#stopDependencies();
-	}
-}
+type Effect = InstanceType<typeof State.Effect>;
 
 export class State<T = unknown> {
-	#value!: T;
-	#reactive!: T; // proxied
-	#derive?: () => T;
-	#topLevelEffects = new Set<Effect>();
-	static #granularEffects = new WeakMap<
+	private _value!: T;
+	private _reactive!: T; // proxied
+	private _derive?: () => T;
+	private _topLevelEffects = new Set<Effect>();
+	private static _granularEffects = new WeakMap<
 		object,
 		Map<string | symbol, Set<Effect>>
 	>();
+	private static _currentEffect: Effect | null = null;
+	private static _proxyInstances = new WeakSet<object>();
 
-	static currentEffect: Effect | null = null;
-	static #proxyInstances = new WeakSet<object>();
+	static Effect = class {
+		private _deps: (() => void)[] = [];
+		private _active = true;
+
+		constructor(private fn: () => void) {}
+
+		run() {
+			if (!this._active) return;
+			this._deps.forEach((cleanup) => cleanup());
+			this._deps.length = 0;
+			State._currentEffect = this;
+			try {
+				this.fn();
+			} finally {
+				State._currentEffect = null;
+			}
+		}
+
+		addDependency = (cleanup: () => void) => this._deps.push(cleanup);
+
+		stop() {
+			this._active = false;
+			this._deps.forEach((cleanup) => cleanup());
+			this._deps.length = 0;
+		}
+	};
 
 	constructor(value: T | (() => T)) {
 		if (typeof value === "function") {
-			this.#derive = value as () => T;
-			const deriveEffect = new Effect(() =>
-				this.#updateInternalValue(this.#derive!())
+			this._derive = value as () => T;
+			const deriveEffect = new State.Effect(() =>
+				this._updateInternalValue(this._derive!())
 			);
-			this.#topLevelEffects.add(deriveEffect);
+			this._topLevelEffects.add(deriveEffect);
 			deriveEffect.run();
 		} else {
-			this.#updateInternalValue(value);
+			this._updateInternalValue(value);
 		}
 	}
 
-	#updateInternalValue(newValue: T) {
-		if (isEqual(this.#value, newValue)) return;
-		this.#value = newValue;
-		this.#reactive = State.#makeObservable(newValue);
-		for (const effect of this.#topLevelEffects) effect.run();
+	private _updateInternalValue(newValue: T) {
+		if (isEqual(this._value, newValue)) return;
+		this._value = newValue;
+		this._reactive = State._makeObservable(newValue);
+		this._topLevelEffects.forEach((effect) => effect.run());
 	}
 
-	static #track(target: object, key: string | symbol) {
-		const effect = State.currentEffect;
+	private static _track(target: object, key: string | symbol) {
+		const effect = State._currentEffect;
+		if (!effect) return;
 
-		if (effect) {
-			let subs = State.#granularEffects.get(target);
-			if (!subs) {
-				subs = new Map();
-				State.#granularEffects.set(target, subs);
-			}
-			let effects = subs.get(key);
-			if (!effects) {
-				effects = new Set();
-				subs.set(key, effects);
-			}
-			effects.add(effect);
+		let subs = State._granularEffects.get(target);
+		if (!subs) State._granularEffects.set(target, (subs = new Map()));
 
-			effect.addDependency(() => {
-				effects?.delete(effect);
-				if (!effects?.size) {
-					subs?.delete(key);
-					if (!subs?.size) State.#granularEffects.delete(target);
-				}
-			});
-		}
+		let effects = subs.get(key);
+		if (!effects) subs.set(key, (effects = new Set()));
+
+		effects.add(effect);
+		effect.addDependency(() => {
+			effects!.delete(effect);
+			if (!effects!.size) {
+				subs!.delete(key);
+				if (!subs!.size) State._granularEffects.delete(target);
+			}
+		});
 	}
 
-	static #makeObservable = <T>(obj: T): T => {
-		if (!obj || typeof obj !== "object" || State.#proxyInstances.has(obj))
+	private static _makeObservable = <T>(obj: T): T => {
+		if (!obj || typeof obj !== "object" || State._proxyInstances.has(obj))
 			return obj;
 
 		const proxy = new Proxy(obj, {
 			get(target, key, receiver) {
-				State.#track(target, key);
-				return State.#makeObservable(
+				State._track(target, key);
+				return State._makeObservable(
 					Reflect.get(target, key, receiver)
 				);
 			},
@@ -109,37 +97,37 @@ export class State<T = unknown> {
 					return true;
 				const result = Reflect.set(target, key, value, receiver);
 				if (result) {
-					const effectsToRun = State.#granularEffects
+					State._granularEffects
 						.get(target)
-						?.get(key);
-					for (const effect of effectsToRun || []) effect.run();
+						?.get(key)
+						?.forEach((effect) => effect.run());
 				}
 				return result;
 			},
 		});
 
-		State.#proxyInstances.add(proxy);
+		State._proxyInstances.add(proxy);
 		return proxy;
 	};
 
 	get value(): T {
-		if (State.currentEffect) {
-			this.#topLevelEffects.add(State.currentEffect);
-			State.currentEffect.addDependency(() => {
-				this.#topLevelEffects.delete(State.currentEffect!);
+		if (State._currentEffect) {
+			this._topLevelEffects.add(State._currentEffect);
+			State._currentEffect.addDependency(() => {
+				this._topLevelEffects.delete(State._currentEffect!);
 			});
 		}
 
-		return this.#reactive;
+		return this._reactive;
 	}
 
 	set value(newValue: T) {
-		if (!this.#derive) this.#updateInternalValue(newValue);
+		if (!this._derive) this._updateInternalValue(newValue);
 	}
 
 	effect(fn: () => void) {
-		const effect = new Effect(fn);
+		const effect = new State.Effect(fn);
 		effect.run();
-		return effect.stop;
+		return effect.stop.bind(effect);
 	}
 }

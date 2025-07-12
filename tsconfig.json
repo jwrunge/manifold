@@ -3,27 +3,20 @@
 		"target": "esnext",
 		"module": "commonjs",
 		"lib": ["esnext", "dom"],
-		// ... other options you might have ...
-
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
-
-		// This is the most crucial part:
-		"strict": true, // <--- MAKE SURE THIS IS TRUE!
-
-		// If you prefer more granular control and don't want all of `strict: true` yet,
-		// at minimum, you'd want:
+		"strict": true,
 		"noImplicitAny": true,
 		"strictNullChecks": true,
 		"strictFunctionTypes": true,
 		"strictBindCallApply": true,
 		"strictPropertyInitialization": true,
 		"noImplicitThis": true,
-		"noUncheckedIndexedAccess": true, // This one is very important for index signatures
+		"noUncheckedIndexedAccess": true,
 		"allowUnusedLabels": false,
 		"noFallthroughCasesInSwitch": true,
 		"noImplicitOverride": true,
-		"noPropertyAccessFromIndexSignature": true, // Often helps catch things like this
+		"noPropertyAccessFromIndexSignature": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true
 	},

@@ -3,7 +3,6 @@ import {
 	ElementFrom,
 	ElementKeys,
 } from "./_types.elements";
-import { State } from "./reactivity";
 import { templ } from "./templating";
 
 const applyProperty = (
@@ -13,7 +12,9 @@ const applyProperty = (
 ) => {
 	if (key === "style") Object.assign(element.style, value);
 	else if (key === "class") {
-		const classMap = State.elementClassList.get(element) || new Set();
+		const classMap = new Set(
+			element.dataset["mf_classes"]?.split(" ") ?? []
+		);
 		for (const className of value as string[]) {
 			if (!classMap.has(className)) {
 				element.classList.add(className);
@@ -26,7 +27,7 @@ const applyProperty = (
 				classMap.delete(className);
 			}
 		}
-		State.elementClassList.set(element, classMap);
+		element.dataset["mf_classes"] = [...classMap].join(" ");
 	} else if (key in element) {
 		(element as any)[key] = value;
 	} else {

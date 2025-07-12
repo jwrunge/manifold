@@ -22,7 +22,23 @@ setTimeout(() => {
 	}, 3000);
 }, 3000);
 
-const chickenInput = viewmodel("input", "#chickens-input", () => ({
+myStore2.effect(() => console.log("MyStore2 changed:", myStore2.value));
+
+// viewmodel("input", "#chickens-input", () => ({
+// 	value: chickenStore.value.toString(),
+// 	onchange: (e) => {
+// 		const value = +e.target.value;
+// 		chickenStore.value = value > 0 ? value : 0;
+// 	},
+// 	cow: "MOO",
+// 	style: {
+// 		border: `3px solid rgb(${chickenStore.value},0,0)`,
+// 		chicken: "BOK",
+// 	},
+// 	class: ["chicken-input", "input", `value-${chickenStore.value}`],
+// }));
+
+$.input("#chickens-input", () => ({
 	value: chickenStore.value.toString(),
 	onchange: (e) => {
 		const value = +e.target.value;
