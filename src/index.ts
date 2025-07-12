@@ -5,7 +5,7 @@ import {
 	ElementKeys,
 } from "./_types.elements";
 import { State } from "./reactivity";
-import { templEach, initTemplating } from "./templating";
+import { templEach } from "./templating";
 import { viewmodel } from "./viewmodel";
 
 type ViewModelProxyFn<T extends ElementKeys> = (
@@ -28,8 +28,6 @@ const proxyHandler: ProxyHandler<object> = {
 				return <T>(value: T | (() => T)): State<T> => new State(value);
 			case "each":
 				return templEach;
-			case "templating":
-				return initTemplating;
 			default:
 				return (
 					selector: string,
