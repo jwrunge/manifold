@@ -81,15 +81,20 @@ export const templEach = (selector: string, arr: () => unknown[]) => {
 		const template = element.querySelector("template");
 		if (!template) return;
 
-		element.replaceChildren(template); // Clear existing children
+		if (
+			template.content.firstChild?.nodeType !== Node.COMMENT_NODE ||
+			!template.content.firstChild?.nodeValue?.startsWith("MF_EACH_START")
+		) {
+			const marker = document.createComment("MF_EACH_START");
+			template.content.prepend(marker);
+		}
+
 		const [valName, keyName] = extractKeyValNames(
 			element as HTMLElement | SVGElement
 		);
 
 		for (const [key, val] of Object.entries(arr())) {
 			const clone = document.importNode(template.content, true);
-
-			console.log(key, val, keyName, valName);
 
 			clone.textContent =
 				clone.textContent?.replaceAll(`\$\{${keyName}\}`, key) ?? "";
@@ -113,7 +118,6 @@ export const templEach = (selector: string, arr: () => unknown[]) => {
 		const regEl = _registerElement(element);
 		State.prototype.effect(() => {
 			onEffect(regEl);
-			console.log("Effect triggered for", selector);
 		});
 	};
 
