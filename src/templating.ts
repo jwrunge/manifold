@@ -1,17 +1,44 @@
 import { ElementFrom, ElementKeys } from "./_types.elements";
 import { State } from "./reactivity";
+import { type _RegEl, _registerElement } from "./registry";
 
-const extractKeyValNames = (element: HTMLElement): string[] => {
+const extractKeyValNames = (element: HTMLElement | SVGElement): string[] => {
 	return element.dataset?.["as"]?.split(/\s*,\s*/) ?? ["value", "key"];
 };
 
+// export const templ = (
+// 	selector: string,
+// 	func: (element?: _RegEl) => void
+// ): Promise<_RegEl | undefined> =>
+// 	new Promise((resolve) => {
+// 		const register = () => {
+// 			const element = document.querySelector(selector) as
+// 				| HTMLElement
+// 				| SVGElement
+// 				| null;
+// 			if (!element) return null;
+// 			const regEl = _registerElement(element);
+// 			State.prototype.effect(() => func(regEl));
+// 			resolve(regEl);
+// 		};
+
+// 		if (document.readyState === "loading") {
+// 			document.addEventListener("DOMContentLoaded", register);
+// 		} else {
+// 			register();
+// 		}
+// 	});
+
 export const templ = <T extends ElementKeys>(
 	selector: string,
-	func: (element: Element) => void
+	func: (element: HTMLElement | SVGElement) => void
 ): Promise<ElementFrom<T> | null> =>
 	new Promise((resolve) => {
 		const register = () => {
-			const element = document.querySelector(selector);
+			const element = document.querySelector(selector) as
+				| HTMLElement
+				| SVGElement
+				| null;
 			if (!element) return resolve(null);
 			State.prototype.effect(() => func(element));
 			resolve(element as ElementFrom<T> | null);
@@ -24,26 +51,75 @@ export const templ = <T extends ElementKeys>(
 		}
 	});
 
-export const templEach = (selector: string, fn: () => unknown[]) => {
-	return templ(selector, (element: Element) => {
+// export const templEach = (selector: string, fn: () => unknown[]) => {
+// 	return templ(selector, (rel: _RegEl) => {
+// 		const template = element.querySelector("template");
+// 		if (!template || element.tagName !== "MF-EACH") return;
+
+// 		element.replaceChildren(template); // Clear existing children
+// 		const [keyName, valName] = extractKeyValNames(
+// 			element as HTMLElement | SVGElement
+// 		);
+
+// 		for (const [key, val] of Object.entries(fn())) {
+// 			const clone = document.importNode(template.content, true);
+
+// 			clone.textContent =
+// 				clone.textContent?.replace(`{{${keyName}}}`, key) ?? "";
+// 			clone.textContent =
+// 				clone.textContent?.replace(`{{${valName}}}`, val as string) ??
+// 				"";
+
+// 			element.appendChild(clone);
+// 		}
+// 	});
+// };
+
+export const templEach = (selector: string, arr: () => unknown[]) => {
+	const onEffect = (regEl: _RegEl) => {
+		const element = regEl.element;
 		const template = element.querySelector("template");
-		if (!template || element.tagName !== "MF-EACH") return;
+		if (!template) return;
 
 		element.replaceChildren(template); // Clear existing children
-		const [keyName, valName] = extractKeyValNames(element as HTMLElement);
+		const [valName, keyName] = extractKeyValNames(
+			element as HTMLElement | SVGElement
+		);
 
-		for (const [key, val] of Object.entries(fn())) {
+		for (const [key, val] of Object.entries(arr())) {
 			const clone = document.importNode(template.content, true);
 
+			console.log(key, val, keyName, valName);
+
 			clone.textContent =
-				clone.textContent?.replace(`{{${keyName}}}`, key) ?? "";
+				clone.textContent?.replaceAll(`\$\{${keyName}\}`, key) ?? "";
 			clone.textContent =
-				clone.textContent?.replace(`{{${valName}}}`, val as string) ??
-				"";
+				clone.textContent?.replaceAll(
+					`\$\{${valName}\}`,
+					val as string
+				) ?? "";
 
 			element.appendChild(clone);
 		}
+	};
 
-		console.log("KEYVAL NAMES", extractKeyValNames(element as HTMLElement));
-	});
+	const register = () => {
+		const element = document.querySelector(selector) as
+			| HTMLElement
+			| SVGElement
+			| null;
+		if (element?.tagName !== "MF-EACH") return;
+
+		const regEl = _registerElement(element);
+		State.prototype.effect(() => {
+			onEffect(regEl);
+			console.log("Effect triggered for", selector);
+		});
+	};
+
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", register);
+	} else {
+		register();
+	}
 };

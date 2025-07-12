@@ -1,27 +1,47 @@
 import { State } from "./reactivity";
 
-class RegisteredElement {
-	static registry: WeakMap<Element, RegisteredElement> = new WeakMap();
+class RegEl {
+	static registry: WeakMap<Element, RegEl> = new WeakMap();
 	classList: Set<string>;
+	private _deregister_show?: () => void;
+	private _deregister_props = new Map<string, () => void>();
 
-	constructor(
-		private element: HTMLElement | SVGElement,
-		public show?: State<boolean>,
-		public props: Map<string, State<unknown>> = new Map()
-	) {
+	constructor(public element: HTMLElement | SVGElement) {
 		this.classList = new Set(Array.from(element.classList));
+		RegEl.registry.set(element, this);
+	}
 
-		show?.effect(() => {
-			if (!show.value) element.style.display = "none";
-			else element.style.display = "";
+	_update(
+		props: Map<string, State<unknown>> = new Map(),
+		show?: State<boolean>
+	) {
+		this._deregister_show?.();
+		this._deregister_show = show?.effect(() => {
+			if (!show.value) this.element.style.display = "none";
+			else this.element.style.display = "";
 		});
 
 		// TODO: Check for registered parent elements to inherit props
-
 		props.forEach((value, key) => {
-			// Replace text content of each key with its value
-		});
+			const dereg = this._deregister_props.get(key);
+			dereg?.();
 
-		RegisteredElement.registry.set(element, this);
+			this._deregister_props.set(
+				key,
+				value.effect(() => {
+					// TODO: Effect to update the element's textContent or property
+				})
+			);
+		});
 	}
 }
+
+export type _RegEl = RegEl;
+
+export const _registerElement = (element: HTMLElement | SVGElement) => {
+	if (RegEl.registry.has(element)) {
+		return RegEl.registry.get(element)!;
+	}
+
+	return new RegEl(element);
+};
