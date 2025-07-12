@@ -18,7 +18,6 @@ type BaseProxy = {
 } & {
 	watch: <T>(value: T | (() => T)) => State<T>;
 	each: typeof templEach;
-	templating: typeof initTemplating;
 };
 
 const proxyHandler: ProxyHandler<object> = {
