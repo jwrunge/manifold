@@ -98,16 +98,15 @@ export const templEach = (selector: string, arr: () => unknown[]) => {
 				const comment = document.createComment(`MF_EACH_${key}`);
 				element.appendChild(comment);
 				element.appendChild(clone);
-			} else {
-				// set current to the next comment matching MF_EACH_SOMETHING
-				current = findCommentNode(current ?? template, "MF_EACH_");
-
-				while ((current as ChildNode | null)?.nextSibling) {
-					current!.nextSibling!.remove();
-				}
-
-				(current as HTMLElement | SVGElement | null)?.remove();
 			}
+		}
+		if (current) {
+			const next = findCommentNode(current ?? template, "MF_EACH_");
+			while ((next as ChildNode | null)?.nextSibling) {
+				next!.nextSibling!.remove();
+			}
+
+			(next as HTMLElement | SVGElement | null)?.remove();
 		}
 	};
 

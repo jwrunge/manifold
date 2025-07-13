@@ -22,8 +22,6 @@ setTimeout(() => {
 	}, 3000);
 }, 3000);
 
-myStore2.effect(() => console.log("MyStore2 changed:", myStore2.value));
-
 // viewmodel("input", "#chickens-input", () => ({
 // 	value: chickenStore.value.toString(),
 // 	onchange: (e) => {
