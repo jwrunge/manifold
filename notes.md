@@ -90,3 +90,9 @@ This is an MVVM library. Model - arbitrary data; view - arbitrary HTML. viewmode
 
 Associating "my-input" with input[x-impl=my-input]:
 These must be in the same FILE -- on run (must be top-level),
+
+BUG NOTES:
+
+-   No UI update if you remove a value. arr[5] still exists in UI after arr.pop() when length === 6.
+-   Infinite reactivity loop if arr is derived from arrLen and then arr[x] is changed.
+-   Individual UI loop elements aren't reactive when accessing loop_iter[x]
