@@ -122,7 +122,8 @@ export class State<T = unknown> {
 	}
 
 	set value(newValue: T) {
-		if (!this._derive) this._updateInternalValue(newValue);
+		if (this._derive) console.warn("Cannot set value on a derived state.");
+		else this._updateInternalValue(newValue);
 	}
 
 	effect(fn: () => void) {

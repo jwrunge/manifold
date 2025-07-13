@@ -77,14 +77,15 @@ export const templEach = (selector: string, arr: () => unknown[]) => {
 			element as HTMLElement | SVGElement
 		);
 
-		const it_over = Object.entries(arr());
+		const it_over = arr();
+		console.log("IT OVER", it_over);
 		let current: Node | null | undefined;
 
-		if (it_over.length === 0) {
+		if (Object.values(it_over).length === 0) {
 			element.replaceChildren(template);
 			return;
 		}
-		for (const [key, val] of it_over) {
+		for (const key of Object.keys(it_over)) {
 			current = findCommentNode(current ?? template, `MF_EACH_${key}`);
 
 			if (!current) {
@@ -92,7 +93,7 @@ export const templEach = (selector: string, arr: () => unknown[]) => {
 				const regel = _registerElement(clone);
 				regel.update({
 					[keyName as string]: key,
-					[valName as string]: val,
+					[valName as string]: it_over[key as keyof typeof it_over],
 				});
 
 				const comment = document.createComment(`MF_EACH_${key}`);

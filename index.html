@@ -18,10 +18,13 @@
 				class="html-class html-class2"
 				min="0"
 			/>
-
-			<mf-each id="chicken-button-list" data-as="val, i">
-				<template> + Lots o' chickens ${i} ${val}</template>
-			</mf-each>
 		</form>
+		<div>CHICKEN 5 SAYS: <span id="chicken-5"></span></div>
+		<br />
+		<ul>
+			<mf-each id="chicken-button-list" data-as="val, i">
+				<template><li>+ Lots o' chickens ${i} ${val}</li></template>
+			</mf-each>
+		</ul>
 	</body>
 </html>

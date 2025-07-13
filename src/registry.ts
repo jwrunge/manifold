@@ -4,7 +4,6 @@ class RegEl {
 	static registry: WeakMap<Element | DocumentFragment, RegEl> = new WeakMap();
 	classList?: Set<string>;
 	private _deregister_show?: () => void;
-	private _deregister_props = new Map<string, () => void>();
 
 	constructor(public element: HTMLElement | SVGElement | DocumentFragment) {
 		if (element instanceof Element)
@@ -12,7 +11,7 @@ class RegEl {
 		RegEl.registry.set(element, this);
 	}
 
-	update(props: Record<string, State<unknown>> = {}, show?: State<boolean>) {
+	update(props: Record<string, unknown> = {}, show?: State<boolean>) {
 		this._deregister_show?.();
 		if (
 			this.element instanceof HTMLElement ||
@@ -30,25 +29,40 @@ class RegEl {
 
 		// TODO: Check for registered parent elements to inherit props
 		for (const [key, value] of Object.entries(props)) {
-			this.element.textContent = this.element.textContent?.replaceAll(
-				`\$\{${key}\}`,
-				`${value}`
-			);
-			// const dereg = this._deregister_props.get(key);
-			// dereg?.();
-
-			// this._deregister_props.set(
-			// 	key,
-			// 	value.effect(() => {
-			// 		console.log("EFFECT");
-			// 		this.element.textContent =
-			// 			this.element.textContent?.replaceAll(
-			// 				`\$\{${key}\}`,
-			// 				`${value.value}`
-			// 			) ?? "";
-			// 	})
-			// );
+			this.replaceTextInElement(this.element, `\$\{${key}\}`, `${value}`);
 		}
+	}
+
+	private replaceTextInElement(
+		element: Element | DocumentFragment,
+		search: string,
+		replace: string
+	) {
+		const walker = document.createTreeWalker(
+			element,
+			NodeFilter.SHOW_TEXT,
+			null
+		);
+
+		const textNodes: Text[] = [];
+		let node: Text | null;
+
+		// Collect all text nodes first to avoid modifying while iterating
+		while ((node = walker.nextNode() as Text | null)) {
+			if (node.textContent?.includes(search)) {
+				textNodes.push(node);
+			}
+		}
+
+		// Replace text content in collected text nodes
+		textNodes.forEach((textNode) => {
+			if (textNode.textContent) {
+				textNode.textContent = textNode.textContent.replaceAll(
+					search,
+					replace
+				);
+			}
+		});
 	}
 }
 
