@@ -61,6 +61,14 @@ $.button("#chickens-bulk", () => {
 	};
 });
 
-$.each("#chicken-button-list", () =>
-	new Array(chickenStore.value > 0 ? chickenStore.value : 0).fill("BOK")
-);
+let chxArray = $.watch(() => {
+	return new Array(chickenStore.value > 0 ? chickenStore.value : 0).fill(
+		"BOK"
+	);
+});
+
+$.each("#chicken-button-list", () => chxArray.value);
+
+setTimeout(() => {
+	chxArray.value[5] = "BOGOCK!!!";
+}, 5_000);

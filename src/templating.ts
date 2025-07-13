@@ -68,33 +68,8 @@ export const templ = <T extends ElementKeys>(
 		}
 	});
 
-// export const templEach = (selector: string, fn: () => unknown[]) => {
-// 	return templ(selector, (rel: _RegEl) => {
-// 		const template = element.querySelector("template");
-// 		if (!template || element.tagName !== "MF-EACH") return;
-
-// 		element.replaceChildren(template); // Clear existing children
-// 		const [keyName, valName] = extractKeyValNames(
-// 			element as HTMLElement | SVGElement
-// 		);
-
-// 		for (const [key, val] of Object.entries(fn())) {
-// 			const clone = document.importNode(template.content, true);
-
-// 			clone.textContent =
-// 				clone.textContent?.replace(`{{${keyName}}}`, key) ?? "";
-// 			clone.textContent =
-// 				clone.textContent?.replace(`{{${valName}}}`, val as string) ??
-// 				"";
-
-// 			element.appendChild(clone);
-// 		}
-// 	});
-// };
-
 export const templEach = (selector: string, arr: () => unknown[]) => {
-	const onEffect = (regEl: _RegEl) => {
-		const element = regEl.element;
+	const onEffect = (element: HTMLElement | SVGElement) => {
 		const template = element.querySelector("template");
 		if (!template) return;
 
@@ -114,14 +89,11 @@ export const templEach = (selector: string, arr: () => unknown[]) => {
 
 			if (!current) {
 				const clone = document.importNode(template.content, true);
-				clone.textContent =
-					clone.textContent?.replaceAll(`\$\{${keyName}\}`, key) ??
-					"";
-				clone.textContent =
-					clone.textContent?.replaceAll(
-						`\$\{${valName}\}`,
-						val as string
-					) ?? "";
+				const regel = _registerElement(clone);
+				regel.update({
+					[keyName as string]: new State(key),
+					[valName as string]: new State(val),
+				});
 
 				const comment = document.createComment(`MF_EACH_${key}`);
 				element.appendChild(comment);
@@ -146,9 +118,8 @@ export const templEach = (selector: string, arr: () => unknown[]) => {
 			| null;
 		if (element?.tagName !== "MF-EACH") return;
 
-		const regEl = _registerElement(element);
 		State.prototype.effect(() => {
-			onEffect(regEl);
+			onEffect(element);
 		});
 	};
 
