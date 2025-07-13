@@ -30,19 +30,24 @@ class RegEl {
 
 		// TODO: Check for registered parent elements to inherit props
 		for (const [key, value] of Object.entries(props)) {
-			const dereg = this._deregister_props.get(key);
-			dereg?.();
-
-			this._deregister_props.set(
-				key,
-				value.effect(() => {
-					this.element.textContent =
-						this.element.textContent?.replaceAll(
-							`\$\{${key}\}`,
-							`${value.value}`
-						) ?? "";
-				})
+			this.element.textContent = this.element.textContent?.replaceAll(
+				`\$\{${key}\}`,
+				`${value}`
 			);
+			// const dereg = this._deregister_props.get(key);
+			// dereg?.();
+
+			// this._deregister_props.set(
+			// 	key,
+			// 	value.effect(() => {
+			// 		console.log("EFFECT");
+			// 		this.element.textContent =
+			// 			this.element.textContent?.replaceAll(
+			// 				`\$\{${key}\}`,
+			// 				`${value.value}`
+			// 			) ?? "";
+			// 	})
+			// );
 		}
 	}
 }

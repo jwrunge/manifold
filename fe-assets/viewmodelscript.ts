@@ -69,4 +69,5 @@ $.each("#chicken-button-list", () => chxArray.value);
 
 setTimeout(() => {
 	chxArray.value[5] = "BOGOCK!!!";
+	console.log("CHICKEN ARRAY", chxArray.value);
 }, 5_000);

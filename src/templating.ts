@@ -91,8 +91,8 @@ export const templEach = (selector: string, arr: () => unknown[]) => {
 				const clone = document.importNode(template.content, true);
 				const regel = _registerElement(clone);
 				regel.update({
-					[keyName as string]: new State(key),
-					[valName as string]: new State(val),
+					[keyName as string]: key,
+					[valName as string]: val,
 				});
 
 				const comment = document.createComment(`MF_EACH_${key}`);
