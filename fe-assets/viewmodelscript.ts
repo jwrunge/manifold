@@ -59,41 +59,15 @@ $.button("#chickens-bulk", () => {
 	};
 });
 
-let chxArray = $.watch(new Array(5).fill("BOK"));
-chickenStore.effect(() => {
-	console.log("Updating chxArray based on chickenStore");
-	while (chxArray.value.length < chickenStore.value) {
-		chxArray.value.push("BOK");
-	}
-	while (chxArray.value.length > chickenStore.value) {
-		chxArray.value.pop();
-	}
-	console.log(chxArray.value);
+let chxArray = $.watch(() => {
+	return new Array(chickenStore.value > 0 ? chickenStore.value : 0).fill(
+		"BOK"
+	);
 });
 
 $.each("#chicken-button-list", () => chxArray.value);
 
-$.span("#chicken-5", () => ({
-	innerText: chxArray.value[5] ?? "No chicken here",
-}));
-
 setTimeout(() => {
-	console.log("Updating chxArray");
-	chickenStore.value = 6;
+	chxArray.value[5] = "BOGOCK!!!";
+	console.log("CHICKEN ARRAY", chxArray.value);
 }, 5_000);
-
-setTimeout(() => {
-	console.log("Updating chxArray 5");
-	chxArray.value[5] = "BAGOCK!!!";
-}, 7_000);
-
-window.logChxFive = () => {
-	const chxFive = document.querySelector("#chicken-5");
-	if (chxFive) {
-		console.log("CHICKEN 5 SAYS:", chxFive.textContent);
-	} else {
-		console.error("CHICKEN 5 NOT FOUND");
-	}
-
-	console.log("CHXARRAY 5:", chxArray.value[5]);
-};

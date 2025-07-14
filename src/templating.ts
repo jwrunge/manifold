@@ -78,7 +78,6 @@ export const templEach = (selector: string, arr: () => unknown[]) => {
 		);
 
 		const it_over = arr();
-		console.log("IT OVER", it_over);
 		let current: Node | null | undefined;
 
 		if (Object.values(it_over).length === 0) {
