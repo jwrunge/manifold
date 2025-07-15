@@ -1,5 +1,5 @@
 // Analyze the "update triggers" test data
-import $ from "./dist/manifold.es.js";
+import $ from "../dist/manifold.es.js";
 
 console.log("=== Analyzing Update Triggers Test ===");
 
