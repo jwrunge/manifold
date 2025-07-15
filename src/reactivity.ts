@@ -1,6 +1,5 @@
 import { isEqual } from "./equality";
 
-// Global tracking state
 let currentEffect: Effect | null = null;
 
 class Effect {
