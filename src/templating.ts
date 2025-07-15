@@ -23,29 +23,6 @@ const findCommentNode = (
 	}
 };
 
-// export const templ = (
-// 	selector: string,
-// 	func: (element?: _RegEl) => void
-// ): Promise<_RegEl | undefined> =>
-// 	new Promise((resolve) => {
-// 		const register = () => {
-// 			const element = document.querySelector(selector) as
-// 				| HTMLElement
-// 				| SVGElement
-// 				| null;
-// 			if (!element) return null;
-// 			const regEl = _registerElement(element);
-// 			State.prototype.effect(() => func(regEl));
-// 			resolve(regEl);
-// 		};
-
-// 		if (document.readyState === "loading") {
-// 			document.addEventListener("DOMContentLoaded", register);
-// 		} else {
-// 			register();
-// 		}
-// 	});
-
 export const templ = <T extends ElementKeys>(
 	selector: string,
 	func: (element: HTMLElement | SVGElement) => void
@@ -128,3 +105,5 @@ export const templEach = (selector: string, arr: () => unknown[]) => {
 		register();
 	}
 };
+
+export const templIf = (selector: string) => {};

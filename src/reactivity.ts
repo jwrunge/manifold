@@ -1,134 +1,181 @@
 import { isEqual } from "./equality";
 
-type Effect = InstanceType<typeof State.Effect>;
+// Global tracking state
+let currentEffect: Effect | null = null;
+
+class Effect {
+	private dependencies = new Set<() => void>();
+	public isActive = true;
+	private isRunning = false;
+
+	constructor(private fn: () => void) {}
+
+	run() {
+		if (!this.isActive || this.isRunning) return;
+
+		this.isRunning = true;
+
+		// Clean up previous dependencies
+		this.dependencies.forEach((cleanup) => cleanup());
+		this.dependencies.clear();
+
+		// Track new dependencies
+		const prevEffect = currentEffect;
+		currentEffect = this;
+
+		try {
+			this.fn();
+		} finally {
+			currentEffect = prevEffect;
+			this.isRunning = false;
+		}
+	}
+
+	addDependency(cleanup: () => void) {
+		this.dependencies.add(cleanup);
+	}
+
+	stop() {
+		this.isActive = false;
+		this.dependencies.forEach((cleanup) => cleanup());
+		this.dependencies.clear();
+	}
+}
 
 export class State<T = unknown> {
-	private _value!: T;
-	private _reactive!: T; // proxied
+	private _value: T;
+	private _reactive: T;
 	private _derive?: () => T;
-	private _topLevelEffects = new Set<Effect>();
-	private static _granularEffects = new WeakMap<
-		object,
-		Map<string | symbol, Set<Effect>>
-	>();
-	private static _currentEffect: Effect | null = null;
-	private static _proxyInstances = new WeakSet<object>();
-
-	static Effect = class {
-		private _deps: (() => void)[] = [];
-		private _active = true;
-
-		constructor(private fn: () => void) {}
-
-		run() {
-			if (!this._active) return;
-			this._deps.forEach((cleanup) => cleanup());
-			this._deps.length = 0;
-			State._currentEffect = this;
-			try {
-				this.fn();
-			} finally {
-				State._currentEffect = null;
-			}
-		}
-
-		addDependency = (cleanup: () => void) => this._deps.push(cleanup);
-
-		stop() {
-			this._active = false;
-			this._deps.forEach((cleanup) => cleanup());
-			this._deps.length = 0;
-		}
-	};
+	private _effects = new Set<Effect>();
+	private _granularEffects = new Map<string | symbol, Set<Effect>>();
 
 	constructor(value: T | (() => T)) {
 		if (typeof value === "function") {
 			this._derive = value as () => T;
-			const deriveEffect = new State.Effect(() =>
-				this._updateInternalValue(this._derive!())
-			);
-			this._topLevelEffects.add(deriveEffect);
-			deriveEffect.run();
+			this._value = undefined as any;
+			this._reactive = undefined as any;
+
+			// Create an effect to update derived state when dependencies change
+			const effect = new Effect(() => {
+				this._updateValue();
+			});
+			effect.run();
 		} else {
-			this._updateInternalValue(value);
+			this._value = value;
+			this._reactive = this._createProxy(value);
 		}
 	}
 
-	private _updateInternalValue(newValue: T) {
-		if (isEqual(this._value, newValue)) return;
-		this._value = newValue;
-		this._reactive = State._makeObservable(newValue);
-		this._topLevelEffects.forEach((effect) => effect.run());
+	private _updateValue() {
+		const newValue = this._derive ? this._derive() : this._value;
+
+		if (!isEqual(this._value, newValue)) {
+			this._value = newValue;
+			this._reactive = this._createProxy(newValue);
+
+			// Trigger effects when the value changes
+			this._triggerEffects();
+		}
 	}
 
-	private static _track(target: object, key: string | symbol) {
-		const effect = State._currentEffect;
-		if (!effect) return;
+	private _createProxy(obj: T): T {
+		if (!obj || typeof obj !== "object") return obj;
 
-		let subs = State._granularEffects.get(target);
-		if (!subs) State._granularEffects.set(target, (subs = new Map()));
+		return new Proxy(obj, {
+			get: (target, key) => {
+				this._track(key);
+				const value = Reflect.get(target, key);
+				return this._createProxy(value as any);
+			},
+			set: (target, key, value) => {
+				if (isEqual(Reflect.get(target, key), value)) return true;
 
-		let effects = subs.get(key);
-		if (!effects) subs.set(key, (effects = new Set()));
+				const result = Reflect.set(target, key, value);
+				if (result) {
+					this._triggerGranularEffects(key);
+				}
+				return result;
+			},
+		}) as T;
+	}
 
-		effects.add(effect);
-		effect.addDependency(() => {
-			effects!.delete(effect);
-			if (!effects!.size) {
-				subs!.delete(key);
-				if (!subs!.size) State._granularEffects.delete(target);
+	private _track(key: string | symbol) {
+		if (!currentEffect) return;
+
+		// Track top-level access
+		this._effects.add(currentEffect);
+		currentEffect.addDependency(() => {
+			this._effects.delete(currentEffect!);
+		});
+
+		// Track granular access
+		let granularEffects = this._granularEffects.get(key);
+		if (!granularEffects) {
+			granularEffects = new Set();
+			this._granularEffects.set(key, granularEffects);
+		}
+
+		granularEffects.add(currentEffect);
+		currentEffect.addDependency(() => {
+			granularEffects!.delete(currentEffect!);
+			if (granularEffects!.size === 0) {
+				this._granularEffects.delete(key);
 			}
 		});
 	}
 
-	private static _makeObservable = <T>(obj: T): T => {
-		if (!obj || typeof obj !== "object" || State._proxyInstances.has(obj))
-			return obj;
-
-		const proxy = new Proxy(obj, {
-			get(target, key, receiver) {
-				State._track(target, key);
-				return State._makeObservable(
-					Reflect.get(target, key, receiver)
-				);
-			},
-			set(target, key, value, receiver) {
-				if (isEqual(Reflect.get(target, key, receiver), value))
-					return true;
-				const result = Reflect.set(target, key, value, receiver);
-				if (result) {
-					State._granularEffects
-						.get(target)
-						?.get(key)
-						?.forEach((effect) => effect.run());
-				}
-				return result;
-			},
+	private _triggerEffects() {
+		// Trigger all effects (both top-level and granular since entire value changed)
+		const allEffects = new Set<Effect>();
+		this._effects.forEach((effect) => allEffects.add(effect));
+		this._granularEffects.forEach((effects) => {
+			effects.forEach((effect) => allEffects.add(effect));
 		});
 
-		State._proxyInstances.add(proxy);
-		return proxy;
-	};
+		allEffects.forEach((effect) => {
+			if (effect.isActive) {
+				effect.run();
+			}
+		});
+	}
 
-	get value(): T {
-		if (State._currentEffect) {
-			this._topLevelEffects.add(State._currentEffect);
-			State._currentEffect.addDependency(() => {
-				this._topLevelEffects.delete(State._currentEffect!);
+	private _triggerGranularEffects(key: string | symbol) {
+		const granularEffects = this._granularEffects.get(key);
+		if (granularEffects) {
+			granularEffects.forEach((effect) => {
+				if (effect.isActive) {
+					effect.run();
+				}
 			});
 		}
+	}
 
+	get value(): T {
+		if (currentEffect) {
+			this._effects.add(currentEffect);
+			currentEffect.addDependency(() => {
+				this._effects.delete(currentEffect!);
+			});
+		}
 		return this._reactive;
 	}
 
 	set value(newValue: T) {
-		if (this._derive) console.warn("Cannot set value on a derived state.");
-		else this._updateInternalValue(newValue);
+		if (this._derive) {
+			console.warn("Cannot set value on a derived state.");
+			return;
+		}
+
+		if (!isEqual(this._value, newValue)) {
+			this._value = newValue;
+			this._reactive = this._createProxy(newValue);
+			this._triggerEffects();
+		}
 	}
 
 	effect(fn: () => void) {
-		const effect = new State.Effect(fn);
+		const effect = new Effect(fn);
 		effect.run();
-		return effect.stop.bind(effect);
+		return () => effect.stop();
 	}
 }
