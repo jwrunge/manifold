@@ -41,6 +41,13 @@ class Effect {
 	}
 }
 
+// Standalone effect function for creating effects outside of State instances
+export const createEffect = (fn: () => void) => {
+	const effect = new Effect(fn);
+	effect.run();
+	return () => effect.stop();
+};
+
 export class State<T = unknown> {
 	private _value: T;
 	private _reactive: T;
@@ -79,6 +86,53 @@ export class State<T = unknown> {
 
 	private _createProxy(obj: T): T {
 		if (!obj || typeof obj !== "object") return obj;
+
+		// Special handling for arrays to intercept mutating methods
+		if (Array.isArray(obj)) {
+			const arrayProxy = new Proxy(obj, {
+				get: (target, key) => {
+					this._track(key);
+					const value = Reflect.get(target, key);
+
+					// Intercept array mutating methods
+					if (
+						typeof value === "function" &&
+						[
+							"push",
+							"pop",
+							"shift",
+							"unshift",
+							"splice",
+							"sort",
+							"reverse",
+						].includes(key as string)
+					) {
+						return (...args: any[]) => {
+							const result = (value as Function).apply(
+								target,
+								args
+							);
+							// Trigger effects after array mutation
+							this._triggerEffects();
+							return result;
+						};
+					}
+
+					return typeof value === "object" && value !== null
+						? this._createProxy(value as any)
+						: value;
+				},
+				set: (target, key, value) => {
+					const current = Reflect.get(target, key);
+					if (isEqual(current, value)) return true;
+
+					const result = Reflect.set(target, key, value);
+					result && this._triggerGranularEffects(key);
+					return result;
+				},
+			}) as T;
+			return arrayProxy;
+		}
 
 		return new Proxy(obj, {
 			get: (target, key) => {

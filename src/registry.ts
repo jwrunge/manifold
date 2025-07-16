@@ -6,30 +6,27 @@ class RegEl {
 	private _deregister_show?: () => void;
 
 	constructor(public element: HTMLElement | SVGElement | DocumentFragment) {
-		if (element instanceof Element)
-			this.classList = new Set(Array.from(element.classList));
+		if (element instanceof Element) {
+			this.classList = new Set();
+			for (let i = 0; i < element.classList.length; i++) {
+				this.classList.add(element.classList[i]!);
+			}
+		}
 		RegEl.registry.set(element, this);
 	}
 
 	update(props: Record<string, unknown> = {}, show?: State<boolean>) {
 		this._deregister_show?.();
-		if (
-			this.element instanceof HTMLElement ||
-			this.element instanceof SVGElement
-		) {
+		const el = this.element;
+		if (el instanceof HTMLElement || el instanceof SVGElement) {
 			this._deregister_show = show?.effect(() => {
-				if (!show.value)
-					(this.element as HTMLElement | SVGElement).style.display =
-						"none";
-				else
-					(this.element as HTMLElement | SVGElement).style.display =
-						"";
+				el.style.display = show.value ? "" : "none";
 			});
 		}
 
 		// TODO: Check for registered parent elements to inherit props
-		for (const [key, value] of Object.entries(props)) {
-			this.replaceTextInElement(this.element, `\$\{${key}\}`, `${value}`);
+		for (const key in props) {
+			this.replaceTextInElement(el, `\$\{${key}\}`, String(props[key]));
 		}
 	}
 
@@ -40,29 +37,17 @@ class RegEl {
 	) {
 		const walker = document.createTreeWalker(
 			element,
-			NodeFilter.SHOW_TEXT,
+			4, // NodeFilter.SHOW_TEXT
 			null
 		);
 
-		const textNodes: Text[] = [];
 		let node: Text | null;
-
-		// Collect all text nodes first to avoid modifying while iterating
 		while ((node = walker.nextNode() as Text | null)) {
-			if (node.textContent?.includes(search)) {
-				textNodes.push(node);
+			const content = node.textContent;
+			if (content?.includes(search)) {
+				node.textContent = content.replaceAll(search, replace);
 			}
 		}
-
-		// Replace text content in collected text nodes
-		textNodes.forEach((textNode) => {
-			if (textNode.textContent) {
-				textNode.textContent = textNode.textContent.replaceAll(
-					search,
-					replace
-				);
-			}
-		});
 	}
 }
 
@@ -70,10 +55,4 @@ export type _RegEl = RegEl;
 
 export const _registerElement = (
 	element: HTMLElement | SVGElement | DocumentFragment
-) => {
-	if (RegEl.registry.has(element)) {
-		return RegEl.registry.get(element)!;
-	}
-
-	return new RegEl(element);
-};
+) => RegEl.registry.get(element) ?? new RegEl(element);
