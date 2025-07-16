@@ -42,6 +42,7 @@ $.input("#chickens-input", () => ({
 		chickenStore.value = value > 0 ? value : 0;
 	},
 	cow: "MOO",
+	type: "number",
 	style: {
 		border: `3px solid rgb(${chickenStore.value},0,0)`,
 		chicken: "BOK",

@@ -20,7 +20,7 @@ type BaseProxy = {
 
 const applyProperty = (
 	element: ElementFrom<ElementKeys>,
-	key: keyof ElementFrom<ElementKeys>,
+	key: string,
 	value: unknown
 ) => {
 	if (key === "style") Object.assign(element.style, value);
@@ -57,7 +57,7 @@ const proxyHandler: ProxyHandler<object> = {
 				return templEach;
 			default:
 				return <T extends ElementKeys = "element">(
-					selector: string,
+					selector: T,
 					func: () => DeepPartialWithTypedListeners<ElementFrom<T>>
 				): Promise<ElementFrom<T> | null> =>
 					templ(selector, (element: Element) => {

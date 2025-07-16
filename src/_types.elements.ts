@@ -1,42 +1,9 @@
-type EventMap = {
-	// Mouse Events
-	onclick: MouseEvent;
-	ondblclick: MouseEvent;
-	onmousedown: MouseEvent;
-	onmouseup: MouseEvent;
-	onmouseover: MouseEvent;
-	onmousemove: MouseEvent;
-	onmouseout: MouseEvent;
-	onmouseenter: MouseEvent;
-	onmouseleave: MouseEvent;
-	// Keyboard Events
-	onkeydown: KeyboardEvent;
-	onkeyup: KeyboardEvent;
-	onkeypress: KeyboardEvent;
-	// Form Events
-	onchange: Event;
-	oninput: InputEvent;
-	onsubmit: SubmitEvent;
-	onfocus: FocusEvent;
-	onblur: FocusEvent;
-	// Drag Events
-	ondrag: DragEvent;
-	ondragend: DragEvent;
-	ondragenter: DragEvent;
-	ondragleave: DragEvent;
-	ondragover: DragEvent;
-	ondragstart: DragEvent;
-	ondrop: DragEvent;
-	// Touch Events
-	ontouchstart: TouchEvent;
-	ontouchmove: TouchEvent;
-	ontouchend: TouchEvent;
-	ontouchcancel: TouchEvent;
-	// Other Common Events
-	onscroll: Event;
-	onload: Event;
-	onerror: ErrorEvent;
-};
+// Helper type to extract the event type from GlobalEventHandlers
+type ExtractEventType<T> = T extends ((this: any, ev: infer E) => any) | null
+	? E extends Event
+		? E
+		: Event
+	: Event;
 
 type EventListenerWithTarget<
 	TEvent extends Event,
@@ -47,13 +14,20 @@ export type DeepPartial<T> = {
 	[K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
 };
 
-export type DeepPartialWithTypedListeners<T extends Element> = {
-	[K in keyof T]?: K extends keyof EventMap
-		? EventListenerWithTarget<EventMap[K], T>
+// Utility type to get settable properties of an element (excluding readonly properties)
+type SettableElementProperties<T extends Element> = {
+	[K in keyof T]?: K extends keyof GlobalEventHandlers
+		? EventListenerWithTarget<ExtractEventType<GlobalEventHandlers[K]>, T>
 		: T[K] extends object
 		? DeepPartial<T[K]>
 		: T[K];
 };
+
+export type DeepPartialWithTypedListeners<T extends Element> =
+	SettableElementProperties<T> & {
+		// Custom properties that don't exist on DOM elements but are handled by the framework
+		class?: string[];
+	};
 
 export type ElementKeys =
 	| "element"
@@ -61,7 +35,7 @@ export type ElementKeys =
 	| keyof SVGElementTagNameMap
 	| keyof MathMLElementTagNameMap;
 
-export type ElementFrom<T extends ElementKeys> = (T extends "element"
+export type ElementFrom<T extends ElementKeys> = T extends "element"
 	? HTMLElement
 	: T extends keyof HTMLElementTagNameMap
 	? HTMLElementTagNameMap[T]
@@ -69,6 +43,4 @@ export type ElementFrom<T extends ElementKeys> = (T extends "element"
 	? SVGElementTagNameMap[T]
 	: T extends keyof MathMLElementTagNameMap
 	? MathMLElementTagNameMap[T]
-	: HTMLElement) & {
-	class?: string[];
-};
+	: HTMLElement;
