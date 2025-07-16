@@ -3,7 +3,7 @@ import {
 	ElementFrom,
 	ElementKeys,
 } from "./_types.elements";
-import { State, flushEffects } from "./reactivity";
+import { State } from "./reactivity";
 import { templ, templEach } from "./templating";
 
 type ViewModelProxyFn<T extends ElementKeys> = <
@@ -36,7 +36,6 @@ type BaseProxy = {
 } & {
 	watch: <T>(value: T | (() => T)) => State<T>;
 	each: typeof templEach;
-	flushEffects: typeof flushEffects;
 };
 
 const applyProperty = (
@@ -73,8 +72,6 @@ const proxyHandler: ProxyHandler<object> = {
 			? <T>(value: T | (() => T)): State<T> => new State(value)
 			: key === "each"
 			? templEach
-			: key === "flushEffects"
-			? flushEffects
 			: <T extends ElementKeys = "element">(
 					selector: T,
 					func: () => DeepPartialWithTypedListeners<ElementFrom<T>>

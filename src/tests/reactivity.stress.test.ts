@@ -487,7 +487,7 @@ describe("Reactivity Stress Tests", () => {
 		console.warn = (...args) => {
 			if (
 				args[0]?.includes("Circular update detected") ||
-				args[0]?.includes("Maximum batch depth")
+				args[0]?.includes("Max batch depth")
 			) {
 				warningCount++;
 			}

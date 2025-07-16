@@ -46,16 +46,20 @@ export const templ = <T extends ElementKeys>(
 	});
 
 export const templEach = (selector: string, arr: State<Array<unknown>>) => {
-	console.log("INIT VALUE", arr.value);
+	let cachedTemplateContent: DocumentFragment | null = null;
 
 	const onEffect = (element: HTMLElement | SVGElement) => {
 		const template = element.querySelector("template");
 		if (!template) return;
 
-		const [valName, keyName] = extractKeyValNames(
-			element as HTMLElement | SVGElement
-		);
+		// Cache template content on first use
+		if (!cachedTemplateContent) {
+			cachedTemplateContent = template.content.cloneNode(
+				true
+			) as DocumentFragment;
+		}
 
+		const [valName, keyName] = extractKeyValNames(element);
 		let current: Node | null | undefined;
 
 		if (arr.value.length === 0) {
@@ -67,17 +71,12 @@ export const templEach = (selector: string, arr: State<Array<unknown>>) => {
 
 			if (!current) {
 				const clone = document.importNode(template.content, true);
-
 				const comment = document.createComment(`MF_EACH_${key}`);
 				element.appendChild(comment);
 
-				// Remember how many children the element had before appending
 				const childCountBefore = element.childNodes.length;
-
-				// Append the clone - this moves its content to the DOM
 				element.appendChild(clone);
 
-				// Find the newly added DOM elements
 				const newNodes = Array.from(element.childNodes).slice(
 					childCountBefore
 				);
@@ -86,21 +85,27 @@ export const templEach = (selector: string, arr: State<Array<unknown>>) => {
 				) as HTMLElement;
 
 				if (targetElement) {
-					// Create RegEl with the actual DOM element, not the DocumentFragment
-					new RegEl(targetElement, template, {
-						[keyName as string]: new State(() => key),
-						[valName as string]: new State(() => arr.value[key]),
-					});
+					new RegEl(
+						targetElement,
+						cachedTemplateContent!.cloneNode(
+							true
+						) as DocumentFragment,
+						{
+							[keyName as string]: new State(() => key),
+							[valName as string]: new State(
+								() => arr.value[key]
+							),
+						}
+					);
 				}
 			}
 		}
 		if (current) {
 			const next = findCommentNode(current ?? template, "MF_EACH_");
-			while ((next as ChildNode | null)?.nextSibling) {
-				next!.nextSibling!.remove();
+			while (next?.nextSibling) {
+				next.nextSibling.remove();
 			}
-
-			(next as HTMLElement | SVGElement | null)?.remove();
+			(next as ChildNode)?.remove();
 		}
 	};
 
@@ -112,7 +117,6 @@ export const templEach = (selector: string, arr: State<Array<unknown>>) => {
 		if (element?.tagName !== "MF-EACH") return;
 
 		arr.effect(() => {
-			console.log("EFFECT RUN", arr.value);
 			onEffect(element);
 		});
 	};

@@ -34,10 +34,7 @@ function flushPendingEffects() {
 		}
 
 		if (batchDepth >= maxBatchDepth && pendingEffects.size > 0) {
-			console.warn(
-				`Maximum batch depth (${maxBatchDepth}) exceeded! Possible infinite update loop detected. Clearing pending effects.`
-			);
-			console.trace("Batch depth exceeded stack trace");
+			console.warn(`Max batch depth (${maxBatchDepth}) exceeded`);
 			pendingEffects.clear();
 		}
 	} finally {
@@ -55,21 +52,6 @@ function processEffectsBatched() {
 
 	// Run immediately but in a controlled batch to prevent cascading
 	flushPendingEffects();
-}
-
-// Test utility: wait for all pending effects to complete
-export function flushEffects(): Promise<void> {
-	return new Promise((resolve) => {
-		if (pendingEffects.size === 0 && !isFlushingEffects) {
-			resolve();
-			return;
-		}
-
-		// Wait for next tick and check again
-		setTimeout(() => {
-			flushEffects().then(resolve);
-		}, 0);
-	});
 }
 
 class Effect {
@@ -96,20 +78,14 @@ class Effect {
 
 		// Circular update detection
 		if (updateStack.has(this)) {
-			console.warn(
-				"Circular update detected! Effect is already running in the call stack. Aborting to prevent infinite loop."
-			);
-			console.trace("Circular update stack trace");
+			console.warn("Circular update detected");
 			return;
 		}
 
 		if (this.isRunning) return;
 
 		if (updateDepth >= MAX_UPDATE_DEPTH) {
-			console.warn(
-				`Maximum update depth (${MAX_UPDATE_DEPTH}) exceeded! Possible infinite loop detected. Aborting.`
-			);
-			console.trace("Update depth exceeded stack trace");
+			console.warn(`Max update depth (${MAX_UPDATE_DEPTH}) exceeded`);
 			return;
 		}
 
@@ -363,7 +339,7 @@ export class State<T = unknown> {
 			}
 		}
 
-		// Process effects in batches using microtasks (immediate but still batched)
+		// Process effects in batches (synchronous)
 		processEffectsBatched();
 	}
 
@@ -375,7 +351,7 @@ export class State<T = unknown> {
 			}
 		}
 
-		// Process effects in batches using microtasks (immediate but still batched)
+		// Process effects in batches (synchronous)
 		processEffectsBatched();
 	}
 
@@ -389,7 +365,7 @@ export class State<T = unknown> {
 			}
 		}
 
-		// Process effects in batches using microtasks (immediate but still batched)
+		// Process effects in batches (synchronous)
 		processEffectsBatched();
 	}
 
@@ -410,7 +386,7 @@ export class State<T = unknown> {
 
 	set value(newValue: T) {
 		if (this._derive) {
-			console.warn("Cannot set value on a derived state.");
+			console.warn("Cannot set derived state");
 			return;
 		}
 
