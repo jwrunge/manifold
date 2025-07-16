@@ -11,6 +11,9 @@ let pendingEffects = new Set<Effect>();
 let batchDepth = 0;
 let isProcessingBatch = false;
 
+// Performance optimization: Reusable sets to avoid allocation overhead
+const reusableTriggeredSet = new Set<Effect>();
+
 function flushPendingEffects() {
 	if (isFlushingEffects || pendingEffects.size === 0) return;
 
@@ -157,6 +160,12 @@ export class State<T = unknown> {
 	private _effects = new Set<Effect>();
 	private _granularEffects = new Map<string | symbol, Set<Effect>>();
 
+	// Performance optimization: Cache effect-to-keys mapping for faster lookups
+	private _effectToKeys = new Map<Effect, Set<string | symbol>>();
+
+	// Performance optimization: Equality check memoization
+	private _lastEqualityCheck = new Map<T, boolean>();
+
 	constructor(value: T | (() => T)) {
 		if (typeof value === "function") {
 			this._derive = value as () => T;
@@ -290,8 +299,23 @@ export class State<T = unknown> {
 		// Only add if not already tracking this specific key
 		if (!granularEffects.has(effect)) {
 			granularEffects.add(effect);
+
+			// Performance optimization: Update effect-to-keys mapping
+			if (!this._effectToKeys.has(effect)) {
+				this._effectToKeys.set(effect, new Set());
+			}
+			this._effectToKeys.get(effect)!.add(key);
+
 			effect.addDependency(() => {
 				granularEffects!.delete(effect);
+				// Clean up key mapping when effect is removed
+				const keySet = this._effectToKeys.get(effect);
+				if (keySet) {
+					keySet.delete(key);
+					if (keySet.size === 0) {
+						this._effectToKeys.delete(effect);
+					}
+				}
 				granularEffects!.size === 0 &&
 					this._granularEffects.delete(key);
 			});
@@ -314,29 +338,26 @@ export class State<T = unknown> {
 	}
 
 	private _hasGranularTracking(effect: Effect): boolean {
-		for (const effects of this._granularEffects.values()) {
-			if (effects.has(effect)) {
-				return true;
-			}
-		}
-		return false;
+		// Performance optimization: Use cached mapping instead of linear search
+		const keys = this._effectToKeys.get(effect);
+		return keys !== undefined && keys.size > 0;
 	}
 
 	private _triggerEffects() {
-		// Batch effects to prevent cascading updates
-		const triggered = new Set<Effect>();
+		// Performance optimization: Use reusable set and clear it
+		reusableTriggeredSet.clear();
 
 		for (const effect of this._effects) {
-			if (effect.isActive && !triggered.has(effect)) {
-				triggered.add(effect);
+			if (effect.isActive && !reusableTriggeredSet.has(effect)) {
+				reusableTriggeredSet.add(effect);
 				pendingEffects.add(effect);
 			}
 		}
 
 		for (const effects of this._granularEffects.values()) {
 			for (const effect of effects) {
-				if (effect.isActive && !triggered.has(effect)) {
-					triggered.add(effect);
+				if (effect.isActive && !reusableTriggeredSet.has(effect)) {
+					reusableTriggeredSet.add(effect);
 					pendingEffects.add(effect);
 				}
 			}
@@ -393,7 +414,16 @@ export class State<T = unknown> {
 			return;
 		}
 
-		if (!isEqual(this._value, newValue)) {
+		// Performance optimization: Memoized equality check
+		if (this._lastEqualityCheck.has(newValue)) {
+			const wasEqual = this._lastEqualityCheck.get(newValue)!;
+			if (wasEqual) return;
+		}
+
+		const isEqualResult = isEqual(this._value, newValue);
+		this._lastEqualityCheck.set(newValue, isEqualResult);
+
+		if (!isEqualResult) {
 			this._value = newValue;
 			this._reactive = this._createProxy(newValue);
 			this._triggerEffects();
