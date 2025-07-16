@@ -43,21 +43,18 @@ const applyProperty = (
 	key: string,
 	value: unknown
 ) => {
-	if (key === "style") Object.assign(element.style, value);
-	else if (key === "class") {
-		const ds = element.dataset,
-			classes = value as string[];
+	if (key === "style") {
+		Object.assign(element.style, value);
+	} else if (key === "class") {
+		const ds = element.dataset;
+		const classes = value as string[];
 		const current = ds["mf_classes"]?.split(" ") ?? [];
 		const classSet = element.classList;
 
-		// Remove old classes not in new array
-		current.forEach((cls) => {
-			if (!classes.includes(cls)) classSet.remove(cls);
-		});
-		// Add new classes
-		classes.forEach((cls) => {
-			if (!current.includes(cls)) classSet.add(cls);
-		});
+		current.forEach(
+			(cls) => !classes.includes(cls) && classSet.remove(cls)
+		);
+		classes.forEach((cls) => !current.includes(cls) && classSet.add(cls));
 		ds["mf_classes"] = classes.join(" ");
 	} else if (key in element) {
 		(element as any)[key] = value;
@@ -80,14 +77,15 @@ const proxyHandler: ProxyHandler<object> = {
 						const props = func();
 						for (const key in props) {
 							const value = props[key as keyof typeof props];
-							key[0] === "o" && key[1] === "n"
-								? ((element as any)[key] =
-										value as EventListener)
-								: applyProperty(
-										element as ElementFrom<T>,
-										key as keyof Element,
-										value
-								  );
+							if (key[0] === "o" && key[1] === "n") {
+								(element as any)[key] = value as EventListener;
+							} else {
+								applyProperty(
+									element as ElementFrom<T>,
+									key as keyof Element,
+									value
+								);
+							}
 						}
 					});
 	},

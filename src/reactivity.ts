@@ -1,5 +1,16 @@
 import { isEqual } from "./equality";
 
+// Array mutating methods set for faster lookup
+const arrayMutatingMethods = new Set([
+	"push",
+	"pop",
+	"shift",
+	"unshift",
+	"splice",
+	"sort",
+	"reverse",
+]);
+
 let currentEffect: Effect | null = null;
 
 // Circular update detection and batching
@@ -135,12 +146,7 @@ export class State<T = unknown> {
 	private _derive?: () => T;
 	private _effects = new Set<Effect>();
 	private _granularEffects = new Map<string | symbol, Set<Effect>>();
-
-	// Performance optimization: Cache effect-to-keys mapping for faster lookups
 	private _effectToKeys = new Map<Effect, Set<string | symbol>>();
-
-	// Performance optimization: Equality check memoization
-	private _lastEqualityCheck = new Map<T, boolean>();
 
 	constructor(value: T | (() => T)) {
 		if (typeof value === "function") {
@@ -184,15 +190,7 @@ export class State<T = unknown> {
 					// Intercept array mutating methods
 					if (
 						typeof value === "function" &&
-						[
-							"push",
-							"pop",
-							"shift",
-							"unshift",
-							"splice",
-							"sort",
-							"reverse",
-						].includes(key as string)
+						arrayMutatingMethods.has(key as string)
 					) {
 						return (...args: any[]) => {
 							const oldLength = target.length;
@@ -276,7 +274,7 @@ export class State<T = unknown> {
 		if (!granularEffects.has(effect)) {
 			granularEffects.add(effect);
 
-			// Performance optimization: Update effect-to-keys mapping
+			// Update effect-to-keys mapping
 			if (!this._effectToKeys.has(effect)) {
 				this._effectToKeys.set(effect, new Set());
 			}
@@ -292,8 +290,9 @@ export class State<T = unknown> {
 						this._effectToKeys.delete(effect);
 					}
 				}
-				granularEffects!.size === 0 &&
+				if (granularEffects!.size === 0) {
 					this._granularEffects.delete(key);
+				}
 			});
 		}
 
@@ -314,7 +313,6 @@ export class State<T = unknown> {
 	}
 
 	private _hasGranularTracking(effect: Effect): boolean {
-		// Performance optimization: Use cached mapping instead of linear search
 		const keys = this._effectToKeys.get(effect);
 		return keys !== undefined && keys.size > 0;
 	}
@@ -390,16 +388,7 @@ export class State<T = unknown> {
 			return;
 		}
 
-		// Performance optimization: Memoized equality check
-		if (this._lastEqualityCheck.has(newValue)) {
-			const wasEqual = this._lastEqualityCheck.get(newValue)!;
-			if (wasEqual) return;
-		}
-
-		const isEqualResult = isEqual(this._value, newValue);
-		this._lastEqualityCheck.set(newValue, isEqualResult);
-
-		if (!isEqualResult) {
+		if (!isEqual(this._value, newValue)) {
 			this._value = newValue;
 			this._reactive = this._createProxy(newValue);
 			this._triggerEffects();

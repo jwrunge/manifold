@@ -52,7 +52,6 @@ export const templEach = (selector: string, arr: State<Array<unknown>>) => {
 		const template = element.querySelector("template");
 		if (!template) return;
 
-		// Cache template content on first use
 		if (!cachedTemplateContent) {
 			cachedTemplateContent = template.content.cloneNode(
 				true
@@ -66,6 +65,7 @@ export const templEach = (selector: string, arr: State<Array<unknown>>) => {
 			element.replaceChildren(template);
 			return;
 		}
+
 		for (const key in arr.value) {
 			current = findCommentNode(current ?? template, `MF_EACH_${key}`);
 
@@ -77,29 +77,27 @@ export const templEach = (selector: string, arr: State<Array<unknown>>) => {
 				const childCountBefore = element.childNodes.length;
 				element.appendChild(clone);
 
-				const newNodes = Array.from(element.childNodes).slice(
-					childCountBefore
-				);
-				const targetElement = newNodes.find(
-					(node) => node.nodeType === Node.ELEMENT_NODE
-				) as HTMLElement;
+				const targetElement = Array.from(element.childNodes)
+					.slice(childCountBefore)
+					.find(
+						(node) => node.nodeType === Node.ELEMENT_NODE
+					) as HTMLElement;
 
 				if (targetElement) {
+					const props: Record<string, State<unknown>> = {};
+					props[keyName!] = new State(() => key);
+					props[valName!] = new State(() => arr.value[key]);
 					new RegEl(
 						targetElement,
 						cachedTemplateContent!.cloneNode(
 							true
 						) as DocumentFragment,
-						{
-							[keyName as string]: new State(() => key),
-							[valName as string]: new State(
-								() => arr.value[key]
-							),
-						}
+						props
 					);
 				}
 			}
 		}
+
 		if (current) {
 			const next = findCommentNode(current ?? template, "MF_EACH_");
 			while (next?.nextSibling) {
@@ -127,5 +125,3 @@ export const templEach = (selector: string, arr: State<Array<unknown>>) => {
 		register();
 	}
 };
-
-export const templIf = (_selector: string) => {};
