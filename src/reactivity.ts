@@ -2,10 +2,51 @@ import { isEqual } from "./equality";
 
 let currentEffect: Effect | null = null;
 
-// Circular update detection
+// Circular update detection and batching
 const MAX_UPDATE_DEPTH = 100;
 const updateStack = new Set<Effect>();
 let updateDepth = 0;
+let isFlushingEffects = false;
+let pendingEffects = new Set<Effect>();
+
+function flushPendingEffects() {
+	if (isFlushingEffects || pendingEffects.size === 0) return;
+	
+	isFlushingEffects = true;
+	
+	try {
+		const effectsToRun = new Set(pendingEffects);
+		pendingEffects.clear();
+		
+		for (const effect of effectsToRun) {
+			if (effect.isActive) {
+				effect.runImmediate();
+			}
+		}
+	} finally {
+		isFlushingEffects = false;
+		
+		// If more effects were queued during flush, flush them too
+		if (pendingEffects.size > 0) {
+			flushPendingEffects();
+		}
+	}
+}
+
+// Test utility: wait for all pending effects to complete
+export function flushEffects(): Promise<void> {
+	return new Promise((resolve) => {
+		if (pendingEffects.size === 0 && !isFlushingEffects) {
+			resolve();
+			return;
+		}
+		
+		// Wait for next tick and check again
+		setTimeout(() => {
+			flushEffects().then(resolve);
+		}, 0);
+	});
+}
 
 class Effect {
 	private dependencies = new Set<() => void>();
@@ -15,6 +56,18 @@ class Effect {
 	constructor(private fn: () => void) {}
 
 	run() {
+		if (!this.isActive) return;
+
+		// During effect flushing, queue effects instead of running immediately
+		if (isFlushingEffects) {
+			pendingEffects.add(this);
+			return;
+		}
+
+		this.runImmediate();
+	}
+
+	runImmediate() {
 		if (!this.isActive) return;
 
 		// Circular update detection
@@ -72,7 +125,7 @@ class Effect {
 // Standalone effect function for creating effects outside of State instances
 export const createEffect = (fn: () => void) => {
 	const effect = new Effect(fn);
-	effect.run();
+	effect.runImmediate();
 	return () => effect.stop();
 };
 
@@ -93,7 +146,7 @@ export class State<T = unknown> {
 			const effect = new Effect(() => {
 				this._updateValue();
 			});
-			effect.run();
+			effect.runImmediate();
 		} else {
 			this._value = value;
 			this._reactive = this._createProxy(value);
@@ -136,12 +189,33 @@ export class State<T = unknown> {
 						].includes(key as string)
 					) {
 						return (...args: any[]) => {
+							const oldLength = target.length;
 							const result = (value as Function).apply(
 								target,
 								args
 							);
-							// Trigger effects after array mutation
-							this._triggerEffects();
+							const newLength = target.length;
+
+							// For methods that change the array structure,
+							// trigger length-related effects and top-level effects
+							if (oldLength !== newLength) {
+								// Trigger length granular effects
+								this._triggerGranularEffects("length");
+								
+								// For push/unshift, trigger effects for new indices
+								if (key === "push" || key === "unshift") {
+									// Only trigger effects that depend on the entire array
+									// Don't trigger granular effects for existing indices
+									this._triggerTopLevelEffects();
+								} else {
+									// For other array mutations, trigger all effects
+									this._triggerEffects();
+								}
+							} else {
+								// For sort/reverse that don't change length but change order
+								this._triggerEffects();
+							}
+							
 							return result;
 						};
 					}
@@ -185,32 +259,55 @@ export class State<T = unknown> {
 		const effect = currentEffect;
 		if (!effect) return;
 
-		// Track top-level access
-		this._effects.add(effect);
-		effect.addDependency(() => this._effects.delete(effect));
-
-		// Track granular access
+		// Track granular access for specific keys
 		let granularEffects = this._granularEffects.get(key);
 		if (!granularEffects) {
 			granularEffects = new Set();
 			this._granularEffects.set(key, granularEffects);
 		}
 
-		granularEffects.add(effect);
-		effect.addDependency(() => {
-			granularEffects!.delete(effect);
-			granularEffects!.size === 0 && this._granularEffects.delete(key);
-		});
+		// Only add if not already tracking this specific key
+		if (!granularEffects.has(effect)) {
+			granularEffects.add(effect);
+			effect.addDependency(() => {
+				granularEffects!.delete(effect);
+				granularEffects!.size === 0 && this._granularEffects.delete(key);
+			});
+		}
+
+		// Don't track top-level for objects/arrays when accessing specific properties
+		// Only track top-level if we haven't tracked any granular properties yet
+		// Check AFTER adding to granular effects
+		if (!this._hasGranularTracking(effect)) {
+			if (!this._effects.has(effect)) {
+				this._effects.add(effect);
+				effect.addDependency(() => this._effects.delete(effect));
+			}
+		} else {
+			// If this effect now has granular tracking, remove it from top-level effects
+			if (this._effects.has(effect)) {
+				this._effects.delete(effect);
+			}
+		}
+	}
+
+	private _hasGranularTracking(effect: Effect): boolean {
+		for (const effects of this._granularEffects.values()) {
+			if (effects.has(effect)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private _triggerEffects() {
-		// Trigger all effects (both top-level and granular since entire value changed)
+		// Batch effects to prevent cascading updates
 		const triggered = new Set<Effect>();
 
 		for (const effect of this._effects) {
 			if (effect.isActive && !triggered.has(effect)) {
 				triggered.add(effect);
-				effect.run();
+				pendingEffects.add(effect);
 			}
 		}
 
@@ -218,10 +315,25 @@ export class State<T = unknown> {
 			for (const effect of effects) {
 				if (effect.isActive && !triggered.has(effect)) {
 					triggered.add(effect);
-					effect.run();
+					pendingEffects.add(effect);
 				}
 			}
 		}
+
+		// Flush effects in next tick to prevent synchronous cascading
+		setTimeout(() => flushPendingEffects(), 0);
+	}
+
+	private _triggerTopLevelEffects() {
+		// Only trigger top-level effects, not granular ones
+		for (const effect of this._effects) {
+			if (effect.isActive) {
+				pendingEffects.add(effect);
+			}
+		}
+
+		// Flush effects in next tick to prevent synchronous cascading
+		setTimeout(() => flushPendingEffects(), 0);
 	}
 
 	private _triggerGranularEffects(key: string | symbol) {
@@ -229,15 +341,26 @@ export class State<T = unknown> {
 		if (!granularEffects) return;
 
 		for (const effect of granularEffects) {
-			effect.isActive && effect.run();
+			if (effect.isActive) {
+				pendingEffects.add(effect);
+			}
 		}
+
+		// Flush effects in next tick to prevent synchronous cascading
+		setTimeout(() => flushPendingEffects(), 0);
 	}
 
 	get value(): T {
 		const effect = currentEffect;
 		if (effect) {
-			this._effects.add(effect);
-			effect.addDependency(() => this._effects.delete(effect));
+			// Use a marker to indicate this might be a direct value access
+			// The _track method will decide whether to track as top-level or not
+			const hasExistingGranular = this._hasGranularTracking(effect);
+			
+			if (!hasExistingGranular && !this._effects.has(effect)) {
+				this._effects.add(effect);
+				effect.addDependency(() => this._effects.delete(effect));
+			}
 		}
 		return this._reactive;
 	}
@@ -257,7 +380,7 @@ export class State<T = unknown> {
 
 	effect(fn: () => void) {
 		const effect = new Effect(fn);
-		effect.run();
+		effect.runImmediate();
 		return () => effect.stop();
 	}
 }

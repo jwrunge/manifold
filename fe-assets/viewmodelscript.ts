@@ -45,29 +45,23 @@ document.addEventListener("DOMContentLoaded", () => {
 		};
 	});
 
-	let chxArray = $.watch(
-		new Array(chickenStore.value > 0 ? chickenStore.value : 0).fill("BOK")
-	);
+	let specialMessage = $.watch("");
 
-	let lastChickenCount = chickenStore.value;
-	chickenStore.effect(() => {
-		const newCount = chickenStore.value;
-		const currentLength = chxArray.value.length;
+	let chxArray = $.watch(() => {
+		const count = chickenStore.value > 0 ? chickenStore.value : 0;
+		const array = new Array(count).fill("BOK");
 
-		if (newCount > currentLength) {
-			for (let i = currentLength; i < newCount; i++) {
-				chxArray.value.push("BOK");
-			}
-		} else if (newCount < currentLength) {
-			chxArray.value.splice(newCount);
+		// Apply special message if it exists and index 5 is within bounds
+		if (specialMessage.value && array.length > 5) {
+			array[5] = specialMessage.value;
 		}
 
-		lastChickenCount = newCount;
+		return array;
 	});
 
 	$.each("#chicken-button-list", () => chxArray);
 
 	setTimeout(() => {
-		chxArray.value[5] = "BOGOCK!!!";
+		specialMessage.value = "BOGOCK!!!";
 	}, 5_000);
 });
