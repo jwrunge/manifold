@@ -59,13 +59,21 @@ document.addEventListener("DOMContentLoaded", () => {
 		return array;
 	});
 
-	$.each("#chicken-button-list", () => chxArray);
+	$.each("#chicken-button-list", () => chxArray.value);
 
 	setTimeout(() => {
 		specialMessage.value = "BOGOCK!!!";
 	}, 5_000);
 
 	setTimeout(() => {
-		chxArray.value.push("BOGOCK!!!");
+		// Cannot mutate derived state directly - modify the underlying state instead
+		// chxArray.value[6] = "BROOOOCK!!!"; // This won't work with derived state
+		specialMessage.value = "BROOOOCK!!!";
+	}, 10_000);
+
+	setTimeout(() => {
+		// Cannot mutate derived state directly - modify the underlying state instead
+		// chxArray.value.push("BOGOCK!!!"); // This won't work with derived state
+		chickenStore.value += 1; // This will trigger the derived state to update
 	}, 7_000);
 });

@@ -12,14 +12,11 @@ test("new store", async () => {
 		updateCount++;
 	});
 
-	await $.flushEffects();
-
 	let dup = false;
 	for (const i of [7, 9, 9, 23]) {
 		if (i !== 9 || !dup) expectedCount++;
 		if (i === 9) dup = true; // 9 is duplicated; only increment expected count once
 		myState.value = i;
-		await $.flushEffects();
 
 		expect(myStateValue).toBe(i);
 		expect(updateCount).toBe(expectedCount);
@@ -51,8 +48,6 @@ test("update triggers", async () => {
 		ageUpdateCount++;
 	});
 
-	await $.flushEffects();
-
 	for (const i of [
 		{ name: "Jake", age: 38 },
 		{ name: "Jake", age: 39 },
@@ -61,7 +56,6 @@ test("update triggers", async () => {
 		{ name: "Mary", age: 38 },
 	]) {
 		myState.value = i;
-		await $.flushEffects();
 		expect(myState.value.name).toBe(i.name);
 		expect(myState.value.age).toBe(i.age);
 		expect(trackedStateValue).toEqual(i);
@@ -70,7 +64,6 @@ test("update triggers", async () => {
 	}
 
 	myState.value.age = 39;
-	await $.flushEffects();
 	expect(myState.value.age).toBe(39);
 	expect(trackedStateValue).toEqual({ name: "Mary", age: 39 });
 	expect(trackedStateName).toBe("Mary");
@@ -104,21 +97,17 @@ test("derived data", async () => {
 		derivedAgeUpdateCount++;
 	});
 
-	await $.flushEffects();
-
 	expect(derivedState.value.name).toBe("JAKE");
 	expect(derivedState.value.age).toBe(47);
 	expect(trackedDerivedStateName).toBe("JAKE");
 	expect(trackedDerivedStateAge).toBe(47);
 
 	myState.value = { name: "Mary", age: 37 };
-	await $.flushEffects();
 	expect(myState.value.name).toBe("Mary");
 	expect(derivedState.value.name).toBe("MARY");
 	expect(trackedDerivedStateName).toBe("MARY");
 
 	myState.value.age = 36;
-	await $.flushEffects();
 	expect(myState.value.age).toBe(36);
 	expect(derivedState.value.age).toBe(46);
 	expect(trackedDerivedStateAge).toBe(46);
@@ -148,9 +137,6 @@ test("Circular update detection", async () => {
 
 	circularA.value = 1;
 
-	// Wait for effects to process
-	await $.flushEffects();
-
 	// Batching should prevent infinite loops and naturally terminate
 	expect(effectACount).toBeLessThan(10); // Should be a small number
 	expect(effectBCount).toBeLessThan(10); // Should be a small number
@@ -177,9 +163,6 @@ test("Max update depth detection", async () => {
 	}
 
 	states[0].value = 1;
-
-	// Wait for effects to process
-	await $.flushEffects();
 
 	// Batching should prevent runaway effects
 	// Each state should only trigger a reasonable number of times

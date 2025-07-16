@@ -8,29 +8,50 @@ const updateStack = new Set<Effect>();
 let updateDepth = 0;
 let isFlushingEffects = false;
 let pendingEffects = new Set<Effect>();
+let batchDepth = 0;
+let isProcessingBatch = false;
 
 function flushPendingEffects() {
 	if (isFlushingEffects || pendingEffects.size === 0) return;
 
 	isFlushingEffects = true;
+	const maxBatchDepth = 10; // Prevent infinite batching loops
 
 	try {
-		const effectsToRun = new Set(pendingEffects);
-		pendingEffects.clear();
+		while (pendingEffects.size > 0 && batchDepth < maxBatchDepth) {
+			batchDepth++;
+			const effectsToRun = new Set(pendingEffects);
+			pendingEffects.clear();
 
-		for (const effect of effectsToRun) {
-			if (effect.isActive) {
-				effect.runImmediate();
+			for (const effect of effectsToRun) {
+				if (effect.isActive) {
+					effect.runImmediate();
+				}
 			}
+		}
+
+		if (batchDepth >= maxBatchDepth && pendingEffects.size > 0) {
+			console.warn(
+				`Maximum batch depth (${maxBatchDepth}) exceeded! Possible infinite update loop detected. Clearing pending effects.`
+			);
+			console.trace("Batch depth exceeded stack trace");
+			pendingEffects.clear();
 		}
 	} finally {
 		isFlushingEffects = false;
-
-		// If more effects were queued during flush, flush them too
-		if (pendingEffects.size > 0) {
-			flushPendingEffects();
-		}
+		batchDepth = 0;
+		isProcessingBatch = false;
 	}
+}
+
+// Immediate but batched processing - synchronous batching for predictable behavior
+function processEffectsBatched() {
+	if (pendingEffects.size === 0 || isProcessingBatch) return;
+
+	isProcessingBatch = true;
+
+	// Run immediately but in a controlled batch to prevent cascading
+	flushPendingEffects();
 }
 
 // Test utility: wait for all pending effects to complete
@@ -321,8 +342,8 @@ export class State<T = unknown> {
 			}
 		}
 
-		// Flush effects in next tick to prevent synchronous cascading
-		setTimeout(() => flushPendingEffects(), 0);
+		// Process effects in batches using microtasks (immediate but still batched)
+		processEffectsBatched();
 	}
 
 	private _triggerTopLevelEffects() {
@@ -333,8 +354,8 @@ export class State<T = unknown> {
 			}
 		}
 
-		// Flush effects in next tick to prevent synchronous cascading
-		setTimeout(() => flushPendingEffects(), 0);
+		// Process effects in batches using microtasks (immediate but still batched)
+		processEffectsBatched();
 	}
 
 	private _triggerGranularEffects(key: string | symbol) {
@@ -347,8 +368,8 @@ export class State<T = unknown> {
 			}
 		}
 
-		// Flush effects in next tick to prevent synchronous cascading
-		setTimeout(() => flushPendingEffects(), 0);
+		// Process effects in batches using microtasks (immediate but still batched)
+		processEffectsBatched();
 	}
 
 	get value(): T {

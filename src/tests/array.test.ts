@@ -12,20 +12,17 @@ test("array reactivity", async () => {
 		console.log("Effect run:", effectRuns, lastValue);
 	});
 
-	await $.flushEffects();
 	expect(effectRuns).toBe(1);
 	expect(lastValue).toEqual(["hello", "world"]);
 
 	// Test modifying an array element
 	myArray.value[0] = "modified";
-	await $.flushEffects();
 	expect(effectRuns).toBe(2);
 	expect(lastValue).toEqual(["modified", "world"]);
 	expect(myArray.value).toEqual(["modified", "world"]);
 
 	// Test adding an element
 	myArray.value.push("new");
-	await $.flushEffects();
 	expect(effectRuns).toBe(3);
 	expect(lastValue).toEqual(["modified", "world", "new"]);
 });

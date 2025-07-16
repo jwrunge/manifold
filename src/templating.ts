@@ -1,6 +1,6 @@
 import { ElementFrom, ElementKeys } from "./_types.elements";
 import { State } from "./reactivity";
-import { type _RegEl, _registerElement } from "./registry";
+import { RegEl } from "./registry";
 
 const extractKeyValNames = (element: HTMLElement | SVGElement): string[] => {
 	return element.dataset?.["as"]?.split(/\s*,\s*/) ?? ["value", "key"];
@@ -45,17 +45,11 @@ export const templ = <T extends ElementKeys>(
 		}
 	});
 
-export const templEach = (
-	selector: string,
-	arr: (() => State<unknown[]>) | (() => unknown[])
-) => {
-	const register = () => {
-		const element = document.querySelector(selector) as
-			| HTMLElement
-			| SVGElement
-			| null;
-		if (element?.tagName !== "MF-EACH") return;
+export const templEach = (selector: string, arr: () => unknown[]) => {
+	const S = new State(arr);
+	console.log("INIT VALUE", S.value);
 
+	const onEffect = (element: HTMLElement | SVGElement) => {
 		const template = element.querySelector("template");
 		if (!template) return;
 
@@ -63,117 +57,49 @@ export const templEach = (
 			element as HTMLElement | SVGElement
 		);
 
-		// Create a derived state for the array to ensure consistent reactivity
-		const arrayState = new State(() => {
-			const arrResult = arr();
-			const result =
-				arrResult instanceof State ? arrResult.value : arrResult;
-			return result;
-		});
+		const it_over = arr();
+		let current: Node | null | undefined;
 
-		// Store created elements to avoid recreating them
-		const createdElements = new Map<
-			string,
-			{
-				comment: Comment;
-				wrapper: HTMLElement;
-				regel: _RegEl;
-				cleanup?: () => void;
-			}
-		>();
+		if (Object.values(it_over).length === 0) {
+			element.replaceChildren(template);
+			return;
+		}
+		for (const key of Object.keys(it_over)) {
+			current = findCommentNode(current ?? template, `MF_EACH_${key}`);
 
-		// Main effect that handles array structure changes
-		arrayState.effect(() => {
-			const it_over = arrayState.value;
-
-			// Check if it_over is null, undefined, or not an object/array
-			if (
-				!it_over ||
-				(typeof it_over !== "object" && !Array.isArray(it_over))
-			) {
-				// Clear all created elements
-				createdElements.forEach((elementData) => {
-					if (elementData.cleanup) {
-						elementData.cleanup();
-					}
-					// Remove DOM elements
-					elementData.wrapper.remove();
+			if (!current) {
+				const clone = document.importNode(template.content, true);
+				new RegEl(clone, {
+					[keyName as string]: () => key,
+					[valName as string]: () =>
+						it_over[key as keyof typeof it_over],
 				});
-				createdElements.clear();
-				element.replaceChildren(template);
-				return;
+
+				const comment = document.createComment(`MF_EACH_${key}`);
+				element.appendChild(comment);
+				element.appendChild(clone);
+			}
+		}
+		if (current) {
+			const next = findCommentNode(current ?? template, "MF_EACH_");
+			while ((next as ChildNode | null)?.nextSibling) {
+				next!.nextSibling!.remove();
 			}
 
-			const currentKeys = Object.keys(it_over);
-			const existingKeys = Array.from(createdElements.keys());
+			(next as HTMLElement | SVGElement | null)?.remove();
+		}
+	};
 
-			// Remove elements that no longer exist in the array
-			existingKeys.forEach((key) => {
-				if (!currentKeys.includes(key)) {
-					const elementData = createdElements.get(key);
-					if (elementData) {
-						// Clean up reactive effects first
-						if (elementData.cleanup) {
-							elementData.cleanup();
-						}
-						// Remove the wrapper
-						elementData.wrapper.remove();
-						createdElements.delete(key);
-					}
-				}
-			});
+	const register = () => {
+		const element = document.querySelector(selector) as
+			| HTMLElement
+			| SVGElement
+			| null;
+		if (element?.tagName !== "MF-EACH") return;
 
-			// Add new elements
-			currentKeys.forEach((key) => {
-				if (!createdElements.has(key)) {
-					// Create new element
-					const clone = document.importNode(template.content, true);
-					const regel = _registerElement(clone);
-
-					// Create derived states for key and value
-					const keyState = new State(() => key);
-
-					const numKey = parseInt(key);
-					const valueState = new State(() => {
-						const currentArray = arrayState.value;
-						if (
-							Array.isArray(currentArray) &&
-							numKey < currentArray.length
-						) {
-							return currentArray[numKey];
-						}
-						// For object keys or out-of-bounds array access
-						if (currentArray && typeof currentArray === "object") {
-							return currentArray[
-								key as keyof typeof currentArray
-							];
-						}
-						return "";
-					});
-
-					// Update with State objects
-					regel.update({
-						[keyName as string]: keyState,
-						[valName as string]: valueState,
-					});
-
-					// Create a wrapper div to contain both comment and clone
-					const wrapper = document.createElement("div");
-					wrapper.style.display = "contents"; // Make wrapper invisible
-					const comment = document.createComment(`MF_EACH_${key}`);
-					wrapper.appendChild(comment);
-					wrapper.appendChild(clone);
-					element.appendChild(wrapper);
-
-					// Store the wrapper and no separate cleanup needed since
-					// our derived states will automatically track dependencies
-					createdElements.set(key, {
-						comment,
-						wrapper,
-						regel,
-					});
-				}
-			});
+		S.effect(() => {
+			console.log("EFFECT RUN", S.value);
+			onEffect(element);
 		});
 	};
 
