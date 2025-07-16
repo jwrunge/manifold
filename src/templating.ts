@@ -45,9 +45,8 @@ export const templ = <T extends ElementKeys>(
 		}
 	});
 
-export const templEach = (selector: string, arr: () => unknown[]) => {
-	const S = new State(arr);
-	console.log("INIT VALUE", S.value);
+export const templEach = (selector: string, arr: State<Array<unknown>>) => {
+	console.log("INIT VALUE", arr.value);
 
 	const onEffect = (element: HTMLElement | SVGElement) => {
 		const template = element.querySelector("template");
@@ -57,27 +56,42 @@ export const templEach = (selector: string, arr: () => unknown[]) => {
 			element as HTMLElement | SVGElement
 		);
 
-		const it_over = arr();
 		let current: Node | null | undefined;
 
-		if (Object.values(it_over).length === 0) {
+		if (arr.value.length === 0) {
 			element.replaceChildren(template);
 			return;
 		}
-		for (const key of Object.keys(it_over)) {
+		for (const key in arr.value) {
 			current = findCommentNode(current ?? template, `MF_EACH_${key}`);
 
 			if (!current) {
 				const clone = document.importNode(template.content, true);
-				new RegEl(clone, {
-					[keyName as string]: () => key,
-					[valName as string]: () =>
-						it_over[key as keyof typeof it_over],
-				});
 
 				const comment = document.createComment(`MF_EACH_${key}`);
 				element.appendChild(comment);
+
+				// Remember how many children the element had before appending
+				const childCountBefore = element.childNodes.length;
+
+				// Append the clone - this moves its content to the DOM
 				element.appendChild(clone);
+
+				// Find the newly added DOM elements
+				const newNodes = Array.from(element.childNodes).slice(
+					childCountBefore
+				);
+				const targetElement = newNodes.find(
+					(node) => node.nodeType === Node.ELEMENT_NODE
+				) as HTMLElement;
+
+				if (targetElement) {
+					// Create RegEl with the actual DOM element, not the DocumentFragment
+					new RegEl(targetElement, template, {
+						[keyName as string]: new State(() => key),
+						[valName as string]: new State(() => arr.value[key]),
+					});
+				}
 			}
 		}
 		if (current) {
@@ -97,8 +111,8 @@ export const templEach = (selector: string, arr: () => unknown[]) => {
 			| null;
 		if (element?.tagName !== "MF-EACH") return;
 
-		S.effect(() => {
-			console.log("EFFECT RUN", S.value);
+		arr.effect(() => {
+			console.log("EFFECT RUN", arr.value);
 			onEffect(element);
 		});
 	};
@@ -110,4 +124,4 @@ export const templEach = (selector: string, arr: () => unknown[]) => {
 	}
 };
 
-export const templIf = (selector: string) => {};
+export const templIf = (_selector: string) => {};

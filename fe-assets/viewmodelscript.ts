@@ -59,7 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		return array;
 	});
 
-	$.each("#chicken-button-list", () => chxArray.value);
+	$.each("#chicken-button-list", chxArray);
 
 	setTimeout(() => {
 		specialMessage.value = "BOGOCK!!!";
