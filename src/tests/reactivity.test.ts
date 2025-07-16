@@ -112,3 +112,81 @@ test("derived data", async () => {
 	expect(derivedState.value.age).toBe(46);
 	expect(trackedDerivedStateAge).toBe(46);
 });
+
+test("Circular update detection", async () => {
+	// Mock console.warn to capture warnings
+	const originalWarn = console.warn;
+	const warnings: string[] = [];
+	console.warn = (message: string) => {
+		warnings.push(message);
+	};
+
+	try {
+		const circularA = $.watch(0);
+		const circularB = $.watch(0);
+
+		circularA.effect(() => {
+			if (circularA.value < 5) {
+				circularB.value = circularA.value + 1;
+			}
+		});
+
+		circularB.effect(() => {
+			if (circularB.value < 5) {
+				circularA.value = circularB.value + 1;
+			}
+		});
+
+		circularA.value = 1;
+
+		expect(warnings.length).toBeGreaterThan(0);
+		expect(
+			warnings.some((warning) =>
+				warning.includes("Circular update detected")
+			)
+		).toBe(true);
+
+		// Values should not reach 5 due to circular detection
+		expect(circularA.value).toBeLessThan(5);
+		expect(circularB.value).toBeLessThan(5);
+	} finally {
+		console.warn = originalWarn;
+	}
+});
+
+test("Max update depth detection", async () => {
+	const originalWarn = console.warn;
+	const warnings: string[] = [];
+	console.warn = (message: string) => {
+		warnings.push(message);
+	};
+
+	try {
+		const states = Array.from({ length: 150 }, () => $.watch(0));
+
+		for (let i = 0; i < states.length - 1; i++) {
+			const currentIndex = i;
+			states[currentIndex].effect(() => {
+				if (
+					states[currentIndex].value > 0 &&
+					states[currentIndex].value < 2
+				) {
+					states[currentIndex + 1].value = states[currentIndex].value;
+				}
+			});
+		}
+
+		states[0].value = 1;
+
+		expect(warnings.length).toBeGreaterThan(0);
+		expect(
+			warnings.some(
+				(warning) =>
+					warning.includes("Maximum update depth") &&
+					warning.includes("exceeded")
+			)
+		).toBe(true);
+	} finally {
+		console.warn = originalWarn;
+	}
+});

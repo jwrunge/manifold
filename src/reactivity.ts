@@ -2,6 +2,11 @@ import { isEqual } from "./equality";
 
 let currentEffect: Effect | null = null;
 
+// Circular update detection
+const MAX_UPDATE_DEPTH = 100;
+const updateStack = new Set<Effect>();
+let updateDepth = 0;
+
 class Effect {
 	private dependencies = new Set<() => void>();
 	public isActive = true;
@@ -10,9 +15,30 @@ class Effect {
 	constructor(private fn: () => void) {}
 
 	run() {
-		if (!this.isActive || this.isRunning) return;
+		if (!this.isActive) return;
+
+		// Circular update detection
+		if (updateStack.has(this)) {
+			console.warn(
+				"Circular update detected! Effect is already running in the call stack. Aborting to prevent infinite loop."
+			);
+			console.trace("Circular update stack trace");
+			return;
+		}
+
+		if (this.isRunning) return;
+
+		if (updateDepth >= MAX_UPDATE_DEPTH) {
+			console.warn(
+				`Maximum update depth (${MAX_UPDATE_DEPTH}) exceeded! Possible infinite loop detected. Aborting.`
+			);
+			console.trace("Update depth exceeded stack trace");
+			return;
+		}
 
 		this.isRunning = true;
+		updateStack.add(this);
+		updateDepth++;
 
 		// Clean up previous dependencies
 		for (const cleanup of this.dependencies) cleanup();
@@ -27,6 +53,8 @@ class Effect {
 		} finally {
 			currentEffect = prevEffect;
 			this.isRunning = false;
+			updateStack.delete(this);
+			updateDepth--;
 		}
 	}
 
