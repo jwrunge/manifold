@@ -15,7 +15,7 @@ type EventMap = {
 	onkeypress: KeyboardEvent;
 	// Form Events
 	onchange: Event;
-	oninput: Event;
+	oninput: InputEvent;
 	onsubmit: SubmitEvent;
 	onfocus: FocusEvent;
 	onblur: FocusEvent;
@@ -41,7 +41,7 @@ type EventMap = {
 type EventListenerWithTarget<
 	TEvent extends Event,
 	TElement extends EventTarget
-> = (event: TEvent & { target: TElement }) => void;
+> = (event: TEvent & { currentTarget: TElement }) => void;
 
 export type DeepPartial<T> = {
 	[K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
