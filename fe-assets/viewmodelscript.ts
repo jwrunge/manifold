@@ -41,11 +41,9 @@ $.input("#chickens-input", () => ({
 		const value = +e.currentTarget.value;
 		chickenStore.value = value > 0 ? value : 0;
 	},
-	cow: "MOO",
 	type: "number",
 	style: {
 		border: `3px solid rgb(${chickenStore.value},0,0)`,
-		chicken: "BOK",
 	},
 	class: ["chicken-input", "input", `value-${chickenStore.value}`],
 }));
