@@ -6,9 +6,29 @@ import {
 import { State } from "./reactivity";
 import { templ, templEach } from "./templating";
 
-type ViewModelProxyFn<T extends ElementKeys> = (
+type ViewModelProxyFn<T extends ElementKeys> = <
+	U extends DeepPartialWithTypedListeners<ElementFrom<T>>
+>(
 	selector: string,
-	func: () => DeepPartialWithTypedListeners<ElementFrom<T>>
+	func: () => U &
+		Record<
+			Exclude<
+				keyof U,
+				keyof DeepPartialWithTypedListeners<ElementFrom<T>> | "class"
+			>,
+			never
+		> &
+		(U extends { style: infer S }
+			? S extends Record<string, any>
+				? {
+						style: Record<
+							Exclude<keyof S, keyof CSSStyleDeclaration>,
+							never
+						> &
+							S;
+				  }
+				: {}
+			: {})
 ) => Promise<ElementFrom<T> | null>;
 
 type BaseProxy = {

@@ -14,20 +14,22 @@ export type DeepPartial<T> = {
 	[K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
 };
 
-// Utility type to get settable properties of an element (excluding readonly properties)
-type SettableElementProperties<T extends Element> = {
+// Strict CSS type that only allows valid CSS properties
+type StrictCSSStyleDeclaration = {
+	[K in keyof CSSStyleDeclaration]?: CSSStyleDeclaration[K];
+};
+
+export type DeepPartialWithTypedListeners<T extends Element> = {
 	[K in keyof T]?: K extends keyof GlobalEventHandlers
 		? EventListenerWithTarget<ExtractEventType<GlobalEventHandlers[K]>, T>
+		: K extends "style"
+		? StrictCSSStyleDeclaration
 		: T[K] extends object
 		? DeepPartial<T[K]>
 		: T[K];
+} & {
+	class?: string[];
 };
-
-export type DeepPartialWithTypedListeners<T extends Element> =
-	SettableElementProperties<T> & {
-		// Custom properties that don't exist on DOM elements but are handled by the framework
-		class?: string[];
-	};
 
 export type ElementKeys =
 	| "element"
