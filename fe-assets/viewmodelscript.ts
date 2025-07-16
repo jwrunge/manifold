@@ -64,4 +64,8 @@ document.addEventListener("DOMContentLoaded", () => {
 	setTimeout(() => {
 		specialMessage.value = "BOGOCK!!!";
 	}, 5_000);
+
+	setTimeout(() => {
+		chxArray.value.push("BOGOCK!!!");
+	}, 7_000);
 });

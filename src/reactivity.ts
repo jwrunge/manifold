@@ -11,13 +11,13 @@ let pendingEffects = new Set<Effect>();
 
 function flushPendingEffects() {
 	if (isFlushingEffects || pendingEffects.size === 0) return;
-	
+
 	isFlushingEffects = true;
-	
+
 	try {
 		const effectsToRun = new Set(pendingEffects);
 		pendingEffects.clear();
-		
+
 		for (const effect of effectsToRun) {
 			if (effect.isActive) {
 				effect.runImmediate();
@@ -25,7 +25,7 @@ function flushPendingEffects() {
 		}
 	} finally {
 		isFlushingEffects = false;
-		
+
 		// If more effects were queued during flush, flush them too
 		if (pendingEffects.size > 0) {
 			flushPendingEffects();
@@ -40,7 +40,7 @@ export function flushEffects(): Promise<void> {
 			resolve();
 			return;
 		}
-		
+
 		// Wait for next tick and check again
 		setTimeout(() => {
 			flushEffects().then(resolve);
@@ -201,7 +201,7 @@ export class State<T = unknown> {
 							if (oldLength !== newLength) {
 								// Trigger length granular effects
 								this._triggerGranularEffects("length");
-								
+
 								// For push/unshift, trigger effects for new indices
 								if (key === "push" || key === "unshift") {
 									// Only trigger effects that depend on the entire array
@@ -215,7 +215,7 @@ export class State<T = unknown> {
 								// For sort/reverse that don't change length but change order
 								this._triggerEffects();
 							}
-							
+
 							return result;
 						};
 					}
@@ -271,7 +271,8 @@ export class State<T = unknown> {
 			granularEffects.add(effect);
 			effect.addDependency(() => {
 				granularEffects!.delete(effect);
-				granularEffects!.size === 0 && this._granularEffects.delete(key);
+				granularEffects!.size === 0 &&
+					this._granularEffects.delete(key);
 			});
 		}
 
@@ -356,7 +357,7 @@ export class State<T = unknown> {
 			// Use a marker to indicate this might be a direct value access
 			// The _track method will decide whether to track as top-level or not
 			const hasExistingGranular = this._hasGranularTracking(effect);
-			
+
 			if (!hasExistingGranular && !this._effects.has(effect)) {
 				this._effects.add(effect);
 				effect.addDependency(() => this._effects.delete(effect));
