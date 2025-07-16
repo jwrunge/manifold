@@ -5,13 +5,16 @@ const toUint8Array = (buf: ArrayBuffer | ArrayBufferView): Uint8Array =>
 
 const compareArrays = <T>(a: T[], b: T[], checked: WeakSet<any>): boolean => {
 	if (a.length !== b.length) return false;
-	return a.every((item, i) => isEqual(item, b[i], checked));
+	for (let i = 0; i < a.length; i++) {
+		if (!isEqual(a[i], b[i], checked)) return false;
+	}
+	return true;
 };
 
 export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 	if (a === b) return true;
 	if (!(a && b && typeof a == "object" && typeof b == "object")) return false;
-	if (checked.has(a) && checked.has(b)) return true;
+	if (checked.has(a) || checked.has(b)) return a === b;
 
 	checked.add(a);
 	checked.add(b);
@@ -21,10 +24,11 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 
 	if (isABuf && isBBuf) {
 		const [aView, bView] = [toUint8Array(a), toUint8Array(b)];
-		return (
-			aView.length === bView.length &&
-			aView.every((byte, i) => byte === bView[i])
-		);
+		if (aView.length !== bView.length) return false;
+		for (let i = 0; i < aView.length; i++) {
+			if (aView[i] !== bView[i]) return false;
+		}
+		return true;
 	} else if (isABuf !== isBBuf) return false;
 
 	const [classA, classB] = [a.constructor, b.constructor];
@@ -44,12 +48,18 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 			}
 			return true;
 		case Set:
-			return (
-				a.size === b.size &&
-				[...a].every((item) =>
-					[...b].some((bItem) => isEqual(item, bItem, checked))
-				)
-			);
+			if (a.size !== b.size) return false;
+			for (const item of a) {
+				let found = false;
+				for (const bItem of b) {
+					if (isEqual(item, bItem, checked)) {
+						found = true;
+						break;
+					}
+				}
+				if (!found) return false;
+			}
+			return true;
 		case URL:
 			return a.href === b.href;
 		case URLSearchParams:
@@ -64,15 +74,11 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 	}
 
 	const keysA = Reflect.ownKeys(a);
-	const keysB = Reflect.ownKeys(b);
-	if (keysA.length !== keysB.length) return false;
+	if (keysA.length !== Reflect.ownKeys(b).length) return false;
 
-	keysA.sort();
-	keysB.sort();
-
-	return keysA.every(
-		(key) =>
-			Reflect.getOwnPropertyDescriptor(b, key) &&
-			isEqual(a[key], b[key], checked)
-	);
+	for (const key of keysA) {
+		if (!Reflect.has(b, key) || !isEqual(a[key], b[key], checked))
+			return false;
+	}
+	return true;
 };

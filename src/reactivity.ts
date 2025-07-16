@@ -15,7 +15,7 @@ class Effect {
 		this.isRunning = true;
 
 		// Clean up previous dependencies
-		this.dependencies.forEach((cleanup) => cleanup());
+		for (const cleanup of this.dependencies) cleanup();
 		this.dependencies.clear();
 
 		// Track new dependencies
@@ -36,7 +36,7 @@ class Effect {
 
 	stop() {
 		this.isActive = false;
-		this.dependencies.forEach((cleanup) => cleanup());
+		for (const cleanup of this.dependencies) cleanup();
 		this.dependencies.clear();
 	}
 }
@@ -84,28 +84,28 @@ export class State<T = unknown> {
 			get: (target, key) => {
 				this._track(key);
 				const value = Reflect.get(target, key);
-				return this._createProxy(value as any);
+				return typeof value === "object" && value !== null
+					? this._createProxy(value as any)
+					: value;
 			},
 			set: (target, key, value) => {
-				if (isEqual(Reflect.get(target, key), value)) return true;
+				const current = Reflect.get(target, key);
+				if (isEqual(current, value)) return true;
 
 				const result = Reflect.set(target, key, value);
-				if (result) {
-					this._triggerGranularEffects(key);
-				}
+				result && this._triggerGranularEffects(key);
 				return result;
 			},
 		}) as T;
 	}
 
 	private _track(key: string | symbol) {
-		if (!currentEffect) return;
+		const effect = currentEffect;
+		if (!effect) return;
 
 		// Track top-level access
-		this._effects.add(currentEffect);
-		currentEffect.addDependency(() => {
-			this._effects.delete(currentEffect!);
-		});
+		this._effects.add(effect);
+		effect.addDependency(() => this._effects.delete(effect));
 
 		// Track granular access
 		let granularEffects = this._granularEffects.get(key);
@@ -114,47 +114,48 @@ export class State<T = unknown> {
 			this._granularEffects.set(key, granularEffects);
 		}
 
-		granularEffects.add(currentEffect);
-		currentEffect.addDependency(() => {
-			granularEffects!.delete(currentEffect!);
-			if (granularEffects!.size === 0) {
-				this._granularEffects.delete(key);
-			}
+		granularEffects.add(effect);
+		effect.addDependency(() => {
+			granularEffects!.delete(effect);
+			granularEffects!.size === 0 && this._granularEffects.delete(key);
 		});
 	}
 
 	private _triggerEffects() {
 		// Trigger all effects (both top-level and granular since entire value changed)
-		const allEffects = new Set<Effect>();
-		this._effects.forEach((effect) => allEffects.add(effect));
-		this._granularEffects.forEach((effects) => {
-			effects.forEach((effect) => allEffects.add(effect));
-		});
+		const triggered = new Set<Effect>();
 
-		allEffects.forEach((effect) => {
-			if (effect.isActive) {
+		for (const effect of this._effects) {
+			if (effect.isActive && !triggered.has(effect)) {
+				triggered.add(effect);
 				effect.run();
 			}
-		});
+		}
+
+		for (const effects of this._granularEffects.values()) {
+			for (const effect of effects) {
+				if (effect.isActive && !triggered.has(effect)) {
+					triggered.add(effect);
+					effect.run();
+				}
+			}
+		}
 	}
 
 	private _triggerGranularEffects(key: string | symbol) {
 		const granularEffects = this._granularEffects.get(key);
-		if (granularEffects) {
-			granularEffects.forEach((effect) => {
-				if (effect.isActive) {
-					effect.run();
-				}
-			});
+		if (!granularEffects) return;
+
+		for (const effect of granularEffects) {
+			effect.isActive && effect.run();
 		}
 	}
 
 	get value(): T {
-		if (currentEffect) {
-			this._effects.add(currentEffect);
-			currentEffect.addDependency(() => {
-				this._effects.delete(currentEffect!);
-			});
+		const effect = currentEffect;
+		if (effect) {
+			this._effects.add(effect);
+			effect.addDependency(() => this._effects.delete(effect));
 		}
 		return this._reactive;
 	}
