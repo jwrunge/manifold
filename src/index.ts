@@ -3,8 +3,8 @@ import {
 	ElementFrom,
 	ElementKeys,
 } from "./_types.elements";
-import { State } from "./reactivity";
-import { RegEl } from "./registry";
+import { State } from "./State";
+import { RegEl } from "./RegisteredElement";
 
 type ViewModelProxyFn<T extends ElementKeys> = <
 	U extends DeepPartialWithTypedListeners<ElementFrom<T>>
@@ -88,6 +88,17 @@ const proxyHandler: ProxyHandler<object> = {
 	get(_: object, key: string | symbol): unknown {
 		return key === "watch"
 			? <T>(value: T | (() => T)): State<T> => new State(value)
+			: key === "if"
+			? (mfId: string, condition: State<unknown>) =>
+					registrar(mfId, (element) => {
+						if (element.nodeName !== "MF-IF") {
+							console.warn(
+								`Element data-mf="${mfId}" is not an <mf-if> element.`
+							);
+							return;
+						}
+						RegEl.register(element, { show: condition });
+					})
 			: key === "each"
 			? (mfId: string, iterable: State<Array<unknown>>) =>
 					registrar(mfId, (element) => {

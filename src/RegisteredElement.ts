@@ -1,4 +1,4 @@
-import { State } from "./reactivity";
+import { State } from "./State";
 
 export class RegEl {
 	static registry: WeakMap<Element | DocumentFragment, RegEl> = new WeakMap();
@@ -9,12 +9,13 @@ export class RegEl {
 		element: HTMLElement | SVGElement | MathMLElement | DocumentFragment,
 		ops?: {
 			props?: Record<string, State<unknown>>;
-			show?: State<boolean>;
+			show?: State<unknown>;
 			each?: State<Array<unknown>>;
 			templateContent?: DocumentFragment;
 		}
 	) {
 		const regel = RegEl.registry.get(element);
+
 		if (regel) {
 			regel.show ??= ops?.show;
 			if (ops?.each) regel.each = ops.each;
@@ -37,7 +38,7 @@ export class RegEl {
 			| MathMLElement
 			| DocumentFragment,
 		props: Record<string, State<unknown>> = {},
-		private show?: State<boolean> | undefined,
+		private show?: State<unknown> | undefined,
 		private each?: State<Array<unknown>> | undefined,
 		private cachedTemplateContent?: DocumentFragment | null
 	) {

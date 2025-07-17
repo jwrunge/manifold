@@ -1,4 +1,5 @@
 import $ from "../src/index.ts";
+import { State } from "../src/State.ts";
 
 document.addEventListener("DOMContentLoaded", () => {
 	let myStore = $.watch(32);
@@ -60,6 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	});
 
 	$.each("chicken-button-list", chxArray);
+	$.if("is-even", new State(() => chickenStore.value % 2 === 0));
 
 	setTimeout(() => {
 		specialMessage.value = "BOGOCK!!!";
