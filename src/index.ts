@@ -36,6 +36,8 @@ type BaseProxy = {
 } & {
 	watch: <T>(value: T | (() => T)) => State<T>;
 	if: (mfId: string, condition: State<unknown>) => void;
+	elseif: (mfId: string, condition: State<unknown>) => void;
+	else: (mfId: string) => void;
 	each: (mfId: string, iterable: State<Array<unknown>>) => void;
 };
 
@@ -100,6 +102,27 @@ const proxyHandler: ProxyHandler<object> = {
 							RegEl.register(element, { show: condition });
 						},
 						"MF-IF"
+					)
+			: key === "elseif"
+			? (mfId: string, condition: State<unknown>) =>
+					registrar(
+						mfId,
+						(element) => {
+							RegEl.register(element, {
+								else: true,
+								show: condition,
+							});
+						},
+						"MF-ELSE-IF"
+					)
+			: key === "else"
+			? (mfId: string) =>
+					registrar(
+						mfId,
+						(element) => {
+							RegEl.register(element, { else: true });
+						},
+						"MF-ELSE"
 					)
 			: key === "each"
 			? (mfId: string, iterable: State<Array<unknown>>) =>

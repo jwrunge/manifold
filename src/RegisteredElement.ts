@@ -9,6 +9,7 @@ export class RegEl {
 		element: HTMLElement | SVGElement | MathMLElement | DocumentFragment,
 		ops?: {
 			props?: Record<string, State<unknown>>;
+			else?: boolean;
 			show?: State<unknown>;
 			each?: State<Array<unknown>>;
 			templateContent?: DocumentFragment;
