@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Manifold Auto-Discovery Demo</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 800px;
+				margin: 40px auto;
+				padding: 20px;
+			}
+			.demo-section {
+				border: 1px solid #ddd;
+				padding: 20px;
+				margin: 20px 0;
+				border-radius: 8px;
+			}
+			.demo-section h3 {
+				margin-top: 0;
+				color: #333;
+			}
+			button {
+				padding: 8px 16px;
+				margin: 5px;
+				cursor: pointer;
+			}
+			.counter {
+				font-size: 24px;
+				font-weight: bold;
+				color: #2196f3;
+			}
+			.status {
+				padding: 10px;
+				border-radius: 4px;
+				margin: 10px 0;
+			}
+			.status.good {
+				background: #e8f5e8;
+				color: #2e7d32;
+			}
+			.status.warn {
+				background: #fff3e0;
+				color: #f57c00;
+			}
+			.status.bad {
+				background: #ffebee;
+				color: #c62828;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Manifold Auto-Discovery Demo</h1>
+		<p>
+			This demo shows the new HTMx-inspired data attribute approach with
+			automatic element discovery.
+		</p>
+
+		<div class="demo-section">
+			<h3>1. Simple Counter with Conditions</h3>
+			<div class="counter" data-content="count"></div>
+
+			<mf-if data-condition="count === 0">
+				<div class="status good">Counter is at zero!</div>
+			</mf-if>
+
+			<mf-else-if data-condition="count < 5">
+				<div class="status warn">Counter is low (less than 5)</div>
+			</mf-else-if>
+
+			<mf-else>
+				<div class="status bad">Counter is 5 or higher!</div>
+			</mf-else>
+
+			<button onclick="window.changeCount(-1)">-</button>
+			<button onclick="window.changeCount(1)">+</button>
+			<button onclick="window.resetCount()">Reset</button>
+		</div>
+
+		<div class="demo-section">
+			<h3>2. Array Loop with Filtering</h3>
+			<div>Total items: <span data-content="items.length"></span></div>
+
+			<mf-each data-items="items" data-mf-as="item, index">
+				<template>
+					<div
+						style="
+							padding: 8px;
+							border: 1px solid #ccc;
+							margin: 4px 0;
+							border-radius: 4px;
+						"
+					>
+						Item: <strong>${item}</strong>
+					</div>
+				</template>
+			</mf-each>
+
+			<button onclick="window.addItem()">Add Item</button>
+			<button onclick="window.clearItems()">Clear</button>
+		</div>
+
+		<div class="demo-section">
+			<h3>3. User Profile with Complex Conditions</h3>
+			<div>
+				Name: <span data-content="user.name"></span><br />
+				Age: <span data-content="user.age"></span>
+			</div>
+
+			<mf-if data-condition="user.age >= 21">
+				<div class="status good">✓ User is an adult (21+)</div>
+			</mf-if>
+
+			<mf-else-if data-condition="user.age >= 18">
+				<div class="status warn">⚠ User is 18-20 years old</div>
+			</mf-else-if>
+
+			<mf-else>
+				<div class="status bad">✗ User is under 18</div>
+			</mf-else>
+
+			<mf-if data-condition="user.name.length > 10">
+				<div style="color: #666; font-style: italic">
+					User has a long name!
+				</div>
+			</mf-if>
+
+			<button onclick="window.randomUser()">Random User</button>
+		</div>
+
+		<div class="demo-section">
+			<h3>4. Dynamic Content</h3>
+			<div>Status: <span data-content="status"></span></div>
+			<div>Progress: <span data-content="progress"></span>%</div>
+
+			<mf-if data-condition="progress < 25">
+				<div style="color: red">Just getting started...</div>
+			</mf-if>
+
+			<mf-else-if data-condition="progress < 75">
+				<div style="color: orange">Making progress!</div>
+			</mf-else-if>
+
+			<mf-else>
+				<div style="color: green">Almost done!</div>
+			</mf-else>
+
+			<button onclick="window.updateProgress()">Update Progress</button>
+		</div>
+
+		<script type="module">
+			import { stateRegistry, initializeManifold } from "./src/index.ts";
+
+			console.log("Loading auto-discovery demo...");
+			console.log("Available exports:", {
+				stateRegistry,
+				initializeManifold,
+			});
+
+			// Set up states FIRST before auto-discovery
+			console.log("Registering states...");
+			stateRegistry.register("count", 0);
+			stateRegistry.register("items", ["Apple", "Banana", "Cherry"]);
+			stateRegistry.register("user", { name: "John Doe", age: 25 });
+			stateRegistry.register("status", "Ready");
+			stateRegistry.register("progress", 0);
+			console.log("States registered:", {
+				count: stateRegistry.getState("count")?.value,
+				items: stateRegistry.getState("items")?.value,
+				user: stateRegistry.getState("user")?.value,
+				status: stateRegistry.getState("status")?.value,
+				progress: stateRegistry.getState("progress")?.value,
+			});
+
+			// NOW initialize the auto-discovery system
+			console.log("Initializing Manifold...");
+			initializeManifold();
+			console.log("Manifold initialized");
+
+			// Make functions available globally for button clicks
+			window.changeCount = (delta) => {
+				console.log("Changing count by", delta);
+				const countState = stateRegistry.getState("count");
+				console.log("Current count:", countState.value);
+				countState.value += delta;
+				console.log("New count:", countState.value);
+			};
+
+			window.resetCount = () => {
+				console.log("Resetting count");
+				stateRegistry.getState("count").value = 0;
+			};
+
+			window.addItem = () => {
+				console.log("Adding item");
+				const itemsState = stateRegistry.getState("items");
+				const fruits = [
+					"Orange",
+					"Grape",
+					"Kiwi",
+					"Mango",
+					"Pineapple",
+					"Strawberry",
+				];
+				const newItem =
+					fruits[Math.floor(Math.random() * fruits.length)];
+				console.log("Adding:", newItem);
+				itemsState.value = [...itemsState.value, newItem];
+				console.log("New items:", itemsState.value);
+			};
+
+			window.clearItems = () => {
+				console.log("Clearing items");
+				stateRegistry.getState("items").value = [];
+			};
+
+			window.randomUser = () => {
+				console.log("Setting random user");
+				const names = [
+					"Alice Johnson",
+					"Bob Smith",
+					"Carol Williams",
+					"Dave Brown",
+					"Eve Davis",
+				];
+				const userState = stateRegistry.getState("user");
+				const newUser = {
+					name: names[Math.floor(Math.random() * names.length)],
+					age: Math.floor(Math.random() * 50) + 10,
+				};
+				console.log("New user:", newUser);
+				userState.value = newUser;
+			};
+
+			window.updateProgress = () => {
+				console.log("Updating progress");
+				const progressState = stateRegistry.getState("progress");
+				const statusState = stateRegistry.getState("status");
+
+				progressState.value = Math.min(
+					100,
+					progressState.value + Math.floor(Math.random() * 25) + 5
+				);
+
+				if (progressState.value >= 100) {
+					statusState.value = "Complete!";
+				} else {
+					statusState.value = "In Progress...";
+				}
+				console.log(
+					"Progress:",
+					progressState.value,
+					"Status:",
+					statusState.value
+				);
+			};
+
+			console.log(
+				"Auto-discovery demo loaded! Try clicking the buttons."
+			);
+		</script>
+	</body>
+</html>

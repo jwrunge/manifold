@@ -10,31 +10,39 @@
 	<body>
 		<h2>Test UI Hooks</h2>
 		<form>
-			<div><button data-mf="chickens-bulk">Add 10 chickens</button></div>
+			<div>
+				<button type="button" onclick="window.addChickens()">
+					Add 10 chickens
+				</button>
+			</div>
 			<label for="chickens-input">Chickens:</label>
 			<input
-				data-mf="chickens-input"
+				id="chickens-input"
+				data-content="chickens"
+				oninput="window.updateChickens(event)"
 				type="number"
-				class="html-class html-class2"
 				min="0"
+				style="border: 3px solid red"
 			/>
 		</form>
-		<div>CHICKEN 5 SAYS: <span data-mf="chicken-5"></span></div>
-		<mf-if data-mf="is-even">
+		<div>CHICKEN 5 SAYS: <span data-content="chicken5Message"></span></div>
+
+		<mf-if data-condition="isEven">
 			<div>EVEN CHICKENS!!!!</div>
 		</mf-if>
-		<mf-else-if data-mf="is-3">
-			<div>THREE chickens!(</div>
+		<mf-else-if data-condition="is3">
+			<div>THREE chickens!</div>
 		</mf-else-if>
-		<mf-else-if data-mf="is-5">
+		<mf-else-if data-condition="is5">
 			<div>FIVE chickens!</div>
 		</mf-else-if>
 		<mf-else>
 			<div>ODD CHICKENS!</div>
 		</mf-else>
+
 		<br />
 		<ul>
-			<mf-each data-mf="chicken-button-list" data-mf-as="val, i">
+			<mf-each data-items="chxArray" data-mf-as="val, i">
 				<template><li>+ Lots o' chickens ${i} ${val}</li></template>
 			</mf-each>
 		</ul>
