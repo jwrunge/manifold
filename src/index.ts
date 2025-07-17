@@ -41,15 +41,19 @@ type BaseProxy = {
 
 const registrar = async (
 	mfId: string,
-	cb: (element: HTMLElement | SVGElement | MathMLElement) => void
+	cb: (element: HTMLElement | SVGElement | MathMLElement) => void,
+	nodeName?: string
 ) => {
 	const register = () => {
 		const elements = document.querySelectorAll(`[data-mf=${mfId}]`);
-		elements.forEach((element) =>
-			State.prototype.effect(() =>
-				cb(element as HTMLElement | SVGElement | MathMLElement)
-			)
-		);
+		elements.forEach((element) => {
+			if (!nodeName || element.nodeName === nodeName)
+				cb(element as HTMLElement | SVGElement | MathMLElement);
+			else
+				console.warn(
+					`Element data-mf="${mfId}" is not a <${nodeName}> element.`
+				);
+		});
 	};
 
 	if (document.readyState === "loading") {
@@ -90,26 +94,22 @@ const proxyHandler: ProxyHandler<object> = {
 			? <T>(value: T | (() => T)): State<T> => new State(value)
 			: key === "if"
 			? (mfId: string, condition: State<unknown>) =>
-					registrar(mfId, (element) => {
-						if (element.nodeName !== "MF-IF") {
-							console.warn(
-								`Element data-mf="${mfId}" is not an <mf-if> element.`
-							);
-							return;
-						}
-						RegEl.register(element, { show: condition });
-					})
+					registrar(
+						mfId,
+						(element) => {
+							RegEl.register(element, { show: condition });
+						},
+						"MF-IF"
+					)
 			: key === "each"
 			? (mfId: string, iterable: State<Array<unknown>>) =>
-					registrar(mfId, (element) => {
-						if (element.nodeName !== "MF-EACH") {
-							console.warn(
-								`Element data-mf="${mfId}" is not an <mf-each> element.`
-							);
-							return;
-						}
-						RegEl.register(element, { each: iterable });
-					})
+					registrar(
+						mfId,
+						(element) => {
+							RegEl.register(element, { each: iterable });
+						},
+						"MF-EACH"
+					)
 			: <T extends ElementKeys = "element">(
 					selector: T,
 					func: () => DeepPartialWithTypedListeners<ElementFrom<T>>
