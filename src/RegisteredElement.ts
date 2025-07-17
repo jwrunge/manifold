@@ -17,19 +17,64 @@ export class RegEl {
 	) {
 		const regel = RegEl.registry.get(element);
 
+		let show = ops?.show;
+		if (ops?.else) {
+			let conditionalStates: State<unknown>[] = [];
+
+			// Find all previous conditional elements (MF-IF, MF-ELSE-IF) in this conditional chain
+			let cond = element.previousSibling;
+			while (cond) {
+				if (cond.nodeType === Node.ELEMENT_NODE) {
+					if (["MF-IF", "MF-ELSE-IF"].includes(cond.nodeName)) {
+						const rl = RegEl.registry.get(cond as Element);
+						if (rl?.show) {
+							conditionalStates.unshift(rl.show); // Add to beginning to maintain order
+						}
+					} else if (
+						!["MF-ELSE", "MF-ELSE-IF"].includes(cond.nodeName)
+					) {
+						// Stop if we hit a non-conditional element
+						break;
+					}
+				}
+				// Skip text nodes (whitespace) and continue
+				cond = cond.previousSibling;
+			}
+
+			show = new State(() =>
+				!conditionalStates.some((s) => s.value)
+					? ops?.show?.value ?? true
+					: false
+			);
+		}
+
 		if (regel) {
-			regel.show ??= ops?.show;
+			regel.show ??= show;
 			if (ops?.each) regel.each = ops.each;
 			regel.addProps(ops?.props ?? {});
 			return regel;
 		}
-		return new RegEl(
-			element,
-			ops?.props,
-			ops?.show,
-			ops?.each,
-			ops?.templateContent
-		);
+
+		try {
+			return (
+				regel ??
+				new RegEl(
+					element,
+					ops?.props,
+					show,
+					ops?.each,
+					ops?.templateContent
+				)
+			);
+		} finally {
+			const el = (element as HTMLElement).nextElementSibling;
+			if (el?.nodeName === "MF-ELSE") {
+				console.log("GOT ELSE");
+				RegEl.register(el as HTMLElement, {
+					else: true,
+				});
+			}
+		}
 	}
 
 	constructor(
@@ -80,10 +125,9 @@ export class RegEl {
 			}
 
 			for (const key in this.each!.value) {
-				current = findCommentNode(
-					current ?? template,
-					`MF_EACH_${key}`
-				);
+				current = findNode(current ?? template, {
+					txt: `MF_EACH_${key}`,
+				});
 
 				if (!current) {
 					const clone = document.importNode(template.content, true);
@@ -119,7 +163,7 @@ export class RegEl {
 			}
 
 			if (current) {
-				const next = findCommentNode(current ?? template, "MF_EACH_");
+				const next = findNode(current ?? template, { txt: "MF_EACH_" });
 				while (next?.nextSibling) {
 					next.nextSibling.remove();
 				}
@@ -206,20 +250,30 @@ export class RegEl {
 	}
 }
 
-const findCommentNode = (
+const findNode = (
 	element: Node,
-	txt?: string | number
+	ops?: {
+		type?: Node["nodeType"];
+		name?: Node["nodeName"];
+		backward?: boolean;
+		txt?: string | number;
+	}
 ): Node | null | undefined => {
-	if (!txt) return null;
+	const { type, name, txt, backward } = {
+		type: Node.COMMENT_NODE,
+		...ops,
+	};
 
-	let current = element.nextSibling;
+	let current = backward ? element.previousSibling : element.nextSibling;
 	while (current) {
 		if (
-			current.nodeType === Node.COMMENT_NODE &&
-			current.textContent?.startsWith(`${txt}`)
+			(name && current.nodeName === name) ||
+			(current.nodeType === type &&
+				txt &&
+				current.textContent?.startsWith(`${txt}`))
 		)
 			return current;
-		current = current.nextSibling;
+		current = backward ? current.previousSibling : current.nextSibling;
 	}
 };
 

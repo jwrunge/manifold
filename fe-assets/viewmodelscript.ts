@@ -60,8 +60,14 @@ document.addEventListener("DOMContentLoaded", () => {
 		return array;
 	});
 
+	$.element("chicken-5", () => ({
+		innerHTML: chxArray.value[5] ?? "nothing at all!",
+	}));
+
 	$.each("chicken-button-list", chxArray);
 	$.if("is-even", new State(() => chickenStore.value % 2 === 0));
+	$.if("is-3", new State(() => chickenStore.value === 3));
+	$.if("is-5", new State(() => chickenStore.value === 5));
 
 	setTimeout(() => {
 		specialMessage.value = "BOGOCK!!!";

@@ -36,20 +36,18 @@ type BaseProxy = {
 } & {
 	watch: <T>(value: T | (() => T)) => State<T>;
 	if: (mfId: string, condition: State<unknown>) => void;
-	elseif: (mfId: string, condition: State<unknown>) => void;
-	else: (mfId: string) => void;
 	each: (mfId: string, iterable: State<Array<unknown>>) => void;
 };
 
 const registrar = async (
 	mfId: string,
 	cb: (element: HTMLElement | SVGElement | MathMLElement) => void,
-	nodeName?: string
+	nodeName?: string[]
 ) => {
 	const register = () => {
 		const elements = document.querySelectorAll(`[data-mf=${mfId}]`);
 		elements.forEach((element) => {
-			if (!nodeName || element.nodeName === nodeName)
+			if (!nodeName || nodeName.includes(element.nodeName))
 				cb(element as HTMLElement | SVGElement | MathMLElement);
 			else
 				console.warn(
@@ -99,30 +97,11 @@ const proxyHandler: ProxyHandler<object> = {
 					registrar(
 						mfId,
 						(element) => {
-							RegEl.register(element, { show: condition });
-						},
-						"MF-IF"
-					)
-			: key === "elseif"
-			? (mfId: string, condition: State<unknown>) =>
-					registrar(
-						mfId,
-						(element) => {
 							RegEl.register(element, {
-								else: true,
 								show: condition,
 							});
 						},
-						"MF-ELSE-IF"
-					)
-			: key === "else"
-			? (mfId: string) =>
-					registrar(
-						mfId,
-						(element) => {
-							RegEl.register(element, { else: true });
-						},
-						"MF-ELSE"
+						["MF-IF", "MF-ELSE-IF", "MF-ELSE"]
 					)
 			: key === "each"
 			? (mfId: string, iterable: State<Array<unknown>>) =>
@@ -131,7 +110,7 @@ const proxyHandler: ProxyHandler<object> = {
 						(element) => {
 							RegEl.register(element, { each: iterable });
 						},
-						"MF-EACH"
+						["MF-EACH"]
 					)
 			: <T extends ElementKeys = "element">(
 					selector: T,
