@@ -5,44 +5,171 @@ export class RegEl {
 	private _variables: Map<string, State<unknown> | unknown> = new Map();
 	private _regexCache: Map<string, RegExp> = new Map();
 
-	constructor(
-		public element: HTMLElement | SVGElement | DocumentFragment,
-		private templateContent: DocumentFragment,
-		props: Record<string, State<unknown>>,
-		show?: () => boolean
-	) {
-		const el = this.element;
-		if (show && (el instanceof HTMLElement || el instanceof SVGElement)) {
-			const showState = new State(show);
-			showState.effect(() => {
-				el.style.display = showState.value ? "" : "none";
-			});
+	static register(
+		element: HTMLElement | SVGElement | MathMLElement | DocumentFragment,
+		ops?: {
+			props?: Record<string, State<unknown>>;
+			show?: State<boolean>;
+			each?: State<Array<unknown>>;
+			templateContent?: DocumentFragment;
 		}
+	) {
+		const regel = RegEl.registry.get(element);
+		if (regel) {
+			regel.show ??= ops?.show;
+			if (ops?.each) regel.each = ops.each;
+			regel.addProps(ops?.props ?? {});
+			return regel;
+		}
+		return new RegEl(
+			element,
+			ops?.props,
+			ops?.show,
+			ops?.each,
+			ops?.templateContent
+		);
+	}
 
+	constructor(
+		private element:
+			| HTMLElement
+			| SVGElement
+			| MathMLElement
+			| DocumentFragment,
+		props: Record<string, State<unknown>> = {},
+		private show?: State<boolean> | undefined,
+		private each?: State<Array<unknown>> | undefined,
+		private cachedTemplateContent?: DocumentFragment | null
+	) {
+		this.cachedTemplateContent ??=
+			element.firstChild instanceof HTMLTemplateElement
+				? ((
+						element.firstChild as HTMLTemplateElement
+				  ).content.cloneNode(true) as DocumentFragment)
+				: null;
+
+		this.show?.effect(() => {
+			(this.element as HTMLElement | SVGElement).style.display = this
+				.show!.value
+				? ""
+				: "none";
+		});
+
+		this.addProps(props);
+
+		this.each?.effect(() => {
+			const template = element.querySelector("template");
+			if (!template) return;
+
+			if (!this.cachedTemplateContent) {
+				this.cachedTemplateContent = template.content.cloneNode(
+					true
+				) as DocumentFragment;
+			}
+
+			const [valName, keyName] = extractKeyValNames(
+				element as HTMLElement | SVGElement
+			);
+			let current: Node | null | undefined;
+
+			if (this.each!.value.length === 0) {
+				element.replaceChildren(template);
+				return;
+			}
+
+			for (const key in this.each!.value) {
+				current = findCommentNode(
+					current ?? template,
+					`MF_EACH_${key}`
+				);
+
+				if (!current) {
+					const clone = document.importNode(template.content, true);
+					const comment = document.createComment(`MF_EACH_${key}`);
+					element.appendChild(comment);
+
+					const childCountBefore = element.childNodes.length;
+					element.appendChild(clone);
+
+					const targetElement = Array.from(element.childNodes)
+						.slice(childCountBefore)
+						.find(
+							(node) => node.nodeType === Node.ELEMENT_NODE
+						) as HTMLElement;
+
+					if (targetElement) {
+						const props: Record<string, State<unknown>> = {};
+						props[keyName!] = new State(() => key);
+						props[valName!] = new State(
+							() => this.each!.value[key]
+						);
+
+						// Pass the template content directly to RegEl.register
+						RegEl.register(targetElement, {
+							templateContent:
+								this.cachedTemplateContent!.cloneNode(
+									true
+								) as DocumentFragment,
+							props,
+						});
+					}
+				}
+			}
+
+			if (current) {
+				const next = findCommentNode(current ?? template, "MF_EACH_");
+				while (next?.nextSibling) {
+					next.nextSibling.remove();
+				}
+				(next as ChildNode)?.remove();
+			}
+		});
+
+		RegEl.registry.set(element, this);
+	}
+
+	addProps(props: Record<string, State<unknown> | undefined>) {
 		for (const key in props) {
 			this._variables.set(key, props[key]);
 			const effect = () => this.updateTemplateContent();
 			props[key]?.effect(effect);
 			effect();
 		}
-
-		RegEl.registry.set(element, this);
 	}
 
 	private updateTemplateContent() {
-		const templateContent = this.templateContent.cloneNode(
-			true
-		) as DocumentFragment;
+		// If we have cached template content, use it (for templates with ${} placeholders)
+		if (this.cachedTemplateContent) {
+			// Clone the template so we don't mutate the original
+			const templateClone = this.cachedTemplateContent.cloneNode(
+				true
+			) as DocumentFragment;
 
-		for (const [key, stateOrValue] of this._variables) {
-			const value =
-				stateOrValue instanceof State
-					? stateOrValue.value
-					: stateOrValue;
-			this.replaceVariableInTemplate(templateContent, key, value);
+			for (const [key, stateOrValue] of this._variables) {
+				const value =
+					stateOrValue instanceof State
+						? stateOrValue.value
+						: stateOrValue;
+				this.replaceVariableInTemplate(templateClone, key, value);
+			}
+
+			this.element.replaceChildren(
+				...Array.from(templateClone.childNodes)
+			);
+		} else {
+			// If no template content, update the existing DOM element in place
+			for (const [key, stateOrValue] of this._variables) {
+				const value =
+					stateOrValue instanceof State
+						? stateOrValue.value
+						: stateOrValue;
+				this.replaceVariableInTemplate(
+					this.element as Node,
+					key,
+					value
+				);
+			}
 		}
-
-		this.element.replaceChildren(...Array.from(templateContent.childNodes));
 	}
 
 	private getRegex(key: string): RegExp {
@@ -76,3 +203,24 @@ export class RegEl {
 		}
 	}
 }
+
+const findCommentNode = (
+	element: Node,
+	txt?: string | number
+): Node | null | undefined => {
+	if (!txt) return null;
+
+	let current = element.nextSibling;
+	while (current) {
+		if (
+			current.nodeType === Node.COMMENT_NODE &&
+			current.textContent?.startsWith(`${txt}`)
+		)
+			return current;
+		current = current.nextSibling;
+	}
+};
+
+const extractKeyValNames = (element: HTMLElement | SVGElement): string[] => {
+	return element.dataset?.["mfAs"]?.split(/\s*,\s*/) ?? ["value", "key"];
+};

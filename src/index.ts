@@ -4,7 +4,7 @@ import {
 	ElementKeys,
 } from "./_types.elements";
 import { State } from "./reactivity";
-import { templ, templEach } from "./templating";
+import { RegEl } from "./registry";
 
 type ViewModelProxyFn<T extends ElementKeys> = <
 	U extends DeepPartialWithTypedListeners<ElementFrom<T>>
@@ -29,13 +29,34 @@ type ViewModelProxyFn<T extends ElementKeys> = <
 				  }
 				: {}
 			: {})
-) => Promise<ElementFrom<T> | null>;
+) => void;
 
 type BaseProxy = {
 	[K in ElementKeys]: ViewModelProxyFn<K>;
 } & {
 	watch: <T>(value: T | (() => T)) => State<T>;
-	each: typeof templEach;
+	if: (mfId: string, condition: State<unknown>) => void;
+	each: (mfId: string, iterable: State<Array<unknown>>) => void;
+};
+
+const registrar = async (
+	mfId: string,
+	cb: (element: HTMLElement | SVGElement | MathMLElement) => void
+) => {
+	const register = () => {
+		const elements = document.querySelectorAll(`[data-mf=${mfId}]`);
+		elements.forEach((element) =>
+			State.prototype.effect(() =>
+				cb(element as HTMLElement | SVGElement | MathMLElement)
+			)
+		);
+	};
+
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", register);
+	} else {
+		register();
+	}
 };
 
 const applyProperty = (
@@ -68,25 +89,37 @@ const proxyHandler: ProxyHandler<object> = {
 		return key === "watch"
 			? <T>(value: T | (() => T)): State<T> => new State(value)
 			: key === "each"
-			? templEach
+			? (mfId: string, iterable: State<Array<unknown>>) =>
+					registrar(mfId, (element) => {
+						if (element.nodeName !== "MF-EACH") {
+							console.warn(
+								`Element data-mf="${mfId}" is not an <mf-each> element.`
+							);
+							return;
+						}
+						RegEl.register(element, { each: iterable });
+					})
 			: <T extends ElementKeys = "element">(
 					selector: T,
 					func: () => DeepPartialWithTypedListeners<ElementFrom<T>>
-			  ): Promise<ElementFrom<T> | null> =>
-					templ(selector, (element: Element) => {
-						const props = func();
-						for (const key in props) {
-							const value = props[key as keyof typeof props];
-							if (key[0] === "o" && key[1] === "n") {
-								(element as any)[key] = value as EventListener;
-							} else {
-								applyProperty(
-									element as ElementFrom<T>,
-									key as keyof Element,
-									value
-								);
+			  ) =>
+					registrar(selector, (element: Element) => {
+						State.prototype.effect(() => {
+							const props = func();
+							for (const key in props) {
+								const value = props[key as keyof typeof props];
+								if (key[0] === "o" && key[1] === "n") {
+									(element as any)[key] =
+										value as EventListener;
+								} else {
+									applyProperty(
+										element as ElementFrom<T>,
+										key as keyof Element,
+										value
+									);
+								}
 							}
-						}
+						});
 					});
 	},
 };

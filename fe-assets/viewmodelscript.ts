@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		}, 3000);
 	}, 3000);
 
-	$.input("#chickens-input", () => ({
+	$.input("chickens-input", () => ({
 		value: chickenStore.value.toString(),
 		onchange: (e) => {
 			const value = +e.currentTarget.value;
@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		class: ["chicken-input", "input", `value-${chickenStore.value}`],
 	}));
 
-	$.button("#chickens-bulk", () => {
+	$.button("chickens-bulk", () => {
 		return {
 			onclick: (e) => {
 				e.preventDefault();
@@ -59,7 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		return array;
 	});
 
-	$.each("#chicken-button-list", chxArray);
+	$.each("chicken-button-list", chxArray);
 
 	setTimeout(() => {
 		specialMessage.value = "BOGOCK!!!";

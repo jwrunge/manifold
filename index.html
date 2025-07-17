@@ -10,19 +10,19 @@
 	<body>
 		<h2>Test UI Hooks</h2>
 		<form>
-			<div><button id="chickens-bulk">Add 10 chickens</button></div>
+			<div><button data-mf="chickens-bulk">Add 10 chickens</button></div>
 			<label for="chickens-input">Chickens:</label>
 			<input
-				id="chickens-input"
+				data-mf="chickens-input"
 				type="number"
 				class="html-class html-class2"
 				min="0"
 			/>
 		</form>
-		<div>CHICKEN 5 SAYS: <span id="chicken-5"></span></div>
+		<div>CHICKEN 5 SAYS: <span data-mf="chicken-5"></span></div>
 		<br />
 		<ul>
-			<mf-each id="chicken-button-list" data-as="val, i">
+			<mf-each data-mf="chicken-button-list" data-mf-as="val, i">
 				<template><li>+ Lots o' chickens ${i} ${val}</li></template>
 			</mf-each>
 		</ul>
