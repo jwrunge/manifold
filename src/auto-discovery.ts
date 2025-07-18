@@ -1,5 +1,5 @@
 import { RegEl } from "./RegisteredElement";
-import { evaluateExpression } from "./expression-parser";
+import { evaluateExpression } from "./simple-expression-parser.js";
 import { stateRegistry, createReactiveContext } from "./state-registry";
 import { State } from "./State";
 
@@ -14,14 +14,11 @@ class AutoDiscovery {
 	 * Scan the entire document for Manifold elements and register them
 	 */
 	discoverAndRegister(): void {
-		console.log("Discovering elements...");
 		this.registerConditionals();
 		this.registerLoops();
 		this.registerTextElements();
 		this.registerBindElements();
-		console.log("Element discovery complete");
 	}
-
 	/**
 	 * Re-register elements in a specific container (for dynamic content)
 	 */
@@ -41,7 +38,6 @@ class AutoDiscovery {
 		const conditionals = container.querySelectorAll(
 			"mf-if[data-condition], mf-if[data-state], mf-else-if[data-condition], mf-else-if[data-state], mf-else"
 		);
-		console.log("Found conditional elements:", conditionals.length);
 
 		conditionals.forEach((element) => {
 			if (this.registered.has(element)) return;
@@ -49,12 +45,6 @@ class AutoDiscovery {
 
 			const condition = element.getAttribute("data-condition");
 			const state = element.getAttribute("data-state");
-
-			console.log(
-				"Registering conditional:",
-				element.nodeName,
-				condition || state || "else"
-			);
 
 			if (condition) {
 				// Expression-based condition
@@ -87,10 +77,6 @@ class AutoDiscovery {
 				const context = createReactiveContext();
 				return Boolean(evaluateExpression(expression, context));
 			} catch (error) {
-				console.warn(
-					`Failed to evaluate condition "${expression}":`,
-					error
-				);
 				return false;
 			}
 		});
@@ -108,7 +94,6 @@ class AutoDiscovery {
 	): void {
 		const state = stateRegistry.getState(stateName);
 		if (!state) {
-			console.warn(`State "${stateName}" not found for condition`);
 			return;
 		}
 
@@ -126,7 +111,6 @@ class AutoDiscovery {
 		const loops = container.querySelectorAll(
 			"mf-each[data-items], mf-each[data-state]"
 		);
-		console.log("Found loop elements:", loops.length);
 
 		loops.forEach((element) => {
 			if (this.registered.has(element)) return;
@@ -135,21 +119,8 @@ class AutoDiscovery {
 			const items = element.getAttribute("data-items");
 			const state = element.getAttribute("data-state");
 
-			console.log(
-				"Registering loop:",
-				element,
-				"items:",
-				items,
-				"state:",
-				state
-			);
-
 			// Check if template exists
-			const template = element.querySelector("template");
-			console.log("Template found:", !!template);
-			if (template) {
-				console.log("Template content:", template.innerHTML);
-			}
+			element.querySelector("template");
 
 			if (items) {
 				this.registerExpressionLoop(element as HTMLElement, items);
@@ -175,10 +146,6 @@ class AutoDiscovery {
 					Array.isArray(array) ? array : []
 				);
 			} catch (error) {
-				console.warn(
-					`Failed to evaluate array "${expression}":`,
-					error
-				);
 				return;
 			}
 		} else {
@@ -190,16 +157,11 @@ class AutoDiscovery {
 					const result = evaluateExpression(expression, context);
 					return Array.isArray(result) ? result : [];
 				} catch (error) {
-					console.warn(
-						`Failed to evaluate array "${expression}":`,
-						error
-					);
 					return [];
 				}
 			});
 		}
 
-		console.log("Registering mf-each with array state:", arrayState.value);
 		RegEl.register(element, {
 			each: arrayState,
 		});
@@ -208,7 +170,6 @@ class AutoDiscovery {
 	private registerStateLoop(element: HTMLElement, stateName: string): void {
 		const state = stateRegistry.getState(stateName);
 		if (!state) {
-			console.warn(`State "${stateName}" not found for loop`);
 			return;
 		}
 
@@ -226,41 +187,31 @@ class AutoDiscovery {
 		const templateElements = container.querySelectorAll(
 			"mf-text[data-template]"
 		);
-		console.log("Found mf-text elements:", templateElements.length);
 		templateElements.forEach((element) => {
 			if (this.registered.has(element)) return;
 			this.registered.add(element);
 
 			const template = element.getAttribute("data-template")!;
-			console.log("Registering mf-text with template:", template);
 			this.registerTemplateElement(element as HTMLElement, template);
 		});
 
 		// mf-span with data-text
 		const textElements = container.querySelectorAll("mf-span[data-text]");
-		console.log("Found mf-span elements:", textElements.length);
 		textElements.forEach((element) => {
 			if (this.registered.has(element)) return;
 			this.registered.add(element);
 
 			const expression = element.getAttribute("data-text")!;
-			console.log("Registering mf-span with text:", expression);
 			this.registerTextElement(element as HTMLElement, expression);
 		});
 
 		// Any element with data-content
 		const contentElements = container.querySelectorAll("[data-content]");
-		console.log("Found data-content elements:", contentElements.length);
 		contentElements.forEach((element) => {
 			if (this.registered.has(element)) return;
 			this.registered.add(element);
 
 			const expression = element.getAttribute("data-content")!;
-			console.log(
-				"Registering element with content:",
-				expression,
-				element
-			);
 			this.registerContentElement(element as HTMLElement, expression);
 		});
 	}
@@ -293,7 +244,6 @@ class AutoDiscovery {
 				const context = createReactiveContext();
 				return String(evaluateExpression(expression, context));
 			} catch (error) {
-				console.warn(`Failed to evaluate text "${expression}":`, error);
 				return "";
 			}
 		});
@@ -320,10 +270,6 @@ class AutoDiscovery {
 				const context = createReactiveContext();
 				return String(evaluateExpression(expression, context));
 			} catch (error) {
-				console.warn(
-					`Failed to evaluate content "${expression}":`,
-					error
-				);
 				return "";
 			}
 		});
@@ -350,8 +296,7 @@ class AutoDiscovery {
 			if (this.registered.has(element)) return;
 			this.registered.add(element);
 
-			const bindId = element.getAttribute("data-bind")!;
-			console.log(`Found data-bind element: ${bindId}`, element);
+			element.getAttribute("data-bind");
 			// Note: data-bind elements still need to be configured via JavaScript
 			// This just marks them as discovered
 		});
@@ -366,9 +311,7 @@ const autoDiscovery = new AutoDiscovery();
  * Call this on DOMContentLoaded or manually
  */
 export function initializeManifold(): void {
-	console.log("Starting Manifold auto-discovery...");
 	autoDiscovery.discoverAndRegister();
-	console.log("Manifold auto-discovery complete");
 }
 
 /**

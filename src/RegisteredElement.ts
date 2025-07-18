@@ -69,7 +69,6 @@ export class RegEl {
 		} finally {
 			const el = (element as HTMLElement).nextElementSibling;
 			if (el?.nodeName === "MF-ELSE") {
-				console.log("GOT ELSE");
 				RegEl.register(el as HTMLElement, {
 					else: true,
 				});

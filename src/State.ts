@@ -45,7 +45,6 @@ function flushPendingEffects() {
 		}
 
 		if (batchDepth >= maxBatchDepth && pendingEffects.size > 0) {
-			console.warn(`Max batch depth (${maxBatchDepth}) exceeded`);
 			pendingEffects.clear();
 		}
 	} finally {
@@ -89,14 +88,12 @@ class Effect {
 
 		// Circular update detection
 		if (updateStack.has(this)) {
-			console.warn("Circular update detected");
 			return;
 		}
 
 		if (this.isRunning) return;
 
 		if (updateDepth >= MAX_UPDATE_DEPTH) {
-			console.warn(`Max update depth (${MAX_UPDATE_DEPTH}) exceeded`);
 			return;
 		}
 
@@ -384,7 +381,6 @@ export class State<T = unknown> {
 
 	set value(newValue: T) {
 		if (this._derive) {
-			console.warn("Cannot set derived state");
 			return;
 		}
 
