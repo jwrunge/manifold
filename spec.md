@@ -6,28 +6,19 @@ Manifold is a reactive state management and front-end templating library that ai
 
 Manifold uses data attributes on regular HTML elements for all reactive templating.
 
-### Core Attributes
+### Data Attributes
 
-| Attribute    | Purpose                | Example                                                 |
-| ------------ | ---------------------- | ------------------------------------------------------- |
-| data-bind    | Property/state binding | `<input data-bind="username" />`                        |
-| data-if      | Conditional rendering  | `<div data-if="isVisible">Content</div>`                |
-| data-else-if | Alternative condition  | `<div data-else-if="showAlternative">Alt content</div>` |
-| data-else    | Fallback content       | `<div data-else>Default content</div>`                  |
-| data-each    | List rendering         | `<div data-each="items as item">${item.name}</div>`     |
-| data-scope   | Variable scoping       | `<div data-scope="user as u">Hello ${u.name}</div>`     |
-| data-await   | Async content          | `<div data-await="fetchUser()">Loading...</div>`        |
+| Attribute    | Purpose                                                                   | Example                                                 |
+| ------------ | ------------------------------------------------------------------------- | ------------------------------------------------------- |
+| data-bind    | Binds element properties to state using `property: value` syntax          | `<input data-bind="value: username" />`                 |
+| data-if      | Conditional rendering - shows element when expression is truthy           | `<div data-if="isVisible">Content</div>`                |
+| data-else-if | Alternative condition - sibling of data-if for additional conditions      | `<div data-else-if="showAlternative">Alt content</div>` |
+| data-else    | Fallback content - sibling of data-if shown when all conditions are false | `<div data-else>Default content</div>`                  |
+| data-each    | Repeats element for each array item using `items as item` syntax          | `<div data-each="items as item">${item.name}</div>`     |
+| data-scope   | Creates scoped variables for child elements using `state as alias` syntax | `<div data-scope="user as u">Hello ${u.name}</div>`     |
+| data-await   | Shows loading content while promise is pending (use with data-then/catch) | `<div data-await="fetchUser()">Loading...</div>`        |
 
-### Data Binding
-
-All reactive functionality is handled through data attributes that work on any HTML element:
-
--   **data-bind**: Binds element properties to state or expressions
--   **data-if/data-else-if/data-else**: Controls element visibility
--   **data-each**: Repeats elements for each item in an array
--   **data-scope**: Creates scoped variables for child elements
--   **data-await**: Handles async content with loading states
--   **Interpolation**: Use `${expression}` syntax within element content
+**Interpolation**: Use `${expression}` syntax within element content to display dynamic values.
 
 #### Examples
 
@@ -42,8 +33,16 @@ All reactive functionality is handled through data attributes that work on any H
 **List rendering:**
 
 ```html
+<!-- Default: key maps to "key", value maps to "value" -->
 <ul>
-	<li data-each="products as product">${product.name} - $${product.price}</li>
+	<li data-each="products">${key}: ${value.name} - $${value.price}</li>
+</ul>
+
+<!-- Custom naming: array as keyName, valueName -->
+<ul>
+	<li data-each="products as id, product">
+		${id}: ${product.name} - $${product.price}
+	</li>
 </ul>
 ```
 
