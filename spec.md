@@ -11,12 +11,14 @@ Manifold uses data attributes on regular HTML elements for all reactive templati
 | Attribute    | Purpose                                                                   | Example                                                 |
 | ------------ | ------------------------------------------------------------------------- | ------------------------------------------------------- |
 | data-bind    | Binds element properties to state using `property: value` syntax          | `<input data-bind="value: username" />`                 |
+| data-sync    | Two-way data binding for form inputs (shorthand for value + events)       | `<input data-sync="username" />`                        |
 | data-if      | Conditional rendering - shows element when expression is truthy           | `<div data-if="isVisible">Content</div>`                |
 | data-else-if | Alternative condition - sibling of data-if for additional conditions      | `<div data-else-if="showAlternative">Alt content</div>` |
-| data-else    | Fallback content - sibling of data-if shown when all conditions are false | `<div data-else>Default content</div>`                  |
+| data-else    | Fallback content - works with data-if, data-each, and data-await          | `<div data-else>Default content</div>`                  |
 | data-each    | Repeats element for each array item using `items as item` syntax          | `<div data-each="items as item">${item.name}</div>`     |
 | data-scope   | Creates scoped variables for child elements using `state as alias` syntax | `<div data-scope="user as u">Hello ${u.name}</div>`     |
-| data-await   | Shows loading content while promise is pending (use with data-then/catch) | `<div data-await="fetchUser()">Loading...</div>`        |
+| data-await   | Shows loading content while promise is pending                            | `<div data-await="fetchUser()">Loading...</div>`        |
+| data-then    | Shows content when promise resolves, creates named variable               | `<div data-then="profile">${profile.name}</div>`        |
 
 **Interpolation**: Use `${expression}` syntax within element content to display dynamic values.
 
@@ -44,11 +46,23 @@ Manifold uses data attributes on regular HTML elements for all reactive templati
 		${id}: ${product.name} - $${product.price}
 	</li>
 </ul>
+
+<!-- With fallback for empty arrays -->
+<ul>
+	<li data-each="products as product">${product.name} - $${product.price}</li>
+	<li data-else>No products available</li>
+</ul>
 ```
 
 **Property binding:**
 
 ```html
+<!-- Two-way binding shorthand -->
+<input type="text" data-sync="username" />
+<input type="email" data-sync="email" />
+<textarea data-sync="message"></textarea>
+
+<!-- Explicit property binding -->
 <input type="text" data-bind="value: username" />
 <button data-bind="disabled: isDisabled">Click me</button>
 <button data-bind="onclick: handleClick">Click me</button>
@@ -73,11 +87,11 @@ Manifold uses data attributes on regular HTML elements for all reactive templati
 
 ```html
 <div data-await="fetchUserProfile()">Loading user profile...</div>
-<div data-then data-bind="result as profile">
+<div data-then="profile">
 	<h2>${profile.name}</h2>
 	<p>${profile.bio}</p>
 </div>
-<div data-catch data-bind="error">Error: ${error.message}</div>
+<div data-else="error">Error: ${error.message}</div>
 ```
 
 **Event handlers:**
@@ -101,9 +115,74 @@ const buttonState = $.create({
 <button data-bind="buttonState"></button>
 ```
 
-**Complex binding:**
+### State Creation & Binding
+
+Manifold provides two ways to create reactive state:
+
+1. **JavaScript/TypeScript constructors** with full typing support
+2. **Simple expressions** parsed directly in data attributes
+
+**Typed constructors:**
+
+```typescript
+// Element-specific constructors with full type inference
+const submitButton = $.button({
+	innerText: "Submit Form",
+	disabled: false,
+	onclick: (e) => handleSubmit(e),
+});
+
+const emailInput = $.input({
+	type: "email",
+	value: "",
+	placeholder: "Enter your email",
+	required: true,
+	oninput: (e) => validateEmail(e.target.value),
+});
+
+// Generic state creation for custom scenarios
+const customState = $.create({
+	isVisible: true,
+	count: 0,
+	items: ["apple", "banana", "cherry"],
+});
+```
+
+**Expression-based state:**
 
 ```html
+<!-- Expressions are automatically converted to reactive State -->
+<div data-if="user.age >= 18">Adult content</div>
+<div data-each="products.filter(p => p.inStock)">Available: ${value.name}</div>
+<input data-bind="value: user.email || 'Enter email'" />
+
+<!-- Complex expressions with scoping -->
+<div data-scope="user.profile as profile, settings.theme as theme">
+	<div data-if="profile.isVisible && theme === 'dark'">
+		Dark mode profile content
+	</div>
+</div>
+```
+
+**Usage examples:**
+
+```html
+<!-- Using typed constructors -->
+<button data-bind="submitButton">This text will be overridden</button>
+<input data-bind="emailInput" />
+
+<!-- Using custom state with scoping -->
+<div data-scope="customState as state">
+	<div data-if="state.isVisible">
+		<p>Count: ${state.count}</p>
+		<ul>
+			<li data-each="state.items as item">${item}</li>
+			<li data-else>No items available</li>
+		</ul>
+	</div>
+</div>
+
+<!-- Complex property binding -->
 <select data-bind="value: selectedValue, options: optionsList">
 	<option
 		data-each="optionsList as option"
