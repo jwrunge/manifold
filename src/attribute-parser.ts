@@ -60,19 +60,43 @@ class ExpressionResolver {
 
 		const rootState = this.scopeContext.get(root);
 		if (!rootState) {
-			throw new Error(`Variable '${root}' not found in scope`);
+			// Try to find global JavaScript variable as fallback
+			const globalVar = this.tryGetGlobalVariable(root);
+			if (globalVar) {
+				// Auto-register it for future use
+				this.scopeContext.set(root, globalVar);
+			} else {
+				throw new Error(`Variable '${root}' not found in scope`);
+			}
 		}
 
-		if (chain.length === 1) return rootState;
+		const resolvedRoot = this.scopeContext.get(root)!;
+
+		if (chain.length === 1) return resolvedRoot;
 
 		return new State(() => {
-			let current = rootState.value;
+			let current = resolvedRoot.value;
 			for (let i = 1; i < chain.length && current != null; i++) {
 				const prop = chain[i];
 				if (prop) current = (current as any)[prop];
 			}
 			return current;
 		});
+	}
+
+	private tryGetGlobalVariable(name: string): State<unknown> | null {
+		if (typeof window !== "undefined") {
+			const globalValue = (window as any)[name];
+			if (globalValue !== undefined) {
+				// If it's already a State, use it directly
+				if (globalValue instanceof State) {
+					return globalValue;
+				}
+				// Otherwise wrap it in a State
+				return new State(globalValue);
+			}
+		}
+		return null;
 	}
 
 	resolveBooleanExpression(expression: string) {

@@ -374,6 +374,31 @@ export class State<T = unknown> {
 							parent,
 							key
 						);
+					} else {
+						// This is the top-level object of the State
+						// Trigger general effects that access .value directly, but exclude granular effects
+						console.log(
+							`Object setter: top-level change, triggering general effects`
+						);
+						for (const effect of this._effects) {
+							if (
+								effect.isActive &&
+								!pendingEffects.has(effect)
+							) {
+								// Check if this effect is already tracked granularly for any key
+								let isGranular = false;
+								for (const granularEffects of this._granularEffects.values()) {
+									if (granularEffects.has(effect)) {
+										isGranular = true;
+										break;
+									}
+								}
+								// Only trigger if it's not a granular effect
+								if (!isGranular) {
+									pendingEffects.add(effect);
+								}
+							}
+						}
 					}
 
 					// Process effects in batches (synchronous)
@@ -416,6 +441,8 @@ export class State<T = unknown> {
 					keySet.delete(key);
 					if (keySet.size === 0) {
 						this._effectToKeys.delete(effect);
+						// Remove from general effects too since no keys left
+						this._effects.delete(effect);
 					}
 				}
 				if (granularEffects!.size === 0) {
@@ -425,6 +452,21 @@ export class State<T = unknown> {
 				this._effectToLastKey.delete(effect);
 			});
 		}
+	}
+
+	private _finalizeEffectTracking(effect: Effect) {
+		// Called when an effect finishes running to determine its final tracking status
+		const keys = this._effectToKeys.get(effect);
+
+		if (!keys || keys.size === 0) {
+			// Effect only accessed .value but no specific properties
+			// Track it as a general effect
+			if (!this._effects.has(effect)) {
+				this._effects.add(effect);
+				effect.addDependency(() => this._effects.delete(effect));
+			}
+		}
+		// If it has keys, it's already tracked as granular effects, so don't add to general
 	}
 
 	private _triggerEffects() {
@@ -482,6 +524,8 @@ export class State<T = unknown> {
 				}
 			}
 		}
+		// Process the batched effects immediately
+		processEffectsBatched();
 	}
 
 	private _triggerGranularEffectsWithParent(
@@ -639,6 +683,8 @@ export class State<T = unknown> {
 				parentInfo.state._triggerGranularEffects(parentInfo.key);
 			}
 		}
+		// Process the batched effects immediately
+		processEffectsBatched();
 	}
 
 	get value(): T {

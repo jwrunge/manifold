@@ -11,4 +11,5 @@ export const createState = <T>(value: T | (() => T)): State<T> =>
 export default {
 	State,
 	createState,
+	watch: createState, // Alias for compatibility
 };
