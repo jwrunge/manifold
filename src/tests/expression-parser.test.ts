@@ -1,8 +1,5 @@
 import { expect, test, describe } from "vitest";
-import {
-	evaluateExpression,
-	extractVariableNames,
-} from "../simple-expression-parser";
+import { evaluateExpression, extractVariableNames } from "../expression-parser";
 
 describe("Expression Parser", () => {
 	describe("Simple Property Access", () => {
@@ -428,6 +425,145 @@ describe("Expression Parser", () => {
 			expect(
 				evaluateExpression("undefinedValue ?? fallback", context)
 			).toBe("default");
+		});
+	});
+
+	describe("Ternary Operators", () => {
+		test("should evaluate simple ternary expressions", () => {
+			const context = {
+				user: { name: "Alice", age: 25 },
+				items: [1, 2, 3],
+			};
+
+			// Age-based conditional
+			expect(
+				evaluateExpression(
+					'user.age >= 18 ? "adult" : "minor"',
+					context
+				)
+			).toBe("adult");
+			expect(
+				evaluateExpression(
+					'user.age >= 30 ? "senior" : "young"',
+					context
+				)
+			).toBe("young");
+
+			// String comparison
+			expect(
+				evaluateExpression(
+					'user.name === "Alice" ? "correct" : "wrong"',
+					context
+				)
+			).toBe("correct");
+			expect(
+				evaluateExpression(
+					'user.name === "Bob" ? "correct" : "wrong"',
+					context
+				)
+			).toBe("wrong");
+
+			// Array length conditional
+			expect(
+				evaluateExpression(
+					"items.length > 2 ? items.length : 0",
+					context
+				)
+			).toBe(3);
+			expect(
+				evaluateExpression(
+					"items.length > 5 ? items.length : 0",
+					context
+				)
+			).toBe(0);
+		});
+
+		test("should evaluate nested ternary expressions", () => {
+			const context = {
+				user: { name: "Alice", age: 25 },
+			};
+
+			// Nested ternary - the main case we were fixing
+			expect(
+				evaluateExpression(
+					'user.name ? user.name.length > 5 ? "long name" : "short name" : "no name"',
+					context
+				)
+			).toBe("short name"); // "Alice" has 5 chars, not > 5
+
+			// Multi-level age categorization
+			expect(
+				evaluateExpression(
+					'user.age > 30 ? "senior" : user.age >= 18 ? "adult" : "child"',
+					context
+				)
+			).toBe("adult");
+
+			// Test with null user name
+			const contextWithNull = { user: { name: null, age: 25 } };
+			expect(
+				evaluateExpression(
+					'user.name ? user.name.length > 5 ? "long name" : "short name" : "no name"',
+					contextWithNull
+				)
+			).toBe("no name");
+		});
+
+		test("should evaluate deeply nested ternary expressions", () => {
+			const context = {
+				user: { name: "Alexander", age: 35 },
+			};
+
+			// Very long name (Alexander = 9 chars)
+			expect(
+				evaluateExpression(
+					'user.name ? user.name.length > 5 ? "long name" : "short name" : "no name"',
+					context
+				)
+			).toBe("long name");
+
+			// Complex nested logic
+			expect(
+				evaluateExpression(
+					'user.age > 40 ? "elder" : user.age > 30 ? "senior" : user.age > 18 ? "adult" : "child"',
+					context
+				)
+			).toBe("senior");
+		});
+
+		test("should extract variables from ternary expressions", () => {
+			expect(
+				extractVariableNames('user.age >= 18 ? "adult" : "minor"')
+			).toEqual(["user"]);
+			expect(
+				extractVariableNames(
+					'user.name ? user.name.length > 5 ? "long" : "short" : "none"'
+				)
+			).toEqual(["user"]);
+			expect(
+				extractVariableNames("first.value ? second.value : third.value")
+			).toEqual(["first", "second", "third"]);
+		});
+
+		test("should handle ternary with boolean values", () => {
+			const context = {
+				isActive: true,
+				isDisabled: false,
+				count: 5,
+			};
+
+			expect(
+				evaluateExpression('isActive ? "enabled" : "disabled"', context)
+			).toBe("enabled");
+			expect(
+				evaluateExpression(
+					'isDisabled ? "disabled" : "enabled"',
+					context
+				)
+			).toBe("enabled");
+			expect(
+				evaluateExpression("count > 0 ? true : false", context)
+			).toBe(true);
 		});
 	});
 

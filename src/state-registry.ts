@@ -1,5 +1,5 @@
 import { State } from "./State";
-import { extractVariableNames } from "./simple-expression-parser.js";
+import { extractVariableNames } from "./expression-parser.js";
 
 /**
  * Global state registry for automatic variable resolution

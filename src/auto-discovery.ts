@@ -1,5 +1,5 @@
 import { RegEl } from "./RegisteredElement";
-import { evaluateExpression } from "./simple-expression-parser.js";
+import { evaluateExpression } from "./expression-parser.js";
 import { stateRegistry, createReactiveContext } from "./state-registry";
 import { State } from "./State";
 
