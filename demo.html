@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Manifold Demo - Reactive State Management</title>
+		<style>
+			/* Base Styles */
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+					Roboto, sans-serif;
+				line-height: 1.6;
+				padding: 2rem;
+				transition: all 0.3s ease;
+			}
+
+			.theme-light {
+				background-color: #ffffff;
+				color: #333333;
+			}
+
+			.theme-dark {
+				background-color: #1a1a1a;
+				color: #e0e0e0;
+			}
+
+			/* Layout */
+			.container {
+				max-width: 1200px;
+				margin: 0 auto;
+			}
+
+			.demo-section {
+				background: rgba(128, 128, 128, 0.1);
+				margin: 2rem 0;
+				padding: 1.5rem;
+				border-radius: 8px;
+				border-left: 4px solid #007acc;
+			}
+
+			.theme-dark .demo-section {
+				background: rgba(255, 255, 255, 0.05);
+				border-left-color: #4fc3f7;
+			}
+
+			/* Typography */
+			h1 {
+				color: #007acc;
+				margin-bottom: 1rem;
+				text-align: center;
+			}
+
+			.theme-dark h1 {
+				color: #4fc3f7;
+			}
+
+			h2 {
+				color: #005999;
+				margin-bottom: 1rem;
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+			}
+
+			.theme-dark h2 {
+				color: #81d4fa;
+			}
+
+			/* Controls */
+			.controls {
+				display: flex;
+				gap: 1rem;
+				margin: 1rem 0;
+				flex-wrap: wrap;
+				align-items: center;
+			}
+
+			button {
+				background: #007acc;
+				color: white;
+				border: none;
+				padding: 0.5rem 1rem;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 0.9rem;
+				transition: background-color 0.2s;
+			}
+
+			button:hover {
+				background: #005999;
+			}
+
+			button:disabled {
+				background: #ccc;
+				cursor: not-allowed;
+			}
+
+			.theme-dark button {
+				background: #4fc3f7;
+				color: #000;
+			}
+
+			.theme-dark button:hover {
+				background: #29b6f6;
+			}
+
+			input[type="text"],
+			input[type="number"] {
+				padding: 0.5rem;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+				font-size: 0.9rem;
+				background: white;
+			}
+
+			.theme-dark input {
+				background: #333;
+				color: #e0e0e0;
+				border-color: #555;
+			}
+
+			/* Display Elements */
+			.display {
+				background: rgba(0, 122, 204, 0.1);
+				padding: 1rem;
+				border-radius: 4px;
+				margin: 1rem 0;
+				font-family: "Courier New", monospace;
+				min-height: 2rem;
+			}
+
+			.theme-dark .display {
+				background: rgba(79, 195, 247, 0.1);
+			}
+
+			.status {
+				padding: 0.5rem;
+				border-radius: 4px;
+				margin: 0.5rem 0;
+				font-weight: bold;
+			}
+
+			.status.visible {
+				background: rgba(76, 175, 80, 0.2);
+				color: #2e7d32;
+			}
+
+			.status.hidden {
+				background: rgba(244, 67, 54, 0.2);
+				color: #c62828;
+			}
+
+			.theme-dark .status.visible {
+				background: rgba(76, 175, 80, 0.3);
+				color: #81c784;
+			}
+
+			.theme-dark .status.hidden {
+				background: rgba(244, 67, 54, 0.3);
+				color: #ef5350;
+			}
+
+			/* Todo List */
+			.todo-list {
+				list-style: none;
+			}
+
+			.todo-item {
+				background: rgba(128, 128, 128, 0.1);
+				margin: 0.5rem 0;
+				padding: 0.75rem;
+				border-radius: 4px;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.theme-dark .todo-item {
+				background: rgba(255, 255, 255, 0.05);
+			}
+
+			.todo-item button {
+				background: #f44336;
+				padding: 0.25rem 0.5rem;
+				font-size: 0.8rem;
+			}
+
+			.todo-item button:hover {
+				background: #d32f2f;
+			}
+
+			/* Conditional Content */
+			.conditional-content {
+				padding: 1rem;
+				border-radius: 4px;
+				margin: 0.5rem 0;
+				transition: all 0.3s ease;
+			}
+
+			.even-count {
+				background: rgba(76, 175, 80, 0.2);
+				border: 2px solid #4caf50;
+			}
+
+			.odd-count {
+				background: rgba(255, 152, 0, 0.2);
+				border: 2px solid #ff9800;
+			}
+
+			.special-count {
+				background: rgba(156, 39, 176, 0.2);
+				border: 2px solid #9c27b0;
+			}
+
+			/* Grid Layout */
+			.grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+				gap: 2rem;
+				margin-top: 2rem;
+			}
+
+			/* Utility */
+			.emoji {
+				font-size: 1.2em;
+			}
+
+			.code {
+				background: rgba(128, 128, 128, 0.2);
+				padding: 0.2rem 0.4rem;
+				border-radius: 3px;
+				font-family: "Courier New", monospace;
+				font-size: 0.9em;
+			}
+		</style>
+	</head>
+	<body class="theme-light">
+		<div class="container">
+			<h1>🚀 Manifold Demo - Reactive State Management</h1>
+
+			<!-- Basic Counter Demo -->
+			<div class="demo-section">
+				<h2>
+					<span class="emoji">🔢</span> Basic Counter with Reactive
+					State
+				</h2>
+				<p>
+					Demonstrates basic state management with automatic UI
+					updates.
+				</p>
+
+				<div class="controls">
+					<button onclick="window.manifoldDemo.decrementCount()">
+						-
+					</button>
+					<button onclick="window.manifoldDemo.incrementCount()">
+						+
+					</button>
+					<span>Current count: </span>
+					<span
+						id="count-display"
+						data-bind="textContent: count.value"
+						class="code"
+						>0</span
+					>
+				</div>
+
+				<div class="display">
+					<div>
+						Count:
+						<span data-bind="textContent: count.value">0</span>
+					</div>
+					<div>
+						Double:
+						<span data-bind="textContent: count.value * 2">0</span>
+					</div>
+					<div>
+						Square:
+						<span data-bind="textContent: count.value * count.value"
+							>0</span
+						>
+					</div>
+				</div>
+
+				<!-- Conditional rendering based on count -->
+				<div
+					data-if="count.value % 2 === 0"
+					class="conditional-content even-count"
+				>
+					<strong>✨ Even number!</strong> The count is even.
+				</div>
+
+				<div data-else class="conditional-content odd-count">
+					<strong>🔥 Odd number!</strong> The count is odd.
+				</div>
+
+				<!-- Special cases -->
+				<div
+					data-if="count.value === 10"
+					class="conditional-content special-count"
+				>
+					<strong>🎉 Perfect Ten!</strong> You've reached 10!
+				</div>
+
+				<div
+					data-if="count.value > 15"
+					class="conditional-content special-count"
+				>
+					<strong>🚀 High Score!</strong> Count is greater than 15!
+				</div>
+			</div>
+
+			<!-- User Management Demo -->
+			<div class="demo-section">
+				<h2><span class="emoji">👤</span> User State Management</h2>
+				<p>Shows object reactivity and nested property binding.</p>
+
+				<div class="controls">
+					<label>Username: </label>
+					<input
+						type="text"
+						data-sync="username"
+						placeholder="Enter username"
+					/>
+					<label>Full Name: </label>
+					<input
+						type="text"
+						data-bind="value: user.name"
+						data-sync="user.name"
+						placeholder="Enter full name"
+					/>
+					<button onclick="window.manifoldDemo.toggleTheme()">
+						Toggle Theme
+					</button>
+				</div>
+
+				<div class="display">
+					<div>
+						Greeting:
+						<span
+							id="greeting"
+							data-bind="textContent: greeting.value"
+							>Hello, Guest!</span
+						>
+					</div>
+					<div>
+						Display Name:
+						<span
+							id="display-name"
+							data-bind="textContent: displayName.value"
+							>GUEST</span
+						>
+					</div>
+					<div>
+						Theme:
+						<span data-bind="textContent: user.preferences.theme"
+							>light</span
+						>
+					</div>
+					<div>
+						User ID: <span data-bind="textContent: user.id">1</span>
+					</div>
+					<div>
+						Email:
+						<span data-bind="textContent: user.email"
+							>user@example.com</span
+						>
+					</div>
+				</div>
+
+				<!-- Theme-based conditional content -->
+				<div
+					data-if="user.preferences.theme === 'dark'"
+					class="status visible"
+				>
+					<span class="emoji">🌙</span> Dark theme is active
+				</div>
+
+				<div
+					data-if="user.preferences.theme === 'light'"
+					class="status visible"
+				>
+					<span class="emoji">☀️</span> Light theme is active
+				</div>
+			</div>
+
+			<!-- Todo List Demo -->
+			<div class="demo-section">
+				<h2><span class="emoji">📝</span> Dynamic Todo List</h2>
+				<p>Demonstrates array reactivity and dynamic list rendering.</p>
+
+				<div class="controls">
+					<input
+						type="text"
+						id="todo-input"
+						placeholder="Enter a todo item"
+					/>
+					<button
+						onclick="
+                    const input = document.getElementById('todo-input');
+                    window.manifoldDemo.addTodo(input.value);
+                    input.value = '';
+                "
+					>
+						Add Todo
+					</button>
+				</div>
+
+				<div class="display">
+					<div
+						id="todo-summary"
+						data-bind="textContent: todoSummary.value"
+					>
+						0 todos remaining
+					</div>
+				</div>
+
+				<!-- Dynamic todo list using data-each -->
+				<ul class="todo-list" data-scope="todos: todos.value">
+					<li class="todo-item" data-each="todos as todo, index">
+						<span data-bind="textContent: todo">Todo item</span>
+						<button
+							onclick="window.manifoldDemo.removeTodo(this.dataset.index)"
+							data-bind="dataset.index: index"
+						>
+							Remove
+						</button>
+					</li>
+				</ul>
+
+				<!-- Conditional messages based on todo count -->
+				<div data-if="todos.value.length === 0" class="status hidden">
+					<span class="emoji">📭</span> No todos yet. Add one above!
+				</div>
+
+				<div
+					data-if="todos.value.length > 0 && todos.value.length <= 3"
+					class="status visible"
+				>
+					<span class="emoji">📝</span> Good progress! Keep it
+					manageable.
+				</div>
+
+				<div data-if="todos.value.length > 3" class="status visible">
+					<span class="emoji">📚</span> Lots of todos! Time to
+					prioritize.
+				</div>
+			</div>
+
+			<!-- Expression Evaluation Demo -->
+			<div class="demo-section">
+				<h2><span class="emoji">🧮</span> Expression Evaluation</h2>
+				<p>
+					Shows the power of the expression parser with complex
+					calculations.
+				</p>
+
+				<div class="controls">
+					<label>X: </label>
+					<input
+						type="number"
+						id="x-input"
+						value="10"
+						data-scope="x: parseInt(this.value) || 0"
+					/>
+					<label>Y: </label>
+					<input
+						type="number"
+						id="y-input"
+						value="5"
+						data-scope="y: parseInt(this.value) || 0"
+					/>
+				</div>
+
+				<div
+					class="display"
+					data-scope="x: parseInt(document.getElementById('x-input')?.value) || 0, y: parseInt(document.getElementById('y-input')?.value) || 0"
+				>
+					<div>
+						Sum: <span data-bind="textContent: x + y">15</span>
+					</div>
+					<div>
+						Product: <span data-bind="textContent: x * y">50</span>
+					</div>
+					<div>
+						Max:
+						<span data-bind="textContent: x > y ? x : y">10</span>
+					</div>
+					<div>
+						Comparison:
+						<span
+							data-bind="textContent: x > y ? 'X is greater' : x < y ? 'Y is greater' : 'Equal'"
+							>X is greater</span
+						>
+					</div>
+				</div>
+
+				<div
+					data-if="x > y"
+					class="conditional-content even-count"
+					data-scope="x: parseInt(document.getElementById('x-input')?.value) || 0, y: parseInt(document.getElementById('y-input')?.value) || 0"
+				>
+					X (<span data-bind="textContent: x">10</span>) is greater
+					than Y (<span data-bind="textContent: y">5</span>)
+				</div>
+
+				<div
+					data-else-if="y > x"
+					class="conditional-content odd-count"
+					data-scope="x: parseInt(document.getElementById('x-input')?.value) || 0, y: parseInt(document.getElementById('y-input')?.value) || 0"
+				>
+					Y (<span data-bind="textContent: y">5</span>) is greater
+					than X (<span data-bind="textContent: x">10</span>)
+				</div>
+
+				<div
+					data-else
+					class="conditional-content special-count"
+					data-scope="x: parseInt(document.getElementById('x-input')?.value) || 0, y: parseInt(document.getElementById('y-input')?.value) || 0"
+				>
+					X and Y are equal! (<span data-bind="textContent: x"
+						>10</span
+					>)
+				</div>
+			</div>
+
+			<!-- API Reference -->
+			<div class="demo-section">
+				<h2><span class="emoji">📚</span> Data Attribute Reference</h2>
+				<p>Available data attributes for HTML binding:</p>
+
+				<ul style="margin-left: 2rem">
+					<li>
+						<span class="code"
+							>data-bind="property: expression"</span
+						>
+						- Bind element property to expression result
+					</li>
+					<li>
+						<span class="code">data-sync="variable"</span> - Two-way
+						binding for form inputs
+					</li>
+					<li>
+						<span class="code">data-if="condition"</span> -
+						Conditionally show element
+					</li>
+					<li>
+						<span class="code">data-else-if="condition"</span> -
+						Alternative condition
+					</li>
+					<li>
+						<span class="code">data-else</span> - Fallback when
+						conditions fail
+					</li>
+					<li>
+						<span class="code"
+							>data-each="array as item, index"</span
+						>
+						- Repeat element for each array item
+					</li>
+					<li>
+						<span class="code"
+							>data-scope="var1: expr1, var2: expr2"</span
+						>
+						- Create scoped variables
+					</li>
+				</ul>
+			</div>
+		</div>
+
+		<!-- Load the TypeScript demo -->
+		<script type="module" src="./demo.ts"></script>
+
+		<!-- Manual input handlers for non-reactive inputs -->
+		<script>
+			// Add event listeners for inputs that need manual handling
+			document.addEventListener("DOMContentLoaded", () => {
+				const xInput = document.getElementById("x-input");
+				const yInput = document.getElementById("y-input");
+
+				function updateExpressionDisplay() {
+					// Trigger re-evaluation by dispatching events
+					if (xInput)
+						xInput.dispatchEvent(
+							new Event("input", { bubbles: true })
+						);
+					if (yInput)
+						yInput.dispatchEvent(
+							new Event("input", { bubbles: true })
+						);
+				}
+
+				if (xInput)
+					xInput.addEventListener("input", updateExpressionDisplay);
+				if (yInput)
+					yInput.addEventListener("input", updateExpressionDisplay);
+			});
+		</script>
+	</body>
+</html>
