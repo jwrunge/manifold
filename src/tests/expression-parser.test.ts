@@ -89,6 +89,12 @@ describe("Expression Parser", () => {
 			expect(evaluateExpression("'hello world'", context)).toBe(
 				"hello world"
 			);
+			expect(evaluateExpression("`hello world`", context)).toBe(
+				"hello world"
+			);
+			expect(evaluateExpression("'3 times hello'", context)).toBe(
+				"3 times hello"
+			);
 			expect(evaluateExpression('"special chars: !@#$%"', context)).toBe(
 				"special chars: !@#$%"
 			);
@@ -292,7 +298,22 @@ describe("Expression Parser", () => {
 			// Test with missing email
 			delete context.user.email;
 			expect(evaluateExpression("user.email", context)).toBeUndefined();
-			// Note: Current parser doesn't support || operator, would need enhancement
+
+			// Test logical OR operator (|| - fallback for falsy values)
+			expect(
+				evaluateExpression(
+					'user.email || "no-email@example.com"',
+					context
+				)
+			).toBe("no-email@example.com");
+
+			// Test nullish coalescing operator (?? - fallback for null/undefined only)
+			expect(
+				evaluateExpression(
+					'user.email ?? "no-email@example.com"',
+					context
+				)
+			).toBe("no-email@example.com");
 		});
 
 		test("should handle option selection pattern", () => {
@@ -309,6 +330,104 @@ describe("Expression Parser", () => {
 			expect(
 				evaluateExpression("option.value === selectedValue", context)
 			).toBe(false);
+		});
+	});
+
+	describe("Logical Operators", () => {
+		test("should handle logical OR (||) operator", () => {
+			const context = {
+				user: { name: "Alice", email: null, count: 0 },
+				fallback: "default@example.com",
+			};
+
+			// Truthy left side - should return left
+			expect(
+				evaluateExpression("user.name || 'Anonymous'", context)
+			).toBe("Alice");
+
+			// Falsy left side - should return right
+			expect(evaluateExpression("user.email || fallback", context)).toBe(
+				"default@example.com"
+			);
+			expect(evaluateExpression("user.count || 10", context)).toBe(10); // 0 is falsy
+			expect(
+				evaluateExpression("user.missing || 'Not found'", context)
+			).toBe("Not found");
+
+			// Both expressions
+			expect(
+				evaluateExpression("user.missing || user.name", context)
+			).toBe("Alice");
+		});
+
+		test("should handle nullish coalescing (??) operator", () => {
+			const context = {
+				user: { name: "Alice", email: null, count: 0, empty: "" },
+				fallback: "default@example.com",
+			};
+
+			// Non-null left side - should return left (even if falsy)
+			expect(
+				evaluateExpression("user.name ?? 'Anonymous'", context)
+			).toBe("Alice");
+			expect(evaluateExpression("user.count ?? 10", context)).toBe(0); // 0 is not null/undefined
+			expect(evaluateExpression("user.empty ?? 'Default'", context)).toBe(
+				""
+			); // empty string is not null/undefined
+
+			// Null/undefined left side - should return right
+			expect(evaluateExpression("user.email ?? fallback", context)).toBe(
+				"default@example.com"
+			);
+			expect(
+				evaluateExpression("user.missing ?? 'Not found'", context)
+			).toBe("Not found");
+		});
+
+		test("should extract variables from logical operators", () => {
+			expect(extractVariableNames("user.email || fallback")).toEqual([
+				"user",
+				"fallback",
+			]);
+			expect(extractVariableNames("user.name ?? defaultName")).toEqual([
+				"user",
+				"defaultName",
+			]);
+			expect(extractVariableNames("first.value || second.value")).toEqual(
+				["first", "second"]
+			);
+		});
+
+		test("should demonstrate difference between || and ??", () => {
+			const context = {
+				zero: 0,
+				empty: "",
+				nullValue: null,
+				undefinedValue: undefined,
+				fallback: "default",
+			};
+
+			// || treats falsy values as trigger for fallback
+			expect(evaluateExpression("zero || 10", context)).toBe(10);
+			expect(evaluateExpression("empty || fallback", context)).toBe(
+				"default"
+			);
+			expect(evaluateExpression("nullValue || fallback", context)).toBe(
+				"default"
+			);
+			expect(
+				evaluateExpression("undefinedValue || fallback", context)
+			).toBe("default");
+
+			// ?? only treats null/undefined as trigger for fallback
+			expect(evaluateExpression("zero ?? 10", context)).toBe(0);
+			expect(evaluateExpression("empty ?? fallback", context)).toBe("");
+			expect(evaluateExpression("nullValue ?? fallback", context)).toBe(
+				"default"
+			);
+			expect(
+				evaluateExpression("undefinedValue ?? fallback", context)
+			).toBe("default");
 		});
 	});
 

@@ -10,7 +10,10 @@ const SIMPLE_PROPERTY =
 const SIMPLE_COMPARISON =
 	/^([a-zA-Z_$][a-zA-Z0-9_$.]*)\s*(===|!==|>=|<=|==|!=|>|<)\s*(.+)$/;
 const SIMPLE_NUMBER = /^-?\d+(\.\d+)?$/;
-const SIMPLE_STRING = /^["'](.*)["']$/;
+const SIMPLE_STRING = /^["'`](.*)["'`]$/;
+// New operators for logical operations
+const LOGICAL_OR = /^(.+?)\s*\|\|\s*(.+)$/;
+const NULLISH_COALESCING = /^(.+?)\s*\?\?\s*(.+)$/;
 
 /**
  * Fast path for simple property access like "user.name" or "items.length"
@@ -135,6 +138,26 @@ export function evaluateExpression(
 	const stringMatch = expression.match(SIMPLE_STRING);
 	if (stringMatch) {
 		return stringMatch[1];
+	}
+
+	// Logical OR operator (|| - returns first truthy value)
+	if (LOGICAL_OR.test(expression)) {
+		const match = expression.match(LOGICAL_OR);
+		if (match && match[1] && match[2]) {
+			const leftValue = evaluateExpression(match[1], context);
+			// Short-circuit evaluation: return left if truthy, otherwise evaluate right
+			return leftValue || evaluateExpression(match[2], context);
+		}
+	}
+
+	// Nullish coalescing operator (?? - returns left if not null/undefined)
+	if (NULLISH_COALESCING.test(expression)) {
+		const match = expression.match(NULLISH_COALESCING);
+		if (match && match[1] && match[2]) {
+			const leftValue = evaluateExpression(match[1], context);
+			// Return left if not null/undefined, otherwise evaluate right
+			return leftValue ?? evaluateExpression(match[2], context);
+		}
 	}
 
 	// Simple property access (most common case)
