@@ -1,292 +1,205 @@
-/**
- * Simplified expression parser for Manifold
- * Optimized for bundle size and common use cases
- * Handles: property access, basic comparisons, simple arithmetic
- */
-
-// Simple regex-based expression parser for common patterns
-const SIMPLE_PROPERTY =
-	/^[a-zA-Z_$][a-zA-Z0-9_$]*(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*)*$/;
-const SIMPLE_COMPARISON =
+const PROP_RE = /^[a-zA-Z_$][a-zA-Z0-9_$]*(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*)*$/;
+const COMP_RE =
 	/^([a-zA-Z_$][a-zA-Z0-9_$.]*)\s*(===|!==|>=|<=|==|!=|>|<)\s*(.+)$/;
-const SIMPLE_NUMBER = /^-?\d+(\.\d+)?$/;
-const SIMPLE_STRING = /^["'`](.*)["'`]$/;
-// New operators for logical operations
-const LOGICAL_OR = /^(.+?)\s*\|\|\s*(.+)$/;
-const NULLISH_COALESCING = /^(.+?)\s*\?\?\s*(.+)$/;
+const NUM_RE = /^-?\d+(\.\d+)?$/;
+const STR_RE = /^["'`](.*)["'`]$/;
+const OR_RE = /^(.+?)\s*\|\|\s*(.+)$/;
+const NULL_RE = /^(.+?)\s*\?\?\s*(.+)$/;
 
-/**
- * Parse ternary expressions with proper depth tracking for nested ternaries
- */
-function parseTernaryExpression(
-	expression: string
-): { condition: string; trueValue: string; falseValue: string } | null {
-	let questionIndex = -1;
-	let colonIndex = -1;
-	let depth = 0;
+// Combined literal map for reuse
+const LITERALS: Record<string, any> = {
+	true: true,
+	false: false,
+	null: null,
+	undefined: undefined,
+};
 
-	// Find the main ? and : by tracking nesting depth
-	for (let i = 0; i < expression.length; i++) {
-		const char = expression[i];
-
+function parseTernary(expr: string) {
+	let qIdx = -1,
+		cIdx = -1,
+		depth = 0;
+	for (let i = 0; i < expr.length; i++) {
+		const char = expr[i];
 		if (char === "?") {
-			if (depth === 0 && questionIndex === -1) {
-				questionIndex = i;
-			}
+			if (depth === 0 && qIdx === -1) qIdx = i;
 			depth++;
 		} else if (char === ":") {
 			depth--;
-			if (depth === 0 && questionIndex !== -1 && colonIndex === -1) {
-				colonIndex = i;
+			if (depth === 0 && qIdx !== -1 && cIdx === -1) {
+				cIdx = i;
 				break;
 			}
 		}
 	}
-
-	if (questionIndex === -1 || colonIndex === -1) {
-		return null;
-	}
-
-	return {
-		condition: expression.slice(0, questionIndex).trim(),
-		trueValue: expression.slice(questionIndex + 1, colonIndex).trim(),
-		falseValue: expression.slice(colonIndex + 1).trim(),
-	};
+	return qIdx === -1 || cIdx === -1
+		? null
+		: {
+				condition: expr.slice(0, qIdx).trim(),
+				trueValue: expr.slice(qIdx + 1, cIdx).trim(),
+				falseValue: expr.slice(cIdx + 1).trim(),
+		  };
 }
 
-/**
- * Fast path for simple property access like "user.name" or "items.length"
- */
-function evaluateSimpleProperty(
-	expression: string,
-	context: Record<string, any>
-): any {
-	const parts = expression.split(".");
-	let result = context;
-
+function evalProp(expr: string, ctx: Record<string, any>) {
+	const parts = expr.split(".");
+	let result = ctx;
 	for (const part of parts) {
 		if (result == null) return undefined;
 		result = result[part];
 	}
-
 	return result;
 }
 
-/**
- * Parse a simple value (number, string, or property reference)
- */
-function parseSimpleValue(value: string, context: Record<string, any>): any {
-	value = value.trim();
+// Simplified value parser that checks literals first, then numbers, then strings
+function parseValue(val: string, ctx: Record<string, any>): any {
+	val = val.trim();
 
-	// Number
-	if (SIMPLE_NUMBER.test(value)) {
-		return parseFloat(value);
-	}
+	// Check literals first (most common)
+	if (val in LITERALS) return LITERALS[val];
 
-	// String
-	const stringMatch = value.match(SIMPLE_STRING);
-	if (stringMatch) {
-		return stringMatch[1];
-	}
+	// Check numbers
+	if (NUM_RE.test(val)) return parseFloat(val);
 
-	// Boolean
-	if (value === "true") return true;
-	if (value === "false") return false;
-	if (value === "null") return null;
-	if (value === "undefined") return undefined;
+	// Check strings
+	const strMatch = val.match(STR_RE);
+	if (strMatch) return strMatch[1];
 
 	// Property access
-	if (SIMPLE_PROPERTY.test(value)) {
-		return evaluateSimpleProperty(value, context);
-	}
+	if (PROP_RE.test(val)) return evalProp(val, ctx);
 
-	// Fallback to string
-	return value;
+	return val;
 }
 
-/**
- * Evaluate a simple comparison expression
- */
-function evaluateSimpleComparison(
-	expression: string,
-	context: Record<string, any>
-): boolean {
-	const match = expression.match(SIMPLE_COMPARISON);
+function evalComparison(expr: string, ctx: Record<string, any>): boolean {
+	const match = expr.match(COMP_RE);
+	if (!match || !match[1] || !match[3]) return false;
+
+	const [, left, op, right] = match;
+	const rightTrimmed = right.trim();
+	// Quick validation to avoid malformed operators
 	if (
-		!match ||
-		!match[1] ||
-		!match[3] ||
-		match[3].trim() === "=" ||
-		match[3].trim().startsWith(">") ||
-		match[3].trim().startsWith("<") ||
-		match[3].trim().startsWith("=")
+		!rightTrimmed ||
+		rightTrimmed[0] === "=" ||
+		rightTrimmed[0] === ">" ||
+		rightTrimmed[0] === "<"
 	)
 		return false;
 
-	const [, left, operator, right] = match;
-	const leftValue = parseSimpleValue(left, context);
-	const rightValue = parseSimpleValue(right, context);
+	const leftVal = parseValue(left, ctx);
+	const rightVal = parseValue(rightTrimmed, ctx);
 
-	switch (operator) {
+	switch (op) {
 		case "===":
-			return leftValue === rightValue;
+			return leftVal === rightVal;
 		case "!==":
-			return leftValue !== rightValue;
+			return leftVal !== rightVal;
 		case "==":
-			return leftValue == rightValue;
+			return leftVal == rightVal;
 		case "!=":
-			return leftValue != rightValue;
+			return leftVal != rightVal;
 		case ">=":
-			return leftValue >= rightValue;
+			return leftVal >= rightVal;
 		case "<=":
-			return leftValue <= rightValue;
+			return leftVal <= rightVal;
 		case ">":
-			return leftValue > rightValue;
+			return leftVal > rightVal;
 		case "<":
-			return leftValue < rightValue;
+			return leftVal < rightVal;
 		default:
 			return false;
 	}
 }
 
-/**
- * Main evaluation function - simplified for common use cases
- */
 export function evaluateExpression(
-	expression: string,
-	context: Record<string, any>
+	expr: string,
+	ctx: Record<string, any>
 ): any {
-	expression = expression.trim();
+	expr = expr.trim();
+	if (!expr) return undefined;
 
-	// Empty expression
-	if (!expression) return undefined;
+	// Check literals first (most common case)
+	if (expr in LITERALS) return LITERALS[expr];
 
-	// Check for literals first (before property access)
-	// Boolean
-	if (expression === "true") return true;
-	if (expression === "false") return false;
-	if (expression === "null") return null;
-	if (expression === "undefined") return undefined;
+	// Check numbers
+	if (NUM_RE.test(expr)) return parseFloat(expr);
 
-	// Number
-	if (SIMPLE_NUMBER.test(expression)) {
-		return parseFloat(expression);
+	// Check strings
+	const strMatch = expr.match(STR_RE);
+	if (strMatch) return strMatch[1];
+
+	// Ternary conditional
+	const ternary = parseTernary(expr);
+	if (ternary) {
+		return evaluateExpression(ternary.condition, ctx)
+			? evaluateExpression(ternary.trueValue, ctx)
+			: evaluateExpression(ternary.falseValue, ctx);
 	}
 
-	// String
-	const stringMatch = expression.match(SIMPLE_STRING);
-	if (stringMatch) {
-		return stringMatch[1];
+	// Logical OR
+	const orMatch = expr.match(OR_RE);
+	if (orMatch && orMatch[1] && orMatch[2]) {
+		const leftVal = evaluateExpression(orMatch[1], ctx);
+		return leftVal || evaluateExpression(orMatch[2], ctx);
 	}
 
-	// Ternary operator (condition ? value1 : value2) - using depth-aware parsing
-	const ternaryResult = parseTernaryExpression(expression);
-	if (ternaryResult) {
-		const condition = evaluateExpression(ternaryResult.condition, context);
-		// JavaScript-style truthiness evaluation
-		return condition
-			? evaluateExpression(ternaryResult.trueValue, context)
-			: evaluateExpression(ternaryResult.falseValue, context);
+	// Nullish coalescing
+	const nullMatch = expr.match(NULL_RE);
+	if (nullMatch && nullMatch[1] && nullMatch[2]) {
+		const leftVal = evaluateExpression(nullMatch[1], ctx);
+		return leftVal ?? evaluateExpression(nullMatch[2], ctx);
 	}
 
-	// Logical OR operator (|| - returns first truthy value)
-	if (LOGICAL_OR.test(expression)) {
-		const match = expression.match(LOGICAL_OR);
-		if (match && match[1] && match[2]) {
-			const leftValue = evaluateExpression(match[1], context);
-			// Short-circuit evaluation: return left if truthy, otherwise evaluate right
-			return leftValue || evaluateExpression(match[2], context);
+	// Property access
+	if (PROP_RE.test(expr)) {
+		const result = evalProp(expr, ctx);
+		return result === undefined &&
+			!expr.includes(".") &&
+			Object.keys(ctx).length === 0
+			? expr
+			: result;
+	}
+
+	// Comparison operations
+	if (COMP_RE.test(expr)) {
+		const compMatch = expr.match(COMP_RE);
+		if (compMatch && compMatch[1] && compMatch[3]) {
+			const rightTrimmed = compMatch[3].trim();
+			if (
+				rightTrimmed &&
+				rightTrimmed[0] !== "=" &&
+				rightTrimmed[0] !== ">" &&
+				rightTrimmed[0] !== "<"
+			) {
+				return evalComparison(expr, ctx);
+			}
 		}
+		return expr;
 	}
 
-	// Nullish coalescing operator (?? - returns left if not null/undefined)
-	if (NULLISH_COALESCING.test(expression)) {
-		const match = expression.match(NULLISH_COALESCING);
-		if (match && match[1] && match[2]) {
-			const leftValue = evaluateExpression(match[1], context);
-			// Return left if not null/undefined, otherwise evaluate right
-			return leftValue ?? evaluateExpression(match[2], context);
-		}
+	// Fallback property access for edge cases
+	if (expr.includes(".") || /^[a-zA-Z_$]/.test(expr)) {
+		const result = evalProp(expr, ctx);
+		if (result !== undefined) return result;
 	}
 
-	// Simple property access (most common case)
-	if (SIMPLE_PROPERTY.test(expression)) {
-		const result = evaluateSimpleProperty(expression, context);
-		// If result is undefined, fallback behavior depends on context:
-		// - Empty context: fallback to string for simple identifiers
-		// - Non-empty context: return undefined for missing properties
-		if (result === undefined && !expression.includes(".")) {
-			const hasAnyProperties = Object.keys(context).length > 0;
-			return hasAnyProperties ? undefined : expression;
-		}
-		return result;
-	}
-
-	// Simple comparison
-	if (SIMPLE_COMPARISON.test(expression)) {
-		const match = expression.match(SIMPLE_COMPARISON);
-		// Validate that we have a complete comparison with a valid right side
-		// A single "=" or starting with an operator is not valid
-		if (
-			match &&
-			match[1] &&
-			match[3] &&
-			match[3].trim() &&
-			match[3].trim() !== "=" &&
-			!match[3].trim().startsWith(">") &&
-			!match[3].trim().startsWith("<") &&
-			!match[3].trim().startsWith("=")
-		) {
-			return evaluateSimpleComparison(expression, context);
-		}
-		// If comparison regex matches but is malformed, fallback to string
-		return expression;
-	}
-
-	// Try to evaluate as property access even if regex doesn't match
-	// (fallback for edge cases)
-	if (expression.includes(".") || /^[a-zA-Z_$]/.test(expression)) {
-		const result = evaluateSimpleProperty(expression, context);
-		if (result !== undefined) {
-			return result;
-		}
-	}
-
-	// Fallback to string for unknown values
-	return expression;
+	return expr;
 }
 
-/**
- * Extract variable names from expression for dependency tracking
- */
-export function extractVariableNames(expression: string): string[] {
-	const variables = new Set<string>();
-
-	// Remove quoted strings first to avoid extracting from them
-	const cleanExpression = expression.replace(/["']([^"']*)["']/g, "");
-
-	// Simple property pattern
-	const propertyMatches = cleanExpression.match(
+export function extractVariableNames(expr: string): string[] {
+	const vars = new Set<string>();
+	const clean = expr.replace(/["']([^"']*)["']/g, "");
+	const matches = clean.match(
 		/[a-zA-Z_$][a-zA-Z0-9_$]*(?:\.[a-zA-Z_$0-9][a-zA-Z0-9_$]*)*/g
 	);
-	if (propertyMatches) {
-		for (const match of propertyMatches) {
-			// Skip literals
-			if (
-				match === "true" ||
-				match === "false" ||
-				match === "null" ||
-				match === "undefined"
-			) {
-				continue;
-			}
-			// Get root variable name
-			const root = match.split(".")[0];
-			if (root) {
-				variables.add(root);
+
+	if (matches) {
+		for (const match of matches) {
+			if (!(match in LITERALS)) {
+				const root = match.split(".")[0];
+				if (root) vars.add(root);
 			}
 		}
 	}
 
-	return Array.from(variables);
+	return Array.from(vars);
 }

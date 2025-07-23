@@ -1,4 +1,4 @@
-import { State, stateRegistry, initializeManifold } from "../src/index.ts";
+import { State, stateRegistry } from "../src/index.ts";
 
 document.addEventListener("DOMContentLoaded", () => {
 	// Create reactive states using the new system
@@ -29,8 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		() => chxArray.value[5] ?? "nothing at all!"
 	);
 
-	// Initialize auto-discovery after states are registered
-	initializeManifold();
+	// initializeManifold();
 
 	// Set up button click handlers
 	(window as any).addChickens = () => {
