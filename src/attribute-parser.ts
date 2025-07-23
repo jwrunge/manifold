@@ -50,12 +50,11 @@ export class AttributeParser {
 					if (typeof window !== "undefined") {
 						const globalValue = (window as any)[varName];
 						if (globalValue !== undefined) {
-							scopeContext.set(
-								varName,
+							const stateObject =
 								globalValue instanceof State
 									? globalValue
-									: new State(globalValue)
-							);
+									: new State(globalValue);
+							scopeContext.set(varName, stateObject);
 						} else {
 							// Ensure missing variables are set to undefined in context
 							scopeContext.set(varName, new State(undefined));
@@ -67,12 +66,43 @@ export class AttributeParser {
 				}
 			}
 
-			const result = evaluateExpression(
-				expression,
-				scopeContext.toContext()
+			// Create a special context that handles State.value access
+			const context = this.createEvaluationContext(
+				scopeContext,
+				expression
 			);
+
+			const result = evaluateExpression(expression, context);
 			return result === undefined ? "" : result;
 		});
+	}
+
+	/**
+	 * Create evaluation context that properly handles State.value access
+	 */
+	private createEvaluationContext(
+		scopeContext: ScopeContext,
+		expression: string
+	): Record<string, any> {
+		const baseContext = scopeContext.toContext();
+
+		// Find all variables that are accessed with .value in the expression
+		const stateValuePattern = /([a-zA-Z_$][a-zA-Z0-9_$]*)\.value/g;
+		const context = { ...baseContext };
+		let match;
+
+		while ((match = stateValuePattern.exec(expression)) !== null) {
+			const varName = match[1];
+			if (varName) {
+				const state = scopeContext.get(varName);
+				if (state) {
+					// Provide the State object itself so .value can be accessed
+					context[varName] = state;
+				}
+			}
+		}
+
+		return context;
 	}
 
 	/**
@@ -108,7 +138,10 @@ export class AttributeParser {
 			}
 
 			return Boolean(
-				evaluateExpression(expression, scopeContext.toContext())
+				evaluateExpression(
+					expression,
+					this.createEvaluationContext(scopeContext, expression)
+				)
 			);
 		});
 	}
@@ -124,7 +157,7 @@ export class AttributeParser {
 			scopeContext
 		);
 		const eachConfig = this.parseDataEach(element, scopeContext);
-		const isElse = element.hasAttribute("data-else");
+		const isElse = !!element.dataset["else"];
 
 		if (showState || eachConfig || isElse) {
 			return RegEl.register(element, {

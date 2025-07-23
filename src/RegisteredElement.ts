@@ -18,35 +18,6 @@ export class RegEl {
 		const regel = RegEl.registry.get(element);
 
 		let show = ops?.show;
-		if (ops?.else) {
-			let conditionalStates: State<unknown>[] = [];
-
-			// Find all previous conditional elements (MF-IF, MF-ELSE-IF) in this conditional chain
-			let cond = element.previousSibling;
-			while (cond) {
-				if (cond.nodeType === Node.ELEMENT_NODE) {
-					if (["MF-IF", "MF-ELSE-IF"].includes(cond.nodeName)) {
-						const rl = RegEl.registry.get(cond as Element);
-						if (rl?.show) {
-							conditionalStates.unshift(rl.show); // Add to beginning to maintain order
-						}
-					} else if (
-						!["MF-ELSE", "MF-ELSE-IF"].includes(cond.nodeName)
-					) {
-						// Stop if we hit a non-conditional element
-						break;
-					}
-				}
-				// Skip text nodes (whitespace) and continue
-				cond = cond.previousSibling;
-			}
-
-			show = new State(() =>
-				!conditionalStates.some((s) => s.value)
-					? ops?.show?.value ?? true
-					: false
-			);
-		}
 
 		if (regel) {
 			regel.show ??= show;
@@ -56,19 +27,19 @@ export class RegEl {
 		}
 
 		try {
-			return (
-				regel ??
-				new RegEl(
-					element,
-					ops?.props,
-					show,
-					ops?.each,
-					ops?.templateContent
-				)
+			const newRegEl = new RegEl(
+				element,
+				ops?.props,
+				show,
+				ops?.each,
+				ops?.templateContent,
+				ops?.else
 			);
+
+			return newRegEl;
 		} finally {
 			const el = (element as HTMLElement).nextElementSibling;
-			if (el?.nodeName === "MF-ELSE") {
+			if ((el as HTMLElement)?.dataset["else"]) {
 				RegEl.register(el as HTMLElement, {
 					else: true,
 				});
@@ -85,7 +56,8 @@ export class RegEl {
 		props: Record<string, State<unknown>> = {},
 		private show?: State<unknown> | undefined,
 		private each?: State<Array<unknown>> | undefined,
-		private cachedTemplateContent?: DocumentFragment | null
+		private cachedTemplateContent?: DocumentFragment | null,
+		private isElse?: boolean
 	) {
 		this.cachedTemplateContent ??=
 			element.firstChild instanceof HTMLTemplateElement
@@ -93,6 +65,12 @@ export class RegEl {
 						element.firstChild as HTMLTemplateElement
 				  ).content.cloneNode(true) as DocumentFragment)
 				: null;
+
+		// Handle data-else elements by creating a computed show state
+		if (this.isElse && !this.show) {
+			// Set a placeholder state that will be replaced
+			this.show = new State(false);
+		}
 
 		this.show?.effect(() => {
 			(this.element as HTMLElement | SVGElement).style.display = this
@@ -253,7 +231,7 @@ const findNode = (
 	element: Node,
 	ops?: {
 		type?: Node["nodeType"];
-		name?: Node["nodeName"];
+		name?: string;
 		backward?: boolean;
 		txt?: string | number;
 	}
@@ -266,7 +244,7 @@ const findNode = (
 	let current = backward ? element.previousSibling : element.nextSibling;
 	while (current) {
 		if (
-			(name && current.nodeName === name) ||
+			(name && (current as HTMLElement).dataset?.[name]) ||
 			(current.nodeType === type &&
 				txt &&
 				current.textContent?.startsWith(`${txt}`))

@@ -5,6 +5,8 @@ const NUM_RE = /^-?\d+(\.\d+)?$/;
 const STR_RE = /^["'`](.*)["'`]$/;
 const OR_RE = /^(.+?)\s*\|\|\s*(.+)$/;
 const NULL_RE = /^(.+?)\s*\?\?\s*(.+)$/;
+const AND_RE = /^(.+?)\s*&&\s*(.+)$/;
+const ARITH_RE = /^([^"'`\|\&]+?)\s*([+\-*/])\s*(.+)$/;
 
 // Combined literal map for reuse
 const LITERALS: Record<string, any> = {
@@ -140,6 +142,33 @@ export function evaluateExpression(
 	if (orMatch && orMatch[1] && orMatch[2]) {
 		const leftVal = evaluateExpression(orMatch[1], ctx);
 		return leftVal || evaluateExpression(orMatch[2], ctx);
+	}
+
+	// Logical AND
+	const andMatch = expr.match(AND_RE);
+	if (andMatch && andMatch[1] && andMatch[2]) {
+		const leftVal = evaluateExpression(andMatch[1], ctx);
+		return leftVal && evaluateExpression(andMatch[2], ctx);
+	}
+
+	// Arithmetic operations
+	const arithMatch = expr.match(ARITH_RE);
+	if (arithMatch && arithMatch[1] && arithMatch[3]) {
+		const leftVal = evaluateExpression(arithMatch[1], ctx);
+		const rightVal = evaluateExpression(arithMatch[3], ctx);
+		const op = arithMatch[2];
+		switch (op) {
+			case "+":
+				return leftVal + rightVal;
+			case "-":
+				return leftVal - rightVal;
+			case "*":
+				return leftVal * rightVal;
+			case "/":
+				return leftVal / rightVal;
+			default:
+				return expr;
+		}
 	}
 
 	// Nullish coalescing

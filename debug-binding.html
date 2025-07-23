@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Debug Binding Test</title>
+	</head>
+	<body>
+		<h1>Debug Data Binding</h1>
+
+		<div>
+			<span
+				>Count:
+				<span id="count-span" data-bind="textContent: count.value"
+					>Initial</span
+				></span
+			>
+		</div>
+
+		<div>
+			<button onclick="incrementCount()">Increment</button>
+			<button onclick="decrementCount()">Decrement</button>
+		</div>
+
+		<script type="module">
+			import { State } from "./src/index.js";
+			import { attributeParser } from "./src/attribute-parser.js";
+
+			// Create state
+			const count = new State(0);
+
+			// Expose to global
+			window.count = count;
+
+			// Debug functions
+			window.incrementCount = () => {
+				console.log("Before increment:", count.value);
+				count.value += 1;
+				console.log("After increment:", count.value);
+			};
+
+			window.decrementCount = () => {
+				console.log("Before decrement:", count.value);
+				count.value -= 1;
+				console.log("After decrement:", count.value);
+			};
+
+			// Add effect to monitor changes
+			count.effect(() => {
+				console.log("Count effect triggered:", count.value);
+			});
+
+			// Parse DOM after loading
+			document.addEventListener("DOMContentLoaded", () => {
+				console.log("DOM loaded, parsing attributes...");
+				console.log("Global count:", window.count);
+				console.log("Count value:", window.count.value);
+
+				attributeParser.parseContainer(document.body);
+
+				console.log("Attribute parsing complete");
+
+				// Test manual update
+				setTimeout(() => {
+					console.log("Manual test - updating count to 42");
+					count.value = 42;
+				}, 2000);
+			});
+		</script>
+	</body>
+</html>

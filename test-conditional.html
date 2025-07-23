@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Conditional Test</title>
+		<style>
+			.conditional-content {
+				padding: 10px;
+				margin: 5px 0;
+				border: 2px solid #333;
+				border-radius: 5px;
+			}
+			.even-count {
+				background-color: #e8f5e8;
+			}
+			.odd-count {
+				background-color: #ffe8e8;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Conditional Rendering Test</h1>
+
+		<div>
+			<button onclick="count.value--">-</button>
+			<span>Count: <span data-bind="count.value">0</span></span>
+			<button onclick="count.value++">+</button>
+		</div>
+
+		<div
+			data-if="count.value % 2 === 0"
+			class="conditional-content even-count"
+		>
+			<strong>✨ Even number!</strong> The count is even.
+		</div>
+
+		<div data-else class="conditional-content odd-count">
+			<strong>🔥 Odd number!</strong> The count is odd.
+		</div>
+
+		<script type="module">
+			import { manifold, State } from "./src/index.ts";
+
+			// Create global state
+			window.count = new State(0);
+
+			// Initialize manifold
+			manifold();
+
+			console.log("Test page loaded");
+		</script>
+	</body>
+</html>

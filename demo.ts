@@ -201,6 +201,16 @@ expressions.forEach((expr) => {
 // DOM Integration Setup
 // ========================
 
+// Expose state variables to global scope for data attribute access
+(window as any).count = count;
+(window as any).username = username;
+(window as any).user = user;
+(window as any).todos = todos;
+(window as any).greeting = greeting;
+(window as any).displayName = displayName;
+(window as any).themeClass = themeClass;
+(window as any).todoSummary = todoSummary;
+
 // Global state for HTML demo
 (window as any).manifoldDemo = {
 	// State objects

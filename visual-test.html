@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>Data Bind Visual Test</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				margin: 20px;
+			}
+			.test-item {
+				margin: 10px 0;
+				padding: 10px;
+				border: 1px solid #ccc;
+			}
+			.value {
+				background: yellow;
+				padding: 2px 5px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Data Binding Visual Test</h1>
+
+		<div class="test-item">
+			<h3>Test 1: Basic Value Binding</h3>
+			<p>
+				Count:
+				<span class="value" data-bind="textContent: count.value"
+					>INITIAL</span
+				>
+			</p>
+			<p>Should show: 42 (not INITIAL)</p>
+		</div>
+
+		<div class="test-item">
+			<h3>Test 2: Expression Binding</h3>
+			<p>
+				Count x2:
+				<span class="value" data-bind="textContent: count.value * 2"
+					>INITIAL</span
+				>
+			</p>
+			<p>Should show: 84 (not INITIAL)</p>
+		</div>
+
+		<div class="test-item">
+			<h3>Test 3: Controls</h3>
+			<button onclick="updateCount()">Set Count to Random Number</button>
+			<button onclick="logState()">Log State to Console</button>
+		</div>
+
+		<div class="test-item" id="log">
+			<h3>Execution Log</h3>
+			<div id="log-content">Loading...</div>
+		</div>
+
+		<script type="module">
+			import { State } from "./src/index.js";
+			import { attributeParser } from "./src/attribute-parser.js";
+
+			function log(message) {
+				const logContent = document.getElementById("log-content");
+				logContent.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+			}
+
+			log("Starting test...");
+
+			// Create state with initial value of 42
+			const count = new State(42);
+			log(`Created count state with value: ${count.value}`);
+
+			// Set up effect to monitor changes
+			count.effect(() => {
+				log(`Count changed to: ${count.value}`);
+			});
+
+			// Expose to global
+			window.count = count;
+			log("Exposed count to global window");
+
+			// Test functions
+			window.updateCount = () => {
+				const newValue = Math.floor(Math.random() * 100);
+				log(`Updating count from ${count.value} to ${newValue}`);
+				count.value = newValue;
+			};
+
+			window.logState = () => {
+				log(`Current count: ${count.value}`);
+				log(`Global count: ${window.count?.value}`);
+			};
+
+			// Parse DOM immediately (don't wait for DOMContentLoaded)
+			log("Parsing DOM attributes...");
+			attributeParser.parseContainer(document.body);
+			log("DOM parsing complete");
+
+			// Test automatic updates
+			setTimeout(() => {
+				log("Auto-updating count to 999");
+				count.value = 999;
+			}, 2000);
+
+			setTimeout(() => {
+				log("Auto-updating count to 0");
+				count.value = 0;
+			}, 4000);
+		</script>
+	</body>
+</html>

@@ -296,6 +296,13 @@
 					<strong>✨ Even number!</strong> The count is even.
 				</div>
 
+				<div
+					data-else-if="count.value === 3"
+					class="conditional-content odd-count"
+				>
+					<strong>🔥 Odd number!</strong> The count is THREE.
+				</div>
+
 				<div data-else class="conditional-content odd-count">
 					<strong>🔥 Odd number!</strong> The count is odd.
 				</div>
@@ -332,8 +339,8 @@
 					<input
 						type="text"
 						data-bind="value: user.name"
-						data-sync="user.name"
 						placeholder="Enter full name"
+						oninput="window.manifoldDemo.updateUserName(this.value)"
 					/>
 					<button onclick="window.manifoldDemo.toggleTheme()">
 						Toggle Theme
