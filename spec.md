@@ -14,13 +14,13 @@ Manifold uses data attributes on regular HTML elements for all reactive templati
 
 | Attribute    | Purpose                                                                                                       | Example                                                                                                                                                     |
 | ------------ | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| data-bind    | Binds element properties to state using `property: value` syntax                                              | `<input data-bind="value: username" />`                                                                                                                     |
-| data-sync    | Two-way data binding for form inputs (shorthand for value + events)                                           | `<input data-sync="username" />`                                                                                                                            |
-| data-if      | Conditional rendering - shows element when expression is truthy                                               | `<div data-if="isVisible">Content</div>`                                                                                                                    |
-| data-else-if | Alternative condition - sibling of data-if for additional conditions                                          | `<div data-else-if="showAlternative">Alt content</div>`                                                                                                     |
+| data-bind    | Binds element properties to state using `property: value` syntax                                              | `<input data-bind="value: @username" />`                                                                                                                    |
+| data-sync    | Two-way data binding for form inputs (shorthand for value + events)                                           | `<input data-sync="@username" />`                                                                                                                           |
+| data-if      | Conditional rendering - shows element when expression is truthy                                               | `<div data-if="@isVisible">Content</div>`                                                                                                                   |
+| data-else-if | Alternative condition - sibling of data-if for additional conditions                                          | `<div data-else-if="@showAlternative">Alt content</div>`                                                                                                    |
 | data-else    | Fallback content - works with data-if, data-each, and data-await                                              | `<div data-else>Default content</div>`                                                                                                                      |
-| data-each    | Repeats element for each array item using `items as item` syntax                                              | `<div data-each="items as item">${item.name}</div>`                                                                                                         |
-| data-scope   | Creates scoped variables for child elements using `state as alias` syntax                                     | `<div data-scope="user as u">Hello ${u.name}</div>`                                                                                                         |
+| data-each    | Repeats element for each array item using `items as item` syntax                                              | `<div data-each="@items as item">${item.name}</div>`                                                                                                        |
+| data-scope   | Creates scoped variables for child elements using `state as alias` syntax                                     | `<div data-scope="@user as u">Hello ${u.name}</div>`                                                                                                        |
 | data-await   | Shows loading content while promise is pending                                                                | `<div data-await="fetchUser()">Loading...</div>`                                                                                                            |
 | data-then    | Shows content when promise resolves, creates named variable                                                   | `<div data-then="profile">${profile.name}</div>`                                                                                                            |
 | data-process | Processes promise result before passing to data-then. Use `event: fn` syntax when element has multiple events | `<div data-process="response => response.json()">...` or `<div data-process="await: response => response.json(), onclick: response => response.text()">...` |
@@ -33,8 +33,8 @@ Manifold uses data attributes on regular HTML elements for all reactive templati
 **Conditional rendering:**
 
 ```html
-<div data-if="user.isLoggedIn">Welcome back, ${user.name}!</div>
-<div data-else-if="user.isGuest">Hello, guest!</div>
+<div data-if="@user.isLoggedIn">Welcome back, ${@user.name}!</div>
+<div data-else-if="@user.isGuest">Hello, guest!</div>
 <div data-else>Please log in</div>
 ```
 
@@ -43,19 +43,19 @@ Manifold uses data attributes on regular HTML elements for all reactive templati
 ```html
 <!-- Default: key maps to "key", value maps to "value" -->
 <ul>
-	<li data-each="products">${key}: ${value.name} - $${value.price}</li>
+	<li data-each="@products">${key}: ${value.name} - $${value.price}</li>
 </ul>
 
 <!-- Custom naming: array as keyName, valueName -->
 <ul>
-	<li data-each="products as id, product">
+	<li data-each="@products as id, product">
 		${id}: ${product.name} - $${product.price}
 	</li>
 </ul>
 
 <!-- With fallback for empty arrays -->
 <ul>
-	<li data-each="products as product">${product.name} - $${product.price}</li>
+	<li data-each="@products as product">${product.name} - ${product.price}</li>
 	<li data-else>No products available</li>
 </ul>
 ```
@@ -64,21 +64,21 @@ Manifold uses data attributes on regular HTML elements for all reactive templati
 
 ```html
 <!-- Two-way binding shorthand -->
-<input type="text" data-sync="username" />
-<input type="email" data-sync="email" />
-<textarea data-sync="message"></textarea>
+<input type="text" data-sync="@username" />
+<input type="email" data-sync="@email" />
+<textarea data-sync="@message"></textarea>
 
 <!-- Explicit property binding -->
-<input type="text" data-bind="value: username" />
-<button data-bind="disabled: isDisabled">Click me</button>
-<button data-bind="onclick: handleClick">Click me</button>
-<input data-bind="value: email, disabled: isReadonly" />
+<input type="text" data-bind="value: @username" />
+<button data-bind="disabled: @isDisabled">Click me</button>
+<button data-bind="onclick: @handleClick">Click me</button>
+<input data-bind="value: @email, disabled: @isReadonly" />
 ```
 
 **Scoped variables:**
 
 ```html
-<div data-scope="currentUser as user, cartItems as items">
+<div data-scope="@currentUser as user, @cartItems as items">
 	<h1>Hello ${user.name}</h1>
 	<div data-if="items.length > 0">
 		<div data-each="items as item">${item.title} - $${item.price}</div>
@@ -93,7 +93,7 @@ Manifold uses data attributes on regular HTML elements for all reactive templati
 
 ```html
 <!-- Basic async content -->
-<div data-await="fetchUserProfile()">Loading user profile...</div>
+<div data-await="@fetchUserProfile()">Loading user profile...</div>
 <div data-then="profile">
 	<h2>${profile.name}</h2>
 	<p>${profile.bio}</p>
@@ -198,8 +198,8 @@ Manifold uses data attributes on regular HTML elements for all reactive templati
 **Event handlers:**
 
 ```html
-<button data-bind="onclick: handleClick">Click me</button>
-<form data-bind="onsubmit: handleSubmit">...</form>
+<button data-bind="onclick: @handleClick">Click me</button>
+<form data-bind="onsubmit: @handleSubmit">...</form>
 ```
 
 **Multiple properties:**
@@ -213,7 +213,7 @@ const buttonState = $.create({
 ```
 
 ```html
-<button data-bind="buttonState"></button>
+<button data-bind="@buttonState"></button>
 ```
 
 ### State Creation & Binding
@@ -253,12 +253,12 @@ const customState = $.create({
 
 ```html
 <!-- Expressions are automatically converted to reactive State -->
-<div data-if="user.age >= 18">Adult content</div>
-<div data-each="products.filter(p => p.inStock)">Available: ${value.name}</div>
-<input data-bind="value: user.email || 'Enter email'" />
+<div data-if="@user.age >= 18">Adult content</div>
+<div data-each="@products.filter(p => p.inStock)">Available: ${value.name}</div>
+<input data-bind="value: @user.email || 'Enter email'" />
 
 <!-- Complex expressions with scoping -->
-<div data-scope="user.profile as profile, settings.theme as theme">
+<div data-scope="@user.profile as profile, @settings.theme as theme">
 	<div data-if="profile.isVisible && theme === 'dark'">
 		Dark mode profile content
 	</div>
@@ -269,11 +269,11 @@ const customState = $.create({
 
 ```html
 <!-- Using typed constructors -->
-<button data-bind="submitButton">This text will be overridden</button>
-<input data-bind="emailInput" />
+<button data-bind="@submitButton">This text will be overridden</button>
+<input data-bind="@emailInput" />
 
 <!-- Using custom state with scoping -->
-<div data-scope="customState as state">
+<div data-scope="@customState as state">
 	<div data-if="state.isVisible">
 		<p>Count: ${state.count}</p>
 		<ul>
@@ -284,11 +284,11 @@ const customState = $.create({
 </div>
 
 <!-- Complex property binding -->
-<select data-bind="value: selectedValue, options: optionsList">
+<select data-bind="value: @selectedValue, options: @optionsList">
 	<option
-		data-each="optionsList as option"
+		data-each="@optionsList as option"
 		data-bind="value: option.value"
-		selected="${option.value === selectedValue}"
+		selected="${option.value === @selectedValue}"
 	>
 		${option.label}
 	</option>
