@@ -1,15 +1,16 @@
-const PROP_RE = /^[a-zA-Z_$][a-zA-Z0-9_$]*(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*)*$/;
-const COMP_RE =
-	/^([a-zA-Z_$][a-zA-Z0-9_$.]*)\s*(===|!==|>=|<=|==|!=|>|<)\s*(.+)$/;
+const ID = "[a-zA-Z_$][a-zA-Z0-9_$]*";
+const PROP = `${ID}(?:\\.${ID})*`;
+const PROP_RE = new RegExp(`^${PROP}$`);
+const COMP_RE = new RegExp(`^(${PROP})\\s*(===|!==|>=|<=|==|!=|>|<)\\s*(.+)$`);
 const NUM_RE = /^-?\d+(\.\d+)?$/;
 const STR_RE = /^["'`](.*)["'`]$/;
 const OR_RE = /^(.+?)\s*\|\|\s*(.+)$/;
 const NULL_RE = /^(.+?)\s*\?\?\s*(.+)$/;
 const AND_RE = /^(.+?)\s*&&\s*(.+)$/;
 const ARITH_RE = /^([^"'`\|\&]+?)\s*([+\-*/])\s*(.+)$/;
+export const STATE_RE = new RegExp(`@(${PROP})`, "g");
 
-// Combined literal map for reuse
-const LITERALS: Record<string, any> = {
+const LITERALS: Record<string, unknown> = {
 	true: true,
 	false: false,
 	null: null,
@@ -42,54 +43,34 @@ function parseTernary(expr: string) {
 		  };
 }
 
-function evalProp(expr: string, ctx: Record<string, any>) {
+function evalProp(expr: string, ctx: Record<string, unknown>): unknown {
 	const parts = expr.split(".");
-	let result = ctx;
+	let result: unknown = ctx;
 	for (const part of parts) {
 		if (result == null) return undefined;
-		result = result[part];
+		result = (result as any)[part];
 	}
 	return result;
 }
 
-// Simplified value parser that checks literals first, then numbers, then strings
-function parseValue(val: string, ctx: Record<string, any>): any {
+function parseValue(val: string, ctx: Record<string, unknown>): any {
 	val = val.trim();
-
-	// Check literals first (most common)
 	if (val in LITERALS) return LITERALS[val];
-
-	// Check numbers
 	if (NUM_RE.test(val)) return parseFloat(val);
-
-	// Check strings
 	const strMatch = val.match(STR_RE);
 	if (strMatch) return strMatch[1];
-
-	// Property access
 	if (PROP_RE.test(val)) return evalProp(val, ctx);
-
 	return val;
 }
 
-function evalComparison(expr: string, ctx: Record<string, any>): boolean {
+function evalComparison(expr: string, ctx: Record<string, unknown>): boolean {
 	const match = expr.match(COMP_RE);
-	if (!match || !match[1] || !match[3]) return false;
-
+	if (!match?.[1] || !match[3]) return false;
 	const [, left, op, right] = match;
 	const rightTrimmed = right.trim();
-	// Quick validation to avoid malformed operators
-	if (
-		!rightTrimmed ||
-		rightTrimmed[0] === "=" ||
-		rightTrimmed[0] === ">" ||
-		rightTrimmed[0] === "<"
-	)
-		return false;
-
+	if (!rightTrimmed || "=><".includes(rightTrimmed[0]!)) return false;
 	const leftVal = parseValue(left, ctx);
 	const rightVal = parseValue(rightTrimmed, ctx);
-
 	switch (op) {
 		case "===":
 			return leftVal === rightVal;
@@ -113,122 +94,119 @@ function evalComparison(expr: string, ctx: Record<string, any>): boolean {
 }
 
 export function evaluateExpression(
-	expr: string,
-	ctx: Record<string, any>
-): any {
-	expr = expr.trim();
-	if (!expr) return undefined;
+	expr: string | undefined
+): (ctx: Record<string, unknown>) => unknown {
+	expr = expr?.trim();
+	if (!expr) return () => undefined;
 
-	// Check literals first (most common case)
-	if (expr in LITERALS) return LITERALS[expr];
+	// Handle literals
+	if (expr in LITERALS) {
+		const literalValue = LITERALS[expr];
+		return () => literalValue;
+	}
 
-	// Check numbers
-	if (NUM_RE.test(expr)) return parseFloat(expr);
+	// Handle numbers
+	if (NUM_RE.test(expr)) {
+		const numValue = parseFloat(expr);
+		return () => numValue;
+	}
 
-	// Check strings
+	// Handle strings
 	const strMatch = expr.match(STR_RE);
-	if (strMatch) return strMatch[1];
+	if (strMatch) {
+		const strValue = strMatch[1];
+		return () => strValue;
+	}
 
-	// Ternary conditional
+	// Handle ternary expressions
 	const ternary = parseTernary(expr);
 	if (ternary) {
-		return evaluateExpression(ternary.condition, ctx)
-			? evaluateExpression(ternary.trueValue, ctx)
-			: evaluateExpression(ternary.falseValue, ctx);
+		const conditionEval = evaluateExpression(ternary.condition);
+		const trueEval = evaluateExpression(ternary.trueValue);
+		const falseEval = evaluateExpression(ternary.falseValue);
+		return (ctx) => (conditionEval(ctx) ? trueEval(ctx) : falseEval(ctx));
 	}
 
-	// Logical OR
+	// Handle OR expressions
 	const orMatch = expr.match(OR_RE);
-	if (orMatch && orMatch[1] && orMatch[2]) {
-		const leftVal = evaluateExpression(orMatch[1], ctx);
-		return leftVal || evaluateExpression(orMatch[2], ctx);
+	if (orMatch?.[1] && orMatch[2]) {
+		const leftEval = evaluateExpression(orMatch[1]);
+		const rightEval = evaluateExpression(orMatch[2]);
+		return (ctx) => leftEval(ctx) || rightEval(ctx);
 	}
 
-	// Logical AND
+	// Handle AND expressions
 	const andMatch = expr.match(AND_RE);
-	if (andMatch && andMatch[1] && andMatch[2]) {
-		const leftVal = evaluateExpression(andMatch[1], ctx);
-		return leftVal && evaluateExpression(andMatch[2], ctx);
+	if (andMatch?.[1] && andMatch[2]) {
+		const leftEval = evaluateExpression(andMatch[1]);
+		const rightEval = evaluateExpression(andMatch[2]);
+		return (ctx) => leftEval(ctx) && rightEval(ctx);
 	}
 
-	// Arithmetic operations
+	// Handle arithmetic expressions
 	const arithMatch = expr.match(ARITH_RE);
-	if (arithMatch && arithMatch[1] && arithMatch[3]) {
-		const leftVal = evaluateExpression(arithMatch[1], ctx);
-		const rightVal = evaluateExpression(arithMatch[3], ctx);
+	if (arithMatch?.[1] && arithMatch[3]) {
+		const leftEval = evaluateExpression(arithMatch[1]);
+		const rightEval = evaluateExpression(arithMatch[3]);
 		const op = arithMatch[2];
-		switch (op) {
-			case "+":
-				return leftVal + rightVal;
-			case "-":
-				return leftVal - rightVal;
-			case "*":
-				return leftVal * rightVal;
-			case "/":
-				return leftVal / rightVal;
-			default:
-				return expr;
-		}
+		return (ctx) => {
+			const leftVal = leftEval(ctx);
+			const rightVal = rightEval(ctx);
+			if (leftVal && rightVal) {
+				return op === "+"
+					? (leftVal as number) + (rightVal as number)
+					: op === "-"
+					? (leftVal as number) - (rightVal as number)
+					: op === "*"
+					? (leftVal as number) * (rightVal as number)
+					: op === "/"
+					? (leftVal as number) / (rightVal as number)
+					: undefined;
+			}
+			return undefined;
+		};
 	}
 
-	// Nullish coalescing
+	// Handle nullish coalescing
 	const nullMatch = expr.match(NULL_RE);
-	if (nullMatch && nullMatch[1] && nullMatch[2]) {
-		const leftVal = evaluateExpression(nullMatch[1], ctx);
-		return leftVal ?? evaluateExpression(nullMatch[2], ctx);
+	if (nullMatch?.[1] && nullMatch[2]) {
+		const leftEval = evaluateExpression(nullMatch[1]);
+		const rightEval = evaluateExpression(nullMatch[2]);
+		return (ctx) => leftEval(ctx) ?? rightEval(ctx);
 	}
 
-	// Property access
+	// Handle property access
 	if (PROP_RE.test(expr)) {
-		const result = evalProp(expr, ctx);
-		return result === undefined &&
-			!expr.includes(".") &&
-			Object.keys(ctx).length === 0
-			? expr
-			: result;
+		return (ctx) => {
+			const result = evalProp(expr, ctx);
+			return result === undefined &&
+				!expr.includes(".") &&
+				Object.keys(ctx).length === 0
+				? expr
+				: result;
+		};
 	}
 
-	// Comparison operations
+	// Handle comparison expressions
 	if (COMP_RE.test(expr)) {
 		const compMatch = expr.match(COMP_RE);
-		if (compMatch && compMatch[1] && compMatch[3]) {
+		if (compMatch?.[1] && compMatch[3]) {
 			const rightTrimmed = compMatch[3].trim();
-			if (
-				rightTrimmed &&
-				rightTrimmed[0] !== "=" &&
-				rightTrimmed[0] !== ">" &&
-				rightTrimmed[0] !== "<"
-			) {
-				return evalComparison(expr, ctx);
+			if (rightTrimmed && !"=><".includes(rightTrimmed[0]!)) {
+				return (ctx) => evalComparison(expr, ctx);
 			}
 		}
-		return expr;
+		return () => expr;
 	}
 
-	// Fallback property access for edge cases
+	// Handle general property access or fallback to string
 	if (expr.includes(".") || /^[a-zA-Z_$]/.test(expr)) {
-		const result = evalProp(expr, ctx);
-		if (result !== undefined) return result;
+		return (ctx) => {
+			const result = evalProp(expr, ctx);
+			return result !== undefined ? result : expr;
+		};
 	}
 
-	return expr;
-}
-
-export function extractVariableNames(expr: string): string[] {
-	const vars = new Set<string>();
-	const clean = expr.replace(/["']([^"']*)["']/g, "");
-	const matches = clean.match(
-		/[a-zA-Z_$][a-zA-Z0-9_$]*(?:\.[a-zA-Z_$0-9][a-zA-Z0-9_$]*)*/g
-	);
-
-	if (matches) {
-		for (const match of matches) {
-			if (!(match in LITERALS)) {
-				const root = match.split(".")[0];
-				if (root) vars.add(root);
-			}
-		}
-	}
-
-	return Array.from(vars);
+	// Fallback to string literal
+	return () => expr;
 }

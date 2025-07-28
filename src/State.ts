@@ -100,13 +100,6 @@ class Effect {
 	}
 }
 
-// Standalone effect function for creating effects outside of State instances
-export const createEffect = (fn: () => void) => {
-	const effect = new Effect(fn);
-	effect.runImmediate();
-	return () => effect.stop();
-};
-
 export class State<T = unknown> {
 	private _value: T;
 	private _reactive: T;
@@ -115,6 +108,8 @@ export class State<T = unknown> {
 	private _granularEffects = new Map<string | symbol, Set<Effect>>();
 	private _effectToKeys = new Map<Effect, Set<string | symbol>>();
 	private _effectToLastKey = new Map<Effect, string | symbol>();
+
+	private static reg = new Map<string, State<unknown>>();
 
 	constructor(value: T | (() => T)) {
 		if (typeof value === "function") {
@@ -126,6 +121,10 @@ export class State<T = unknown> {
 			this._value = value;
 			this._reactive = this._createProxy(value);
 		}
+	}
+
+	static get<T>(name: string): State<T> | undefined {
+		return this.reg.get(name) as State<T> | undefined;
 	}
 
 	private _updateValue() {

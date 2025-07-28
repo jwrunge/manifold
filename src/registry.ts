@@ -1,50 +1,132 @@
+import { evaluateExpression, STATE_RE } from "./expression-parser";
 import { State } from "./State";
+
+// Extend element interfaces to include mfRegister
+declare global {
+	interface HTMLElement {
+		mfRegister?: () => RegEl;
+	}
+	interface SVGElement {
+		mfRegister?: () => RegEl;
+	}
+	interface MathMLElement {
+		mfRegister?: () => RegEl;
+	}
+}
+
+export const MANIFOLD_ATTRIBUTES = [
+	"if",
+	"else-if",
+	"else",
+	"each",
+	"scope",
+	"await",
+	"then",
+	"process",
+	"target",
+	"bind",
+	"sync",
+] as const;
+
+export interface ParsedElement {
+	show?: State<unknown>; // Condition based on data-if or data-else-if
+	each?: State<Array<unknown>>; // Loop State based on data-each
+	props: Record<string, State<unknown>>; // Any bound properties (assigned with data-bind or data-scope) - a .effect() should be set on any State bound to a property with data-bind BEFORE adding to this Record that updates the bound property
+	else?: boolean; // Whether or not this element has a data-else attribute
+}
 
 export class RegEl {
 	static registry: WeakMap<Element | DocumentFragment, RegEl> = new WeakMap();
-	private _variables: Map<string, State<unknown> | unknown> = new Map();
 	private _regexCache: Map<string, RegExp> = new Map();
+	private cachedContent: Node | null = null;
 
-	static register(
-		element: HTMLElement | SVGElement | MathMLElement | DocumentFragment,
-		ops?: {
-			props?: Record<string, State<unknown>>;
-			else?: boolean;
-			show?: State<unknown>;
-			each?: State<Array<unknown>>;
-			templateContent?: DocumentFragment;
-		}
-	) {
-		const regel = RegEl.registry.get(element);
+	static register(element: HTMLElement | SVGElement | MathMLElement) {
+		const props: Record<string, State<unknown>> = {};
+		const expressions: Record<string, string> = {};
 
-		let show = ops?.show;
+		for (const attr of MANIFOLD_ATTRIBUTES) {
+			const attrText =
+				element.dataset[
+					attr.replace(/-([a-z])/g, (_, letter) =>
+						letter.toUpperCase()
+					)
+				];
 
-		if (regel) {
-			regel.show ??= show;
-			if (ops?.each) regel.each = ops.each;
-			regel.addProps(ops?.props ?? {});
-			return regel;
-		}
+			if (!attrText) continue;
 
-		try {
-			const newRegEl = new RegEl(
-				element,
-				ops?.props,
-				show,
-				ops?.each,
-				ops?.templateContent,
-				ops?.else
-			);
+			// Get State variables
+			for (const ref of Array.from(
+				attrText.matchAll(STATE_RE),
+				(match) => match[1]!
+			)) {
+				const refName = ref.split(".")[0] ?? "";
+				const S = State.get<unknown>(refName);
+				if (S) props[refName] = S;
+			}
 
-			return newRegEl;
-		} finally {
-			const el = (element as HTMLElement).nextElementSibling;
-			if ((el as HTMLElement)?.dataset["else"]) {
-				RegEl.register(el as HTMLElement, {
-					else: true,
-				});
+			// Traverse ancestors to find inherited props
+			let parent = element.parentElement;
+			while (parent) {
+				const regPar = RegEl.registry.get(parent);
+				if (regPar)
+					for (const [key, state] of Object.entries(regPar.props))
+						props[key] ??= state;
+				parent = parent.parentElement;
 			}
 		}
+
+		// Handy re-register function
+		element.mfRegister = () => RegEl.register(element);
+
+		// Handle conditionals
+		// TODO: Traverse up for conditionals for if, else-if, and else
+
+		// Handle bind
+		if (expressions["bind"]) {
+			expressions["bind"].split(/\s*,\s*/).forEach((binding) => {
+				const [property, expr] = binding
+					.split(":")
+					.map((s) => s.trim());
+				if (!property || !expr) return;
+
+				const bindState = evaluateExpression(expr, props);
+				bindState?.effect(() => {
+					const value = bindState.value;
+					if (property in element) (element as any)[property] = value;
+					else element.setAttribute(property, String(value ?? ""));
+				});
+			});
+		}
+
+		// Handle sync
+		if (expressions["sync"]) {
+			expressions["sync"].split(/\s*,\s*/).forEach((binding) => {
+				const [property, expr] = binding
+					.split(":")
+					.map((s) => s.trim());
+				if (!property || !expr) return;
+
+				(element as any)[property] = () => console.log(expr);
+			});
+		}
+
+		// Handle await
+
+		// Handle then
+		// Handle process
+		// Handle target
+
+		return new RegEl(
+			element,
+			props,
+			evaluateExpression(
+				expressions["if"] ?? expressions["else-if"],
+				props
+			),
+			evaluateExpression(expressions["each"], props) as
+				| State<Array<unknown>>
+				| undefined
+		);
 	}
 
 	constructor(
@@ -53,26 +135,11 @@ export class RegEl {
 			| SVGElement
 			| MathMLElement
 			| DocumentFragment,
-		props: Record<string, State<unknown>> = {},
+		public props: Record<string, State<unknown>> = {},
 		private show?: State<unknown> | undefined,
-		private each?: State<Array<unknown>> | undefined,
-		private cachedTemplateContent?: DocumentFragment | null,
-		private isElse?: boolean
+		private each?: State<Array<unknown>> | undefined
 	) {
-		// For direct elements (no template), cache the element's content for data-each only
-		if (!this.cachedTemplateContent && this.each) {
-			this.cachedTemplateContent = document.createDocumentFragment();
-			// Clone all child nodes to preserve the original content
-			Array.from(element.childNodes).forEach((child) => {
-				this.cachedTemplateContent!.appendChild(child.cloneNode(true));
-			});
-		}
-
-		// Handle data-else elements by creating a computed show state
-		if (this.isElse && !this.show) {
-			// Set a placeholder state that will be replaced
-			this.show = new State(false);
-		}
+		this.cachedContent = element.cloneNode(true);
 
 		this.show?.effect(() => {
 			(this.element as HTMLElement | SVGElement).style.display = this
@@ -81,8 +148,6 @@ export class RegEl {
 				: "none";
 		});
 
-		this.addProps(props);
-
 		// Trigger initial show effect by accessing the value
 		if (this.show) {
 			this.show.value;
@@ -90,7 +155,7 @@ export class RegEl {
 
 		this.each?.effect(() => {
 			// For each functionality, we need the original content as template
-			if (!this.cachedTemplateContent) {
+			if (!this.cachedContent) {
 				return;
 			}
 
@@ -103,7 +168,7 @@ export class RegEl {
 
 			// Iterate through array items
 			this.each!.value.forEach((item, index) => {
-				const clone = this.cachedTemplateContent!.cloneNode(
+				const clone = this.cachedContent!.cloneNode(
 					true
 				) as DocumentFragment;
 
@@ -124,30 +189,6 @@ export class RegEl {
 		}
 
 		RegEl.registry.set(element, this);
-	}
-
-	addProps(props: Record<string, State<unknown> | undefined>) {
-		for (const key in props) {
-			this._variables.set(key, props[key]);
-			// Only set up general interpolation effects for non-data-each elements
-			if (!this.each) {
-				const effect = () => this.updateTemplateContent();
-				props[key]?.effect(effect);
-				effect();
-			}
-		}
-	}
-
-	private updateTemplateContent() {
-		// This method is only called for general interpolation (non-data-each elements)
-		// Update the existing DOM element in place
-		for (const [key, stateOrValue] of this._variables) {
-			const value =
-				stateOrValue instanceof State
-					? stateOrValue.value
-					: stateOrValue;
-			this.replaceVariableInTemplate(this.element as Node, key, value);
-		}
 	}
 
 	private getRegex(key: string): RegExp {
@@ -220,7 +261,7 @@ export class RegEl {
 		if (!rootKey) return undefined;
 
 		// Get the root state object
-		const rootState = this._variables.get(rootKey);
+		const rootState = this.props.get(rootKey);
 		if (!rootState) return undefined;
 
 		let current = rootState instanceof State ? rootState.value : rootState;
@@ -244,15 +285,15 @@ export class RegEl {
 		value: unknown
 	) {
 		// Temporarily add iteration variables to our variables map
-		this._variables.set("key", key);
-		this._variables.set("value", value);
+		this.props.set("key", key);
+		this.props.set("value", value);
 
 		// Replace variables in content
 		this.replaceVariableInContent(content);
 
 		// Clean up temporary variables
-		this._variables.delete("key");
-		this._variables.delete("value");
+		this.props.delete("key");
+		this.props.delete("value");
 	}
 }
 
