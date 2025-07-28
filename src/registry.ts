@@ -200,20 +200,20 @@ export class RegEl {
 			}
 
 			// Iterate through array items
-			this.each!.value.forEach((item, index) => {
-				const clone = this.cachedContent!.cloneNode(
-					true
-				) as DocumentFragment;
+			// this.each!.value.forEach((item, index) => {
+			// 	const clone = this.cachedContent!.cloneNode(
+			// 		true
+			// 	) as DocumentFragment;
 
-				// Replace iteration variables directly in the clone
-				this.replaceIterationVariables(clone, String(index), item);
+			// 	// Replace iteration variables directly in the clone
+			// 	this.replaceIterationVariables(clone, String(index), item);
 
-				const comment = document.createComment(`MF_EACH_${index}`);
-				element.appendChild(comment);
+			// 	const comment = document.createComment(`MF_EACH_${index}`);
+			// 	element.appendChild(comment);
 
-				// Append the fragment (this will move all child nodes from fragment to element)
-				element.appendChild(clone);
-			});
+			// 	// Append the fragment (this will move all child nodes from fragment to element)
+			// 	element.appendChild(clone);
+			// });
 		});
 
 		// Trigger initial render by accessing the value
@@ -231,102 +231,6 @@ export class RegEl {
 			this._regexCache.set(key, pattern);
 		}
 		return pattern;
-	}
-
-	private replaceVariableInTemplate(node: Node, key: string, value: unknown) {
-		if (node.nodeType === Node.TEXT_NODE && node.textContent) {
-			node.textContent = node.textContent.replace(
-				this.getRegex(key),
-				String(value ?? "")
-			);
-		} else if (node.nodeType === Node.ELEMENT_NODE) {
-			const element = node as Element;
-			for (let i = 0; i < element.attributes.length; i++) {
-				const attr = element.attributes[i]!;
-				attr.value = attr.value.replace(
-					this.getRegex(key),
-					String(value ?? "")
-				);
-			}
-		}
-
-		for (const child of Array.from(node.childNodes)) {
-			this.replaceVariableInTemplate(child, key, value);
-		}
-	}
-
-	private replaceVariableInContent(content: DocumentFragment) {
-		for (const child of Array.from(content.childNodes)) {
-			this.replaceVariableInNode(child);
-		}
-	}
-
-	private replaceVariableInNode(node: Node) {
-		if (node.nodeType === Node.TEXT_NODE && node.textContent) {
-			// Replace all possible variable patterns
-			node.textContent = this.replaceAllVariables(node.textContent);
-		} else if (node.nodeType === Node.ELEMENT_NODE) {
-			const element = node as Element;
-			for (let i = 0; i < element.attributes.length; i++) {
-				const attr = element.attributes[i]!;
-				attr.value = this.replaceAllVariables(attr.value);
-			}
-		}
-
-		for (const child of Array.from(node.childNodes)) {
-			this.replaceVariableInNode(child);
-		}
-	}
-
-	private replaceAllVariables(text: string): string {
-		// Find all ${...} patterns and replace them
-		return text.replace(/\$\{([^}]+)\}/g, (_, varPath) => {
-			const value = this.getVariableValue(varPath);
-			return String(value ?? "");
-		});
-	}
-
-	private getVariableValue(varPath: string): unknown {
-		// Handle nested property access (e.g., "user.name")
-		const parts = varPath.split(".");
-		const rootKey = parts[0];
-
-		if (!rootKey) return undefined;
-
-		// Get the root state object
-		const rootState = this.props.get(rootKey);
-		if (!rootState) return undefined;
-
-		let current = rootState instanceof State ? rootState.value : rootState;
-
-		// Navigate through nested properties
-		for (let i = 1; i < parts.length; i++) {
-			const part = parts[i];
-			if (current && typeof current === "object" && part) {
-				current = (current as any)[part];
-			} else {
-				return undefined;
-			}
-		}
-
-		return current;
-	}
-
-	private replaceIterationVariables(
-		content: DocumentFragment,
-		key: string,
-		value: unknown
-	) {
-		// Temporarily add iteration variables to our variables map
-		this.props.set("key", key);
-		this.props.set("value", value);
-
-		// Replace variables in content
-		this.replaceVariableInContent(content);
-
-		// Clean up temporary variables
-		this.props.delete("key");
-		this.props.delete("value");
 	}
 }
 
