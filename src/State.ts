@@ -101,6 +101,7 @@ class Effect {
 }
 
 export class State<T = unknown> {
+	public name: string;
 	private _value: T;
 	private _reactive: T;
 	private _derive?: () => T;
@@ -111,7 +112,8 @@ export class State<T = unknown> {
 
 	private static reg = new Map<string, State<unknown>>();
 
-	constructor(value: T | (() => T)) {
+	constructor(value: T | (() => T), name?: string) {
+		this.name ??= Math.random().toString(36).substring(2, 15);
 		if (typeof value === "function") {
 			this._derive = value as () => T;
 			this._value = undefined as any;

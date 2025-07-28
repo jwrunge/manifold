@@ -37,42 +37,49 @@ export interface ParsedElement {
 
 export class RegEl {
 	static registry: WeakMap<Element | DocumentFragment, RegEl> = new WeakMap();
+	static expressions: Map<
+		string,
+		(vars: Record<string, unknown>) => unknown
+	> = new Map();
+	static stateExpression: Map<State<unknown>, string> = new Map();
+
 	private _regexCache: Map<string, RegExp> = new Map();
 	private cachedContent: Node | null = null;
 
 	static register(element: HTMLElement | SVGElement | MathMLElement) {
 		const props: Record<string, State<unknown>> = {};
-		const expressions: Record<string, string> = {};
+		const attrState = new Map<string, State<unknown>>();
 
 		for (const attr of MANIFOLD_ATTRIBUTES) {
-			const attrText =
+			const attrStr =
 				element.dataset[
 					attr.replace(/-([a-z])/g, (_, letter) =>
 						letter.toUpperCase()
 					)
 				];
 
-			if (!attrText) continue;
-
 			// Get State variables
 			for (const ref of Array.from(
-				attrText.matchAll(STATE_RE),
+				(attrStr ?? "").matchAll(STATE_RE),
 				(match) => match[1]!
 			)) {
 				const refName = ref.split(".")[0] ?? "";
 				const S = State.get<unknown>(refName);
-				if (S) props[refName] = S;
+				if (S) {
+					props[refName] = S;
+					attrState.set(attr, S);
+				}
 			}
+		}
 
-			// Traverse ancestors to find inherited props
-			let parent = element.parentElement;
-			while (parent) {
-				const regPar = RegEl.registry.get(parent);
-				if (regPar)
-					for (const [key, state] of Object.entries(regPar.props))
-						props[key] ??= state;
-				parent = parent.parentElement;
-			}
+		// Traverse ancestors to find inherited props
+		let parent = element.parentElement;
+		while (parent) {
+			const regPar = RegEl.registry.get(parent);
+			if (regPar)
+				for (const [key, state] of Object.entries(regPar.props))
+					props[key] ??= state;
+			parent = parent.parentElement;
 		}
 
 		// Handy re-register function
@@ -82,33 +89,39 @@ export class RegEl {
 		// TODO: Traverse up for conditionals for if, else-if, and else
 
 		// Handle bind
-		if (expressions["bind"]) {
-			expressions["bind"].split(/\s*,\s*/).forEach((binding) => {
-				const [property, expr] = binding
-					.split(":")
-					.map((s) => s.trim());
-				if (!property || !expr) return;
+		element.dataset["bind"]?.split(/\s*,\s*/).forEach((binding) => {
+			const [property, expr] = binding.split(":").map((s) => s.trim());
+			if (!property || !expr) return;
 
-				const bindState = evaluateExpression(expr, props);
-				bindState?.effect(() => {
-					const value = bindState.value;
-					if (property in element) (element as any)[property] = value;
-					else element.setAttribute(property, String(value ?? ""));
-				});
+			const fn = evaluateExpression(expr);
+			const bindState = attrState.get("bind");
+			if (!bindState) return;
+
+			const newState = new State(() =>
+				fn({ ...props, [bindState.name]: bindState.value })
+			);
+			newState?.effect(() => {
+				if (property in element)
+					(element as any)[property] = newState.value;
+				else
+					element.setAttribute(
+						property,
+						String(newState.value ?? "")
+					);
 			});
-		}
+		});
 
 		// Handle sync
-		if (expressions["sync"]) {
-			expressions["sync"].split(/\s*,\s*/).forEach((binding) => {
-				const [property, expr] = binding
-					.split(":")
-					.map((s) => s.trim());
-				if (!property || !expr) return;
+		// if (expressions["sync"]) {
+		// 	expressions["sync"].split(/\s*,\s*/).forEach((binding) => {
+		// 		const [property, expr] = binding
+		// 			.split(":")
+		// 			.map((s) => s.trim());
+		// 		if (!property || !expr) return;
 
-				(element as any)[property] = () => console.log(expr);
-			});
-		}
+		// 		(element as any)[property] = () => console.log(expr);
+		// 	});
+		// }
 
 		// Handle await
 
@@ -116,17 +129,37 @@ export class RegEl {
 		// Handle process
 		// Handle target
 
-		return new RegEl(
-			element,
-			props,
-			evaluateExpression(
-				expressions["if"] ?? expressions["else-if"],
-				props
-			),
-			evaluateExpression(expressions["each"], props) as
-				| State<Array<unknown>>
-				| undefined
-		);
+		// Get expression strings from dataset
+		const ifExpr = element.dataset["if"] ?? element.dataset["elseIf"];
+		const eachExpr = element.dataset["each"];
+
+		// Create show State if conditional expression exists
+		let showState: State<unknown> | undefined;
+		if (ifExpr) {
+			const evaluator = evaluateExpression(ifExpr);
+			showState = new State(() => {
+				const context: Record<string, unknown> = {};
+				for (const [key, state] of Object.entries(props)) {
+					context[key] = state.value;
+				}
+				return evaluator(context);
+			});
+		}
+
+		// Create each State if each expression exists
+		let eachState: State<Array<unknown>> | undefined;
+		if (eachExpr) {
+			const evaluator = evaluateExpression(eachExpr);
+			eachState = new State(() => {
+				const context: Record<string, unknown> = {};
+				for (const [key, state] of Object.entries(props)) {
+					context[key] = state.value;
+				}
+				return evaluator(context);
+			}) as State<Array<unknown>>;
+		}
+
+		return new RegEl(element, props, showState, eachState);
 	}
 
 	constructor(
