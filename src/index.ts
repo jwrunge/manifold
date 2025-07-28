@@ -57,6 +57,26 @@ function parseDataAttributes(element: HTMLElement) {
 	return attributes;
 }
 
+// Parse state references from text content
+function parseTextInterpolation(text: string): string[] {
+	const stateRefs: string[] = [];
+	const matches = text.match(/\$\{([^}]+)\}/g);
+
+	if (matches) {
+		for (const match of matches) {
+			const varPath = match.slice(2, -1); // Remove ${ and }
+			// Extract the root variable name from nested paths
+			const rootName = varPath.split(".")[0];
+			if (rootName && !rootName.includes("@")) {
+				// Don't include @ prefixed ones here
+				stateRefs.push(rootName);
+			}
+		}
+	}
+
+	return stateRefs;
+}
+
 // Parse state references (@ prefixed variables)
 function parseStateReferences(expression: string): string[] {
 	const stateRefs: string[] = [];
@@ -98,13 +118,35 @@ function createContext(stateRefs: string[]): Record<string, any> {
 // Initialize Manifold on the page
 export function init(container: HTMLElement | Document = document) {
 	// Find all elements with data attributes
-	const elements = Array.from(
+	const dataElements = Array.from(
 		container.querySelectorAll(
 			"[data-if], [data-else-if], [data-else], [data-each], [data-scope], [data-bind], [data-sync], [data-await]"
 		)
 	);
 
-	for (const element of elements) {
+	// Also find all elements that contain ${} interpolation
+	const allElements = Array.from(container.querySelectorAll("*"));
+	const interpolationElements = allElements.filter((element) => {
+		const htmlElement = element as HTMLElement;
+		// Check if element's text content or attributes contain ${}
+		const textContent = htmlElement.textContent || "";
+		const hasTextInterpolation = /\$\{[^}]+\}/.test(textContent);
+
+		// Check attributes for interpolation
+		const hasAttrInterpolation = Array.from(htmlElement.attributes).some(
+			(attr) => /\$\{[^}]+\}/.test(attr.value)
+		);
+
+		return hasTextInterpolation || hasAttrInterpolation;
+	});
+
+	// Combine and deduplicate elements
+	const allElementsToProcess = new Set([
+		...dataElements,
+		...interpolationElements,
+	]);
+
+	for (const element of allElementsToProcess) {
 		try {
 			const htmlElement = element as HTMLElement;
 			const attributes = parseDataAttributes(htmlElement);
@@ -117,6 +159,17 @@ export function init(container: HTMLElement | Document = document) {
 					refs.forEach((ref) => allStateRefs.add(ref));
 				}
 			}
+
+			// Also parse state references from text interpolation
+			const textContent = htmlElement.textContent || "";
+			const textRefs = parseTextInterpolation(textContent);
+			textRefs.forEach((ref) => allStateRefs.add(ref));
+
+			// Parse state references from attributes with interpolation
+			Array.from(htmlElement.attributes).forEach((attr) => {
+				const attrRefs = parseTextInterpolation(attr.value);
+				attrRefs.forEach((ref) => allStateRefs.add(ref));
+			});
 
 			// Create context and props
 			const context = createContext(Array.from(allStateRefs));

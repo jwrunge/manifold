@@ -59,12 +59,14 @@ export class RegEl {
 		private cachedTemplateContent?: DocumentFragment | null,
 		private isElse?: boolean
 	) {
-		this.cachedTemplateContent ??=
-			element.firstChild instanceof HTMLTemplateElement
-				? ((
-						element.firstChild as HTMLTemplateElement
-				  ).content.cloneNode(true) as DocumentFragment)
-				: null;
+		// For direct elements (no template), cache the element's content for data-each only
+		if (!this.cachedTemplateContent && this.each) {
+			this.cachedTemplateContent = document.createDocumentFragment();
+			// Clone all child nodes to preserve the original content
+			Array.from(element.childNodes).forEach((child) => {
+				this.cachedTemplateContent!.appendChild(child.cloneNode(true));
+			});
+		}
 
 		// Handle data-else elements by creating a computed show state
 		if (this.isElse && !this.show) {
@@ -81,72 +83,45 @@ export class RegEl {
 
 		this.addProps(props);
 
+		// Trigger initial show effect by accessing the value
+		if (this.show) {
+			this.show.value;
+		}
+
 		this.each?.effect(() => {
-			const template = element.querySelector("template");
-			if (!template) return;
-
+			// For each functionality, we need the original content as template
 			if (!this.cachedTemplateContent) {
-				this.cachedTemplateContent = template.content.cloneNode(
-					true
-				) as DocumentFragment;
-			}
-
-			const [valName, keyName] = extractKeyValNames(
-				element as HTMLElement | SVGElement
-			);
-			let current: Node | null | undefined;
-
-			if (this.each!.value.length === 0) {
-				element.replaceChildren(template);
 				return;
 			}
 
-			for (const key in this.each!.value) {
-				current = findNode(current ?? template, {
-					txt: `MF_EACH_${key}`,
-				});
+			// Clear existing content
+			element.replaceChildren();
 
-				if (!current) {
-					const clone = document.importNode(template.content, true);
-					const comment = document.createComment(`MF_EACH_${key}`);
-					element.appendChild(comment);
-
-					const childCountBefore = element.childNodes.length;
-					element.appendChild(clone);
-
-					const targetElement = Array.from(element.childNodes)
-						.slice(childCountBefore)
-						.find(
-							(node) => node.nodeType === Node.ELEMENT_NODE
-						) as HTMLElement;
-
-					if (targetElement) {
-						const props: Record<string, State<unknown>> = {};
-						props[keyName!] = new State(() => key);
-						props[valName!] = new State(
-							() => this.each!.value[key]
-						);
-
-						// Pass the template content directly to RegEl.register
-						RegEl.register(targetElement, {
-							templateContent:
-								this.cachedTemplateContent!.cloneNode(
-									true
-								) as DocumentFragment,
-							props,
-						});
-					}
-				}
+			if (this.each!.value.length === 0) {
+				return;
 			}
 
-			if (current) {
-				const next = findNode(current ?? template, { txt: "MF_EACH_" });
-				while (next?.nextSibling) {
-					next.nextSibling.remove();
-				}
-				(next as ChildNode)?.remove();
-			}
+			// Iterate through array items
+			this.each!.value.forEach((item, index) => {
+				const clone = this.cachedTemplateContent!.cloneNode(
+					true
+				) as DocumentFragment;
+
+				// Replace iteration variables directly in the clone
+				this.replaceIterationVariables(clone, String(index), item);
+
+				const comment = document.createComment(`MF_EACH_${index}`);
+				element.appendChild(comment);
+
+				// Append the fragment (this will move all child nodes from fragment to element)
+				element.appendChild(clone);
+			});
 		});
+
+		// Trigger initial render by accessing the value
+		if (this.each) {
+			this.each.value;
+		}
 
 		RegEl.registry.set(element, this);
 	}
@@ -154,44 +129,24 @@ export class RegEl {
 	addProps(props: Record<string, State<unknown> | undefined>) {
 		for (const key in props) {
 			this._variables.set(key, props[key]);
-			const effect = () => this.updateTemplateContent();
-			props[key]?.effect(effect);
-			effect();
+			// Only set up general interpolation effects for non-data-each elements
+			if (!this.each) {
+				const effect = () => this.updateTemplateContent();
+				props[key]?.effect(effect);
+				effect();
+			}
 		}
 	}
 
 	private updateTemplateContent() {
-		// If we have cached template content, use it (for templates with ${} placeholders)
-		if (this.cachedTemplateContent) {
-			// Clone the template so we don't mutate the original
-			const templateClone = this.cachedTemplateContent.cloneNode(
-				true
-			) as DocumentFragment;
-
-			for (const [key, stateOrValue] of this._variables) {
-				const value =
-					stateOrValue instanceof State
-						? stateOrValue.value
-						: stateOrValue;
-				this.replaceVariableInTemplate(templateClone, key, value);
-			}
-
-			this.element.replaceChildren(
-				...Array.from(templateClone.childNodes)
-			);
-		} else {
-			// If no template content, update the existing DOM element in place
-			for (const [key, stateOrValue] of this._variables) {
-				const value =
-					stateOrValue instanceof State
-						? stateOrValue.value
-						: stateOrValue;
-				this.replaceVariableInTemplate(
-					this.element as Node,
-					key,
-					value
-				);
-			}
+		// This method is only called for general interpolation (non-data-each elements)
+		// Update the existing DOM element in place
+		for (const [key, stateOrValue] of this._variables) {
+			const value =
+				stateOrValue instanceof State
+					? stateOrValue.value
+					: stateOrValue;
+			this.replaceVariableInTemplate(this.element as Node, key, value);
 		}
 	}
 
@@ -224,6 +179,80 @@ export class RegEl {
 		for (const child of Array.from(node.childNodes)) {
 			this.replaceVariableInTemplate(child, key, value);
 		}
+	}
+
+	private replaceVariableInContent(content: DocumentFragment) {
+		for (const child of Array.from(content.childNodes)) {
+			this.replaceVariableInNode(child);
+		}
+	}
+
+	private replaceVariableInNode(node: Node) {
+		if (node.nodeType === Node.TEXT_NODE && node.textContent) {
+			// Replace all possible variable patterns
+			node.textContent = this.replaceAllVariables(node.textContent);
+		} else if (node.nodeType === Node.ELEMENT_NODE) {
+			const element = node as Element;
+			for (let i = 0; i < element.attributes.length; i++) {
+				const attr = element.attributes[i]!;
+				attr.value = this.replaceAllVariables(attr.value);
+			}
+		}
+
+		for (const child of Array.from(node.childNodes)) {
+			this.replaceVariableInNode(child);
+		}
+	}
+
+	private replaceAllVariables(text: string): string {
+		// Find all ${...} patterns and replace them
+		return text.replace(/\$\{([^}]+)\}/g, (_, varPath) => {
+			const value = this.getVariableValue(varPath);
+			return String(value ?? "");
+		});
+	}
+
+	private getVariableValue(varPath: string): unknown {
+		// Handle nested property access (e.g., "user.name")
+		const parts = varPath.split(".");
+		const rootKey = parts[0];
+
+		if (!rootKey) return undefined;
+
+		// Get the root state object
+		const rootState = this._variables.get(rootKey);
+		if (!rootState) return undefined;
+
+		let current = rootState instanceof State ? rootState.value : rootState;
+
+		// Navigate through nested properties
+		for (let i = 1; i < parts.length; i++) {
+			const part = parts[i];
+			if (current && typeof current === "object" && part) {
+				current = (current as any)[part];
+			} else {
+				return undefined;
+			}
+		}
+
+		return current;
+	}
+
+	private replaceIterationVariables(
+		content: DocumentFragment,
+		key: string,
+		value: unknown
+	) {
+		// Temporarily add iteration variables to our variables map
+		this._variables.set("key", key);
+		this._variables.set("value", value);
+
+		// Replace variables in content
+		this.replaceVariableInContent(content);
+
+		// Clean up temporary variables
+		this._variables.delete("key");
+		this._variables.delete("value");
 	}
 }
 
