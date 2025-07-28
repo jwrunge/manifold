@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Manifold Init Test</title>
+		<style>
+			body {
+				font-family: system-ui, -apple-system, sans-serif;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 2rem;
+				line-height: 1.6;
+			}
+
+			.demo-section {
+				background: #f5f5f5;
+				padding: 1.5rem;
+				margin: 1rem 0;
+				border-radius: 8px;
+				border-left: 4px solid #007acc;
+			}
+
+			.demo-section h3 {
+				margin-top: 0;
+				color: #007acc;
+			}
+
+			button {
+				background: #007acc;
+				color: white;
+				border: none;
+				padding: 0.5rem 1rem;
+				border-radius: 4px;
+				cursor: pointer;
+				margin: 0.5rem 0.5rem 0.5rem 0;
+			}
+
+			button:hover {
+				background: #005a9e;
+			}
+
+			input {
+				padding: 0.5rem;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				margin: 0.5rem 0;
+			}
+
+			.hidden {
+				display: none;
+			}
+
+			.product {
+				background: white;
+				padding: 1rem;
+				margin: 0.5rem 0;
+				border-radius: 4px;
+				border: 1px solid #ddd;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Manifold Init Function Test</h1>
+		<p>
+			This page tests the basic initialization flow with simple examples.
+		</p>
+
+		<div class="demo-section">
+			<h3>Basic Conditional Rendering</h3>
+			<p>Testing data-if with state variables:</p>
+
+			<div data-if="@user.isLoggedIn">
+				<p>Welcome back, ${@user.name}!</p>
+			</div>
+
+			<div data-if="!@user.isLoggedIn">
+				<p>Please log in to continue.</p>
+			</div>
+
+			<button onclick="toggleLogin()">Toggle Login Status</button>
+		</div>
+
+		<div class="demo-section">
+			<h3>Simple State Updates</h3>
+			<p>Testing basic state reactivity:</p>
+
+			<div data-if="@counter.value >= 0">
+				<p>Counter: ${@counter.value}</p>
+			</div>
+
+			<div data-if="@counter.value < 0">
+				<p>Counter is negative: ${@counter.value}</p>
+			</div>
+
+			<button onclick="incrementCounter()">Increment</button>
+			<button onclick="decrementCounter()">Decrement</button>
+			<button onclick="resetCounter()">Reset</button>
+		</div>
+
+		<div class="demo-section">
+			<h3>List Rendering</h3>
+			<p>Testing data-each with arrays:</p>
+
+			<div data-if="@products.length > 0">
+				<h4>Products Available:</h4>
+				<div data-each="@products">
+					<div class="product">
+						<strong>${value.name}</strong> - $${value.price}
+						<br />
+						<small>ID: ${key}</small>
+					</div>
+				</div>
+			</div>
+
+			<div data-if="@products.length === 0">
+				<p>No products available.</p>
+			</div>
+
+			<button onclick="addProduct()">Add Product</button>
+			<button onclick="clearProducts()">Clear Products</button>
+		</div>
+
+		<div class="demo-section">
+			<h3>Debug Info</h3>
+			<div id="debug">
+				<p>Open browser console to see initialization logs.</p>
+			</div>
+		</div>
+
+		<script type="module">
+			import Manifold from "./src/index.js";
+
+			// Create global state
+			const userState = Manifold.$.create({
+				isLoggedIn: false,
+				name: "John Doe",
+			});
+
+			const counterState = Manifold.$.create({
+				value: 0,
+			});
+
+			const productsState = Manifold.$.create({
+				products: [
+					{ name: "Laptop", price: 999.99 },
+					{ name: "Mouse", price: 29.99 },
+				],
+			});
+
+			// Make state accessible globally for button handlers
+			window.userState = userState;
+			window.counterState = counterState;
+			window.productsState = productsState;
+
+			// Button handlers
+			window.toggleLogin = function () {
+				userState.isLoggedIn.value = !userState.isLoggedIn.value;
+				console.log("Login status:", userState.isLoggedIn.value);
+			};
+
+			window.incrementCounter = function () {
+				counterState.value.value++;
+				console.log("Counter:", counterState.value.value);
+			};
+
+			window.decrementCounter = function () {
+				counterState.value.value--;
+				console.log("Counter:", counterState.value.value);
+			};
+
+			window.resetCounter = function () {
+				counterState.value.value = 0;
+				console.log("Counter reset");
+			};
+
+			window.addProduct = function () {
+				const products = [...productsState.products.value];
+				products.push({
+					name: `Product ${products.length + 1}`,
+					price: Math.round(Math.random() * 100 + 10),
+				});
+				productsState.products.value = products;
+				console.log("Products:", products);
+			};
+
+			window.clearProducts = function () {
+				productsState.products.value = [];
+				console.log("Products cleared");
+			};
+
+			// Initialize Manifold
+			console.log("Initializing Manifold...");
+			Manifold.init();
+			console.log("Manifold initialized");
+
+			// Log current state
+			console.log("Initial state:");
+			console.log("User:", {
+				isLoggedIn: userState.isLoggedIn.value,
+				name: userState.name.value,
+			});
+			console.log("Counter:", counterState.value.value);
+			console.log("Products:", productsState.products.value);
+		</script>
+	</body>
+</html>
