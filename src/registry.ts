@@ -16,7 +16,7 @@ declare global {
 
 export const MANIFOLD_ATTRIBUTES = [
 	"if",
-	"elif",
+	"elseif",
 	"else",
 	"each",
 	"scope",
@@ -207,6 +207,72 @@ export class RegEl {
 
 		// Handle conditionals
 		// TODO: Traverse up for conditionals for if, else-if, and else
+		const ifExpr = element.dataset["if"] ?? element.dataset["elseif"];
+		const isElif = !!element.dataset["elseif"];
+		const isElse = !!element.dataset["else"];
+		const eachExpr = element.dataset["each"];
+
+		// Create show State if conditional expression exists
+		let showState: State<unknown> | undefined;
+
+		if (ifExpr) {
+			// Always parse the expression with aliases and use full props context
+			const { processedExpression } = RegEl.parseAliases(
+				ifExpr,
+				{},
+				false
+			);
+			const evaluator = evaluateExpression(processedExpression);
+			showState = new State(() => {
+				const context: Record<string, unknown> = {};
+				for (const [key, state] of Object.entries(props)) {
+					context[key] = state.value;
+				}
+				return evaluator.fn(context);
+			});
+		}
+
+		if (isElif || isElse) {
+			let conditionalStates: State<unknown>[] = [];
+
+			// Find all previous conditional elements (data-if, data-elseif) in this conditional chain
+			let cond = element.previousElementSibling;
+			while (cond) {
+				const ifCondition = (cond as HTMLElement).dataset?.["if"];
+				const elifCondition = (cond as HTMLElement).dataset?.["elseif"];
+
+				if (ifCondition || elifCondition) {
+					const rl = RegEl._registry.get(cond as Element);
+					if (rl?._show) {
+						conditionalStates.unshift(rl._show); // Add to beginning to maintain order
+					}
+				}
+
+				// Stop when we reach the initial if condition
+				if (ifCondition) break;
+
+				// Skip text nodes (whitespace) and continue
+				cond = cond.previousElementSibling;
+			}
+
+			if (isElif) {
+				// For elseif: show only if this condition is true AND all previous conditions are false
+				const currentCondition = showState;
+				showState = new State(() => {
+					const previousConditionsTrue = conditionalStates.some(
+						(s) => s.value
+					);
+					const currentConditionTrue =
+						currentCondition?.value ?? false;
+					return !previousConditionsTrue && currentConditionTrue;
+				});
+			} else if (isElse) {
+				// For else: show only if all previous conditions are false
+				showState = new State(() => {
+					return !conditionalStates.some((s) => s.value);
+				});
+			}
+		}
 
 		// Handle bind
 		element.dataset["bind"]?.split(/\s*,\s*/).forEach((binding) => {
@@ -258,29 +324,6 @@ export class RegEl {
 		// Handle then
 		// Handle process
 		// Handle target
-
-		// Get expression strings from dataset
-		const ifExpr = element.dataset["if"] ?? element.dataset["elseIf"];
-		const eachExpr = element.dataset["each"];
-
-		// Create show State if conditional expression exists
-		let showState: State<unknown> | undefined;
-		if (ifExpr) {
-			// Always parse the expression with aliases and use full props context
-			const { processedExpression } = RegEl.parseAliases(
-				ifExpr,
-				{},
-				false
-			);
-			const evaluator = evaluateExpression(processedExpression);
-			showState = new State(() => {
-				const context: Record<string, unknown> = {};
-				for (const [key, state] of Object.entries(props)) {
-					context[key] = state.value;
-				}
-				return evaluator.fn(context);
-			});
-		}
 
 		// Create each State if each expression exists
 		let eachState: State<Array<unknown>> | undefined;

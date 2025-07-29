@@ -283,7 +283,14 @@ export const evaluateExpression = (
 				fn: (ctx) => {
 					const result = evalProp(propName, ctx);
 					if (expr.includes("'Counter is '")) {
-						console.log("DEBUG: State reference evaluation - prop:", propName, "result:", result, "ctx:", ctx);
+						console.log(
+							"DEBUG: State reference evaluation - prop:",
+							propName,
+							"result:",
+							result,
+							"ctx:",
+							ctx
+						);
 					}
 					return result;
 				},
