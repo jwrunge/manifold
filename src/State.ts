@@ -19,7 +19,7 @@ let batchDepth = 0;
 let isProcessingBatch = false;
 const reusableTriggeredSet = new Set<Effect>();
 
-function flushPendingEffects() {
+const flushPendingEffects = () => {
 	if (isFlushingEffects || pendingEffects.size === 0) return;
 	isFlushingEffects = true;
 	try {
@@ -28,7 +28,7 @@ function flushPendingEffects() {
 			const effectsToRun = new Set(pendingEffects);
 			pendingEffects.clear();
 			for (const effect of effectsToRun) {
-				if (effect.isActive) effect.runImmediate();
+				if (effect._isActive) effect._runImmediate();
 			}
 		}
 		if (batchDepth >= 10) pendingEffects.clear();
@@ -37,45 +37,45 @@ function flushPendingEffects() {
 		batchDepth = 0;
 		isProcessingBatch = false;
 	}
-}
+};
 
-function processEffectsBatched() {
+const processEffectsBatched = () => {
 	if (pendingEffects.size === 0 || isProcessingBatch) return;
 	isProcessingBatch = true;
 	flushPendingEffects();
-}
+};
 
 class Effect {
-	private dependencies = new Set<() => void>();
-	public isActive = true;
-	private isRunning = false;
+	private _dependencies = new Set<() => void>();
+	public _isActive = true;
+	private _isRunning = false;
 
 	constructor(private fn: () => void) {}
 
-	run() {
-		if (!this.isActive) return;
+	_run() {
+		if (!this._isActive) return;
 		if (isFlushingEffects) {
 			pendingEffects.add(this);
 			return;
 		}
-		this.runImmediate();
+		this._runImmediate();
 	}
 
-	runImmediate() {
+	_runImmediate() {
 		if (
-			!this.isActive ||
+			!this._isActive ||
 			updateStack.has(this) ||
-			this.isRunning ||
+			this._isRunning ||
 			updateDepth >= MAX_UPDATE_DEPTH
 		)
 			return;
 
-		this.isRunning = true;
+		this._isRunning = true;
 		updateStack.add(this);
 		updateDepth++;
 
-		for (const cleanup of this.dependencies) cleanup();
-		this.dependencies.clear();
+		for (const cleanup of this._dependencies) cleanup();
+		this._dependencies.clear();
 
 		const prevEffect = currentEffect;
 		currentEffect = this;
@@ -83,25 +83,24 @@ class Effect {
 			this.fn();
 		} finally {
 			currentEffect = prevEffect;
-			this.isRunning = false;
+			this._isRunning = false;
 			updateStack.delete(this);
 			updateDepth--;
 		}
 	}
 
-	addDependency(cleanup: () => void) {
-		this.dependencies.add(cleanup);
+	_addDependency(cleanup: () => void) {
+		this._dependencies.add(cleanup);
 	}
 
-	stop() {
-		this.isActive = false;
-		for (const cleanup of this.dependencies) cleanup();
-		this.dependencies.clear();
+	_stop() {
+		this._isActive = false;
+		for (const cleanup of this._dependencies) cleanup();
+		this._dependencies.clear();
 	}
 }
 
 export class State<T = unknown> {
-	public name: string;
 	private _value: T;
 	private _reactive: T;
 	private _derive?: () => T;
@@ -112,13 +111,13 @@ export class State<T = unknown> {
 
 	private static reg = new Map<string, State<unknown>>();
 
-	constructor(value: T | (() => T), name?: string) {
+	constructor(value: T | (() => T), public name?: string) {
 		this.name ??= Math.random().toString(36).substring(2, 15);
 		if (typeof value === "function") {
 			this._derive = value as () => T;
 			this._value = undefined as any;
 			this._reactive = undefined as any;
-			new Effect(() => this._updateValue()).runImmediate();
+			new Effect(() => this._updateValue())._runImmediate();
 		} else {
 			this._value = value;
 			this._reactive = this._createProxy(value);
@@ -176,6 +175,7 @@ export class State<T = unknown> {
 			return new Proxy(obj, {
 				get: (target, key) => {
 					this._track(key);
+					this._track(key);
 					const value = Reflect.get(target, key);
 					if (
 						typeof value === "function" &&
@@ -195,12 +195,12 @@ export class State<T = unknown> {
 									this._granularEffects.get("length");
 								if (lengthEffects) {
 									for (const effect of lengthEffects) {
-										if (effect.isActive)
+										if (effect._isActive)
 											effectsToProcess.add(effect);
 									}
 								}
 								for (const effect of this._effects) {
-									if (effect.isActive)
+									if (effect._isActive)
 										effectsToProcess.add(effect);
 								}
 							} else {
@@ -209,13 +209,13 @@ export class State<T = unknown> {
 										this._granularEffects.get(String(i));
 									if (indexEffects) {
 										for (const effect of indexEffects) {
-											if (effect.isActive)
+											if (effect._isActive)
 												effectsToProcess.add(effect);
 										}
 									}
 								}
 								for (const effect of this._effects) {
-									if (effect.isActive)
+									if (effect._isActive)
 										effectsToProcess.add(effect);
 								}
 							}
@@ -227,7 +227,7 @@ export class State<T = unknown> {
 									);
 								if (parentGranularEffects) {
 									for (const effect of parentGranularEffects) {
-										if (effect.isActive)
+										if (effect._isActive)
 											effectsToProcess.add(effect);
 									}
 								}
@@ -277,7 +277,7 @@ export class State<T = unknown> {
 					} else {
 						for (const effect of this._effects) {
 							if (
-								effect.isActive &&
+								effect._isActive &&
 								!pendingEffects.has(effect)
 							) {
 								let isGranular = false;
@@ -318,7 +318,7 @@ export class State<T = unknown> {
 			}
 			this._effectToKeys.get(effect)!.add(key);
 
-			effect.addDependency(() => {
+			effect._addDependency(() => {
 				granularEffects!.delete(effect);
 				const keySet = this._effectToKeys.get(effect);
 				if (keySet) {
@@ -339,14 +339,14 @@ export class State<T = unknown> {
 	private _triggerEffects() {
 		reusableTriggeredSet.clear();
 		for (const effect of this._effects) {
-			if (effect.isActive && !reusableTriggeredSet.has(effect)) {
+			if (effect._isActive && !reusableTriggeredSet.has(effect)) {
 				reusableTriggeredSet.add(effect);
 				pendingEffects.add(effect);
 			}
 		}
 		for (const effects of this._granularEffects.values()) {
 			for (const effect of effects) {
-				if (effect.isActive && !reusableTriggeredSet.has(effect)) {
+				if (effect._isActive && !reusableTriggeredSet.has(effect)) {
 					reusableTriggeredSet.add(effect);
 					pendingEffects.add(effect);
 				}
@@ -360,7 +360,7 @@ export class State<T = unknown> {
 		if (granularEffects) {
 			for (const effect of granularEffects) {
 				if (
-					effect.isActive &&
+					effect._isActive &&
 					this._effectToLastKey.get(effect) === key
 				) {
 					pendingEffects.add(effect);
@@ -378,7 +378,7 @@ export class State<T = unknown> {
 		if (granularEffects) {
 			for (const effect of granularEffects) {
 				if (
-					effect.isActive &&
+					effect._isActive &&
 					this._effectToLastKey.get(effect) === key
 				) {
 					pendingEffects.add(effect);
@@ -396,7 +396,7 @@ export class State<T = unknown> {
 		const effect = currentEffect;
 		if (effect && !this._effects.has(effect)) {
 			this._effects.add(effect);
-			effect.addDependency(() => this._effects.delete(effect));
+			effect._addDependency(() => this._effects.delete(effect));
 		}
 		return this._reactive;
 	}
@@ -412,7 +412,7 @@ export class State<T = unknown> {
 
 	effect(fn: () => void) {
 		const effect = new Effect(fn);
-		effect.runImmediate();
-		return () => effect.stop();
+		effect._runImmediate();
+		return () => effect._stop();
 	}
 }

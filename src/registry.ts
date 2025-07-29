@@ -36,15 +36,16 @@ export interface ParsedElement {
 }
 
 export class RegEl {
-	static registry: WeakMap<Element | DocumentFragment, RegEl> = new WeakMap();
-	static expressions: Map<
+	private static _registry: WeakMap<Element | DocumentFragment, RegEl> =
+		new WeakMap();
+	private static _expressions: Map<
 		string,
 		(vars: Record<string, unknown>) => unknown
 	> = new Map();
-	static stateExpression: Map<State<unknown>, string> = new Map();
+	private static _stateExpression: Map<State<unknown>, string> = new Map();
 
 	private _regexCache: Map<string, RegExp> = new Map();
-	private cachedContent: Node | null = null;
+	private _cachedContent: Node | null = null;
 
 	static register(element: HTMLElement | SVGElement | MathMLElement) {
 		const props: Record<string, State<unknown>> = {};
@@ -75,7 +76,7 @@ export class RegEl {
 		// Traverse ancestors to find inherited props
 		let parent = element.parentElement;
 		while (parent) {
-			const regPar = RegEl.registry.get(parent);
+			const regPar = RegEl._registry.get(parent);
 			if (regPar)
 				for (const [key, state] of Object.entries(regPar.props))
 					props[key] ??= state;
@@ -98,7 +99,7 @@ export class RegEl {
 			if (!bindState) return;
 
 			const newState = new State(() =>
-				fn({ ...props, [bindState.name]: bindState.value })
+				fn({ ...props, [bindState.name!]: bindState.value })
 			);
 			newState?.effect(() => {
 				if (property in element)
@@ -163,39 +164,39 @@ export class RegEl {
 	}
 
 	constructor(
-		private element:
+		private _element:
 			| HTMLElement
 			| SVGElement
 			| MathMLElement
 			| DocumentFragment,
 		public props: Record<string, State<unknown>> = {},
-		private show?: State<unknown> | undefined,
-		private each?: State<Array<unknown>> | undefined
+		private _show?: State<unknown> | undefined,
+		private _each?: State<Array<unknown>> | undefined
 	) {
-		this.cachedContent = element.cloneNode(true);
+		this._cachedContent = _element.cloneNode(true);
 
-		this.show?.effect(() => {
-			(this.element as HTMLElement | SVGElement).style.display = this
-				.show!.value
+		this._show?.effect(() => {
+			(this._element as HTMLElement | SVGElement).style.display = this
+				._show!.value
 				? ""
 				: "none";
 		});
 
 		// Trigger initial show effect by accessing the value
-		if (this.show) {
-			this.show.value;
+		if (this._show) {
+			this._show.value;
 		}
 
-		this.each?.effect(() => {
+		this._each?.effect(() => {
 			// For each functionality, we need the original content as template
-			if (!this.cachedContent) {
+			if (!this._cachedContent) {
 				return;
 			}
 
 			// Clear existing content
-			element.replaceChildren();
+			_element.replaceChildren();
 
-			if (this.each!.value.length === 0) {
+			if (this._each!.value.length === 0) {
 				return;
 			}
 
@@ -217,11 +218,11 @@ export class RegEl {
 		});
 
 		// Trigger initial render by accessing the value
-		if (this.each) {
-			this.each.value;
+		if (this._each) {
+			this._each.value;
 		}
 
-		RegEl.registry.set(element, this);
+		RegEl._registry.set(_element, this);
 	}
 
 	private getRegex(key: string): RegExp {

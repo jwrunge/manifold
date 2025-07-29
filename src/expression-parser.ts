@@ -17,7 +17,7 @@ const LITERALS: Record<string, unknown> = {
 	undefined: undefined,
 };
 
-function parseTernary(expr: string) {
+const parseTernary = (expr: string) => {
 	let qIdx = -1,
 		cIdx = -1,
 		depth = 0;
@@ -37,13 +37,13 @@ function parseTernary(expr: string) {
 	return qIdx === -1 || cIdx === -1
 		? null
 		: {
-				condition: expr.slice(0, qIdx).trim(),
-				trueValue: expr.slice(qIdx + 1, cIdx).trim(),
-				falseValue: expr.slice(cIdx + 1).trim(),
+				_condition: expr.slice(0, qIdx).trim(),
+				_trueValue: expr.slice(qIdx + 1, cIdx).trim(),
+				_falseValue: expr.slice(cIdx + 1).trim(),
 		  };
-}
+};
 
-function evalProp(expr: string, ctx: Record<string, unknown>): unknown {
+const evalProp = (expr: string, ctx: Record<string, unknown>): unknown => {
 	const parts = expr.split(".");
 	let result: unknown = ctx;
 	for (const part of parts) {
@@ -51,9 +51,9 @@ function evalProp(expr: string, ctx: Record<string, unknown>): unknown {
 		result = (result as any)[part];
 	}
 	return result;
-}
+};
 
-function parseValue(val: string, ctx: Record<string, unknown>): any {
+const parseValue = (val: string, ctx: Record<string, unknown>): any => {
 	val = val.trim();
 	if (val in LITERALS) return LITERALS[val];
 	if (NUM_RE.test(val)) return parseFloat(val);
@@ -61,9 +61,12 @@ function parseValue(val: string, ctx: Record<string, unknown>): any {
 	if (strMatch) return strMatch[1];
 	if (PROP_RE.test(val)) return evalProp(val, ctx);
 	return val;
-}
+};
 
-function evalComparison(expr: string, ctx: Record<string, unknown>): boolean {
+const evalComparison = (
+	expr: string,
+	ctx: Record<string, unknown>
+): boolean => {
 	const match = expr.match(COMP_RE);
 	if (!match?.[1] || !match[3]) return false;
 	const [, left, op, right] = match;
@@ -71,31 +74,29 @@ function evalComparison(expr: string, ctx: Record<string, unknown>): boolean {
 	if (!rightTrimmed || "=><".includes(rightTrimmed[0]!)) return false;
 	const leftVal = parseValue(left, ctx);
 	const rightVal = parseValue(rightTrimmed, ctx);
-	switch (op) {
-		case "===":
-			return leftVal === rightVal;
-		case "!==":
-			return leftVal !== rightVal;
-		case "==":
-			return leftVal == rightVal;
-		case "!=":
-			return leftVal != rightVal;
-		case ">=":
-			return leftVal >= rightVal;
-		case "<=":
-			return leftVal <= rightVal;
-		case ">":
-			return leftVal > rightVal;
-		case "<":
-			return leftVal < rightVal;
-		default:
-			return false;
-	}
-}
 
-export function evaluateExpression(
+	return op == "==="
+		? leftVal === rightVal
+		: op == "!=="
+		? leftVal !== rightVal
+		: op == "=="
+		? leftVal == rightVal
+		: op == "!="
+		? leftVal != rightVal
+		: op == ">="
+		? leftVal >= rightVal
+		: op == "<="
+		? leftVal <= rightVal
+		: op == ">"
+		? leftVal > rightVal
+		: op == "<"
+		? leftVal < rightVal
+		: false;
+};
+
+export const evaluateExpression = (
 	expr: string | undefined
-): (ctx: Record<string, unknown>) => unknown {
+): ((ctx: Record<string, unknown>) => unknown) => {
 	expr = expr?.trim();
 	if (!expr) return () => undefined;
 
@@ -121,9 +122,9 @@ export function evaluateExpression(
 	// Handle ternary expressions
 	const ternary = parseTernary(expr);
 	if (ternary) {
-		const conditionEval = evaluateExpression(ternary.condition);
-		const trueEval = evaluateExpression(ternary.trueValue);
-		const falseEval = evaluateExpression(ternary.falseValue);
+		const conditionEval = evaluateExpression(ternary._condition);
+		const trueEval = evaluateExpression(ternary._trueValue);
+		const falseEval = evaluateExpression(ternary._falseValue);
 		return (ctx) => (conditionEval(ctx) ? trueEval(ctx) : falseEval(ctx));
 	}
 
@@ -209,4 +210,4 @@ export function evaluateExpression(
 
 	// Fallback to string literal
 	return () => expr;
-}
+};
