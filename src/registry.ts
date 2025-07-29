@@ -158,6 +158,9 @@ export class RegEl {
 					RegEl.parseAliases(item, props, false);
 					RegEl.addSimpleStateRefs(item, props);
 				}
+			} else if (attr === "each") {
+				// Skip data-each during props collection - it has special syntax and is handled separately
+				continue;
 			} else {
 				// For all other attributes, collect aliases and add base states as needed
 				RegEl.parseAliases(attrText, props, true);
@@ -218,7 +221,6 @@ export class RegEl {
 		}
 
 		// Handle conditionals
-		// TODO: Traverse up for conditionals for if, else-if, and else
 		const ifExpr = element.dataset["if"] ?? element.dataset["elseif"];
 		const isElif = !!element.dataset["elseif"];
 		const isElse = !!element.dataset["else"];
@@ -291,8 +293,12 @@ export class RegEl {
 			const [property, expr] = binding.split(":").map((s) => s.trim());
 			if (!property || !expr) return;
 
-			// Parse the bind expression to handle aliases
-			const { processedExpression } = RegEl.parseAliases(expr, {}, false);
+			// Parse the bind expression to handle aliases - pass current props for context
+			const { processedExpression } = RegEl.parseAliases(
+				expr,
+				props,
+				false
+			);
 			const exprResult = evaluateExpression(processedExpression);
 
 			// Create a state that evaluates the bind expression with full props context
@@ -466,23 +472,53 @@ export class RegEl {
 		// Create each State if each expression exists
 		let eachState: State<Array<unknown>> | undefined;
 		if (eachExpr) {
-			// Always parse the expression with aliases and use full props context
-			const { processedExpression } = RegEl.parseAliases(
-				eachExpr,
-				{},
-				false
+			console.log("Processing data-each expression:", eachExpr);
+			// Parse data-each expression: "@items as item, index" or "@items as item"
+			const eachMatch = eachExpr.match(
+				/@([a-zA-Z_$][a-zA-Z0-9_.$]*)\s+as\s+(.+)/
 			);
-			const evaluator = evaluateExpression(processedExpression);
-			eachState = new State(() => {
-				const context: Record<string, unknown> = {};
-				for (const [key, state] of Object.entries(props)) {
-					context[key] = state.value;
+			console.log("Regex match result:", eachMatch);
+			if (eachMatch) {
+				const [, stateRef] = eachMatch;
+				console.log("State reference:", stateRef);
+				// Get the array state directly
+				const arrayState = State.get<Array<unknown>>(stateRef);
+				console.log("Found array state:", arrayState);
+				if (arrayState) {
+					eachState = arrayState;
+					console.log("Set each state:", eachState);
+				} else {
+					console.warn(`State not found for: ${stateRef}`);
 				}
-				return evaluator.fn(context);
-			}) as State<Array<unknown>>;
+			} else {
+				console.warn(
+					`Invalid data-each expression format: ${eachExpr}`
+				);
+			}
 		}
 
 		return new RegEl(element, props, showState, eachState);
+	}
+
+	// Getter for cached template content
+	get cachedTemplateContent(): DocumentFragment | null {
+		if (
+			this._cachedContent &&
+			this._cachedContent.nodeType === Node.DOCUMENT_FRAGMENT_NODE
+		) {
+			return this._cachedContent as DocumentFragment;
+		} else if (this._cachedContent) {
+			// Convert element to document fragment
+			const fragment = document.createDocumentFragment();
+			fragment.appendChild(this._cachedContent.cloneNode(true));
+			return fragment;
+		}
+		return null;
+	}
+
+	// Getter for each state
+	get each(): State<Array<unknown>> | undefined {
+		return this._each;
 	}
 
 	constructor(
@@ -495,7 +531,11 @@ export class RegEl {
 		private _show?: State<unknown> | undefined,
 		private _each?: State<Array<unknown>> | undefined
 	) {
-		this._cachedContent = _element.cloneNode(true);
+		const element = this._element as
+			| HTMLElement
+			| SVGElement
+			| MathMLElement;
+		this._cachedContent = element.cloneNode(true);
 
 		this._show?.effect(() => {
 			(this._element as HTMLElement | SVGElement).style.display = this
@@ -509,34 +549,197 @@ export class RegEl {
 			this._show.value;
 		}
 
+		// Handle each loop - element with data-each is the template that gets repeated
 		this._each?.effect(() => {
-			// For each functionality, we need the original content as template
-			if (!this._cachedContent) {
+			const eachArray = this._each!.value;
+			console.log("Data-each array value:", eachArray);
+			if (!Array.isArray(eachArray)) {
+				console.warn("Each value is not an array:", eachArray);
 				return;
 			}
 
-			// Clear existing content
-			_element.replaceChildren();
+			// Extract key and value names from data-each expression
+			const eachExpr = (element as HTMLElement).dataset?.["each"] || "";
+			console.log("Data-each expression:", eachExpr);
+			const [, aliasExpr] = eachExpr.split(" as ");
+			const aliases = aliasExpr?.split(",").map((s) => s.trim()) || [
+				"item",
+				"index",
+			];
+			const valName = aliases[0] || "item";
+			const keyName = aliases[1] || "index";
+			console.log("Aliases - value:", valName, "key:", keyName);
 
-			if (this._each!.value.length === 0) {
+			// Hide the original template element
+			element.style.display = "none";
+
+			// Remove any existing cloned elements (look for elements with data-mf-each-clone attribute)
+			const parent = element.parentElement;
+			if (parent) {
+				const existingClones = parent.querySelectorAll(
+					"[data-mf-each-clone]"
+				);
+				existingClones.forEach((clone) => clone.remove());
+			}
+
+			if (eachArray.length === 0) {
+				console.log("Empty array, nothing to render");
 				return;
 			}
 
-			// Iterate through array items
-			// this.each!.value.forEach((item, index) => {
-			// 	const clone = this.cachedContent!.cloneNode(
-			// 		true
-			// 	) as DocumentFragment;
+			// Create items for each array element
+			for (let i = 0; i < eachArray.length; i++) {
+				const value = eachArray[i];
+				console.log(`Creating item ${i}:`, value);
 
-			// 	// Replace iteration variables directly in the clone
-			// 	this.replaceIterationVariables(clone, String(index), item);
+				// Clone the template element
+				const template = element.cloneNode(true) as HTMLElement;
 
-			// 	const comment = document.createComment(`MF_EACH_${index}`);
-			// 	element.appendChild(comment);
+				// Mark as clone and remove the data-each attribute to prevent recursive processing
+				template.setAttribute("data-mf-each-clone", "true");
+				template.removeAttribute("data-each");
+				template.style.display = ""; // Ensure clone is visible
 
-			// 	// Append the fragment (this will move all child nodes from fragment to element)
-			// 	element.appendChild(clone);
-			// });
+				// Create props for this iteration
+				const iterationProps: Record<string, State<unknown>> = {};
+
+				// Only inherit props that don't conflict with iteration aliases
+				for (const [key, state] of Object.entries(this.props)) {
+					if (key !== keyName && key !== valName) {
+						iterationProps[key] = state;
+					}
+				}
+
+				// Add iteration-specific props
+				iterationProps[keyName] = new State(i);
+				iterationProps[valName] = new State(value);
+				console.log("Iteration props:", Object.keys(iterationProps));
+
+				// Insert the clone after the template element
+				if (parent) {
+					parent.insertBefore(template, element.nextSibling);
+				}
+
+				// Create a RegEl for the cloned element with iteration props
+				// We need to manually set up the data-bind expressions with the iteration context
+				const cloneRegEl = new RegEl(template, iterationProps);
+
+				// Handle data-bind expressions for the cloned element
+				console.log(
+					"Template data-bind attribute:",
+					template.dataset["bind"]
+				);
+
+				// Split data-bind expressions respecting quotes
+				const splitBindExpressions = (bindStr: string): string[] => {
+					const expressions: string[] = [];
+					let current = "";
+					let inQuotes = false;
+					let quoteChar = "";
+
+					for (let i = 0; i < bindStr.length; i++) {
+						const char = bindStr[i];
+
+						if (
+							(char === '"' || char === "'") &&
+							(i === 0 || bindStr[i - 1] !== "\\")
+						) {
+							if (!inQuotes) {
+								inQuotes = true;
+								quoteChar = char;
+							} else if (char === quoteChar) {
+								inQuotes = false;
+								quoteChar = "";
+							}
+						}
+
+						if (char === "," && !inQuotes) {
+							expressions.push(current.trim());
+							current = "";
+						} else {
+							current += char;
+						}
+					}
+
+					if (current.trim()) {
+						expressions.push(current.trim());
+					}
+
+					return expressions;
+				};
+
+				const bindExpressions = template.dataset["bind"]
+					? splitBindExpressions(template.dataset["bind"])
+					: [];
+				bindExpressions.forEach((binding) => {
+					console.log("Processing binding:", binding);
+					// Split only on the first colon to handle expressions with colons in them
+					const colonIndex = binding.indexOf(":");
+					if (colonIndex === -1) return;
+
+					const property = binding.substring(0, colonIndex).trim();
+					const expr = binding.substring(colonIndex + 1).trim();
+					console.log(
+						"Split result - property:",
+						property,
+						"expr:",
+						expr
+					);
+					if (!property || !expr) return;
+
+					// For cloned elements, we need to manually map @ references to context keys
+					// The expression evaluator expects context keys without @ prefix
+					// So @index should become index, @todo should become todo, etc.
+					// But we need to keep the @ for the expression parser to recognize them as state refs
+					let processedExpr = expr;
+
+					console.log("Original expression:", expr);
+					console.log("Processed expression:", processedExpr);
+
+					const exprResult = evaluateExpression(processedExpr);
+
+					// Create a state that evaluates the bind expression with iteration props context
+					const newState = new State(() => {
+						const context: Record<string, unknown> = {};
+						// Map iteration props to context without the @ prefix
+						for (const [key, state] of Object.entries(
+							iterationProps
+						)) {
+							context[key] = state.value;
+						}
+						console.log("=== CLONE BIND DEBUG ===");
+						console.log("Expression:", processedExpr);
+						console.log(
+							"Iteration props keys:",
+							Object.keys(iterationProps)
+						);
+						console.log("Context keys:", Object.keys(context));
+						console.log("Context values:", context);
+						console.log(
+							"Expression state refs:",
+							exprResult.stateRefs
+						);
+
+						const result = exprResult.fn(context);
+						console.log("Clone bind result:", result);
+						return result;
+					});
+
+					// Set up the effect to update the property
+					newState?.effect(() => {
+						if (property in template)
+							(template as any)[property] = newState.value;
+						else
+							template.setAttribute(
+								property,
+								String(newState.value ?? "")
+							);
+					});
+
+					// Trigger initial evaluation
+					newState.value;
+				});
+			}
 		});
 
 		// Trigger initial render by accessing the value
@@ -544,7 +747,7 @@ export class RegEl {
 			this._each.value;
 		}
 
-		RegEl._registry.set(_element, this);
+		RegEl._registry.set(element, this);
 	}
 
 	private getRegex(key: string): RegExp {

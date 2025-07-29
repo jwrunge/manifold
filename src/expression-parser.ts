@@ -5,11 +5,11 @@ const PROP_RE = new RegExp(`^${PROP}$`);
 const VALUE = `(?:${STATE_PROP}|${PROP}|-?\\d+(?:\\.\\d+)?|["'][^"']*["']|\`[^\`]*\`|true|false|null|undefined)`;
 const COMP_RE = new RegExp(`^(${VALUE})\\s*(===|!==|>=|<=|==|!=|>|<)\\s*(.+)$`);
 const NUM_RE = /^-?\d+(\.\d+)?$/;
-const STR_RE = /^["'`](.*)["'`]$/;
+// Simple string regex for basic string literals
+const STR_RE = /^(['"`])(.*?)\1$/;
 const OR_RE = /^(.+?)\s*\|\|\s*(.+)$/;
 const NULL_RE = /^(.+?)\s*\?\?\s*(.+)$/;
 const AND_RE = /^(.+?)\s*&&\s*(.+)$/;
-const ARITH_RE = /^(.+?)\s*([+\-*/])\s*(.+)$/;
 export const STATE_RE = new RegExp(STATE_PROP, "g");
 
 const LITERALS: Record<string, unknown> = {
@@ -17,6 +17,87 @@ const LITERALS: Record<string, unknown> = {
 	false: false,
 	null: null,
 	undefined: undefined,
+};
+
+// Parse arithmetic expressions with proper left-to-right associativity
+const parseArithmetic = (
+	expr: string
+): { left: string; op: string; right: string } | null => {
+	let depth = 0;
+	let ternaryDepth = 0;
+	let lastOpIndex = -1;
+	let lastOp = "";
+	let inQuotes = false;
+	let quoteChar = "";
+
+	if (expr.includes("'Number:") || expr.includes("@num")) {
+		console.log("DEBUG parseArithmetic input:", JSON.stringify(expr));
+	}
+
+	// Find the rightmost operator at depth 0 (outside parentheses and ternary expressions)
+	for (let i = expr.length - 1; i >= 0; i--) {
+		const char = expr[i];
+		if (!char) continue;
+
+		// Handle quotes
+		if (
+			(char === '"' || char === "'") &&
+			(i === 0 || expr[i - 1] !== "\\")
+		) {
+			if (!inQuotes) {
+				inQuotes = true;
+				quoteChar = char;
+			} else if (char === quoteChar) {
+				inQuotes = false;
+				quoteChar = "";
+			}
+			continue;
+		}
+
+		if (inQuotes) continue; // Skip characters inside quotes
+
+		if (char === ")") depth++;
+		else if (char === "(") depth--;
+		else if (char === "?") ternaryDepth++;
+		else if (char === ":") ternaryDepth--;
+		else if (depth === 0 && ternaryDepth === 0 && /[+\-*/]/.test(char)) {
+			// Make sure it's not a negative number
+			const prevChar = i > 0 ? expr[i - 1] : "";
+			if (char === "-" && prevChar && /[+\-*/]/.test(prevChar)) {
+				continue; // This is a negative number, not an operator
+			}
+			lastOpIndex = i;
+			lastOp = char;
+			if (expr.includes("'Number:") || expr.includes("@num")) {
+				console.log(
+					"DEBUG parseArithmetic found operator:",
+					char,
+					"at index:",
+					i
+				);
+			}
+			break; // Found the rightmost operator
+		}
+	}
+
+	if (lastOpIndex === -1) {
+		if (expr.includes("'Number:") || expr.includes("@num")) {
+			console.log("DEBUG parseArithmetic no operator found");
+		}
+		return null;
+	}
+
+	const result = {
+		left: expr.slice(0, lastOpIndex).trim(),
+		op: lastOp,
+		right: expr.slice(lastOpIndex + 1).trim(),
+	};
+
+	if (expr.includes("'Number:") || expr.includes("@num")) {
+		console.log("DEBUG parseArithmetic result:", result);
+	}
+
+	return result;
 };
 
 const parseTernary = (expr: string) => {
@@ -60,15 +141,39 @@ export const evalProp = (
 
 const parseValue = (val: string, ctx: Record<string, unknown>): any => {
 	val = val.trim();
+	if (val.includes("'") || val.includes("@")) {
+		console.log("DEBUG parseValue input:", JSON.stringify(val));
+	}
+
 	if (val in LITERALS) return LITERALS[val];
 	if (NUM_RE.test(val)) return parseFloat(val);
 	const strMatch = val.match(STR_RE);
-	if (strMatch) return strMatch[1];
+	if (strMatch) {
+		const result = strMatch[2]; // Second capture group contains the content
+		if (val.includes("'")) {
+			console.log(
+				"DEBUG parseValue string match:",
+				JSON.stringify(val),
+				"->",
+				JSON.stringify(result)
+			);
+		}
+		return result;
+	}
 
 	// Handle state properties with @ prefix
 	if (val.startsWith("@")) {
 		const propName = val.slice(1); // Remove the @ prefix
-		if (PROP_RE.test(propName)) return evalProp(propName, ctx);
+		if (PROP_RE.test(propName)) {
+			const result = evalProp(propName, ctx);
+			console.log(
+				"DEBUG parseValue state prop:",
+				JSON.stringify(val),
+				"->",
+				result
+			);
+			return result;
+		}
 	}
 
 	if (PROP_RE.test(val)) return evalProp(val, ctx);
@@ -118,7 +223,12 @@ export const evaluateExpression = (
 	if (!expr) return { fn: () => undefined, stateRefs: [] };
 
 	// Debug logging for the problematic expression
-	if (expr.includes("'Counter is '")) {
+	if (
+		expr.includes("'Counter is '") ||
+		expr.includes("@todo") ||
+		expr.includes("@num") ||
+		expr.includes("@index")
+	) {
 		console.log("DEBUG: Evaluating expression:", expr);
 	}
 
@@ -145,11 +255,37 @@ export const evaluateExpression = (
 		return { fn: () => numValue, stateRefs };
 	}
 
-	// Handle strings
+	// Handle strings (but reject if they contain expressions)
 	const strMatch = expr.match(STR_RE);
-	if (strMatch) {
-		const strValue = strMatch[1];
-		return { fn: () => strValue, stateRefs };
+	if (strMatch && strMatch[2] !== undefined) {
+		const strValue = strMatch[2]; // Second capture group contains the content
+		// Reject if the content contains @ (state references) - this indicates it's an expression, not a simple string
+		if (!strValue.includes("@")) {
+			return { fn: () => strValue, stateRefs };
+		}
+	}
+
+	// Handle expressions wrapped in parentheses
+	if (expr.startsWith("(") && expr.endsWith(")")) {
+		// Check if the parentheses are balanced and wrap the entire expression
+		let depth = 0;
+		let isFullyWrapped = true;
+		for (let i = 0; i < expr.length; i++) {
+			if (expr[i] === "(") depth++;
+			else if (expr[i] === ")") depth--;
+
+			// If depth becomes 0 before the last character, parentheses don't wrap the whole expression
+			if (depth === 0 && i < expr.length - 1) {
+				isFullyWrapped = false;
+				break;
+			}
+		}
+
+		if (isFullyWrapped) {
+			// Strip outer parentheses and evaluate the inner expression
+			const innerExpr = expr.slice(1, -1).trim();
+			return evaluateExpression(innerExpr);
+		}
 	}
 
 	// Handle ternary expressions
@@ -197,15 +333,20 @@ export const evaluateExpression = (
 		};
 	}
 
-	// Handle arithmetic expressions
-	const arithMatch = expr.match(ARITH_RE);
-	if (arithMatch?.[1] && arithMatch[3]) {
-		if (expr.includes("'Counter is '")) {
-			console.log("DEBUG: Arithmetic match found:", arithMatch);
+	// Handle arithmetic expressions with proper left-to-right associativity
+	const arithParse = parseArithmetic(expr);
+	if (arithParse) {
+		if (
+			expr.includes("'Counter is '") ||
+			expr.includes("@todo") ||
+			expr.includes("@num") ||
+			expr.includes("@index")
+		) {
+			console.log("DEBUG: Arithmetic parse found:", arithParse);
 		}
-		const leftEval = evaluateExpression(arithMatch[1]);
-		const rightEval = evaluateExpression(arithMatch[3]);
-		const op = arithMatch[2];
+		const leftEval = evaluateExpression(arithParse.left);
+		const rightEval = evaluateExpression(arithParse.right);
+		const op = arithParse.op;
 		const allStateRefs = [...leftEval.stateRefs, ...rightEval.stateRefs];
 		const uniqueStateRefs = [...new Set([...stateRefs, ...allStateRefs])];
 		return {
@@ -213,13 +354,19 @@ export const evaluateExpression = (
 				const leftVal = leftEval.fn(ctx);
 				const rightVal = rightEval.fn(ctx);
 
-				if (expr.includes("'Counter is '")) {
+				if (
+					expr.includes("'Counter is '") ||
+					expr.includes("@todo") ||
+					expr.includes("@num") ||
+					expr.includes("@index")
+				) {
 					console.log(
 						"DEBUG: Evaluating arithmetic - left:",
 						leftVal,
 						"right:",
 						rightVal
 					);
+					console.log("DEBUG: Context:", ctx);
 				}
 
 				if (op === "+") {
@@ -230,10 +377,21 @@ export const evaluateExpression = (
 					) {
 						const result =
 							String(leftVal ?? "") + String(rightVal ?? "");
-						if (expr.includes("'Counter is '")) {
+						if (
+							expr.includes("'Counter is '") ||
+							expr.includes("@todo") ||
+							expr.includes("@num") ||
+							expr.includes("@index")
+						) {
 							console.log(
 								"DEBUG: String concatenation result:",
 								result
+							);
+							console.log(
+								"DEBUG: Left value:",
+								leftVal,
+								"Right value:",
+								rightVal
 							);
 						}
 						return result;
@@ -260,6 +418,17 @@ export const evaluateExpression = (
 			},
 			stateRefs: uniqueStateRefs,
 		};
+	} else {
+		// Debug: Log when arithmetic parsing fails
+		if (expr.includes("@index + ': '")) {
+			console.log("DEBUG: Arithmetic parsing failed for:", expr);
+		}
+		if (expr.includes("@num") && expr.includes("+")) {
+			console.log(
+				"DEBUG: Arithmetic parsing FAILED for @num expression:",
+				expr
+			);
+		}
 	}
 
 	// Handle nullish coalescing

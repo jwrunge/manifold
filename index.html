@@ -147,6 +147,41 @@
 		</div>
 
 		<div class="test-section">
+			<h2>Data-Each Test (List Rendering)</h2>
+			<p>Testing data-each for efficient list rendering with aliasing</p>
+
+			<!-- Simple list -->
+			<div>
+				<h3>Todo List (@todos as todo, index):</h3>
+				<ul>
+					<li
+						data-each="@todos as todo, index"
+						data-bind="textContent: @index + ': ' + @todo.text + ' (' + (@todo.done ? 'done' : 'pending') + ')'"
+					></li>
+				</ul>
+			</div>
+
+			<!-- Interactive list -->
+			<div>
+				<h3>Numbers List (@numbers as num):</h3>
+				<div>
+					<span
+						data-each="@numbers as num"
+						data-bind="textContent: 'Number: ' + @num + ', '"
+					></span>
+					<br />
+				</div>
+			</div>
+
+			<button onclick="addTodo()">Add Todo</button>
+			<button onclick="toggleFirstTodo()">Toggle First Todo</button>
+			<button onclick="addNumber()">Add Random Number</button>
+			<button onclick="clearNumbers()">Clear Numbers</button>
+			<button onclick="debugDataEach()">Debug Data-Each</button>
+			<button onclick="testExpression()">Test Expression</button>
+		</div>
+
+		<div class="test-section">
 			<h2>Element Registry Test</h2>
 			<p>Testing data-scope prop binding and logging</p>
 
@@ -181,9 +216,32 @@
 			);
 			window.counterState = new State(0, "counter");
 
+			// Initialize array states for data-each testing
+			window.todosState = new State(
+				[
+					{ text: "Learn Manifold", done: false },
+					{ text: "Build awesome apps", done: false },
+					{ text: "Celebrate success", done: true },
+				],
+				"todos"
+			);
+
+			window.numbersState = new State([1, 2, 3, 4, 5], "numbers");
+
 			// Register states globally
 			State.register("user", window.userState);
 			State.register("counter", window.counterState);
+			State.register("todos", window.todosState);
+			State.register("numbers", window.numbersState);
+
+			// Debug: Log available states
+			console.log("=== REGISTERED STATES ===");
+			console.log("User state:", State.get("user"));
+			console.log("Counter state:", State.get("counter"));
+			console.log("Todos state:", State.get("todos"));
+			console.log("Numbers state:", State.get("numbers"));
+			console.log("Todos value:", window.todosState.value);
+			console.log("Numbers value:", window.numbersState.value);
 
 			// Register the test element
 			let testRegEl;
@@ -255,6 +313,32 @@
 					'[data-bind="textContent:@count"]'
 				);
 				if (countDisplay) RegEl.register(countDisplay);
+
+				// Register data-each elements (the repeating elements, not their containers)
+				const todoListItem = document.querySelector(
+					'li[data-each="@todos as todo, index"]'
+				);
+				console.log("Todo list item element:", todoListItem);
+				if (todoListItem) {
+					console.log("Registering todo list item...");
+					const todosRegEl = RegEl.register(todoListItem);
+					console.log("Todo item RegEl:", todosRegEl);
+					console.log("Todo item RegEl props:", todosRegEl.props);
+				}
+
+				const numbersSpan = document.querySelector(
+					'span[data-each="@numbers as num"]'
+				);
+				console.log("Numbers span element:", numbersSpan);
+				if (numbersSpan) {
+					console.log("Registering numbers span...");
+					const numbersRegEl = RegEl.register(numbersSpan);
+					console.log("Numbers span RegEl:", numbersRegEl);
+					console.log(
+						"Numbers span RegEl props:",
+						numbersRegEl.props
+					);
+				}
 
 				console.log("Element registered:", testRegEl);
 			});
@@ -393,6 +477,122 @@
 						window.counterState.value
 					);
 				}
+			};
+
+			// Data-each test functions
+			window.addTodo = () => {
+				console.log("=== Adding Todo ===");
+				const newTodo = {
+					text: `New todo ${window.todosState.value.length + 1}`,
+					done: false,
+				};
+				window.todosState.value = [...window.todosState.value, newTodo];
+				console.log("New todos:", window.todosState.value);
+			};
+
+			window.toggleFirstTodo = () => {
+				console.log("=== Toggling First Todo ===");
+				const todos = [...window.todosState.value];
+				if (todos.length > 0) {
+					todos[0] = { ...todos[0], done: !todos[0].done };
+					window.todosState.value = todos;
+					console.log("Updated todos:", window.todosState.value);
+				}
+			};
+
+			window.addNumber = () => {
+				console.log("=== Adding Random Number ===");
+				const randomNum = Math.floor(Math.random() * 100);
+				window.numbersState.value = [
+					...window.numbersState.value,
+					randomNum,
+				];
+				console.log("New numbers:", window.numbersState.value);
+			};
+
+			window.clearNumbers = () => {
+				console.log("=== Clearing Numbers ===");
+				window.numbersState.value = [];
+				console.log("Numbers cleared");
+			};
+
+			window.debugDataEach = () => {
+				console.log("=== DEBUG DATA-EACH ===");
+				const todoListItem = document.querySelector(
+					'li[data-each="@todos as todo, index"]'
+				);
+				const numbersSpan = document.querySelector(
+					'span[data-each="@numbers as num"]'
+				);
+
+				console.log("Todo list item element:", todoListItem);
+				console.log("Numbers span element:", numbersSpan);
+
+				if (todoListItem) {
+					const todosRegEl = RegEl.getRegEl(todoListItem);
+					console.log("Todo item RegEl:", todosRegEl);
+					console.log("Todo item each state:", todosRegEl?.each);
+					console.log(
+						"Todo item each value:",
+						todosRegEl?.each?.value
+					);
+				}
+
+				if (numbersSpan) {
+					const numbersRegEl = RegEl.getRegEl(numbersSpan);
+					console.log("Numbers span RegEl:", numbersRegEl);
+					console.log("Numbers span each state:", numbersRegEl?.each);
+					console.log(
+						"Numbers span each value:",
+						numbersRegEl?.each?.value
+					);
+				}
+
+				console.log("Global todos state:", window.todosState.value);
+				console.log("Global numbers state:", window.numbersState.value);
+			};
+
+			window.testExpression = () => {
+				console.log("=== TESTING EXPRESSION ===");
+
+				// Test simple expressions first
+				console.log("--- Simple expressions ---");
+				let expr1 = "@index";
+				let evaluator1 = evaluateExpression(expr1);
+				console.log(`${expr1} ->`, evaluator1.fn({ index: 0 }));
+
+				let expr2 = "': '";
+				let evaluator2 = evaluateExpression(expr2);
+				console.log(`${expr2} ->`, evaluator2.fn({}));
+
+				let expr3 = "@index + ': '";
+				let evaluator3 = evaluateExpression(expr3);
+				console.log(`${expr3} ->`, evaluator3.fn({ index: 0 }));
+
+				// Test the problematic numbers expression
+				console.log("--- Problematic numbers expression ---");
+				let expr4 = "'Number: ' + @num + ', '";
+				let evaluator4 = evaluateExpression(expr4);
+				console.log(`${expr4} ->`, evaluator4.fn({ num: 42 }));
+
+				// Test the exact expression used in the todo list
+				console.log("--- Complex expression ---");
+				const expr =
+					"@index + ': ' + @todo.text + ' (' + (@todo.done ? 'done' : 'pending') + ')'";
+				console.log("Expression:", expr);
+
+				const evaluator = evaluateExpression(expr);
+				console.log("Evaluator:", evaluator);
+
+				// Test with sample context
+				const context = {
+					index: 0,
+					todo: { text: "Test todo", done: false },
+				};
+				console.log("Context:", context);
+
+				const result = evaluator.fn(context);
+				console.log("Result:", result);
 			};
 		</script>
 	</body>
