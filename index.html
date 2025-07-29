@@ -79,6 +79,74 @@
 		</div>
 
 		<div class="test-section">
+			<h2>Data-Sync Test (Two-Way Binding)</h2>
+			<p>Testing data-sync for bidirectional state binding</p>
+
+			<!-- Text input sync -->
+			<div>
+				<label>Text Input (synced with @user.name):</label>
+				<input
+					type="text"
+					id="name-input"
+					data-sync="value:@user.name"
+					placeholder="Enter name"
+				/>
+				<p>
+					Current user name:
+					<span data-bind="textContent:@user.name"></span>
+				</p>
+			</div>
+
+			<!-- Number input sync -->
+			<div>
+				<label>Number Input (synced with @user.age):</label>
+				<input
+					type="number"
+					id="age-input"
+					data-sync="value:@user.age"
+					min="0"
+					max="120"
+				/>
+				<p>
+					Current user age:
+					<span data-bind="textContent:@user.age"></span>
+				</p>
+			</div>
+
+			<!-- Checkbox sync -->
+			<div>
+				<label>
+					<input
+						type="checkbox"
+						id="active-checkbox"
+						data-sync="checked:@user.active"
+					/>
+					User is active
+				</label>
+				<p>
+					Active status:
+					<span data-bind="textContent:@user.active"></span>
+				</p>
+			</div>
+
+			<!-- Counter with aliasing -->
+			<div data-scope="@counter as count">
+				<label>Counter Input (with aliasing):</label>
+				<input
+					type="number"
+					id="counter-input"
+					data-sync="value:@count"
+				/>
+				<p>
+					Counter value: <span data-bind="textContent:@count"></span>
+				</p>
+			</div>
+
+			<button onclick="resetSyncTest()">Reset Values</button>
+			<button onclick="logSyncValues()">Log Current Values</button>
+		</div>
+
+		<div class="test-section">
 			<h2>Element Registry Test</h2>
 			<p>Testing data-scope prop binding and logging</p>
 
@@ -107,6 +175,7 @@
 				{
 					name: "John Doe",
 					age: 25,
+					active: false,
 				},
 				"user"
 			);
@@ -133,6 +202,59 @@
 
 				const testElement55 = document.getElementById("test-el-55");
 				RegEl.register(testElement55);
+
+				// Register sync test elements
+				const nameInput = document.getElementById("name-input");
+				RegEl.register(nameInput);
+
+				const ageInput = document.getElementById("age-input");
+				RegEl.register(ageInput);
+
+				const activeCheckbox =
+					document.getElementById("active-checkbox");
+				RegEl.register(activeCheckbox);
+
+				// Register the counter scope div first, then the input
+				const counterScopeDiv = document.querySelector(
+					'.test-section [data-scope="@counter as count"]'
+				);
+				console.log("=== REGISTERING COUNTER SCOPE DIV ===");
+				console.log("Counter scope div:", counterScopeDiv);
+				if (counterScopeDiv) {
+					const scopeRegEl = RegEl.register(counterScopeDiv);
+					console.log("Scope RegEl props:", scopeRegEl.props);
+				}
+
+				console.log("=== REGISTERING COUNTER INPUT ===");
+				const counterInput = document.getElementById("counter-input");
+				console.log("Counter input:", counterInput);
+				console.log(
+					"Counter input parent:",
+					counterInput.parentElement
+				);
+				const inputRegEl = RegEl.register(counterInput);
+				console.log("Input RegEl props:", inputRegEl.props);
+
+				// Register display spans for sync test
+				const nameDisplay = document.querySelector(
+					'[data-bind="textContent:@user.name"]'
+				);
+				if (nameDisplay) RegEl.register(nameDisplay);
+
+				const ageDisplay = document.querySelector(
+					'[data-bind="textContent:@user.age"]'
+				);
+				if (ageDisplay) RegEl.register(ageDisplay);
+
+				const activeDisplay = document.querySelector(
+					'[data-bind="textContent:@user.active"]'
+				);
+				if (activeDisplay) RegEl.register(activeDisplay);
+
+				const countDisplay = document.querySelector(
+					'[data-bind="textContent:@count"]'
+				);
+				if (countDisplay) RegEl.register(countDisplay);
 
 				console.log("Element registered:", testRegEl);
 			});
@@ -170,6 +292,107 @@
 				console.log("=== Incrementing Counter ===");
 				window.counterState.value += 1;
 				console.log("Counter is now:", window.counterState.value);
+			};
+
+			window.resetSyncTest = () => {
+				console.log("=== Resetting Sync Test Values ===");
+				window.userState.value = {
+					name: "John Doe",
+					age: 25,
+					active: false,
+				};
+				window.counterState.value = 0;
+				console.log("Values reset!");
+			};
+
+			window.logSyncValues = () => {
+				console.log("=== Current Sync Values ===");
+				console.log("User state:", window.userState.value);
+				console.log("Counter state:", window.counterState.value);
+
+				// Also log the actual DOM element values
+				console.log("DOM Element Values:");
+				console.log(
+					"Name input:",
+					document.getElementById("name-input").value
+				);
+				console.log(
+					"Age input:",
+					document.getElementById("age-input").value
+				);
+				console.log(
+					"Active checkbox:",
+					document.getElementById("active-checkbox").checked
+				);
+				console.log(
+					"Counter input:",
+					document.getElementById("counter-input").value
+				);
+
+				// Debug: Check if the alias states are the same objects
+				const counterInputRegEl = RegEl.getRegEl(
+					document.getElementById("counter-input")
+				);
+				if (counterInputRegEl) {
+					console.log("=== Counter Input RegEl Props ===");
+					console.log("Props:", counterInputRegEl.props);
+					console.log("count state:", counterInputRegEl.props.count);
+					console.log(
+						"counter state:",
+						counterInputRegEl.props.counter
+					);
+					console.log(
+						"Are they the same object?",
+						counterInputRegEl.props.count ===
+							counterInputRegEl.props.counter
+					);
+					console.log(
+						"count value:",
+						counterInputRegEl.props.count?.value
+					);
+					console.log(
+						"counter value:",
+						counterInputRegEl.props.counter?.value
+					);
+				}
+			};
+
+			window.debugSync = () => {
+				console.log("=== SYNC DEBUG ===");
+				const counterInput = document.getElementById("counter-input");
+				const regEl = RegEl.getRegEl(counterInput);
+				console.log("Counter input element:", counterInput);
+				console.log("Counter input RegEl:", regEl);
+				console.log("Counter input value:", counterInput.value);
+				console.log("Counter state value:", window.counterState.value);
+				console.log(
+					"Available aliases in props:",
+					regEl ? Object.keys(regEl.props) : "No RegEl"
+				);
+				if (regEl) {
+					console.log("count alias state:", regEl.props.count);
+					console.log("count alias value:", regEl.props.count?.value);
+					console.log("counter alias state:", regEl.props.counter);
+					console.log(
+						"counter alias value:",
+						regEl.props.counter?.value
+					);
+				}
+
+				// Test manual sync
+				console.log("=== TESTING MANUAL SYNC ===");
+				if (regEl && regEl.props.count) {
+					console.log("Setting count state to 99");
+					regEl.props.count.value = 99;
+					console.log(
+						"Count state after manual set:",
+						regEl.props.count.value
+					);
+					console.log(
+						"Global counter state:",
+						window.counterState.value
+					);
+				}
 			};
 		</script>
 	</body>
