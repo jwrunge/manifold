@@ -75,7 +75,8 @@
 		</div>
 
 		<div id="test-el-4" data-scope="@user.name as name">
-			User name (aliased): <span data-bind="textContent: @name"></span>
+			User name (aliased): <span data-bind="textContent: @name"></span> ==
+			${name}
 		</div>
 
 		<div class="test-section">
@@ -251,10 +252,11 @@
 
 				const testElement2 = document.getElementById("test-el-2");
 				RegEl.register(testElement2);
-
 				const testElement3 = document.getElementById("test-el-3");
 				RegEl.register(testElement3);
 
+				const testElement4 = document.getElementById("test-el-4");
+				RegEl.register(testElement4);
 				const testElement44 = document.getElementById("test-el-44");
 				RegEl.register(testElement44);
 

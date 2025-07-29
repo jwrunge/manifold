@@ -31,10 +31,6 @@ const parseArithmetic = (
 	let inQuotes = false;
 	let quoteChar = "";
 
-	if (expr.includes("'Number:") || expr.includes("@num")) {
-		console.log("DEBUG parseArithmetic input:", JSON.stringify(expr));
-	}
-
 	// Find the rightmost operator at depth 0 (outside parentheses and ternary expressions)
 	for (let i = expr.length - 1; i >= 0; i--) {
 		const char = expr[i];
@@ -72,22 +68,11 @@ const parseArithmetic = (
 			}
 			lastOpIndex = i;
 			lastOp = char;
-			if (expr.includes("'Number:") || expr.includes("@num")) {
-				console.log(
-					"DEBUG parseArithmetic found operator:",
-					char,
-					"at index:",
-					i
-				);
-			}
 			break; // Found the rightmost operator
 		}
 	}
 
 	if (lastOpIndex === -1) {
-		if (expr.includes("'Number:") || expr.includes("@num")) {
-			console.log("DEBUG parseArithmetic no operator found");
-		}
 		return null;
 	}
 
@@ -96,10 +81,6 @@ const parseArithmetic = (
 		op: lastOp,
 		right: expr.slice(lastOpIndex + 1).trim(),
 	};
-
-	if (expr.includes("'Number:") || expr.includes("@num")) {
-		console.log("DEBUG parseArithmetic result:", result);
-	}
 
 	return result;
 };
@@ -145,23 +126,12 @@ export const evalProp = (
 
 const parseValue = (val: string, ctx: Record<string, unknown>): any => {
 	val = val.trim();
-	if (val.includes("'") || val.includes("@")) {
-		console.log("DEBUG parseValue input:", JSON.stringify(val));
-	}
 
 	if (val in LITERALS) return LITERALS[val];
 	if (NUM_RE.test(val)) return parseFloat(val);
 	const strMatch = val.match(STR_RE);
 	if (strMatch) {
 		const result = strMatch[2]; // Second capture group contains the content
-		if (val.includes("'")) {
-			console.log(
-				"DEBUG parseValue string match:",
-				JSON.stringify(val),
-				"->",
-				JSON.stringify(result)
-			);
-		}
 		return result;
 	}
 
@@ -170,12 +140,6 @@ const parseValue = (val: string, ctx: Record<string, unknown>): any => {
 		const propName = val.slice(1); // Remove the @ prefix
 		if (PROP_RE.test(propName)) {
 			const result = evalProp(propName, ctx);
-			console.log(
-				"DEBUG parseValue state prop:",
-				JSON.stringify(val),
-				"->",
-				result
-			);
 			return result;
 		}
 	}
@@ -225,16 +189,6 @@ export const evaluateExpression = (
 ): ExpressionResult => {
 	expr = expr?.trim();
 	if (!expr) return { fn: () => undefined, stateRefs: [] };
-
-	// Debug logging for the problematic expression
-	if (
-		expr.includes("'Counter is '") ||
-		expr.includes("@todo") ||
-		expr.includes("@num") ||
-		expr.includes("@index")
-	) {
-		console.log("DEBUG: Evaluating expression:", expr);
-	}
 
 	// Extract state references from the expression
 	const stateRefs: string[] = [];
@@ -404,14 +358,6 @@ export const evaluateExpression = (
 	// Handle arithmetic expressions with proper left-to-right associativity
 	const arithParse = parseArithmetic(expr);
 	if (arithParse) {
-		if (
-			expr.includes("'Counter is '") ||
-			expr.includes("@todo") ||
-			expr.includes("@num") ||
-			expr.includes("@index")
-		) {
-			console.log("DEBUG: Arithmetic parse found:", arithParse);
-		}
 		const leftEval = evaluateExpression(arithParse.left);
 		const rightEval = evaluateExpression(arithParse.right);
 		const op = arithParse.op;
@@ -426,21 +372,6 @@ export const evaluateExpression = (
 				const leftVal = leftEval.fn(ctx);
 				const rightVal = rightEval.fn(ctx);
 
-				if (
-					expr.includes("'Counter is '") ||
-					expr.includes("@todo") ||
-					expr.includes("@num") ||
-					expr.includes("@index")
-				) {
-					console.log(
-						"DEBUG: Evaluating arithmetic - left:",
-						leftVal,
-						"right:",
-						rightVal
-					);
-					console.log("DEBUG: Context:", ctx);
-				}
-
 				if (op === "+") {
 					// Handle both string concatenation and numeric addition
 					if (
@@ -449,23 +380,6 @@ export const evaluateExpression = (
 					) {
 						const result =
 							String(leftVal ?? "") + String(rightVal ?? "");
-						if (
-							expr.includes("'Counter is '") ||
-							expr.includes("@todo") ||
-							expr.includes("@num") ||
-							expr.includes("@index")
-						) {
-							console.log(
-								"DEBUG: String concatenation result:",
-								result
-							);
-							console.log(
-								"DEBUG: Left value:",
-								leftVal,
-								"Right value:",
-								rightVal
-							);
-						}
 						return result;
 					} else if (
 						typeof leftVal === "number" &&
@@ -491,16 +405,7 @@ export const evaluateExpression = (
 			stateRefs: uniqueStateRefs,
 		};
 	} else {
-		// Debug: Log when arithmetic parsing fails
-		if (expr.includes("@index + ': '")) {
-			console.log("DEBUG: Arithmetic parsing failed for:", expr);
-		}
-		if (expr.includes("@num") && expr.includes("+")) {
-			console.log(
-				"DEBUG: Arithmetic parsing FAILED for @num expression:",
-				expr
-			);
-		}
+		// Arithmetic parsing failed, continue with other parsing methods
 	}
 
 	// Handle nullish coalescing
@@ -527,16 +432,6 @@ export const evaluateExpression = (
 			return {
 				fn: (ctx) => {
 					const result = evalProp(propName, ctx);
-					if (expr.includes("'Counter is '")) {
-						console.log(
-							"DEBUG: State reference evaluation - prop:",
-							propName,
-							"result:",
-							result,
-							"ctx:",
-							ctx
-						);
-					}
 					return result;
 				},
 				stateRefs,
