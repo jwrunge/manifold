@@ -55,10 +55,6 @@ export class RegEl {
 		props: Record<string, State<unknown>>,
 		includeBaseStates: boolean
 	): { processedExpression: string } {
-		console.log(
-			`[PARSE ALIASES DEBUG] Input: "${text}", includeBaseStates: ${includeBaseStates}`
-		);
-
 		let processedExpression = text;
 
 		// Parse aliases: "@counter as count" or "@user.name as name"
@@ -69,10 +65,6 @@ export class RegEl {
 		while ((match = aliasRegex.exec(text)) !== null) {
 			const [fullMatch, stateRef, aliasName] = match;
 			if (!stateRef || !aliasName) continue;
-
-			console.log(
-				`[PARSE ALIASES DEBUG] Found alias: ${stateRef} as ${aliasName}`
-			);
 
 			// Replace the alias expression with just the alias name
 			processedExpression = processedExpression.replace(
@@ -102,24 +94,12 @@ export class RegEl {
 						return current;
 					});
 					props[aliasName] = computedState;
-					console.log(
-						`[PARSE ALIASES DEBUG] Added property alias: ${aliasName} -> ${stateRef}`,
-						computedState
-					);
 				}
 			} else {
 				// Simple state alias: "@counter as count"
 				const state = State.get<unknown>(stateRef);
 				if (state) {
 					props[aliasName] = state;
-					console.log(
-						`[PARSE ALIASES DEBUG] Added simple alias: ${aliasName} -> ${stateRef}`,
-						state
-					);
-				} else {
-					console.warn(
-						`[PARSE ALIASES DEBUG] State ${stateRef} not found for alias ${aliasName}`
-					);
 				}
 			}
 
@@ -129,18 +109,9 @@ export class RegEl {
 				const baseState = State.get<unknown>(stateName);
 				if (baseState && stateName && !props[stateName]) {
 					props[stateName] = baseState;
-					console.log(
-						`[PARSE ALIASES DEBUG] Added base state: ${stateName}`,
-						baseState
-					);
 				}
 			}
 		}
-
-		console.log(
-			`[PARSE ALIASES DEBUG] Processed expression: "${processedExpression}"`
-		);
-		console.log(`[PARSE ALIASES DEBUG] Current props:`, Object.keys(props));
 
 		return { processedExpression };
 	} // Helper function to add simple state references (no aliasing)
@@ -195,46 +166,18 @@ export class RegEl {
 
 		// Traverse ancestors to find inherited props
 		let parent = element.parentElement;
-		console.log(
-			`[INHERITANCE DEBUG] Starting ancestor traversal for element:`,
-			element
-		);
-		console.log(`[INHERITANCE DEBUG] First parent:`, parent);
 
 		while (parent) {
 			const regPar = RegEl._registry.get(parent);
-			console.log(
-				`[INHERITANCE DEBUG] Checking parent:`,
-				parent,
-				`RegEl:`,
-				regPar
-			);
 			if (regPar) {
-				console.log(
-					`[INHERITANCE DEBUG] Found parent RegEl with props:`,
-					Object.keys(regPar.props)
-				);
 				for (const [key, state] of Object.entries(regPar.props)) {
 					if (!props[key]) {
 						props[key] = state;
-						console.log(
-							`[INHERITANCE DEBUG] Inherited prop: ${key}`,
-							state
-						);
-					} else {
-						console.log(
-							`[INHERITANCE DEBUG] Prop ${key} already exists, skipping`
-						);
 					}
 				}
 			}
 			parent = parent.parentElement;
 		}
-
-		console.log(
-			`[INHERITANCE DEBUG] Final props after inheritance:`,
-			Object.keys(props)
-		);
 
 		// PHASE 2: Now evaluate all expressions with complete props context
 		for (const attr of MANIFOLD_ATTRIBUTES) {
@@ -376,27 +319,10 @@ export class RegEl {
 			newState.value;
 		});
 
-		console.log(`[REGISTER DEBUG] Element:`, element);
-		console.log(`[REGISTER DEBUG] Element ID:`, element.id);
-		console.log(
-			`[REGISTER DEBUG] Final props before processing:`,
-			Object.keys(props)
-		);
-		console.log(`[REGISTER DEBUG] Props details:`, props);
-
 		// Handle sync (two-way binding)
 		element.dataset["sync"]?.split(/\s*,\s*/).forEach((binding) => {
 			const [property, expr] = binding.split(":").map((s) => s.trim());
 			if (!property || !expr) return;
-
-			console.log(
-				`[SYNC DEBUG] Setting up sync for ${property}:${expr} on element:`,
-				element
-			);
-			console.log(
-				`[SYNC DEBUG] Available props at sync time:`,
-				Object.keys(props)
-			);
 
 			// Parse the sync expression to handle aliases using the current props context
 			const { processedExpression } = RegEl.parseAliases(
@@ -406,11 +332,6 @@ export class RegEl {
 			);
 			const exprResult = evaluateExpression(processedExpression);
 
-			console.log(
-				`[SYNC DEBUG] Processed expression: ${processedExpression}, original: ${expr}`
-			);
-			console.log(`[SYNC DEBUG] Expression result:`, exprResult);
-
 			// Create a state that evaluates the sync expression with full props context
 			const newState = new State(() => {
 				const context: Record<string, unknown> = {};
@@ -418,22 +339,12 @@ export class RegEl {
 					context[key] = state.value;
 				}
 				const result = exprResult.fn(context);
-				console.log(
-					`[SYNC DEBUG] State evaluation - context:`,
-					context,
-					`result:`,
-					result
-				);
 				return result;
 			});
 
 			// Set up the effect to update the property (state -> element)
 			newState?.effect(() => {
 				try {
-					console.log(
-						`[SYNC DEBUG] Updating ${property} to:`,
-						newState.value
-					);
 					if (property in element) {
 						(element as any)[property] = newState.value;
 					} else {
@@ -454,45 +365,23 @@ export class RegEl {
 			// For sync, we need to resolve the target state to update
 			if (processedExpression.startsWith("@")) {
 				const stateRef = processedExpression.slice(1); // Remove @
-				console.log(
-					`[SYNC DEBUG] Resolving state reference: ${stateRef}`
-				);
-				console.log(
-					`[SYNC DEBUG] Available props:`,
-					Object.keys(props)
-				);
 
 				if (stateRef.includes(".")) {
 					// Property path: "@user.name"
 					const [stateName, ...propPath] = stateRef.split(".");
 					targetState = State.get<unknown>(stateName);
 					targetProperty = propPath.join(".");
-					console.log(
-						`[SYNC DEBUG] Property path - stateName: ${stateName}, targetState:`,
-						targetState,
-						`targetProperty: ${targetProperty}`
-					);
 				} else {
 					// Simple state or aliased state: "@counter" or "@count"
 					// Check if it's an alias in props first
 					if (props[stateRef]) {
 						targetState = props[stateRef];
-						console.log(
-							`[SYNC DEBUG] Found aliased state for ${stateRef}:`,
-							targetState
-						);
 					} else {
 						// Direct state reference
 						targetState = State.get<unknown>(stateRef);
-						console.log(
-							`[SYNC DEBUG] Found direct state for ${stateRef}:`,
-							targetState
-						);
 					}
 				}
 			}
-
-			console.log(`[SYNC DEBUG] Final targetState:`, targetState);
 
 			if (targetState) {
 				// Determine the appropriate event type
@@ -503,8 +392,6 @@ export class RegEl {
 						? "change"
 						: "input";
 
-				console.log(`[SYNC DEBUG] Adding ${eventType} event listener`);
-
 				element.addEventListener(eventType, () => {
 					let newValue: unknown;
 					if (property in element) {
@@ -512,11 +399,6 @@ export class RegEl {
 					} else {
 						newValue = element.getAttribute(property);
 					}
-
-					console.log(
-						`[SYNC DEBUG] Event triggered - ${eventType}, newValue:`,
-						newValue
-					);
 
 					// Handle type conversion
 					if (property === "checked") {
@@ -532,16 +414,8 @@ export class RegEl {
 						}
 					}
 
-					console.log(
-						`[SYNC DEBUG] After type conversion:`,
-						newValue
-					);
-
 					try {
 						if (targetProperty) {
-							console.log(
-								`[SYNC DEBUG] Updating object property ${targetProperty}`
-							);
 							// Update object property (e.g., user.name)
 							const currentValue = targetState.value;
 							if (
@@ -563,20 +437,11 @@ export class RegEl {
 								if (current && lastProp) {
 									current[lastProp] = newValue;
 									targetState.value = newStateValue;
-									console.log(
-										`[SYNC DEBUG] Updated state to:`,
-										newStateValue
-									);
 								}
 							}
 						} else {
-							console.log(`[SYNC DEBUG] Updating entire state`);
 							// Update entire state
 							targetState.value = newValue;
-							console.log(
-								`[SYNC DEBUG] Updated state to:`,
-								newValue
-							);
 						}
 					} catch (error) {
 						console.warn(`Failed to update state:`, error);
