@@ -124,8 +124,8 @@ export class State<T = unknown> {
 		}
 	}
 
-	static get<T>(name: string): State<T> | undefined {
-		return this.reg.get(name) as State<T> | undefined;
+	static get<T>(name?: string): State<T> | undefined {
+		return name ? (this.reg.get(name) as State<T> | undefined) : undefined;
 	}
 
 	static register<T>(name: string, state: State<T>): void {

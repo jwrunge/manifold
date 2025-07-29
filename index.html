@@ -3,48 +3,151 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<link rel="stylesheet" href="/fe-assets/style.css" />
-		<title>Manifold UI tests</title>
+		<title>Manifold Registry Test</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			.test-section {
+				margin: 20px 0;
+				padding: 15px;
+				border: 1px solid #ccc;
+				border-radius: 5px;
+			}
+			.hidden {
+				display: none;
+			}
+			.item {
+				padding: 8px;
+				margin: 4px 0;
+				background: #f0f0f0;
+				border-radius: 3px;
+			}
+			button {
+				padding: 8px 16px;
+				margin: 5px;
+				background: #007acc;
+				color: white;
+				border: none;
+				border-radius: 3px;
+				cursor: pointer;
+			}
+			button:hover {
+				background: #005999;
+			}
+			input {
+				padding: 5px;
+				margin: 5px;
+				border: 1px solid #ccc;
+				border-radius: 3px;
+			}
+		</style>
 	</head>
-	<!-- <script type="module" src="/fe-assets/viewmodelscript.ts"></script> -->
 	<body>
-		<h2>Test UI Hooks</h2>
-		<form>
-			<div>
-				<button type="button" onclick="window.addChickens()">
-					Add 10 chickens
-				</button>
+		<h1>Registry Test - data-scope</h1>
+
+		<span id="test-el-2" data-scope="@counter">
+			Counter is ${counter}!
+		</span>
+
+		<div id="test-el-3" data-scope="@counter as count" data-if="@count > 5">
+			Counter (aliased as count) is greater than 5:
+			<span id="counter-display"></span>
+		</div>
+
+		<div id="test-el-4" data-scope="@user.name as name">
+			User name (aliased): <span data-bind="textContent: @name"></span>
+		</div>
+
+		<div class="test-section">
+			<h2>Element Registry Test</h2>
+			<p>Testing data-scope prop binding and logging</p>
+
+			<div id="test-element" data-scope="@user, @counter as count">
+				Test element with scoped props
 			</div>
-			<label for="chickens-input">Chickens:</label>
-			<input
-				id="chickens-input"
-				data-content="chickens"
-				oninput="window.updateChickens(event)"
-				type="number"
-				min="0"
-				style="border: 3px solid red"
-			/>
-		</form>
-		<div>CHICKEN 5 SAYS: <span data-content="chicken5Message"></span></div>
 
-		<mf-if data-condition="isEven">
-			<div>EVEN CHICKENS!!!!</div>
-		</mf-if>
-		<mf-else-if data-condition="is3">
-			<div>THREE chickens!</div>
-		</mf-else-if>
-		<mf-else-if data-condition="is5">
-			<div>FIVE chickens!</div>
-		</mf-else-if>
-		<mf-else>
-			<div>ODD CHICKENS!</div>
-		</mf-else>
+			<button onclick="logProps()">Log Props</button>
+			<button onclick="updateProps()">Update Props</button>
+			<button onclick="logPropsAgain()">Log Props Again</button>
+			<button onclick="incrementCounter()">Increment Counter</button>
+		</div>
 
-		<br />
-		<ul>
-			<mf-each data-items="chxArray" data-mf-as="val, i">
-				<template><li>+ Lots o' chickens ${i} ${val}</li></template>
-			</mf-each>
-		</ul>
+		<!-- Import Manifold -->
+		<script type="module">
+			import { State } from "./src/State.js";
+			import { RegEl } from "./src/registry.js";
+			import { evaluateExpression } from "./src/expression-parser.js";
+
+			// Initialize test states
+			window.userState = new State(
+				{
+					name: "John Doe",
+					age: 25,
+				},
+				"user"
+			);
+			window.counterState = new State(0, "counter");
+
+			// Register states globally
+			State.register("user", window.userState);
+			State.register("counter", window.counterState);
+
+			// Register the test element
+			let testRegEl;
+			document.addEventListener("DOMContentLoaded", () => {
+				const testElement = document.getElementById("test-element");
+				testRegEl = RegEl.register(testElement);
+
+				const testElement2 = document.getElementById("test-el-2");
+				RegEl.register(testElement2);
+
+				const testElement3 = document.getElementById("test-el-3");
+				RegEl.register(testElement3);
+
+				const testElement4 = document.getElementById("test-el-4");
+				RegEl.register(testElement4);
+
+				console.log("Element registered:", testRegEl);
+			});
+
+			// Test functions
+			window.logProps = () => {
+				console.log("=== Logging Props ===");
+				console.log("RegEl props:", testRegEl.props);
+
+				Object.entries(testRegEl.props).forEach(([key, state]) => {
+					console.log(`${key}:`, state.value);
+				});
+			};
+
+			window.updateProps = () => {
+				console.log("=== Updating Props ===");
+				window.userState.value = {
+					name: "Jane Smith",
+					age: 30,
+				};
+				window.counterState.value = 42;
+				console.log("Props updated!");
+			};
+
+			window.logPropsAgain = () => {
+				console.log("=== Logging Props Again ===");
+				console.log("RegEl props:", testRegEl.props);
+
+				Object.entries(testRegEl.props).forEach(([key, state]) => {
+					console.log(`${key}:`, state.value);
+				});
+			};
+
+			window.incrementCounter = () => {
+				console.log("=== Incrementing Counter ===");
+				window.counterState.value += 1;
+				console.log("Counter is now:", window.counterState.value);
+			};
+		</script>
 	</body>
 </html>

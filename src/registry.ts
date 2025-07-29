@@ -1,4 +1,8 @@
-import { evaluateExpression, STATE_RE } from "./expression-parser";
+import {
+	evaluateExpression,
+	ExpressionResult,
+	evalProp,
+} from "./expression-parser";
 import { State } from "./State";
 
 // Extend element interfaces to include mfRegister
@@ -16,7 +20,7 @@ declare global {
 
 export const MANIFOLD_ATTRIBUTES = [
 	"if",
-	"else-if",
+	"elif",
 	"else",
 	"each",
 	"scope",
@@ -38,37 +42,87 @@ export interface ParsedElement {
 export class RegEl {
 	private static _registry: WeakMap<Element | DocumentFragment, RegEl> =
 		new WeakMap();
-	private static _expressions: Map<
-		string,
-		(vars: Record<string, unknown>) => unknown
-	> = new Map();
+	private static _expressions = new Set<(vars: Record<string, any>) => any>();
 	private static _stateExpression: Map<State<unknown>, string> = new Map();
 
 	private _regexCache: Map<string, RegExp> = new Map();
 	private _cachedContent: Node | null = null;
 
 	static register(element: HTMLElement | SVGElement | MathMLElement) {
+		element.mfRegister = () => RegEl.register(element);
+
 		const props: Record<string, State<unknown>> = {};
 		const attrState = new Map<string, State<unknown>>();
 
-		for (const attr of MANIFOLD_ATTRIBUTES) {
-			const attrStr =
-				element.dataset[
-					attr.replace(/-([a-z])/g, (_, letter) =>
-						letter.toUpperCase()
-					)
-				];
+		// Parse scope declarations first to handle aliasing
+		const scopeDeclaration = element.dataset["scope"];
+		if (scopeDeclaration) {
+			// Parse "@user, @counter as count, @user.name as name" format
+			const scopeItems = scopeDeclaration.split(",").map((s) => s.trim());
+			for (const item of scopeItems) {
+				// Check for aliasing pattern: "@counter as count" or "@user.name as name"
+				const asMatch = item.match(
+					/^@([a-zA-Z_$][a-zA-Z0-9_$]*(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*)*)\s+as\s+([a-zA-Z_$][a-zA-Z0-9_$]*)$/
+				);
+				if (asMatch) {
+					const [, fullPath, aliasName] = asMatch;
+					if (!fullPath || !aliasName) continue;
 
-			// Get State variables
-			for (const ref of Array.from(
-				(attrStr ?? "").matchAll(STATE_RE),
-				(match) => match[1]!
-			)) {
-				const refName = ref.split(".")[0] ?? "";
-				const S = State.get<unknown>(refName);
-				if (S) {
-					props[refName] = S;
-					attrState.set(attr, S);
+					const baseName = fullPath.split(".")[0];
+					if (!baseName) continue;
+
+					const baseState = State.get<unknown>(baseName);
+					if (baseState) {
+						// For simple state references like "@counter as count"
+						if (!fullPath.includes(".")) {
+							props[aliasName] = baseState;
+						} else {
+							// For property paths like "@user.name as name"
+							// Create a derived state that evaluates the property path
+							const derivedState = new State(() => {
+								const context: Record<string, unknown> = {};
+								context[baseName] = baseState.value;
+								return evalProp(fullPath, context);
+							});
+							props[aliasName] = derivedState;
+						}
+					}
+				} else {
+					// Handle simple "@user" format (no aliasing)
+					const simpleMatch = item.match(
+						/^@([a-zA-Z_$][a-zA-Z0-9_$]*)$/
+					);
+					if (simpleMatch) {
+						const [, stateName] = simpleMatch;
+						if (stateName) {
+							const S = State.get<unknown>(stateName);
+							if (S) {
+								props[stateName] = S;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Process other manifold attributes and extract their state dependencies
+		for (const attr of MANIFOLD_ATTRIBUTES) {
+			if (attr === "scope") continue; // Already handled above
+
+			const attrText = element.dataset[attr];
+			if (!attrText) continue;
+
+			// Parse the expression to get both the function and state dependencies
+			const exprResult = evaluateExpression(attrText);
+
+			// Add any state dependencies that aren't already in props
+			for (const stateRef of exprResult.stateRefs) {
+				if (!props[stateRef]) {
+					const S = State.get<unknown>(stateRef);
+					if (S) {
+						props[stateRef] = S;
+						attrState.set(attr, S);
+					}
 				}
 			}
 		}
@@ -83,8 +137,13 @@ export class RegEl {
 			parent = parent.parentElement;
 		}
 
-		// Handy re-register function
-		element.mfRegister = () => RegEl.register(element);
+		for (const [attr, expTxt] of Object.entries(element.dataset)) {
+			console.log("ATTR", attr, expTxt);
+			const exprResult = evaluateExpression(expTxt);
+			console.log("Function:", exprResult.fn);
+			console.log("States:", exprResult.stateRefs);
+			console.log("Result:", exprResult.fn(props));
+		}
 
 		// Handle conditionals
 		// TODO: Traverse up for conditionals for if, else-if, and else
@@ -94,12 +153,12 @@ export class RegEl {
 			const [property, expr] = binding.split(":").map((s) => s.trim());
 			if (!property || !expr) return;
 
-			const fn = evaluateExpression(expr);
+			const exprResult = evaluateExpression(expr);
 			const bindState = attrState.get("bind");
 			if (!bindState) return;
 
 			const newState = new State(() =>
-				fn({ ...props, [bindState.name!]: bindState.value })
+				exprResult.fn({ ...props, [bindState.name!]: bindState.value })
 			);
 			newState?.effect(() => {
 				if (property in element)
@@ -143,7 +202,7 @@ export class RegEl {
 				for (const [key, state] of Object.entries(props)) {
 					context[key] = state.value;
 				}
-				return evaluator(context);
+				return evaluator.fn(context);
 			});
 		}
 
@@ -156,7 +215,7 @@ export class RegEl {
 				for (const [key, state] of Object.entries(props)) {
 					context[key] = state.value;
 				}
-				return evaluator(context);
+				return evaluator.fn(context);
 			}) as State<Array<unknown>>;
 		}
 
