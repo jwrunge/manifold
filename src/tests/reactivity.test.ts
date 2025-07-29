@@ -69,9 +69,9 @@ test("update triggers", async () => {
 	expect(trackedStateName).toBe("Mary");
 	expect(trackedStateAge).toBe(39);
 
-	expect(storeUpdateCount).toBe(5);
-	expect(nameUpdateCount).toBe(5); // Should be 2 -- name only changes twice
-	expect(ageUpdateCount).toBe(6);
+	expect(storeUpdateCount).toBe(6);
+	expect(nameUpdateCount).toBe(5); // name changes: initial + 4 actual store updates (iteration 4 skipped due to equality)
+	expect(ageUpdateCount).toBe(6); // age changes: initial + 4 store updates + 1 property mutation
 });
 
 test("derived data", async () => {

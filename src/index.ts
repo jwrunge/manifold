@@ -16,7 +16,11 @@ const init = (
 		RegEl.register(el as HTMLElement | SVGElement | MathMLElement);
 };
 
+// Factory function for creating reactive state
+const watch = <T>(value: T) => new State(value);
+
 export default {
 	State,
+	watch,
 	init,
 };

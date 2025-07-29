@@ -10,6 +10,7 @@ const STR_RE = /^(['"`])(.*?)\1$/;
 const OR_RE = /^(.+?)\s*\|\|\s*(.+)$/;
 const NULL_RE = /^(.+?)\s*\?\?\s*(.+)$/;
 const AND_RE = /^(.+?)\s*&&\s*(.+)$/;
+const NEG_RE = /^!\s*(.+)$/;
 export const STATE_RE = new RegExp(STATE_PROP, "g");
 
 const LITERALS: Record<string, unknown> = {
@@ -61,10 +62,13 @@ const parseArithmetic = (
 		else if (char === "?") ternaryDepth++;
 		else if (char === ":") ternaryDepth--;
 		else if (depth === 0 && ternaryDepth === 0 && /[+\-*/]/.test(char)) {
-			// Make sure it's not a negative number
-			const prevChar = i > 0 ? expr[i - 1] : "";
-			if (char === "-" && prevChar && /[+\-*/]/.test(prevChar)) {
-				continue; // This is a negative number, not an operator
+			// Make sure it's not a negative number at the start or after operators/spaces
+			if (char === "-") {
+				const prevPart = expr.slice(0, i).trim();
+				// If it's at the start or after an operator, it's likely a negative number
+				if (prevPart === "" || /[+\-*/=<>!&|?:]$/.test(prevPart)) {
+					continue; // This is a negative number, not an operator
+				}
 			}
 			lastOpIndex = i;
 			lastOp = char;
@@ -259,13 +263,41 @@ export const evaluateExpression = (
 	const strMatch = expr.match(STR_RE);
 	if (strMatch && strMatch[2] !== undefined) {
 		const strValue = strMatch[2]; // Second capture group contains the content
-		// Reject if the content contains @ (state references) - this indicates it's an expression, not a simple string
+		// Reject if the content contains @ (state references) or if there are operators outside quotes
+		// indicating it's an expression, not a simple string
 		if (!strValue.includes("@")) {
-			return { fn: () => strValue, stateRefs };
+			// Also check if there are unquoted operators in the original expression
+			let inQuotes = false;
+			let quoteChar = "";
+			let hasOperatorsOutsideQuotes = false;
+
+			for (let i = 0; i < expr.length; i++) {
+				const char = expr[i];
+				if (!char) continue;
+				if (
+					(char === '"' || char === "'") &&
+					(i === 0 || expr[i - 1] !== "\\")
+				) {
+					if (!inQuotes) {
+						inQuotes = true;
+						quoteChar = char;
+					} else if (char === quoteChar) {
+						inQuotes = false;
+						quoteChar = "";
+					}
+				} else if (!inQuotes && /[+\-*/]/.test(char)) {
+					hasOperatorsOutsideQuotes = true;
+					break;
+				}
+			}
+
+			if (!hasOperatorsOutsideQuotes) {
+				return { fn: () => strValue, stateRefs };
+			}
 		}
 	}
 
-	// Handle expressions wrapped in parentheses
+	// Handle expressions wrapped in parentheses FIRST (before ternary and arithmetic)
 	if (expr.startsWith("(") && expr.endsWith(")")) {
 		// Check if the parentheses are balanced and wrap the entire expression
 		let depth = 0;
@@ -295,14 +327,42 @@ export const evaluateExpression = (
 		const trueEval = evaluateExpression(ternary._trueValue);
 		const falseEval = evaluateExpression(ternary._falseValue);
 		const allStateRefs = [
+			...stateRefs,
 			...conditionEval.stateRefs,
 			...trueEval.stateRefs,
 			...falseEval.stateRefs,
 		];
-		const uniqueStateRefs = [...new Set([...stateRefs, ...allStateRefs])];
+		const uniqueStateRefs = [...new Set(allStateRefs)];
 		return {
 			fn: (ctx) =>
 				conditionEval.fn(ctx) ? trueEval.fn(ctx) : falseEval.fn(ctx),
+			stateRefs: uniqueStateRefs,
+		};
+	}
+
+	// Handle negation operator (!)
+	const negMatch = expr.match(NEG_RE);
+	if (negMatch?.[1]) {
+		const innerEval = evaluateExpression(negMatch[1]);
+		const allStateRefs = [...stateRefs, ...innerEval.stateRefs];
+		const uniqueStateRefs = [...new Set(allStateRefs)];
+		return {
+			fn: (ctx) => !innerEval.fn(ctx),
+			stateRefs: uniqueStateRefs,
+		};
+	}
+
+	// Handle unary minus (negative) expressions
+	if (expr.startsWith("-") && expr.length > 1) {
+		const innerExpr = expr.slice(1).trim();
+		const innerEval = evaluateExpression(innerExpr);
+		const allStateRefs = [...stateRefs, ...innerEval.stateRefs];
+		const uniqueStateRefs = [...new Set(allStateRefs)];
+		return {
+			fn: (ctx) => {
+				const value = innerEval.fn(ctx);
+				return typeof value === "number" ? -value : undefined;
+			},
 			stateRefs: uniqueStateRefs,
 		};
 	}
@@ -312,8 +372,12 @@ export const evaluateExpression = (
 	if (orMatch?.[1] && orMatch[2]) {
 		const leftEval = evaluateExpression(orMatch[1]);
 		const rightEval = evaluateExpression(orMatch[2]);
-		const allStateRefs = [...leftEval.stateRefs, ...rightEval.stateRefs];
-		const uniqueStateRefs = [...new Set([...stateRefs, ...allStateRefs])];
+		const allStateRefs = [
+			...stateRefs,
+			...leftEval.stateRefs,
+			...rightEval.stateRefs,
+		];
+		const uniqueStateRefs = [...new Set(allStateRefs)];
 		return {
 			fn: (ctx) => leftEval.fn(ctx) || rightEval.fn(ctx),
 			stateRefs: uniqueStateRefs,
@@ -325,8 +389,12 @@ export const evaluateExpression = (
 	if (andMatch?.[1] && andMatch[2]) {
 		const leftEval = evaluateExpression(andMatch[1]);
 		const rightEval = evaluateExpression(andMatch[2]);
-		const allStateRefs = [...leftEval.stateRefs, ...rightEval.stateRefs];
-		const uniqueStateRefs = [...new Set([...stateRefs, ...allStateRefs])];
+		const allStateRefs = [
+			...stateRefs,
+			...leftEval.stateRefs,
+			...rightEval.stateRefs,
+		];
+		const uniqueStateRefs = [...new Set(allStateRefs)];
 		return {
 			fn: (ctx) => leftEval.fn(ctx) && rightEval.fn(ctx),
 			stateRefs: uniqueStateRefs,
@@ -347,8 +415,12 @@ export const evaluateExpression = (
 		const leftEval = evaluateExpression(arithParse.left);
 		const rightEval = evaluateExpression(arithParse.right);
 		const op = arithParse.op;
-		const allStateRefs = [...leftEval.stateRefs, ...rightEval.stateRefs];
-		const uniqueStateRefs = [...new Set([...stateRefs, ...allStateRefs])];
+		const allStateRefs = [
+			...stateRefs,
+			...leftEval.stateRefs,
+			...rightEval.stateRefs,
+		];
+		const uniqueStateRefs = [...new Set(allStateRefs)];
 		return {
 			fn: (ctx) => {
 				const leftVal = leftEval.fn(ctx);
@@ -436,8 +508,12 @@ export const evaluateExpression = (
 	if (nullMatch?.[1] && nullMatch[2]) {
 		const leftEval = evaluateExpression(nullMatch[1]);
 		const rightEval = evaluateExpression(nullMatch[2]);
-		const allStateRefs = [...leftEval.stateRefs, ...rightEval.stateRefs];
-		const uniqueStateRefs = [...new Set([...stateRefs, ...allStateRefs])];
+		const allStateRefs = [
+			...stateRefs,
+			...leftEval.stateRefs,
+			...rightEval.stateRefs,
+		];
+		const uniqueStateRefs = [...new Set(allStateRefs)];
 		return {
 			fn: (ctx) => leftEval.fn(ctx) ?? rightEval.fn(ctx),
 			stateRefs: uniqueStateRefs,
