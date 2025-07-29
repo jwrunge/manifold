@@ -129,6 +129,10 @@ export class State<T = unknown> {
 		return this.reg.get(name) as State<T> | undefined;
 	}
 
+	static register<T>(name: string, state: State<T>): void {
+		this.reg.set(name, state);
+	}
+
 	private _updateValue() {
 		const newValue = this._derive ? this._derive() : this._value;
 		if (!isEqual(this._value, newValue)) {
