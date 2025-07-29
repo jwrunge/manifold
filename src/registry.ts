@@ -1,8 +1,4 @@
-import {
-	evaluateExpression,
-	ExpressionResult,
-	evalProp,
-} from "./expression-parser";
+import { evaluateExpression, evalProp } from "./expression-parser";
 import { State } from "./State";
 
 // Extend element interfaces to include mfRegister
@@ -48,82 +44,108 @@ export class RegEl {
 	private _regexCache: Map<string, RegExp> = new Map();
 	private _cachedContent: Node | null = null;
 
+	// Helper function to parse and create aliased states
+	private static parseAliases(
+		expression: string,
+		props: Record<string, State<unknown>>,
+		addBaseStateForAliases: boolean = true
+	): { processedExpression: string; hasAliases: boolean } {
+		let processedExpression = expression;
+		let hasAliases = false;
+
+		// Find all "@stateRef as alias" patterns in the expression
+		const aliasRegex =
+			/@([a-zA-Z_$][a-zA-Z0-9_$]*(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*)*)\s+as\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g;
+		let match;
+
+		while ((match = aliasRegex.exec(expression)) !== null) {
+			const [fullMatch, stateRef, aliasName] = match;
+			if (!stateRef || !aliasName) continue;
+
+			hasAliases = true;
+			const baseStateName = stateRef.split(".")[0];
+			if (!baseStateName) continue;
+
+			const baseState = State.get<unknown>(baseStateName);
+			if (baseState) {
+				// Only add base state to props if explicitly requested
+				// For scope declarations, we don't want the base state unless it's also used directly
+				if (addBaseStateForAliases && !props[baseStateName]) {
+					props[baseStateName] = baseState;
+				}
+
+				// Create derived state for the alias
+				if (!stateRef.includes(".")) {
+					// Simple state reference: "@user as me"
+					props[aliasName] = baseState;
+				} else {
+					// Property path: "@user.name as name"
+					const derivedState = new State(() => {
+						const context: Record<string, unknown> = {};
+						context[baseStateName] = baseState.value;
+						return evalProp(stateRef, context);
+					});
+					props[aliasName] = derivedState;
+				}
+
+				// Replace the "@stateRef as alias" with just the alias in the expression
+				processedExpression = processedExpression.replace(
+					fullMatch,
+					aliasName
+				);
+			}
+		}
+
+		return { processedExpression, hasAliases };
+	}
+
+	// Helper function to add simple state references (no aliasing)
+	private static addSimpleStateRefs(
+		expression: string,
+		props: Record<string, State<unknown>>
+	): void {
+		// First, remove all aliasing patterns from the expression to avoid false matches
+		const withoutAliases = expression.replace(
+			/@([a-zA-Z_$][a-zA-Z0-9_$]*(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*)*)\s+as\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g,
+			""
+		);
+
+		const simpleStateRegex = /@([a-zA-Z_$][a-zA-Z0-9_$]*)/g;
+		let match;
+
+		while ((match = simpleStateRegex.exec(withoutAliases)) !== null) {
+			const [, stateName] = match;
+			if (stateName && !props[stateName]) {
+				const state = State.get<unknown>(stateName);
+				if (state) {
+					props[stateName] = state;
+				}
+			}
+		}
+	}
+
 	static register(element: HTMLElement | SVGElement | MathMLElement) {
 		element.mfRegister = () => RegEl.register(element);
 
 		const props: Record<string, State<unknown>> = {};
 		const attrState = new Map<string, State<unknown>>();
 
-		// Parse scope declarations first to handle aliasing
-		const scopeDeclaration = element.dataset["scope"];
-		if (scopeDeclaration) {
-			// Parse "@user, @counter as count, @user.name as name" format
-			const scopeItems = scopeDeclaration.split(",").map((s) => s.trim());
-			for (const item of scopeItems) {
-				// Check for aliasing pattern: "@counter as count" or "@user.name as name"
-				const asMatch = item.match(
-					/^@([a-zA-Z_$][a-zA-Z0-9_$]*(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*)*)\s+as\s+([a-zA-Z_$][a-zA-Z0-9_$]*)$/
-				);
-				if (asMatch) {
-					const [, fullPath, aliasName] = asMatch;
-					if (!fullPath || !aliasName) continue;
-
-					const baseName = fullPath.split(".")[0];
-					if (!baseName) continue;
-
-					const baseState = State.get<unknown>(baseName);
-					if (baseState) {
-						// For simple state references like "@counter as count"
-						if (!fullPath.includes(".")) {
-							props[aliasName] = baseState;
-						} else {
-							// For property paths like "@user.name as name"
-							// Create a derived state that evaluates the property path
-							const derivedState = new State(() => {
-								const context: Record<string, unknown> = {};
-								context[baseName] = baseState.value;
-								return evalProp(fullPath, context);
-							});
-							props[aliasName] = derivedState;
-						}
-					}
-				} else {
-					// Handle simple "@user" format (no aliasing)
-					const simpleMatch = item.match(
-						/^@([a-zA-Z_$][a-zA-Z0-9_$]*)$/
-					);
-					if (simpleMatch) {
-						const [, stateName] = simpleMatch;
-						if (stateName) {
-							const S = State.get<unknown>(stateName);
-							if (S) {
-								props[stateName] = S;
-							}
-						}
-					}
-				}
-			}
-		}
-
-		// Process other manifold attributes and extract their state dependencies
+		// PHASE 1: Collect ALL props from ALL attributes (no evaluations yet)
 		for (const attr of MANIFOLD_ATTRIBUTES) {
-			if (attr === "scope") continue; // Already handled above
-
 			const attrText = element.dataset[attr];
 			if (!attrText) continue;
 
-			// Parse the expression to get both the function and state dependencies
-			const exprResult = evaluateExpression(attrText);
-
-			// Add any state dependencies that aren't already in props
-			for (const stateRef of exprResult.stateRefs) {
-				if (!props[stateRef]) {
-					const S = State.get<unknown>(stateRef);
-					if (S) {
-						props[stateRef] = S;
-						attrState.set(attr, S);
-					}
+			if (attr === "scope") {
+				// Parse scope declarations: "@user, @counter as count, @user.name as name"
+				const scopeItems = attrText.split(",").map((s) => s.trim());
+				for (const item of scopeItems) {
+					// For scope, don't add base states for aliases - only the alias itself
+					RegEl.parseAliases(item, props, false);
+					RegEl.addSimpleStateRefs(item, props);
 				}
+			} else {
+				// For all other attributes, collect aliases and add base states as needed
+				RegEl.parseAliases(attrText, props, true);
 			}
 		}
 
@@ -137,12 +159,50 @@ export class RegEl {
 			parent = parent.parentElement;
 		}
 
-		for (const [attr, expTxt] of Object.entries(element.dataset)) {
-			console.log("ATTR", attr, expTxt);
-			const exprResult = evaluateExpression(expTxt);
-			console.log("Function:", exprResult.fn);
-			console.log("States:", exprResult.stateRefs);
-			console.log("Result:", exprResult.fn(props));
+		// PHASE 2: Now evaluate all expressions with complete props context
+		for (const attr of MANIFOLD_ATTRIBUTES) {
+			const attrText = element.dataset[attr];
+			if (!attrText) continue;
+			if (attr === "scope") continue; // Already handled in phase 1
+
+			// Parse aliases and get processed expression
+			const { processedExpression, hasAliases } = RegEl.parseAliases(
+				attrText,
+				{}, // Empty props object since we already collected everything
+				false // Don't add any more props
+			);
+
+			// Parse the processed expression
+			const exprResult = evaluateExpression(processedExpression);
+
+			// Add any remaining state dependencies that weren't caught by aliasing
+			for (const stateRef of exprResult.stateRefs) {
+				if (!props[stateRef]) {
+					const state = State.get<unknown>(stateRef);
+					if (state) {
+						props[stateRef] = state;
+					}
+				}
+			}
+
+			// Store the expression result for this attribute
+			if (hasAliases) {
+				// Create a new state that evaluates the processed expression
+				const evaluatedState = new State(() => {
+					const context: Record<string, unknown> = {};
+					for (const [key, state] of Object.entries(props)) {
+						context[key] = state.value;
+					}
+					return exprResult.fn(context);
+				});
+				attrState.set(attr, evaluatedState);
+			} else {
+				// No aliases - use the first state dependency if available
+				const firstStateRef = exprResult.stateRefs[0];
+				if (firstStateRef && props[firstStateRef]) {
+					attrState.set(attr, props[firstStateRef]);
+				}
+			}
 		}
 
 		// Handle conditionals
@@ -153,13 +213,20 @@ export class RegEl {
 			const [property, expr] = binding.split(":").map((s) => s.trim());
 			if (!property || !expr) return;
 
-			const exprResult = evaluateExpression(expr);
-			const bindState = attrState.get("bind");
-			if (!bindState) return;
+			// Parse the bind expression to handle aliases
+			const { processedExpression } = RegEl.parseAliases(expr, {}, false);
+			const exprResult = evaluateExpression(processedExpression);
 
-			const newState = new State(() =>
-				exprResult.fn({ ...props, [bindState.name!]: bindState.value })
-			);
+			// Create a state that evaluates the bind expression with full props context
+			const newState = new State(() => {
+				const context: Record<string, unknown> = {};
+				for (const [key, state] of Object.entries(props)) {
+					context[key] = state.value;
+				}
+				return exprResult.fn(context);
+			});
+
+			// Set up the effect to update the property
 			newState?.effect(() => {
 				if (property in element)
 					(element as any)[property] = newState.value;
@@ -169,6 +236,9 @@ export class RegEl {
 						String(newState.value ?? "")
 					);
 			});
+
+			// Trigger initial evaluation
+			newState.value;
 		});
 
 		// Handle sync
@@ -196,7 +266,13 @@ export class RegEl {
 		// Create show State if conditional expression exists
 		let showState: State<unknown> | undefined;
 		if (ifExpr) {
-			const evaluator = evaluateExpression(ifExpr);
+			// Always parse the expression with aliases and use full props context
+			const { processedExpression } = RegEl.parseAliases(
+				ifExpr,
+				{},
+				false
+			);
+			const evaluator = evaluateExpression(processedExpression);
 			showState = new State(() => {
 				const context: Record<string, unknown> = {};
 				for (const [key, state] of Object.entries(props)) {
@@ -209,7 +285,13 @@ export class RegEl {
 		// Create each State if each expression exists
 		let eachState: State<Array<unknown>> | undefined;
 		if (eachExpr) {
-			const evaluator = evaluateExpression(eachExpr);
+			// Always parse the expression with aliases and use full props context
+			const { processedExpression } = RegEl.parseAliases(
+				eachExpr,
+				{},
+				false
+			);
+			const evaluator = evaluateExpression(processedExpression);
 			eachState = new State(() => {
 				const context: Record<string, unknown> = {};
 				for (const [key, state] of Object.entries(props)) {

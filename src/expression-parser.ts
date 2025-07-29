@@ -9,7 +9,7 @@ const STR_RE = /^["'`](.*)["'`]$/;
 const OR_RE = /^(.+?)\s*\|\|\s*(.+)$/;
 const NULL_RE = /^(.+?)\s*\?\?\s*(.+)$/;
 const AND_RE = /^(.+?)\s*&&\s*(.+)$/;
-const ARITH_RE = /^([^"'`\|\&]+?)\s*([+\-*/])\s*(.+)$/;
+const ARITH_RE = /^(.+?)\s*([+\-*/])\s*(.+)$/;
 export const STATE_RE = new RegExp(STATE_PROP, "g");
 
 const LITERALS: Record<string, unknown> = {
@@ -117,6 +117,11 @@ export const evaluateExpression = (
 	expr = expr?.trim();
 	if (!expr) return { fn: () => undefined, stateRefs: [] };
 
+	// Debug logging for the problematic expression
+	if (expr.includes("'Counter is '")) {
+		console.log("DEBUG: Evaluating expression:", expr);
+	}
+
 	// Extract state references from the expression
 	const stateRefs: string[] = [];
 	const stateMatches = Array.from(expr.matchAll(STATE_RE));
@@ -195,6 +200,9 @@ export const evaluateExpression = (
 	// Handle arithmetic expressions
 	const arithMatch = expr.match(ARITH_RE);
 	if (arithMatch?.[1] && arithMatch[3]) {
+		if (expr.includes("'Counter is '")) {
+			console.log("DEBUG: Arithmetic match found:", arithMatch);
+		}
 		const leftEval = evaluateExpression(arithMatch[1]);
 		const rightEval = evaluateExpression(arithMatch[3]);
 		const op = arithMatch[2];
@@ -204,15 +212,48 @@ export const evaluateExpression = (
 			fn: (ctx) => {
 				const leftVal = leftEval.fn(ctx);
 				const rightVal = rightEval.fn(ctx);
-				if (leftVal && rightVal) {
-					return op === "+"
-						? (leftVal as number) + (rightVal as number)
-						: op === "-"
-						? (leftVal as number) - (rightVal as number)
+
+				if (expr.includes("'Counter is '")) {
+					console.log(
+						"DEBUG: Evaluating arithmetic - left:",
+						leftVal,
+						"right:",
+						rightVal
+					);
+				}
+
+				if (op === "+") {
+					// Handle both string concatenation and numeric addition
+					if (
+						typeof leftVal === "string" ||
+						typeof rightVal === "string"
+					) {
+						const result =
+							String(leftVal ?? "") + String(rightVal ?? "");
+						if (expr.includes("'Counter is '")) {
+							console.log(
+								"DEBUG: String concatenation result:",
+								result
+							);
+						}
+						return result;
+					} else if (
+						typeof leftVal === "number" &&
+						typeof rightVal === "number"
+					) {
+						return leftVal + rightVal;
+					}
+				} else if (
+					typeof leftVal === "number" &&
+					typeof rightVal === "number"
+				) {
+					// Handle numeric operations
+					return op === "-"
+						? leftVal - rightVal
 						: op === "*"
-						? (leftVal as number) * (rightVal as number)
+						? leftVal * rightVal
 						: op === "/"
-						? (leftVal as number) / (rightVal as number)
+						? leftVal / rightVal
 						: undefined;
 				}
 				return undefined;
@@ -232,6 +273,23 @@ export const evaluateExpression = (
 			fn: (ctx) => leftEval.fn(ctx) ?? rightEval.fn(ctx),
 			stateRefs: uniqueStateRefs,
 		};
+	}
+
+	// Handle state references (@property)
+	if (expr.startsWith("@")) {
+		const propName = expr.slice(1); // Remove the @ prefix
+		if (PROP_RE.test(propName)) {
+			return {
+				fn: (ctx) => {
+					const result = evalProp(propName, ctx);
+					if (expr.includes("'Counter is '")) {
+						console.log("DEBUG: State reference evaluation - prop:", propName, "result:", result, "ctx:", ctx);
+					}
+					return result;
+				},
+				stateRefs,
+			};
+		}
 	}
 
 	// Handle property access
