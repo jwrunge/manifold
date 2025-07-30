@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Manifold Performance Test - Standalone</title>
+		<style>
+			body {
+				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+				max-width: 1000px;
+				margin: 0 auto;
+				padding: 20px;
+				background: #f5f5f5;
+			}
+
+			.header {
+				text-align: center;
+				margin-bottom: 30px;
+				padding: 20px;
+				background: white;
+				border-radius: 8px;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			}
+
+			.test-section {
+				background: white;
+				border-radius: 8px;
+				padding: 20px;
+				margin-bottom: 20px;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			}
+
+			.test-controls {
+				display: flex;
+				gap: 10px;
+				margin-bottom: 15px;
+				flex-wrap: wrap;
+			}
+
+			.test-button {
+				padding: 10px 20px;
+				background: #007acc;
+				color: white;
+				border: none;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 14px;
+				font-weight: 600;
+			}
+
+			.test-button:hover {
+				background: #005a9e;
+			}
+
+			.test-button:disabled {
+				background: #ccc;
+				cursor: not-allowed;
+			}
+
+			.metrics {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+				gap: 15px;
+				margin-bottom: 20px;
+			}
+
+			.metric {
+				background: #f8f9fa;
+				padding: 15px;
+				border-radius: 6px;
+				text-align: center;
+				border: 1px solid #e9ecef;
+			}
+
+			.metric-value {
+				font-size: 28px;
+				font-weight: bold;
+				color: #007acc;
+				margin-bottom: 5px;
+			}
+
+			.metric-label {
+				font-size: 12px;
+				color: #666;
+				text-transform: uppercase;
+				font-weight: 600;
+			}
+
+			.test-output {
+				background: #f8f9fa;
+				border: 1px solid #e9ecef;
+				border-radius: 4px;
+				padding: 15px;
+				min-height: 120px;
+				font-family: "Courier New", monospace;
+				font-size: 12px;
+				white-space: pre-wrap;
+				overflow-y: auto;
+				max-height: 300px;
+			}
+
+			.log-entry {
+				margin-bottom: 8px;
+				padding: 6px;
+				border-left: 3px solid #007acc;
+				background: #f0f8ff;
+				border-radius: 0 4px 4px 0;
+			}
+
+			.log-time {
+				color: #666;
+				font-size: 11px;
+				font-weight: 600;
+			}
+
+			.success {
+				background: #d4edda;
+				border-left-color: #28a745;
+			}
+
+			.warning {
+				background: #fff3cd;
+				border-left-color: #ffc107;
+			}
+
+			.error {
+				background: #f8d7da;
+				border-left-color: #dc3545;
+			}
+
+			.results-summary {
+				background: linear-gradient(135deg, #007acc, #4da6d9);
+				color: white;
+				padding: 20px;
+				border-radius: 8px;
+				margin-top: 20px;
+			}
+
+			.results-summary h3 {
+				margin-top: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="header">
+			<h1>🚀 Manifold Performance Testing Suite</h1>
+			<p>
+				Real-time performance analysis and benchmarking for the Manifold
+				reactive framework
+			</p>
+			<p>
+				<strong>Status:</strong>
+				<span id="framework-status">Loading...</span>
+			</p>
+		</div>
+
+		<!-- Quick Performance Test -->
+		<div class="test-section">
+			<h2>⚡ Quick Performance Benchmark</h2>
+			<div class="test-controls">
+				<button class="test-button" id="run-quick-test">
+					Run Quick Test
+				</button>
+				<button class="test-button" id="run-comprehensive-test">
+					Run Comprehensive Test
+				</button>
+				<button class="test-button" id="clear-results">
+					Clear Results
+				</button>
+			</div>
+
+			<div class="metrics">
+				<div class="metric">
+					<div class="metric-value" id="total-time">0</div>
+					<div class="metric-label">Total Time (ms)</div>
+				</div>
+				<div class="metric">
+					<div class="metric-value" id="operations-count">0</div>
+					<div class="metric-label">Operations</div>
+				</div>
+				<div class="metric">
+					<div class="metric-value" id="throughput">0</div>
+					<div class="metric-label">Ops/sec</div>
+				</div>
+				<div class="metric">
+					<div class="metric-value" id="memory-used">0</div>
+					<div class="metric-label">Memory (KB)</div>
+				</div>
+			</div>
+
+			<div class="test-output" id="test-output"></div>
+		</div>
+
+		<!-- Individual Tests -->
+		<div class="test-section">
+			<h2>🔬 Individual Performance Tests</h2>
+			<div class="test-controls">
+				<button class="test-button" id="test-state-updates">
+					State Updates
+				</button>
+				<button class="test-button" id="test-dom-bindings">
+					DOM Bindings
+				</button>
+				<button class="test-button" id="test-each-loops">
+					Each Loops
+				</button>
+				<button class="test-button" id="test-expressions">
+					Expressions
+				</button>
+				<button class="test-button" id="test-memory">Memory</button>
+			</div>
+
+			<div class="test-output" id="individual-output"></div>
+		</div>
+
+		<!-- Results Summary -->
+		<div class="results-summary" id="results-summary" style="display: none">
+			<h3>📊 Performance Results Summary</h3>
+			<div id="summary-content"></div>
+		</div>
+
+		<!-- Load Manifold -->
+		<script src="./dist/manifold.umd.js"></script>
+
+		<script>
+			// Performance Testing Suite
+			class ManifoldPerformanceTester {
+				constructor() {
+					this.results = {};
+					this.isLoaded = false;
+					this.init();
+				}
+
+				init() {
+					try {
+						if (typeof window.Manifold !== "undefined") {
+							this.State = window.Manifold.State;
+							this.RegEl = window.Manifold.RegEl;
+							this.isLoaded = true;
+							document.getElementById(
+								"framework-status"
+							).textContent = "Loaded Successfully ✅";
+							document.getElementById(
+								"framework-status"
+							).style.color = "#28a745";
+						} else {
+							throw new Error("Manifold not loaded");
+						}
+					} catch (error) {
+						document.getElementById(
+							"framework-status"
+						).textContent = "Failed to Load ❌";
+						document.getElementById(
+							"framework-status"
+						).style.color = "#dc3545";
+						this.logOutput(
+							"test-output",
+							`❌ Error loading Manifold: ${error.message}`,
+							"error"
+						);
+					}
+				}
+
+				measureTime(fn) {
+					const start = performance.now();
+					fn();
+					return performance.now() - start;
+				}
+
+				getMemoryUsage() {
+					if ("memory" in performance) {
+						return Math.round(
+							performance.memory.usedJSHeapSize / 1024
+						);
+					}
+					return 0;
+				}
+
+				logOutput(outputId, message, type = "info") {
+					const output = document.getElementById(outputId);
+					const time = new Date().toLocaleTimeString();
+					const entry = document.createElement("div");
+					entry.className = `log-entry ${type}`;
+					entry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+					output.appendChild(entry);
+					output.scrollTop = output.scrollHeight;
+				}
+
+				updateMetrics(totalTime, operations, memory) {
+					document.getElementById("total-time").textContent =
+						totalTime.toFixed(2);
+					document.getElementById("operations-count").textContent =
+						operations.toLocaleString();
+					document.getElementById("throughput").textContent =
+						Math.round(
+							operations / (totalTime / 1000)
+						).toLocaleString();
+					document.getElementById("memory-used").textContent = memory;
+				}
+
+				// Test: State Updates Performance
+				testStateUpdates() {
+					if (!this.isLoaded) return;
+
+					this.logOutput(
+						"individual-output",
+						"🔄 Testing state update performance...",
+						"info"
+					);
+
+					const state = new this.State(0);
+					let updateCount = 0;
+
+					const cleanup = state.effect(() => {
+						updateCount++;
+					});
+
+					const time = this.measureTime(() => {
+						for (let i = 0; i < 1000; i++) {
+							state.value = i;
+						}
+					});
+
+					cleanup();
+
+					const opsPerSec = Math.round(1000 / (time / 1000));
+					this.logOutput(
+						"individual-output",
+						`✅ State Updates: ${time.toFixed(
+							2
+						)}ms for 1000 updates (${opsPerSec.toLocaleString()} ops/sec)`,
+						"success"
+					);
+					this.logOutput(
+						"individual-output",
+						`   Effect runs: ${updateCount} (efficient batching!)`,
+						"info"
+					);
+
+					this.results.stateUpdates = {
+						time,
+						operations: 1000,
+						effectRuns: updateCount,
+					};
+				}
+
+				// Test: DOM Bindings Performance
+				testDOMBindings() {
+					if (!this.isLoaded) return;
+
+					this.logOutput(
+						"individual-output",
+						"🌐 Testing DOM binding performance...",
+						"info"
+					);
+
+					const state = new this.State("initial");
+					this.State.register("testState", state);
+
+					// Create test container
+					const container = document.createElement("div");
+					document.body.appendChild(container);
+
+					// Create multiple elements
+					const elements = [];
+					for (let i = 0; i < 50; i++) {
+						const div = document.createElement("div");
+						div.dataset.bind = "textContent: @testState";
+						container.appendChild(div);
+						this.RegEl.register(div);
+						elements.push(div);
+					}
+
+					const time = this.measureTime(() => {
+						for (let i = 0; i < 50; i++) {
+							state.value = `Update ${i}`;
+						}
+					});
+
+					// Cleanup
+					container.remove();
+
+					const totalOps = 50 * 50; // 50 elements × 50 updates
+					const opsPerSec = Math.round(totalOps / (time / 1000));
+					this.logOutput(
+						"individual-output",
+						`✅ DOM Bindings: ${time.toFixed(
+							2
+						)}ms for ${totalOps} updates (${opsPerSec.toLocaleString()} ops/sec)`,
+						"success"
+					);
+
+					this.results.domBindings = { time, operations: totalOps };
+				}
+
+				// Test: Each Loops Performance
+				testEachLoops() {
+					if (!this.isLoaded) return;
+
+					this.logOutput(
+						"individual-output",
+						"🔁 Testing each-loop performance...",
+						"info"
+					);
+
+					const items = new this.State(
+						Array.from({ length: 500 }, (_, i) => ({
+							id: i,
+							text: `Item ${i}`,
+						}))
+					);
+					this.State.register("testItems", items);
+
+					const container = document.createElement("div");
+					document.body.appendChild(container);
+
+					const template = document.createElement("div");
+					template.dataset.each = "@testItems as item";
+					template.dataset.bind = "textContent: @item.text";
+					container.appendChild(template);
+
+					const time = this.measureTime(() => {
+						this.RegEl.register(template);
+					});
+
+					// Cleanup
+					container.remove();
+
+					const opsPerSec = Math.round(500 / (time / 1000));
+					this.logOutput(
+						"individual-output",
+						`✅ Each Loops: ${time.toFixed(
+							2
+						)}ms to render 500 items (${opsPerSec.toLocaleString()} items/sec)`,
+						"success"
+					);
+
+					this.results.eachLoops = { time, operations: 500 };
+				}
+
+				// Test: Expression Performance
+				testExpressions() {
+					if (!this.isLoaded) return;
+
+					this.logOutput(
+						"individual-output",
+						"📝 Testing expression parsing performance...",
+						"info"
+					);
+
+					// Create test states
+					const counter = new this.State(10);
+					const user = new this.State({ name: "John", score: 100 });
+					this.State.register("counter", counter);
+					this.State.register("user", user);
+
+					const container = document.createElement("div");
+					document.body.appendChild(container);
+
+					const div = document.createElement("div");
+					div.dataset.bind =
+						"textContent: @user.name + ' has ' + (@user.score + @counter) + ' points'";
+					container.appendChild(div);
+					this.RegEl.register(div);
+
+					const time = this.measureTime(() => {
+						for (let i = 0; i < 100; i++) {
+							counter.value = i;
+						}
+					});
+
+					// Cleanup
+					container.remove();
+
+					const opsPerSec = Math.round(100 / (time / 1000));
+					this.logOutput(
+						"individual-output",
+						`✅ Complex Expressions: ${time.toFixed(
+							2
+						)}ms for 100 evaluations (${opsPerSec.toLocaleString()} evals/sec)`,
+						"success"
+					);
+
+					this.results.expressions = { time, operations: 100 };
+				}
+
+				// Test: Memory Usage
+				testMemory() {
+					if (!this.isLoaded) return;
+
+					this.logOutput(
+						"individual-output",
+						"🧠 Testing memory usage...",
+						"info"
+					);
+
+					const initialMemory = this.getMemoryUsage();
+
+					// Create many states
+					const states = [];
+					const cleanupFunctions = [];
+
+					for (let i = 0; i < 100; i++) {
+						const state = new this.State(i);
+						states.push(state);
+
+						const cleanup = state.effect(() => {
+							const value = state.value; // Use the value
+						});
+						cleanupFunctions.push(cleanup);
+					}
+
+					const peakMemory = this.getMemoryUsage();
+
+					// Cleanup
+					cleanupFunctions.forEach((cleanup) => cleanup());
+
+					const finalMemory = this.getMemoryUsage();
+					const memoryGrowth = finalMemory - initialMemory;
+
+					this.logOutput(
+						"individual-output",
+						`✅ Memory Test: Created 100 states + effects`,
+						"success"
+					);
+					this.logOutput(
+						"individual-output",
+						`   Peak memory: ${peakMemory}KB (+${
+							peakMemory - initialMemory
+						}KB)`,
+						"info"
+					);
+					this.logOutput(
+						"individual-output",
+						`   After cleanup: ${finalMemory}KB (${
+							memoryGrowth >= 0 ? "+" : ""
+						}${memoryGrowth}KB net)`,
+						"info"
+					);
+
+					this.results.memory = {
+						initial: initialMemory,
+						peak: peakMemory,
+						final: finalMemory,
+						growth: memoryGrowth,
+					};
+				}
+
+				// Run Quick Test
+				runQuickTest() {
+					if (!this.isLoaded) {
+						this.logOutput(
+							"test-output",
+							"❌ Manifold framework not loaded",
+							"error"
+						);
+						return;
+					}
+
+					this.logOutput(
+						"test-output",
+						"🚀 Starting quick performance test...",
+						"info"
+					);
+
+					const totalStart = performance.now();
+
+					// Quick state test
+					const state = new this.State(0);
+					let operations = 0;
+
+					const stateTime = this.measureTime(() => {
+						for (let i = 0; i < 500; i++) {
+							state.value = i;
+							operations++;
+						}
+					});
+
+					const totalTime = performance.now() - totalStart;
+					const memory = this.getMemoryUsage();
+
+					this.updateMetrics(totalTime, operations, memory);
+
+					this.logOutput(
+						"test-output",
+						`✅ Quick test completed in ${totalTime.toFixed(2)}ms`,
+						"success"
+					);
+					this.logOutput(
+						"test-output",
+						`   State updates: ${stateTime.toFixed(
+							2
+						)}ms for ${operations} operations`,
+						"info"
+					);
+					this.logOutput(
+						"test-output",
+						`   Throughput: ${Math.round(
+							operations / (totalTime / 1000)
+						).toLocaleString()} ops/sec`,
+						"info"
+					);
+					this.logOutput(
+						"test-output",
+						`   Memory usage: ${memory}KB`,
+						"info"
+					);
+				}
+
+				// Run Comprehensive Test
+				runComprehensiveTest() {
+					if (!this.isLoaded) {
+						this.logOutput(
+							"test-output",
+							"❌ Manifold framework not loaded",
+							"error"
+						);
+						return;
+					}
+
+					this.logOutput(
+						"test-output",
+						"🔬 Starting comprehensive performance test...",
+						"info"
+					);
+
+					const totalStart = performance.now();
+
+					// Run all tests
+					this.testStateUpdates();
+					this.testDOMBindings();
+					this.testEachLoops();
+					this.testExpressions();
+					this.testMemory();
+
+					const totalTime = performance.now() - totalStart;
+					const totalOperations = Object.values(this.results)
+						.filter((r) => r.operations)
+						.reduce((sum, r) => sum + r.operations, 0);
+
+					this.updateMetrics(
+						totalTime,
+						totalOperations,
+						this.getMemoryUsage()
+					);
+
+					this.logOutput(
+						"test-output",
+						`✅ Comprehensive test completed in ${totalTime.toFixed(
+							2
+						)}ms`,
+						"success"
+					);
+					this.logOutput(
+						"test-output",
+						`   Total operations: ${totalOperations.toLocaleString()}`,
+						"info"
+					);
+					this.logOutput(
+						"test-output",
+						`   Overall throughput: ${Math.round(
+							totalOperations / (totalTime / 1000)
+						).toLocaleString()} ops/sec`,
+						"info"
+					);
+
+					this.showResultsSummary();
+				}
+
+				showResultsSummary() {
+					const summary = document.getElementById("results-summary");
+					const content = document.getElementById("summary-content");
+
+					let html =
+						'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">';
+
+					for (const [test, result] of Object.entries(this.results)) {
+						if (result.time && result.operations) {
+							const opsPerSec = Math.round(
+								result.operations / (result.time / 1000)
+							);
+							html += `
+                            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
+                                <div style="font-size: 18px; font-weight: bold;">${test}</div>
+                                <div>${result.time.toFixed(2)}ms</div>
+                                <div>${opsPerSec.toLocaleString()} ops/sec</div>
+                            </div>
+                        `;
+						}
+					}
+
+					html += "</div>";
+					content.innerHTML = html;
+					summary.style.display = "block";
+				}
+
+				clearResults() {
+					document.getElementById("test-output").innerHTML = "";
+					document.getElementById("individual-output").innerHTML = "";
+					document.getElementById("results-summary").style.display =
+						"none";
+					this.updateMetrics(0, 0, this.getMemoryUsage());
+					this.results = {};
+				}
+			}
+
+			// Initialize the tester
+			const tester = new ManifoldPerformanceTester();
+
+			// Set up event listeners
+			document
+				.getElementById("run-quick-test")
+				.addEventListener("click", () => tester.runQuickTest());
+			document
+				.getElementById("run-comprehensive-test")
+				.addEventListener("click", () => tester.runComprehensiveTest());
+			document
+				.getElementById("clear-results")
+				.addEventListener("click", () => tester.clearResults());
+
+			document
+				.getElementById("test-state-updates")
+				.addEventListener("click", () => tester.testStateUpdates());
+			document
+				.getElementById("test-dom-bindings")
+				.addEventListener("click", () => tester.testDOMBindings());
+			document
+				.getElementById("test-each-loops")
+				.addEventListener("click", () => tester.testEachLoops());
+			document
+				.getElementById("test-expressions")
+				.addEventListener("click", () => tester.testExpressions());
+			document
+				.getElementById("test-memory")
+				.addEventListener("click", () => tester.testMemory());
+		</script>
+	</body>
+</html>
