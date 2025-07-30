@@ -1,64 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Debug Async Test</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .test { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
-        .loading { background: lightblue; }
-        .result { background: lightgreen; }
-        .error { background: lightcoral; }
-    </style>
-</head>
-<body>
-    <h1>Debug Async Test</h1>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Debug Async Test</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				margin: 20px;
+			}
+			.test {
+				border: 1px solid #ccc;
+				margin: 10px 0;
+				padding: 10px;
+			}
+			.loading {
+				background: lightblue;
+			}
+			.result {
+				background: lightgreen;
+			}
+			.error {
+				background: lightcoral;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Debug Async Test</h1>
 
-    <!-- Simple template interpolation test -->
-    <div class="test">
-        <h3>Template Interpolation Test</h3>
-        <div id="template-test">Hello ${name}!</div>
-    </div>
+		<!-- Simple template interpolation test -->
+		<div class="test">
+			<h3>Template Interpolation Test</h3>
+			<div id="template-test">Hello ${name}!</div>
+		</div>
 
-    <!-- Basic async test -->
-    <div class="test">
-        <h3>Basic Async Test</h3>
-        <div data-await="@simplePromise" class="loading">
-            Loading...
-        </div>
-        <div data-then="result" class="result" style="display: none;">
-            Result: ${result}
-        </div>
-    </div>
+		<!-- Basic async test -->
+		<div class="test">
+			<h3>Basic Async Test</h3>
+			<div data-await="@simplePromise" class="loading">Loading...</div>
+			<div data-then="result" class="result" style="display: none">
+				Result: ${result}
+			</div>
+		</div>
 
-    <script type="module">
-        import './src/index.js';
-        import { State } from './src/State.js';
-        import { RegEl } from './src/registry.js';
+		<script type="module">
+			import "./src/index.js";
+			import { State } from "./src/State.js";
+			import { RegEl } from "./src/registry.js";
 
-        // Test 1: Simple template interpolation
-        const nameState = new State('World');
-        State.register('name', nameState);
-        const templateElement = document.getElementById('template-test');
-        const testRegEl = new RegEl(templateElement, { name: nameState });
+			// Test 1: Simple template interpolation
+			const nameState = new State("World");
+			State.register("name", nameState);
+			const templateElement = document.getElementById("template-test");
+			const testRegEl = new RegEl(templateElement, { name: nameState });
 
-        console.log('Template test element:', templateElement);
-        console.log('RegEl props:', testRegEl.props);
+			console.log("Template test element:", templateElement);
+			console.log("RegEl props:", testRegEl.props);
 
-        // Test 2: Simple promise
-        const simplePromise = new State(
-            new Promise(resolve => {
-                console.log('Promise created, will resolve in 3 seconds...');
-                setTimeout(() => {
-                    console.log('Promise resolving with "Hello Async!"');
-                    resolve('Hello Async!');
-                }, 3000);
-            })
-        );
-        State.register('simplePromise', simplePromise);
+			// Test 2: Simple promise
+			const simplePromise = new State(
+				new Promise((resolve) => {
+					console.log(
+						"Promise created, will resolve in 3 seconds..."
+					);
+					setTimeout(() => {
+						console.log('Promise resolving with "Hello Async!"');
+						resolve("Hello Async!");
+					}, 3000);
+				})
+			);
+			State.register("simplePromise", simplePromise);
 
-        console.log('Async test setup complete');
-    </script>
-</body>
+			console.log("Async test setup complete");
+		</script>
+	</body>
 </html>

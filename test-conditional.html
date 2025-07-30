@@ -1,198 +1,271 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manifold Conditional Async Test</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .test-section { border: 1px solid #ccc; margin: 20px 0; padding: 20px; }
-        .loading { color: blue; font-style: italic; }
-        .success { color: green; font-weight: bold; }
-        .error { color: red; font-weight: bold; }
-        .debug { background: #f0f0f0; padding: 10px; margin: 10px 0; font-family: monospace; }
-        button { padding: 10px 20px; margin: 5px; background: #007cba; color: white; border: none; cursor: pointer; }
-        button:hover { background: #005a87; }
-    </style>
-</head>
-<body>
-    <h1>Manifold Conditional Async Test</h1>
-    <p>This page tests conditional display of async elements (data-await, data-then, data-else). Open browser console to see debug logs.</p>
-    
-    <div class="debug">
-        <strong>Debug Test:</strong>
-        <button data-bind="onclick: () => console.log('🔥 Simple button click works!')">
-            Test Simple Click
-        </button>
-    </div>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Manifold Conditional Async Test</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				margin: 20px;
+			}
+			.test-section {
+				border: 1px solid #ccc;
+				margin: 20px 0;
+				padding: 20px;
+			}
+			.loading {
+				color: blue;
+				font-style: italic;
+			}
+			.success {
+				color: green;
+				font-weight: bold;
+			}
+			.error {
+				color: red;
+				font-weight: bold;
+			}
+			.debug {
+				background: #f0f0f0;
+				padding: 10px;
+				margin: 10px 0;
+				font-family: monospace;
+			}
+			button {
+				padding: 10px 20px;
+				margin: 5px;
+				background: #007cba;
+				color: white;
+				border: none;
+				cursor: pointer;
+			}
+			button:hover {
+				background: #005a87;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Manifold Conditional Async Test</h1>
+		<p>
+			This page tests conditional display of async elements (data-await,
+			data-then, data-else). Open browser console to see debug logs.
+		</p>
 
-    <div class="debug">
-        <strong>Expected Behavior:</strong>
-        <ul>
-            <li>Initially: Only "Click to test" button visible</li>
-            <li>After click: Only loading message visible</li>
-            <li>After 2 seconds: Only success/error message visible (depending on test)</li>
-            <li><strong>Issue:</strong> All elements showing simultaneously instead of being conditional</li>
-        </ul>
-    </div>
+		<div class="debug">
+			<strong>Debug Test:</strong>
+			<button
+				data-bind="onclick: () => console.log('🔥 Simple button click works!')"
+			>
+				Test Simple Click
+			</button>
+		</div>
 
-    <div class="test-section">
-        <h2>Test 1: Success Case</h2>
-        <!-- Trigger button - separate from async elements -->
-        <button data-bind="onclick: () => testSuccess()">
-            Click to Test Success
-        </button>
-        
-        <!-- Loading state - should show during promise -->
-        <div data-await="@successPromise" data-then="result" class="loading">
-            ⏳ Loading success test... (should be visible only during loading)
-        </div>
-        
-        <!-- Success state - should show after promise resolves -->
-        <div data-then="result" class="success" style="display: none;">
-            ✅ Success! Result: ${result}
-        </div>
-        
-        <!-- Error state - should show if promise rejects -->
-        <div data-else="error" class="error" style="display: none;">
-            ❌ Error occurred: ${error}
-        </div>
-    </div>
+		<div class="debug">
+			<strong>Expected Behavior:</strong>
+			<ul>
+				<li>Initially: Only "Click to test" button visible</li>
+				<li>After click: Only loading message visible</li>
+				<li>
+					After 2 seconds: Only success/error message visible
+					(depending on test)
+				</li>
+				<li>
+					<strong>Issue:</strong> All elements showing simultaneously
+					instead of being conditional
+				</li>
+			</ul>
+		</div>
 
-    <div class="test-section">
-        <h2>Test 2: Error Case</h2>
-        <!-- Trigger button - separate from async elements -->
-        <button data-bind="onclick: () => testError()">
-            Click to Test Error
-        </button>
-        
-        <!-- Loading state -->
-        <div data-await="@errorPromise" data-then="result2" data-else="error2" class="loading">
-            ⏳ Loading error test... (should be visible only during loading)
-        </div>
-        
-        <!-- Success state -->
-        <div data-then="result2" class="success" style="display: none;">
-            ✅ Unexpected success: ${result2}
-        </div>
-        
-        <!-- Error state -->
-        <div data-else="error2" class="error" style="display: none;">
-            ❌ Expected error: ${error2}
-        </div>
-    </div>
+		<div class="test-section">
+			<h2>Test 1: Success Case</h2>
+			<!-- Trigger button - separate from async elements -->
+			<button data-bind="onclick: () => testSuccess()">
+				Click to Test Success
+			</button>
 
-    <div class="test-section">
-        <h2>Test 3: Fast Promise (Immediate Resolution)</h2>
-        <!-- Trigger button - separate from async elements -->
-        <button data-bind="onclick: () => testFast()">
-            Click to Test Fast Promise
-        </button>
-        
-        <div data-await="@fastPromise" data-then="fastResult" class="loading">
-            ⚡ Fast loading... (might be too fast to see)
-        </div>
-        
-        <div data-then="fastResult" class="success" style="display: none;">
-            🚀 Fast result: ${fastResult}
-        </div>
-    </div>
+			<!-- Loading state - should show during promise -->
+			<div
+				data-await="@successPromise"
+				data-then="result"
+				class="loading"
+			>
+				⏳ Loading success test... (should be visible only during
+				loading)
+			</div>
 
-    <script type="module">
-        import { State } from './src/State.js';
-        import { RegEl } from './src/registry.js';
+			<!-- Success state - should show after promise resolves -->
+			<div data-then="result" class="success" style="display: none">
+				✅ Success! Result: ${result}
+			</div>
 
-        // Create states for different test promises
-        const successPromise = new State();
-        const errorPromise = new State();
-        const fastPromise = new State();
+			<!-- Error state - should show if promise rejects -->
+			<div data-else="error" class="error" style="display: none">
+				❌ Error occurred: ${error}
+			</div>
+		</div>
 
-        // Register states globally
-        State.register('successPromise', successPromise);
-        State.register('errorPromise', errorPromise);
-        State.register('fastPromise', fastPromise);
+		<div class="test-section">
+			<h2>Test 2: Error Case</h2>
+			<!-- Trigger button - separate from async elements -->
+			<button data-bind="onclick: () => testError()">
+				Click to Test Error
+			</button>
 
-        // Test functions
-        window.testSuccess = () => {
-            console.log('🚀 Starting success test');
-            const rawPromise = new Promise((resolve) => {
-                setTimeout(() => {
-                    console.log('✅ Success promise resolving');
-                    resolve({ data: 'Success data!' });
-                }, 2000);
-            });
-            
-            // Store the raw promise directly
-            window.currentPromise = rawPromise;
-            successPromise.value = rawPromise;
-        };
+			<!-- Loading state -->
+			<div
+				data-await="@errorPromise"
+				data-then="result2"
+				data-else="error2"
+				class="loading"
+			>
+				⏳ Loading error test... (should be visible only during loading)
+			</div>
 
-        window.testError = () => {
-            console.log('🚀 Starting error test');
-            const rawPromise = new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    console.log('❌ Error promise rejecting');
-                    reject(new Error('Test error message'));
-                }, 2000);
-            });
-            
-            // Store the raw promise directly
-            window.currentPromise = rawPromise;
-            errorPromise.value = rawPromise;
-        };
+			<!-- Success state -->
+			<div data-then="result2" class="success" style="display: none">
+				✅ Unexpected success: ${result2}
+			</div>
 
-        window.testFast = () => {
-            console.log('🚀 Starting fast test');
-            const rawPromise = Promise.resolve('Immediate result');
-            
-            // Store the raw promise directly
-            window.currentPromise = rawPromise;
-            fastPromise.value = rawPromise;
-        };
+			<!-- Error state -->
+			<div data-else="error2" class="error" style="display: none">
+				❌ Expected error: ${error2}
+			</div>
+		</div>
 
-        // Register all elements after page load
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('📋 Registering all Manifold elements...');
-            document.querySelectorAll('[data-bind], [data-await], [data-then], [data-else]').forEach(element => {
-                console.log('Registering element:', element);
-                RegEl.register(element);
-            });
-            console.log('✅ All elements registered');
-            
-            // Debug: Check if test functions are available
-            console.log('🔍 Test functions available:');
-            console.log('testSuccess:', typeof window.testSuccess);
-            console.log('testError:', typeof window.testError);
-            console.log('testFast:', typeof window.testFast);
-        });
+		<div class="test-section">
+			<h2>Test 3: Fast Promise (Immediate Resolution)</h2>
+			<!-- Trigger button - separate from async elements -->
+			<button data-bind="onclick: () => testFast()">
+				Click to Test Fast Promise
+			</button>
 
-        // Debug helper to inspect element states
-        window.debugElements = () => {
-            const awaitElements = document.querySelectorAll('[data-await]');
-            const thenElements = document.querySelectorAll('[data-then]');
-            const elseElements = document.querySelectorAll('[data-else]');
-            
-            console.group('🔍 Element Debug Info');
-            console.log('Await elements:', awaitElements.length, Array.from(awaitElements).map(el => ({
-                element: el,
-                display: el.style.display,
-                dataset: el.dataset
-            })));
-            console.log('Then elements:', thenElements.length, Array.from(thenElements).map(el => ({
-                element: el,
-                display: el.style.display,
-                dataset: el.dataset
-            })));
-            console.log('Else elements:', elseElements.length, Array.from(elseElements).map(el => ({
-                element: el,
-                display: el.style.display,
-                dataset: el.dataset
-            })));
-            console.groupEnd();
-        };
+			<div
+				data-await="@fastPromise"
+				data-then="fastResult"
+				class="loading"
+			>
+				⚡ Fast loading... (might be too fast to see)
+			</div>
 
-        // Make debug function available
-        console.log('💡 Run debugElements() in console to inspect element states');
-    </script>
-</body>
+			<div data-then="fastResult" class="success" style="display: none">
+				🚀 Fast result: ${fastResult}
+			</div>
+		</div>
+
+		<script type="module">
+			import { State } from "./src/State.js";
+			import { RegEl } from "./src/registry.js";
+
+			// Create states for different test promises
+			const successPromise = new State();
+			const errorPromise = new State();
+			const fastPromise = new State();
+
+			// Register states globally
+			State.register("successPromise", successPromise);
+			State.register("errorPromise", errorPromise);
+			State.register("fastPromise", fastPromise);
+
+			// Test functions
+			window.testSuccess = () => {
+				console.log("🚀 Starting success test");
+				const rawPromise = new Promise((resolve) => {
+					setTimeout(() => {
+						console.log("✅ Success promise resolving");
+						resolve({ data: "Success data!" });
+					}, 2000);
+				});
+
+				// Store the raw promise directly
+				window.currentPromise = rawPromise;
+				successPromise.value = rawPromise;
+			};
+
+			window.testError = () => {
+				console.log("🚀 Starting error test");
+				const rawPromise = new Promise((resolve, reject) => {
+					setTimeout(() => {
+						console.log("❌ Error promise rejecting");
+						reject(new Error("Test error message"));
+					}, 2000);
+				});
+
+				// Store the raw promise directly
+				window.currentPromise = rawPromise;
+				errorPromise.value = rawPromise;
+			};
+
+			window.testFast = () => {
+				console.log("🚀 Starting fast test");
+				const rawPromise = Promise.resolve("Immediate result");
+
+				// Store the raw promise directly
+				window.currentPromise = rawPromise;
+				fastPromise.value = rawPromise;
+			};
+
+			// Register all elements after page load
+			document.addEventListener("DOMContentLoaded", () => {
+				console.log("📋 Registering all Manifold elements...");
+				document
+					.querySelectorAll(
+						"[data-bind], [data-await], [data-then], [data-else]"
+					)
+					.forEach((element) => {
+						console.log("Registering element:", element);
+						RegEl.register(element);
+					});
+				console.log("✅ All elements registered");
+
+				// Debug: Check if test functions are available
+				console.log("🔍 Test functions available:");
+				console.log("testSuccess:", typeof window.testSuccess);
+				console.log("testError:", typeof window.testError);
+				console.log("testFast:", typeof window.testFast);
+			});
+
+			// Debug helper to inspect element states
+			window.debugElements = () => {
+				const awaitElements = document.querySelectorAll("[data-await]");
+				const thenElements = document.querySelectorAll("[data-then]");
+				const elseElements = document.querySelectorAll("[data-else]");
+
+				console.group("🔍 Element Debug Info");
+				console.log(
+					"Await elements:",
+					awaitElements.length,
+					Array.from(awaitElements).map((el) => ({
+						element: el,
+						display: el.style.display,
+						dataset: el.dataset,
+					}))
+				);
+				console.log(
+					"Then elements:",
+					thenElements.length,
+					Array.from(thenElements).map((el) => ({
+						element: el,
+						display: el.style.display,
+						dataset: el.dataset,
+					}))
+				);
+				console.log(
+					"Else elements:",
+					elseElements.length,
+					Array.from(elseElements).map((el) => ({
+						element: el,
+						display: el.style.display,
+						dataset: el.dataset,
+					}))
+				);
+				console.groupEnd();
+			};
+
+			// Make debug function available
+			console.log(
+				"💡 Run debugElements() in console to inspect element states"
+			);
+		</script>
+	</body>
 </html>
