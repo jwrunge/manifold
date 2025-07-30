@@ -23,6 +23,7 @@ export const MANIFOLD_ATTRIBUTES = [
 	"scope",
 	"await",
 	"then",
+	"catch",
 	"process",
 	"target",
 	"bind",
@@ -33,10 +34,11 @@ export interface ParsedElement {
 	show?: State<unknown>; // Condition based on data-if or data-else-if
 	each?: State<Array<unknown>>; // Loop State based on data-each
 	props: Record<string, State<unknown>>; // Any bound properties (assigned with data-bind or data-scope) - a .effect() should be set on any State bound to a property with data-bind BEFORE adding to this Record that updates the bound property
-	else?: boolean; // Whether or not this element has a data-else attribute
+	else?: boolean; // Whether or not this element has a data-else attribute (conditional logic only)
 	await?: State<Promise<unknown>>; // Promise state for data-await
 	then?: string; // Variable name for data-then results
-	process?: Record<string, Function>; // Processing functions for different events (data-process)
+	catch?: string; // Variable name for data-catch errors
+	process?: Record<string, (result: unknown) => unknown>; // Processing functions for different events (data-process)
 	target?: Record<string, string>; // Target selectors for different events (data-target)
 }
 
@@ -380,8 +382,7 @@ export class RegEl {
 		// Handle conditionals
 		const ifExpr = element.dataset["if"] ?? element.dataset["elseif"];
 		const isElif = !!element.dataset["elseif"];
-		// Only treat as conditional else if data-else has no value (not async data-else="variableName")
-		const isElse = element.dataset["else"] === "";
+		const isElse = element.hasAttribute("data-else");
 		const eachExpr = element.dataset["each"];
 
 		// Create show State if conditional expression exists
@@ -402,7 +403,7 @@ export class RegEl {
 		}
 
 		if (isElif || isElse) {
-			let conditionalStates: State<unknown>[] = [];
+			const conditionalStates: State<unknown>[] = [];
 
 			// Find all previous conditional elements (data-if, data-elseif) in this conditional chain
 			let cond = element.previousElementSibling;
@@ -445,7 +446,6 @@ export class RegEl {
 
 		// Handle async attributes first so they're available for bind handlers
 		let awaitState: State<Promise<unknown>> | undefined;
-		let thenVar: string | undefined;
 		let processMap: Record<string, Function> | undefined;
 		let targetMap: Record<string, string> | undefined;
 
@@ -465,10 +465,10 @@ export class RegEl {
 		}
 
 		// Handle data-then
-		thenVar = element.dataset["then"];
+		const thenVar = element.dataset["then"];
 
-		// Handle data-else
-		let elseVar = element.dataset["else"];
+		// Handle data-catch
+		const catchVar = element.dataset["catch"];
 
 		// Handle data-process
 		const processExpr = element.dataset["process"];
@@ -747,11 +747,11 @@ export class RegEl {
 
 		// Prepare async configuration
 		const asyncConfig =
-			awaitState || thenVar || elseVar || processMap || targetMap
+			awaitState || thenVar || catchVar || processMap || targetMap
 				? {
 						await: awaitState,
 						then: thenVar,
-						else: elseVar,
+						catch: catchVar,
 						process: processMap,
 						target: targetMap,
 				  }
@@ -792,10 +792,15 @@ export class RegEl {
 		return this._each;
 	}
 
+	// Getter for show state
+	get show(): State<unknown> | undefined {
+		return this._show;
+	}
+
 	// Async-related properties
 	private _await?: State<Promise<unknown>>;
 	private _then?: string;
-	private _else?: string;
+	private _catch?: string;
 	private _process?: Record<string, Function>;
 	private _target?: Record<string, string>;
 	private _awaitResults: Map<string, State<unknown>> = new Map(); // Store results by variable name
@@ -812,7 +817,7 @@ export class RegEl {
 		asyncConfig?: {
 			await?: State<Promise<unknown>>;
 			then?: string;
-			else?: string;
+			catch?: string;
 			process?: Record<string, Function>;
 			target?: Record<string, string>;
 		}
@@ -826,11 +831,11 @@ export class RegEl {
 		// Initialize async properties
 		this._await = asyncConfig?.await;
 		this._then = asyncConfig?.then;
-		this._else = asyncConfig?.else;
+		this._catch = asyncConfig?.catch;
 		this._process = asyncConfig?.process;
 		this._target = asyncConfig?.target;
 
-		// Initially hide all async elements (data-await, data-then, data-else) except buttons
+		// Initially hide all async elements (data-await, data-then, data-catch) except buttons
 		if (
 			element.dataset["await"] &&
 			(element as HTMLElement).tagName !== "BUTTON"
@@ -855,14 +860,14 @@ export class RegEl {
 			);
 		}
 		if (
-			element.dataset["else"] !== undefined &&
+			element.dataset["catch"] !== undefined &&
 			!element.dataset["await"] &&
 			(element as HTMLElement).tagName !== "BUTTON"
 		) {
-			console.log("Hiding data-else element:", element);
+			console.log("Hiding data-catch element:", element);
 			(element as HTMLElement).style.display = "none";
 			console.log(
-				"✅ data-else element hidden, style:",
+				"✅ data-catch element hidden, style:",
 				(element as HTMLElement).style.display
 			);
 		}
@@ -967,7 +972,7 @@ export class RegEl {
 	}
 
 	/**
-	 * Hide all async-related elements (then and else) to prepare for new promise
+	 * Hide all async-related elements (then and catch) to prepare for new promise
 	 */
 	private _hideAllAsyncElements(): void {
 		// Hide data-then elements
@@ -982,15 +987,15 @@ export class RegEl {
 			}
 		}
 
-		// Hide data-else elements
-		if (this._else) {
-			const elseElement = this._findElseElement();
-			if (elseElement) {
+		// Hide data-catch elements
+		if (this._catch) {
+			const catchElement = this._findCatchElement();
+			if (catchElement) {
 				console.log(
-					"🙈 Hiding previous data-else element:",
-					elseElement
+					"🙈 Hiding previous data-catch element:",
+					catchElement
 				);
-				elseElement.style.display = "none";
+				catchElement.style.display = "none";
 			}
 		}
 	}
@@ -1122,47 +1127,47 @@ export class RegEl {
 				element.style.display = "none";
 			}
 
-			// Handle data-else by creating a state for the error
-			if (this._else) {
+			// Handle data-catch by creating a state for the error
+			if (this._catch) {
 				console.log(
-					`🎯 Handling data-else with variable: ${this._else}`
+					`🎯 Handling data-catch with variable: ${this._catch}`
 				);
 				const errorState = new State(error);
-				this._awaitResults.set(this._else, errorState);
+				this._awaitResults.set(this._catch, errorState);
 
-				// Find data-else element
-				const elseElement = this._findElseElement();
-				console.log("🔍 Found data-else element:", elseElement);
-				if (elseElement) {
-					// Show the else element
-					console.log("👁️ Showing data-else element:", elseElement);
-					elseElement.style.display = "";
+				// Find data-catch element
+				const catchElement = this._findCatchElement();
+				console.log("🔍 Found data-catch element:", catchElement);
+				if (catchElement) {
+					// Show the catch element
+					console.log("👁️ Showing data-catch element:", catchElement);
+					catchElement.style.display = "";
 
-					// Add the error state to props for the else element
-					const elseRegEl = RegEl._registry.get(elseElement);
-					if (elseRegEl) {
+					// Add the error state to props for the catch element
+					const catchRegEl = RegEl._registry.get(catchElement);
+					if (catchRegEl) {
 						console.log("🔗 Adding error to existing RegEl props");
-						elseRegEl.props[this._else] = errorState;
+						catchRegEl.props[this._catch] = errorState;
 						// Process template interpolation directly instead of re-registering
 						RegEl.processTextInterpolation(
-							elseElement,
-							elseRegEl.props
+							catchElement,
+							catchRegEl.props
 						);
 					} else {
 						// If no RegEl exists, create one with the error state
 						console.log(
-							"🆕 Creating new RegEl for data-else element"
+							"🆕 Creating new RegEl for data-catch element"
 						);
 						const props: Record<string, State<unknown>> = {};
-						props[this._else] = errorState;
-						new RegEl(elseElement, props);
+						props[this._catch] = errorState;
+						new RegEl(catchElement, props);
 						// Process template interpolation for the new element
-						RegEl.processTextInterpolation(elseElement, props);
+						RegEl.processTextInterpolation(catchElement, props);
 					}
 				} else {
 					console.warn(
-						"⚠️ No data-else element found for variable:",
-						this._else
+						"⚠️ No data-catch element found for variable:",
+						this._catch
 					);
 				}
 			}
@@ -1187,14 +1192,14 @@ export class RegEl {
 	}
 
 	/**
-	 * Find the data-else element (typically next sibling after data-then)
+	 * Find the data-catch element (typically next sibling after data-then)
 	 */
-	private _findElseElement(): HTMLElement | null {
+	private _findCatchElement(): HTMLElement | null {
 		const element = this._element as HTMLElement;
 		let sibling = element.nextElementSibling;
 
 		while (sibling) {
-			if ((sibling as HTMLElement).dataset["else"] !== undefined) {
+			if ((sibling as HTMLElement).dataset["catch"] !== undefined) {
 				return sibling as HTMLElement;
 			}
 			sibling = sibling.nextElementSibling;
@@ -1210,18 +1215,30 @@ export class RegEl {
 		targetElement: HTMLElement,
 		result: unknown
 	): void {
+		console.log(
+			"🎯 Updating target element:",
+			targetElement,
+			"with result:",
+			result
+		);
+
 		// Check if target element has data-bind="innerHTML: variableName"
 		const bindAttr = targetElement.dataset["bind"];
 		if (bindAttr && bindAttr.includes("innerHTML:")) {
 			// Direct HTML insertion
+			console.log("📝 Using innerHTML update");
 			targetElement.innerHTML = String(result || "");
 		} else {
-			// Try to register as normal Manifold element with the result
-			const targetRegEl = RegEl._registry.get(targetElement);
-			if (targetRegEl && this._then) {
-				targetRegEl.props[this._then] = new State(result);
-				RegEl.register(targetElement);
-			}
+			// Simple text content update
+			console.log("📝 Using textContent update");
+			targetElement.textContent = String(result || "");
+
+			// Alternative: Try to register as normal Manifold element with the result
+			// const targetRegEl = RegEl._registry.get(targetElement);
+			// if (targetRegEl && this._then) {
+			// 	targetRegEl.props[this._then] = new State(result);
+			// 	RegEl.processTextInterpolation(targetElement, targetRegEl.props);
+			// }
 		}
 	}
 

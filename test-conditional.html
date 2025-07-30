@@ -49,7 +49,13 @@
 		<h1>Manifold Conditional Async Test</h1>
 		<p>
 			This page tests conditional display of async elements (data-await,
-			data-then, data-else). Open browser console to see debug logs.
+			data-then, data-catch) and conditional logic (data-if, data-else).
+			Open browser console to see debug logs.
+		</p>
+		<p>
+			<strong>Note:</strong> <code>data-else</code> is now used ONLY for
+			conditional if/else logic. <code>data-catch</code> is used for async
+			error handling.
 		</p>
 
 		<div class="debug">
@@ -100,7 +106,7 @@
 			</div>
 
 			<!-- Error state - should show if promise rejects -->
-			<div data-else="error" class="error" style="display: none">
+			<div data-catch="error" class="error" style="display: none">
 				❌ Error occurred: ${error}
 			</div>
 		</div>
@@ -116,7 +122,7 @@
 			<div
 				data-await="@errorPromise"
 				data-then="result2"
-				data-else="error2"
+				data-catch="error2"
 				class="loading"
 			>
 				⏳ Loading error test... (should be visible only during loading)
@@ -128,7 +134,7 @@
 			</div>
 
 			<!-- Error state -->
-			<div data-else="error2" class="error" style="display: none">
+			<div data-catch="error2" class="error" style="display: none">
 				❌ Expected error: ${error2}
 			</div>
 		</div>
@@ -153,6 +159,137 @@
 			</div>
 		</div>
 
+		<div class="test-section">
+			<h2>Test 4: data-process Example</h2>
+			<p>
+				This test demonstrates data-process for transforming promise
+				results
+			</p>
+			<!-- Trigger button -->
+			<button data-bind="onclick: () => testWithProcessor()">
+				Click to Test data-process
+			</button>
+
+			<!-- Loading state with data-process that transforms the result -->
+			<div
+				data-await="@processPromise"
+				data-then="processedResult"
+				data-process="await: (response) => ({ transformed: response.value * 2, timestamp: new Date().toISOString() })"
+				class="loading"
+			>
+				⚙️ Processing data... (transforming result)
+			</div>
+
+			<!-- Success state showing processed result -->
+			<div
+				data-then="processedResult"
+				class="success"
+				style="display: none"
+			>
+				🔧 Processed result: ${processedResult.transformed} at
+				${processedResult.timestamp}
+			</div>
+		</div>
+
+		<div class="test-section">
+			<h2>Test 5: data-target Example</h2>
+			<p>
+				This test demonstrates data-target for updating external
+				elements
+			</p>
+			<!-- Trigger button -->
+			<button data-bind="onclick: () => testWithTarget()">
+				Click to Test data-target
+			</button>
+
+			<!-- Loading state with data-target that updates #target-display -->
+			<div
+				data-await="@targetPromise"
+				data-then="targetResult"
+				data-target="await: #target-display"
+				class="loading"
+			>
+				🎯 Loading target test... (will update target element)
+			</div>
+
+			<!-- Target element that will be updated -->
+			<div
+				id="target-display"
+				class="success"
+				style="border: 2px dashed #ccc; padding: 10px; margin: 10px 0"
+			>
+				🎯 Target element: Waiting for update...
+			</div>
+
+			<!-- Regular result display -->
+			<div data-then="targetResult" class="success" style="display: none">
+				📊 Regular result: ${targetResult}
+			</div>
+		</div>
+
+		<div class="test-section">
+			<h2>Test 6: Combined data-process + data-target</h2>
+			<p>
+				This test demonstrates both data-process and data-target working
+				together
+			</p>
+			<!-- Trigger button -->
+			<button data-bind="onclick: () => testCombined()">
+				Click to Test Combined Features
+			</button>
+
+			<!-- Loading state with both data-process and data-target -->
+			<div
+				data-await="@combinedPromise"
+				data-then="combinedResult"
+				data-process="await: (response) => `🎉 PROCESSED: ${response.toUpperCase()}`"
+				data-target="await: #combined-target"
+				class="loading"
+			>
+				🔄 Processing and targeting...
+			</div>
+
+			<!-- Target element for combined test -->
+			<div
+				id="combined-target"
+				class="success"
+				style="border: 2px solid #007cba; padding: 15px; margin: 10px 0"
+			>
+				🎯 Combined target: Waiting for processed result...
+			</div>
+
+			<!-- Regular result display -->
+			<div
+				data-then="combinedResult"
+				class="success"
+				style="display: none"
+			>
+				📈 Combined result: ${combinedResult}
+			</div>
+		</div>
+
+		<div class="test-section">
+			<h2>Test 7: Conditional data-else (Non-Async)</h2>
+			<p>
+				This test verifies that data-else still works for regular
+				if/else conditional logic
+			</p>
+
+			<!-- Create a simple state toggle -->
+			<button data-bind="onclick: () => window.toggleCondition()">
+				Toggle Condition
+			</button>
+
+			<!-- Conditional elements -->
+			<div data-if="@showMessage" class="success" style="margin: 10px 0">
+				✅ Condition is TRUE - Message is shown
+			</div>
+
+			<div data-else class="error" style="margin: 10px 0">
+				❌ Condition is FALSE - Else message is shown
+			</div>
+		</div>
+
 		<script type="module">
 			import { State } from "./src/State.js";
 			import { RegEl } from "./src/registry.js";
@@ -161,11 +298,21 @@
 			const successPromise = new State();
 			const errorPromise = new State();
 			const fastPromise = new State();
+			const processPromise = new State();
+			const targetPromise = new State();
+			const combinedPromise = new State();
+
+			// Create state for conditional test
+			const showMessage = new State(true);
 
 			// Register states globally
 			State.register("successPromise", successPromise);
 			State.register("errorPromise", errorPromise);
 			State.register("fastPromise", fastPromise);
+			State.register("processPromise", processPromise);
+			State.register("targetPromise", targetPromise);
+			State.register("combinedPromise", combinedPromise);
+			State.register("showMessage", showMessage);
 
 			// Test functions
 			window.testSuccess = () => {
@@ -205,15 +352,91 @@
 				fastPromise.value = rawPromise;
 			};
 
+			// Test function for data-process
+			window.testWithProcessor = () => {
+				console.log("🚀 Starting data-process test");
+				const rawPromise = new Promise((resolve) => {
+					setTimeout(() => {
+						console.log("🔧 Process promise resolving");
+						resolve({ value: 42 });
+					}, 1500);
+				});
+
+				window.currentPromise = rawPromise;
+				processPromise.value = rawPromise;
+			};
+
+			// Test function for data-target
+			window.testWithTarget = () => {
+				console.log("🚀 Starting data-target test");
+				const rawPromise = new Promise((resolve) => {
+					setTimeout(() => {
+						console.log("🎯 Target promise resolving");
+						resolve("Data sent to target!");
+					}, 1500);
+				});
+
+				window.currentPromise = rawPromise;
+				targetPromise.value = rawPromise;
+			};
+
+			// Test function for combined data-process + data-target
+			window.testCombined = () => {
+				console.log("🚀 Starting combined test");
+				const rawPromise = new Promise((resolve) => {
+					setTimeout(() => {
+						console.log("🎉 Combined promise resolving");
+						resolve("hello world");
+					}, 2000);
+				});
+
+				window.currentPromise = rawPromise;
+				combinedPromise.value = rawPromise;
+			};
+
+			// Test function for conditional toggle
+			window.toggleCondition = () => {
+				console.log(
+					"🔄 Toggling condition from",
+					showMessage.value,
+					"to",
+					!showMessage.value
+				);
+				showMessage.value = !showMessage.value;
+			};
+
 			// Register all elements after page load
 			document.addEventListener("DOMContentLoaded", () => {
 				console.log("📋 Registering all Manifold elements...");
+
+				// Register conditional elements in order: if -> elseif -> else
+				document.querySelectorAll("[data-if]").forEach((element) => {
+					console.log("Registering data-if element:", element);
+					RegEl.register(element);
+				});
+
+				document
+					.querySelectorAll("[data-elseif]")
+					.forEach((element) => {
+						console.log(
+							"Registering data-elseif element:",
+							element
+						);
+						RegEl.register(element);
+					});
+
+				document.querySelectorAll("[data-else]").forEach((element) => {
+					console.log("Registering data-else element:", element);
+					RegEl.register(element);
+				});
+
+				// Register all other elements
 				document
 					.querySelectorAll(
-						"[data-bind], [data-await], [data-then], [data-else]"
+						"[data-bind], [data-await], [data-then], [data-catch], [data-process], [data-target]"
 					)
 					.forEach((element) => {
-						console.log("Registering element:", element);
+						console.log("Registering other element:", element);
 						RegEl.register(element);
 					});
 				console.log("✅ All elements registered");
@@ -223,6 +446,13 @@
 				console.log("testSuccess:", typeof window.testSuccess);
 				console.log("testError:", typeof window.testError);
 				console.log("testFast:", typeof window.testFast);
+				console.log(
+					"testWithProcessor:",
+					typeof window.testWithProcessor
+				);
+				console.log("testWithTarget:", typeof window.testWithTarget);
+				console.log("testCombined:", typeof window.testCombined);
+				console.log("toggleCondition:", typeof window.toggleCondition);
 			});
 
 			// Debug helper to inspect element states
@@ -230,6 +460,7 @@
 				const awaitElements = document.querySelectorAll("[data-await]");
 				const thenElements = document.querySelectorAll("[data-then]");
 				const elseElements = document.querySelectorAll("[data-else]");
+				const catchElements = document.querySelectorAll("[data-catch]");
 
 				console.group("🔍 Element Debug Info");
 				console.log(
@@ -251,9 +482,18 @@
 					}))
 				);
 				console.log(
-					"Else elements:",
+					"Else elements (conditional):",
 					elseElements.length,
 					Array.from(elseElements).map((el) => ({
+						element: el,
+						display: el.style.display,
+						dataset: el.dataset,
+					}))
+				);
+				console.log(
+					"Catch elements (async errors):",
+					catchElements.length,
+					Array.from(catchElements).map((el) => ({
 						element: el,
 						display: el.style.display,
 						dataset: el.dataset,
