@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "vitest";
-import { State } from "../State";
+import { State, computed } from "../State";
 import { RegEl } from "../registry";
 import { evaluateExpression } from "../expression-parser";
 
@@ -53,12 +53,12 @@ describe("Performance Tests", () => {
 		test("should batch multiple state updates efficiently", async () => {
 			const state1 = new State(0);
 			const state2 = new State(0);
-			const computed = new State(() => state1.value + state2.value);
+			const computedState = computed(() => state1.value + state2.value);
 			let computedCalls = 0;
 
-			computed.effect(() => {
+			computedState.effect(() => {
 				computedCalls++;
-				computed.value; // Access to trigger computation
+				computedState.value; // Access to trigger computation
 			});
 
 			const time = await measureTime(() => {

@@ -1,5 +1,5 @@
 import { evaluateExpression } from "./expression-parser";
-import { State } from "./State";
+import { State, computed } from "./State";
 import { isEqual } from "./equality";
 
 // Extend element interfaces to include mfRegister
@@ -241,7 +241,7 @@ export class RegEl {
 				const state = State.get<unknown>(stateName);
 				if (state) {
 					// Create a computed state for the property
-					const computedState = new State(() => {
+					const computedState = computed(() => {
 						const obj = state.value;
 						const propPath = stateRef.split(".").slice(1);
 						let current: any = obj;
@@ -372,7 +372,7 @@ export class RegEl {
 
 			// Store the expression result for this attribute
 			// Always create a new state that evaluates the processed expression
-			const evaluatedState = new State(() => {
+			const evaluatedState = computed(() => {
 				const context = RegEl.createContext(props);
 				return exprResult.fn(context);
 			});
@@ -396,7 +396,7 @@ export class RegEl {
 				false
 			);
 			const evaluator = evaluateExpression(processedExpression);
-			showState = new State(() => {
+			showState = computed(() => {
 				const context = RegEl.createContext(props);
 				return evaluator.fn(context);
 			});
@@ -428,7 +428,7 @@ export class RegEl {
 			if (isElif) {
 				// For elseif: show only if this condition is true AND all previous conditions are false
 				const currentCondition = showState;
-				showState = new State(() => {
+				showState = computed(() => {
 					const previousConditionsTrue = conditionalStates.some(
 						(s) => s.value
 					);
@@ -438,7 +438,7 @@ export class RegEl {
 				});
 			} else if (isElse) {
 				// For else: show only if all previous conditions are false
-				showState = new State(() => {
+				showState = computed(() => {
 					return !conditionalStates.some((s) => s.value);
 				});
 			}
@@ -458,7 +458,7 @@ export class RegEl {
 				false
 			);
 			const evaluator = evaluateExpression(processedExpression);
-			awaitState = new State(() => {
+			awaitState = computed(() => {
 				const context = RegEl.createContext(props);
 				return evaluator.fn(context) as Promise<unknown>;
 			});
@@ -543,7 +543,7 @@ export class RegEl {
 			const exprResult = evaluateExpression(processedExpression);
 
 			// Create a state that evaluates the bind expression with full props context
-			const newState = new State(() => {
+			const newState = computed(() => {
 				const context = RegEl.createContext(props);
 				return exprResult.fn(context);
 			});
@@ -608,7 +608,7 @@ export class RegEl {
 			const exprResult = evaluateExpression(processedExpression);
 
 			// Create a state that evaluates the sync expression with full props context
-			const newState = new State(() => {
+			const newState = computed(() => {
 				const context = RegEl.createContext(props);
 				const result = exprResult.fn(context);
 				return result;
@@ -1731,7 +1731,7 @@ export class RegEl {
 				const exprResult = evaluateExpression(processedExpr);
 
 				// Create a state that evaluates the bind expression with iteration props context
-				const newState = new State(() => {
+				const newState = computed(() => {
 					const context = RegEl.createContext(iterationProps);
 					const result = exprResult.fn(context);
 					return result;

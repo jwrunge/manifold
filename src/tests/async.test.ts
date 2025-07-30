@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { RegEl } from "../registry";
-import { State } from "../State";
+import { State, computed } from "../State";
 
 // Mock DOM
 const createMockElement = (tag: string = "div"): HTMLElement => {
@@ -62,7 +62,7 @@ describe("Async Features", () => {
 			button.dataset.then = "htmlContent";
 			document.body.appendChild(button);
 
-			const handleClick = new State(() =>
+			const handleClick = computed(() =>
 				Promise.resolve(createMockResponse("<p>HTML content</p>"))
 			);
 			State.register("handleClick", handleClick);

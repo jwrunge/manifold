@@ -49,6 +49,13 @@
 	<body>
 		<h1>Registry Test - data-scope</h1>
 
+		<div class="test-section">
+			<h2>Computed State Example</h2>
+			<p>Demonstrates the new computed() helper function for reactive derived values</p>
+			<div data-bind="textContent: @greeting">${greeting}</div>
+			<p>Try changing the user name or age below to see the greeting update automatically!</p>
+		</div>
+
 		<span id="test-el-2" data-bind="textContent: 'Counter is ' + @counter">
 			Counter is ${counter}!
 		</span>
@@ -198,7 +205,7 @@
 
 		<!-- Import Manifold -->
 		<script type="module">
-			import { State } from "./src/State.js";
+			import { State, computed } from "./src/State.js";
 			import { RegEl } from "./src/registry.js";
 			import { evaluateExpression } from "./src/expression-parser.js";
 
@@ -212,6 +219,12 @@
 				"user"
 			);
 			window.counterState = new State(0, "counter");
+
+			// Create a computed state that derives from user state
+			window.greetingState = computed(() => {
+				const user = window.userState.value;
+				return `Hello, ${user.name}! You are ${user.age} years old.`;
+			});
 
 			// Initialize array states for data-each testing
 			window.todosState = new State(
@@ -230,6 +243,7 @@
 			State.register("counter", window.counterState);
 			State.register("todos", window.todosState);
 			State.register("numbers", window.numbersState);
+			State.register("greeting", window.greetingState);
 
 			// Debug: Log available states
 			console.log("=== REGISTERED STATES ===");

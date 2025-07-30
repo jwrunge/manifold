@@ -1,7 +1,7 @@
-import { State } from "./State";
+import { State, computed } from "./State";
 import { MANIFOLD_ATTRIBUTES, RegEl } from "./registry";
 
-export { State };
+export { State, computed };
 export { RegEl } from "./registry";
 
 const init = (
@@ -21,7 +21,7 @@ function watch<T>(deriveFn: () => T): State<T>;
 function watch<T>(value: T): State<T>;
 function watch<T>(value: T | (() => T)): State<T> {
 	if (typeof value === "function") {
-		return new State(value as () => T);
+		return computed(value as () => T);
 	}
 	return new State(value as T);
 }

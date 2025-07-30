@@ -112,17 +112,26 @@ export class State<T = unknown> {
 
 	private static reg = new Map<string, State<unknown>>();
 
-	constructor(value: T | (() => T), public name?: string) {
+	constructor(value: T, public name?: string) {
 		this.name ??= Math.random().toString(36).substring(2, 15);
-		if (typeof value === "function") {
-			this._derive = value as () => T;
-			this._value = undefined as any;
-			this._reactive = undefined as any;
-			new Effect(() => this._updateValue())._runImmediate();
-		} else {
-			this._value = value;
-			this._reactive = this._createProxy(value);
-		}
+		this._value = value;
+		this._reactive = this._createProxy(value);
+	}
+
+	// Internal constructor for computed states
+	static _createComputed<T>(deriveFn: () => T, name?: string): State<T> {
+		const state = Object.create(State.prototype) as State<T>;
+		state.name = name ?? Math.random().toString(36).substring(2, 15);
+		state._derive = deriveFn;
+		state._value = undefined as any;
+		state._reactive = undefined as any;
+		state._effects = new Set<Effect>();
+		state._granularEffects = new Map<string | symbol, Set<Effect>>();
+		state._effectToKeys = new Map<Effect, Set<string | symbol>>();
+		state._effectToLastKey = new Map<Effect, string | symbol>();
+		
+		new Effect(() => state._updateValue())._runImmediate();
+		return state;
 	}
 
 	static get<T>(name?: string): State<T> | undefined {
@@ -393,4 +402,16 @@ export class State<T = unknown> {
 		effect._runImmediate();
 		return () => effect._stop();
 	}
+}
+
+/**
+ * Create a computed state that derives its value from a function.
+ * The state will automatically update when any dependencies change.
+ * 
+ * @param deriveFn Function that computes the state value
+ * @param name Optional name for the state (for debugging/registry)
+ * @returns A new State that recomputes when dependencies change
+ */
+export function computed<T>(deriveFn: () => T, name?: string): State<T> {
+	return State._createComputed(deriveFn, name);
 }
