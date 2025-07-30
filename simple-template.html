@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Template Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+        button { padding: 10px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Simple Template Test</h1>
+
+    <!-- Test with data-scope to create the name variable -->
+    <div class="test" data-scope="@nameState as name">
+        <h3>Template Test</h3>
+        <div>Hello ${name}!</div>
+        <button onclick="changeName()">Change Name</button>
+    </div>
+
+    <script type="module">
+        import './src/index.js';
+        import { State } from './src/State.js';
+
+        // Create a simple name state
+        const nameState = new State('World');
+        State.register('nameState', nameState);
+
+        // Global function to change the name
+        window.changeName = () => {
+            console.log('Changing name from', nameState.value, 'to "JavaScript"');
+            nameState.value = 'JavaScript';
+            console.log('Name state updated to:', nameState.value);
+        };
+
+        console.log('Simple template test setup complete');
+    </script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Async Features Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        .loading {
+            background-color: #f0f8ff;
+            padding: 10px;
+            border-left: 4px solid #007acc;
+        }
+        .result {
+            background-color: #f0fff0;
+            padding: 10px;
+            border-left: 4px solid #28a745;
+        }
+        .error {
+            background-color: #fff5f5;
+            padding: 10px;
+            border-left: 4px solid #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <h1>Async Features Test</h1>
+
+    <!-- Test 1: Basic data-await with data-then -->
+    <div class="test-section">
+        <h2>Test 1: Basic Async Loading</h2>
+        <div data-await="@fetchUserProfile()" class="loading">
+            Loading user profile...
+        </div>
+        <div data-then="profile" class="result">
+            <h3>${profile.name}</h3>
+            <p>Email: ${profile.email}</p>
+            <p>Role: ${profile.role}</p>
+        </div>
+        <div data-else="error" class="error">
+            Error loading profile: ${error.message}
+        </div>
+    </div>
+
+    <!-- Test 2: Button with async fetch and processing -->
+    <div class="test-section">
+        <h2>Test 2: Button Click with JSON Processing</h2>
+        <button 
+            data-bind="onclick: @fetchUsers"
+            data-process="onclick: response => response.json()"
+            data-then="users">
+            Load Users
+        </button>
+        <div data-then="users" class="result">
+            <h3>Users:</h3>
+            <ul>
+                <li data-each="users as user">${user.name} - ${user.email}</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Test 3: HTMx-style targeting -->
+    <div class="test-section">
+        <h2>Test 3: HTMx-style Content Targeting</h2>
+        <div id="content-area" class="result">
+            <p>Default content here</p>
+        </div>
+        <button 
+            data-bind="onclick: @fetchHtml"
+            data-process="onclick: response => response.text()"
+            data-target="onclick: #content-area">
+            Refresh Content
+        </button>
+    </div>
+
+    <!-- Test 4: Multiple async operations -->
+    <div class="test-section">
+        <h2>Test 4: Multiple Async Operations</h2>
+        <div 
+            data-await="@fetchInitialData()"
+            data-process="await: response => response.json()"
+            class="loading">
+            Loading initial data...
+        </div>
+        <div data-then="data" class="result">
+            <h3>Initial Data:</h3>
+            <p>Count: ${data.count}</p>
+            <p>Status: ${data.status}</p>
+        </div>
+        <button 
+            data-bind="onclick: @refreshData"
+            data-process="onclick: response => response.json()"
+            data-then="refreshedData">
+            Refresh Data
+        </button>
+        <div data-then="refreshedData" class="result">
+            <h3>Refreshed Data:</h3>
+            <p>Count: ${refreshedData.count}</p>
+            <p>Timestamp: ${refreshedData.timestamp}</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { $ } from './src/index.js';
+
+        // Mock API functions
+        window.fetchUserProfile = () => {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    if (Math.random() > 0.2) { // 80% success rate
+                        resolve(new Response(JSON.stringify({
+                            name: "John Doe",
+                            email: "john@example.com",
+                            role: "Developer"
+                        })));
+                    } else {
+                        reject(new Error("Failed to fetch user profile"));
+                    }
+                }, 1000);
+            });
+        };
+
+        window.fetchUsers = () => {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve(new Response(JSON.stringify([
+                        { name: "Alice Smith", email: "alice@example.com" },
+                        { name: "Bob Johnson", email: "bob@example.com" },
+                        { name: "Carol Brown", email: "carol@example.com" }
+                    ])));
+                }, 800);
+            });
+        };
+
+        window.fetchHtml = () => {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve(new Response(`
+                        <h3>Updated Content</h3>
+                        <p>This content was fetched at ${new Date().toLocaleTimeString()}</p>
+                        <p>Random number: ${Math.floor(Math.random() * 1000)}</p>
+                    `));
+                }, 600);
+            });
+        };
+
+        window.fetchInitialData = () => {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve(new Response(JSON.stringify({
+                        count: 42,
+                        status: "initialized"
+                    })));
+                }, 500);
+            });
+        };
+
+        window.refreshData = () => {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve(new Response(JSON.stringify({
+                        count: Math.floor(Math.random() * 100),
+                        timestamp: new Date().toISOString()
+                    })));
+                }, 300);
+            });
+        };
+
+        // Initialize the framework
+        console.log('Starting async tests...');
+    </script>
+</body>
+</html>

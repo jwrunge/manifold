@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOM Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+        .loading { background: lightblue; }
+        .result { background: lightgreen; }
+        .error { background: lightcoral; }
+        button { padding: 10px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>DOM Debug Test</h1>
+
+    <!-- Test 1: Simple template interpolation -->
+    <div class="test">
+        <h3>Test 1: Template Interpolation</h3>
+        <div id="template-test">Hello ${name}!</div>
+        <button onclick="changeName()">Change Name</button>
+    </div>
+
+    <!-- Test 2: Manual check -->
+    <div class="test">
+        <h3>Test 2: Manual DOM Update</h3>
+        <div id="manual-test">Original text</div>
+        <button onclick="manualUpdate()">Manual Update</button>
+    </div>
+
+    <!-- Test 3: Simple async -->
+    <div class="test">
+        <h3>Test 3: Simple Async</h3>
+        <div data-await="@testPromise" class="loading">
+            Loading simple test...
+        </div>
+        <div data-then="result" class="result">
+            Result: ${result}
+        </div>
+        <button onclick="triggerPromise()">Trigger Promise</button>
+    </div>
+
+    <script type="module">
+        import './src/index.js';
+        import { State } from './src/State.js';
+        import { RegEl } from './src/registry.js';
+
+        // Test 1: Template interpolation
+        const nameState = new State('World');
+        State.register('name', nameState);
+        
+        console.log('Setting up template test...');
+        const templateElement = document.getElementById('template-test');
+        console.log('Template element before RegEl:', templateElement.textContent);
+        
+        const testRegEl = new RegEl(templateElement, { name: nameState });
+        console.log('Template element after RegEl:', templateElement.textContent);
+        console.log('RegEl props:', testRegEl.props);
+
+        // Global functions for testing
+        window.changeName = () => {
+            console.log('Changing name from', nameState.value, 'to "JavaScript"');
+            nameState.value = 'JavaScript';
+            console.log('Name changed, element content:', templateElement.textContent);
+        };
+
+        window.manualUpdate = () => {
+            const manualElement = document.getElementById('manual-test');
+            manualElement.textContent = 'Updated at ' + new Date().toLocaleTimeString();
+            console.log('Manual update done');
+        };
+
+        // Test 3: Async promise
+        let testPromise = new State(null);
+        State.register('testPromise', testPromise);
+
+        window.triggerPromise = () => {
+            console.log('Triggering promise...');
+            const promise = new Promise(resolve => {
+                setTimeout(() => {
+                    console.log('Promise resolving...');
+                    resolve('Promise result at ' + new Date().toLocaleTimeString());
+                }, 2000);
+            });
+            testPromise.value = promise;
+        };
+
+        console.log('Debug test setup complete');
+    </script>
+</body>
+</html>

@@ -63,12 +63,12 @@ Manifold uses data attributes on regular HTML elements for all reactive templati
 **Property binding:**
 
 ```html
-<!-- Two-way binding shorthand -->
-<input type="text" data-sync="@username" />
-<input type="email" data-sync="@email" />
-<textarea data-sync="@message"></textarea>
+<!-- Two-way binding -->
+<input type="text" data-sync="value: @username" />
+<input type="email" data-sync="value: @email" />
+<textarea data-sync="value: @message"></textarea>
 
-<!-- Explicit property binding -->
+<!-- One-way binding -->
 <input type="text" data-bind="value: @username" />
 <button data-bind="disabled: @isDisabled">Click me</button>
 <button data-bind="onclick: @handleClick">Click me</button>
