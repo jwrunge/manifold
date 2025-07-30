@@ -169,10 +169,31 @@ export interface ExpressionResult {
 }
 
 export const evaluateExpression = (
-	expr: string | undefined
+	expr: string | undefined,
+	isEventHandler = false
 ): ExpressionResult => {
 	expr = expr?.trim();
 	if (!expr) return { fn: () => undefined, stateRefs: [] };
+
+	// Check if this is a JavaScript arrow function or regular function
+	// Only detect if it doesn't contain @ symbols (which would make it a Manifold expression)
+	if (
+		!expr.includes("@") &&
+		(expr.includes("=>") || expr.startsWith("function"))
+	) {
+		try {
+			const func = new Function("return (" + expr + ")")();
+			if (isEventHandler) {
+				// For event handlers, return the function itself
+				return { fn: () => func, stateRefs: [] };
+			} else {
+				// For regular properties, call the function and return its result
+				return { fn: () => func(), stateRefs: [] };
+			}
+		} catch (error) {
+			// Fall through to normal expression evaluation if JavaScript function creation fails
+		}
+	}
 
 	const stateRefs: string[] = [];
 	Array.from(expr.matchAll(STATE_RE)).forEach((match) => {

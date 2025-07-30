@@ -33,18 +33,27 @@ describe("Async Features", () => {
 			loadingDiv.textContent = "Loading...";
 			document.body.appendChild(loadingDiv);
 
-			// Create a test promise that resolves after a delay
-			const testPromise = new State(
-				new Promise((resolve) =>
-					setTimeout(() => resolve("test data"), 100)
-				)
+			// Create an empty promise state first
+			const testPromise = new State<Promise<unknown> | undefined>(
+				undefined
 			);
 			State.register("testPromise", testPromise);
 
 			RegEl.register(loadingDiv);
 
-			// Initially, loading content should be visible
-			expect(loadingDiv.style.display).toBe("");
+			// Initially, loading content should be hidden (no promise yet)
+			expect(loadingDiv.style.display).toBe("none");
+
+			// Set the promise - this should show the loading content
+			testPromise.value = new Promise((resolve) =>
+				setTimeout(() => resolve("test data"), 100)
+			);
+
+			// Give the reactive system a moment to update
+			await new Promise((resolve) => setTimeout(resolve, 10));
+
+			// Loading content should now be visible
+			expect(loadingDiv.style.display).toBe("block");
 
 			// Wait for promise to resolve
 			await new Promise((resolve) => setTimeout(resolve, 150));
@@ -62,8 +71,9 @@ describe("Async Features", () => {
 			button.dataset.then = "htmlContent";
 			document.body.appendChild(button);
 
-			const handleClick = computed(() =>
-				Promise.resolve(createMockResponse("<p>HTML content</p>"))
+			const handleClick = computed(
+				() => () =>
+					Promise.resolve(createMockResponse("<p>HTML content</p>"))
 			);
 			State.register("handleClick", handleClick);
 

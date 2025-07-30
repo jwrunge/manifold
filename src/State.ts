@@ -129,7 +129,7 @@ export class State<T = unknown> {
 		state._granularEffects = new Map<string | symbol, Set<Effect>>();
 		state._effectToKeys = new Map<Effect, Set<string | symbol>>();
 		state._effectToLastKey = new Map<Effect, string | symbol>();
-		
+
 		new Effect(() => state._updateValue())._runImmediate();
 		return state;
 	}
@@ -157,6 +157,9 @@ export class State<T = unknown> {
 		parent?: { state: State<any>; key: string | symbol }
 	): T {
 		if (!obj || typeof obj !== "object") return obj;
+
+		// Don't proxy Promises - they have special native methods that break with proxies
+		if (obj instanceof Promise) return obj;
 
 		const commonProxyHandler: ProxyHandler<any> = {
 			get: (target, key) => {
@@ -407,7 +410,7 @@ export class State<T = unknown> {
 /**
  * Create a computed state that derives its value from a function.
  * The state will automatically update when any dependencies change.
- * 
+ *
  * @param deriveFn Function that computes the state value
  * @param name Optional name for the state (for debugging/registry)
  * @returns A new State that recomputes when dependencies change

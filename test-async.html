@@ -174,7 +174,7 @@
 			<div
 				data-await="@processPromise"
 				data-then="processedResult"
-				data-process="await: (response) => ({ transformed: response.value * 2, timestamp: new Date().toISOString() })"
+				data-process="await: (response) => ({ transformed: response.value * 2, timestamp: 'test-time' })"
 				class="loading"
 			>
 				⚙️ Processing data... (transforming result)

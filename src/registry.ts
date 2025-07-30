@@ -100,16 +100,19 @@ export class RegEl {
 		return { property, expr };
 	}
 
-	// Helper function to split bind expressions respecting quotes
+	// Helper function to split bind expressions respecting quotes, parentheses, and braces
 	private static splitBindExpressions(bindStr: string): string[] {
 		const expressions: string[] = [];
 		let current = "";
 		let inQuotes = false;
 		let quoteChar = "";
+		let parenDepth = 0;
+		let braceDepth = 0;
 
 		for (let i = 0; i < bindStr.length; i++) {
 			const char = bindStr[i];
 
+			// Handle quotes
 			if (
 				(char === '"' || char === "'") &&
 				(i === 0 || bindStr[i - 1] !== "\\")
@@ -123,7 +126,26 @@ export class RegEl {
 				}
 			}
 
-			if (char === "," && !inQuotes) {
+			// Handle parentheses and braces (only when not in quotes)
+			if (!inQuotes) {
+				if (char === "(") {
+					parenDepth++;
+				} else if (char === ")") {
+					parenDepth--;
+				} else if (char === "{") {
+					braceDepth++;
+				} else if (char === "}") {
+					braceDepth--;
+				}
+			}
+
+			// Split on comma only when not in quotes, parentheses, or braces
+			if (
+				char === "," &&
+				!inQuotes &&
+				parenDepth === 0 &&
+				braceDepth === 0
+			) {
 				expressions.push(current.trim());
 				current = "";
 			} else {
@@ -153,21 +175,68 @@ export class RegEl {
 				const parsed = RegEl.parseBinding(eventExpr);
 				if (parsed) {
 					const { property: event, expr: fnExpr } = parsed;
-					const { processedExpression } = RegEl.parseAliases(
-						fnExpr,
-						props,
-						false
-					);
-					const evaluator = evaluateExpression(processedExpression);
-					eventMap[event] = (result: unknown) => {
-						const context = RegEl.createContext(props);
-						// Add the result as 'response' or similar context variable
-						const extendedContext = {
-							...context,
-							response: result,
+
+					// Check if this is a JavaScript arrow function or regular function
+					if (
+						fnExpr.includes("=>") ||
+						fnExpr.startsWith("function")
+					) {
+						// Raw JavaScript function - create it directly
+						try {
+							console.log(
+								`🔧 Creating function for ${event}:`,
+								fnExpr
+							);
+							const functionString = "return (" + fnExpr + ")";
+							console.log(`🔧 Function string:`, functionString);
+							const func = new Function(functionString)();
+							console.log(`🔧 Created function:`, func);
+							eventMap[event] = func;
+						} catch (error) {
+							console.error(
+								`❌ Failed to create event handler for ${event}:`,
+								error
+							);
+							console.error(
+								`❌ Function expression was:`,
+								fnExpr
+							);
+							// Fallback to expression evaluation
+							const { processedExpression } = RegEl.parseAliases(
+								fnExpr,
+								props,
+								false
+							);
+							const evaluator =
+								evaluateExpression(processedExpression);
+							eventMap[event] = (result: unknown) => {
+								const context = RegEl.createContext(props);
+								const extendedContext = {
+									...context,
+									response: result,
+								};
+								return evaluator.fn(extendedContext);
+							};
+						}
+					} else {
+						// Manifold expression - evaluate normally
+						const { processedExpression } = RegEl.parseAliases(
+							fnExpr,
+							props,
+							false
+						);
+						const evaluator =
+							evaluateExpression(processedExpression);
+						eventMap[event] = (result: unknown) => {
+							const context = RegEl.createContext(props);
+							// Add the result as 'response' or similar context variable
+							const extendedContext = {
+								...context,
+								response: result,
+							};
+							return evaluator.fn(extendedContext);
 						};
-						return evaluator.fn(extendedContext);
-					};
+					}
 				}
 			}
 		} else {
@@ -494,42 +563,74 @@ export class RegEl {
 			if (property.startsWith("on")) {
 				console.log(`🎪 Detected event handler: ${property}`);
 
-				// For event handlers, evaluate the expression as JavaScript code
-				try {
-					// Create a function that evaluates the expression in the proper context
-					const handlerFunction = new Function(
-						"event",
-						`
-						// Make test functions available in the handler context
-						const testSuccess = window.testSuccess;
-						const testError = window.testError;
-						const testFast = window.testFast;
-						const console = window.console;
-						
-						// Evaluate the expression
-						return (${expr})(event);
-					`
-					);
+				// Parse the bind expression to handle aliases - pass current props for context
+				const { processedExpression } = RegEl.parseAliases(
+					expr,
+					props,
+					false
+				);
+				const exprResult = evaluateExpression(
+					processedExpression,
+					true
+				); // true = isEventHandler
 
+				// Create a state that evaluates the event handler expression with full props context
+				const handlerState = computed(() => {
+					const context = RegEl.createContext(props);
+					return exprResult.fn(context);
+				});
+
+				// Set up the effect to update the event handler property
+				handlerState?.effect(() => {
+					const handlerFunction = handlerState.value;
 					console.log(
 						`📌 Setting up event handler for ${property}:`,
 						handlerFunction
 					);
-					RegEl.setElementProperty(
-						element,
-						property,
-						handlerFunction
-					);
-					console.log(
-						`✅ Event handler ${property} set on element:`,
-						element
-					);
-				} catch (error) {
-					console.error(
-						`❌ Failed to create event handler for ${property}:`,
-						error
-					);
-				}
+
+					if (typeof handlerFunction === "function") {
+						// Wrap event handler to support async operations
+						const wrappedHandler = (event: Event) => {
+							console.log(`🔥 ${property} handler triggered!`);
+							const result = handlerFunction(event);
+
+							// Check if result is a promise and we have async config
+							if (
+								result instanceof Promise &&
+								(processMap || targetMap)
+							) {
+								// Use the full property name (e.g., 'onclick') for event type
+								const eventType = property;
+
+								// Handle the promise with async features
+								const regEl = RegEl._registry.get(element);
+								if (regEl) {
+									regEl._handlePromise(result, eventType);
+								}
+							}
+
+							return result;
+						};
+
+						RegEl.setElementProperty(
+							element,
+							property,
+							wrappedHandler
+						);
+						console.log(
+							`✅ Event handler ${property} set on element:`,
+							element
+						);
+					} else {
+						console.warn(
+							`⚠️ Expected function for ${property} but got:`,
+							typeof handlerFunction
+						);
+					}
+				});
+
+				// Trigger initial evaluation
+				handlerState.value;
 
 				return; // Skip normal expression processing for event handlers
 			}
@@ -540,7 +641,7 @@ export class RegEl {
 				props,
 				false
 			);
-			const exprResult = evaluateExpression(processedExpression);
+			const exprResult = evaluateExpression(processedExpression, false); // false = not event handler
 
 			// Create a state that evaluates the bind expression with full props context
 			const newState = computed(() => {
@@ -566,8 +667,8 @@ export class RegEl {
 							result instanceof Promise &&
 							(processMap || targetMap)
 						) {
-							// Extract event type from property (e.g., 'onclick' -> 'click')
-							const eventType = property.slice(2); // Remove 'on' prefix
+							// Use the full property name (e.g., 'onclick') for event type
+							const eventType = property;
 
 							// Handle the promise with async features
 							const regEl = RegEl._registry.get(element);
@@ -835,17 +936,17 @@ export class RegEl {
 		this._process = asyncConfig?.process;
 		this._target = asyncConfig?.target;
 
-		// Initially show data-await elements (loading content) but hide data-then/data-catch except buttons
+		// Initially hide all async elements (data-await, data-then, data-catch) except buttons
+		// They will be shown/hidden appropriately when promises are set or resolve
 		if (
 			element.dataset["await"] &&
 			(element as HTMLElement).tagName !== "BUTTON"
 		) {
-			console.log("Showing data-await element (loading content):", element);
-			(element as HTMLElement).style.display = "";
 			console.log(
-				"✅ data-await element shown, style:",
-				(element as HTMLElement).style.display
+				"Initially hiding data-await element (will show when promise is active):",
+				element
 			);
+			(element as HTMLElement).style.display = "none";
 		}
 		if (
 			element.dataset["then"] &&
@@ -930,18 +1031,45 @@ export class RegEl {
 				);
 				console.log("🔍 Promise.then:", typeof promiseValue?.then);
 
-				// Extract the raw promise if it's wrapped in a proxy
+				// If no promise is set, keep await elements hidden
+				if (!promiseValue) {
+					console.log(
+						"⏸️ No promise set, keeping data-await element hidden"
+					);
+					(this._element as HTMLElement).style.display = "none";
+					return;
+				}
 
+				// Extract the raw promise if it's wrapped in a proxy
 				if (promiseValue instanceof Promise) {
 					try {
+						// Get the raw promise by checking if it has a target property (proxy indicator)
+						const rawPromise =
+							(promiseValue as any).__raw_promise__ ||
+							promiseValue;
+
 						// Create a new promise to avoid proxy issues
 						const cleanPromise = new Promise((resolve, reject) => {
-							promiseValue.then(resolve).catch(reject);
+							// Use Promise.prototype.then directly to avoid proxy interference
+							const thenMethod = Promise.prototype.then;
+							const catchMethod = Promise.prototype.catch;
+
+							thenMethod.call(rawPromise, resolve);
+							catchMethod.call(rawPromise, reject);
 						});
 						console.log("✅ Created clean promise wrapper");
 						this._handlePromise(cleanPromise, "await");
 					} catch (error) {
 						console.warn("⚠️ Error accessing promise:", error);
+						// Fallback: try to handle the original promise directly
+						try {
+							this._handlePromise(promiseValue, "await");
+						} catch (fallbackError) {
+							console.error(
+								"⚠️ Fallback also failed:",
+								fallbackError
+							);
+						}
 					}
 				} else {
 					console.warn("⚠️ Expected Promise but got:", promiseValue);
@@ -1015,7 +1143,8 @@ export class RegEl {
 			if (eventType === "await" && this._await) {
 				console.log("📋 Showing loading content:", element);
 				// The element with data-await shows its content during loading
-				element.style.display = "";
+				// Use 'block' to ensure it shows even if hidden by inline styles
+				element.style.display = "block";
 			}
 
 			// Wait for promise to resolve
@@ -1023,10 +1152,33 @@ export class RegEl {
 
 			// Create a new promise to avoid proxy issues
 			const cleanPromise = new Promise((resolve, reject) => {
-				// Use the original promise methods directly
-				const originalThen = Object.getPrototypeOf(promise).then;
+				// Use Promise.prototype methods directly to avoid proxy interference
+				try {
+					const thenMethod = Promise.prototype.then;
+					const catchMethod = Promise.prototype.catch;
 
-				originalThen.call(promise, resolve, reject);
+					thenMethod.call(promise, resolve);
+					catchMethod.call(promise, reject);
+				} catch (proxyError) {
+					console.warn(
+						"⚠️ Proxy issue, trying fallback:",
+						proxyError
+					);
+					// Fallback: try to extract raw promise or use directly
+					try {
+						promise.then(resolve).catch(reject);
+					} catch (fallbackError) {
+						const errorMessage =
+							fallbackError instanceof Error
+								? fallbackError.message
+								: String(fallbackError);
+						reject(
+							new Error(
+								`Promise handling failed: ${errorMessage}`
+							)
+						);
+					}
+				}
 			});
 
 			console.log("🔄 Using clean promise wrapper:", cleanPromise);
@@ -1055,13 +1207,50 @@ export class RegEl {
 				const resultState = new State(result);
 				this._awaitResults.set(this._then, resultState);
 
-				// Find data-then element (next sibling typically)
-				const thenElement = this._findThenElement();
+				// Check if the current element has data-then (same element)
+				const currentElement = element as HTMLElement;
+				const hasThenOnSelf =
+					currentElement.dataset["then"] === this._then;
+
+				console.log(
+					`🔍 hasThenOnSelf: ${hasThenOnSelf} (current element has data-then="${currentElement.dataset["then"]}")`
+				);
+
+				// Always try to find a separate data-then element first
+				const separateThenElement = this._findThenElement();
+
+				// Use separate element if found, otherwise fall back to current element if it has data-then
+				const thenElement =
+					separateThenElement ||
+					(hasThenOnSelf ? currentElement : null);
+
 				console.log("🔍 Found data-then element:", thenElement);
+				console.log(
+					"🔍 Is separate element:",
+					separateThenElement !== null
+				);
+
 				if (thenElement) {
-					// Show the then element
-					console.log("👁️ Showing data-then element:", thenElement);
-					thenElement.style.display = "";
+					// Show the then element (always show separate elements, skip for same element)
+					const isSeparateElement = separateThenElement !== null;
+					if (isSeparateElement) {
+						console.log(
+							"👁️ Showing separate data-then element:",
+							thenElement
+						);
+						console.log(
+							`👁️ Before: display="${thenElement.style.display}"`
+						);
+						// Use 'block' to override any inline display:none styles
+						thenElement.style.display = "block";
+						console.log(
+							`👁️ After: display="${thenElement.style.display}"`
+						);
+					} else {
+						console.log(
+							"⏩ Skipping display change for same element (no separate element found)"
+						);
+					}
 
 					// Add the result state to props for the then element
 					const thenRegEl = RegEl._registry.get(thenElement);
@@ -1125,7 +1314,8 @@ export class RegEl {
 				if (catchElement) {
 					// Show the catch element
 					console.log("👁️ Showing data-catch element:", catchElement);
-					catchElement.style.display = "";
+					// Use 'block' to override any inline display:none styles
+					catchElement.style.display = "block";
 
 					// Add the error state to props for the catch element
 					const catchRegEl = RegEl._registry.get(catchElement);
@@ -1159,32 +1349,64 @@ export class RegEl {
 	}
 
 	/**
-	 * Find the data-then element (typically next sibling)
+	 * Find the data-then element with matching variable name (but not data-await)
 	 */
 	private _findThenElement(): HTMLElement | null {
+		if (!this._then) return null;
+
 		const element = this._element as HTMLElement;
 		let sibling = element.nextElementSibling;
 
+		console.log(
+			`🔍 Looking for data-then="${this._then}" element starting from:`,
+			element
+		);
+
 		while (sibling) {
-			if ((sibling as HTMLElement).dataset["then"]) {
-				return sibling as HTMLElement;
+			const siblingElement = sibling as HTMLElement;
+			const siblingThen = siblingElement.dataset["then"];
+			const siblingAwait = siblingElement.dataset["await"];
+
+			console.log(
+				`🔍 Checking sibling:`,
+				siblingElement,
+				`data-then="${siblingThen}", data-await="${siblingAwait}"`
+			);
+
+			// Find data-then element that matches our variable but doesn't have data-await
+			if (siblingThen === this._then && !siblingAwait) {
+				console.log(
+					`✅ Found matching data-then element:`,
+					siblingElement
+				);
+				return siblingElement;
 			}
 			sibling = sibling.nextElementSibling;
 		}
 
+		console.log(
+			`❌ No matching data-then element found for variable: ${this._then}`
+		);
 		return null;
 	}
 
 	/**
-	 * Find the data-catch element (typically next sibling after data-then)
+	 * Find the data-catch element with matching variable name (but not data-await)
 	 */
 	private _findCatchElement(): HTMLElement | null {
+		if (!this._catch) return null;
+
 		const element = this._element as HTMLElement;
 		let sibling = element.nextElementSibling;
 
 		while (sibling) {
-			if ((sibling as HTMLElement).dataset["catch"] !== undefined) {
-				return sibling as HTMLElement;
+			const siblingElement = sibling as HTMLElement;
+			const siblingCatch = siblingElement.dataset["catch"];
+			const siblingAwait = siblingElement.dataset["await"];
+
+			// Find data-catch element that matches our variable but doesn't have data-await
+			if (siblingCatch === this._catch && !siblingAwait) {
+				return siblingElement;
 			}
 			sibling = sibling.nextElementSibling;
 		}
@@ -1625,26 +1847,43 @@ export class RegEl {
 		element: HTMLElement | SVGElement | MathMLElement,
 		props: Record<string, State<unknown>>
 	): void {
+		console.log("🔤 Processing text interpolation for element:", element);
+		console.log("🔤 Available props:", Object.keys(props), props);
+
 		// Process text content for template interpolation
 		const processTextContent = (node: Node) => {
 			if (node.nodeType === Node.TEXT_NODE && node.textContent) {
-				const originalText = node.textContent;
+				// Store original template if not already stored
+				if (!(node as any)._originalTemplate) {
+					(node as any)._originalTemplate = node.textContent;
+				}
+
+				const originalText = (node as any)._originalTemplate;
+				console.log("🔤 Processing text node:", originalText);
 
 				if (originalText.includes("${")) {
 					// Create a state that updates the text content based on interpolated variables
 					const updateText = () => {
 						const context = RegEl.createContext(props);
+						console.log("🔤 Context for interpolation:", context);
 						let newText = originalText;
 
 						// Replace all interpolations
 						newText = newText.replace(
 							/\$\{([^}]+)\}/g,
-							(match, expression) => {
+							(match: string, expression: string) => {
+								console.log(
+									`🔤 Evaluating expression: "${expression}"`
+								);
 								try {
 									const evaluator = evaluateExpression(
 										expression.trim()
 									);
 									const result = evaluator.fn(context);
+									console.log(
+										`🔤 Expression result:`,
+										result
+									);
 									return String(result ?? "");
 								} catch (error) {
 									console.warn(
@@ -1656,6 +1895,7 @@ export class RegEl {
 							}
 						);
 
+						console.log(`🔤 Final text: "${newText}"`);
 						node.textContent = newText;
 					};
 
