@@ -17,7 +17,14 @@ const init = (
 };
 
 // Factory function for creating reactive state
-const watch = <T>(value: T) => new State(value);
+function watch<T>(deriveFn: () => T): State<T>;
+function watch<T>(value: T): State<T>;
+function watch<T>(value: T | (() => T)): State<T> {
+	if (typeof value === "function") {
+		return new State(value as () => T);
+	}
+	return new State(value as T);
+}
 
 export default {
 	State,

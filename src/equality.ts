@@ -1,63 +1,59 @@
-const toUint8Array = (buf: ArrayBuffer | ArrayBufferView): Uint8Array =>
-	buf instanceof ArrayBuffer
-		? new Uint8Array(buf)
-		: new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+const _toUint8Array = (b: ArrayBuffer | ArrayBufferView): Uint8Array =>
+	b instanceof ArrayBuffer
+		? new Uint8Array(b)
+		: new Uint8Array(b.buffer, b.byteOffset, b.byteLength);
 
-const compareArrays = <T>(a: T[], b: T[], checked: WeakSet<any>): boolean => {
+const compareArrays = (a: any[], b: any[], c: WeakSet<any>): boolean => {
 	if (a.length !== b.length) return false;
-	for (let i = 0; i < a.length; i++) {
-		if (!isEqual(a[i], b[i], checked)) return false;
-	}
+	for (let i = 0; i < a.length; i++)
+		if (!isEqual(a[i], b[i], c)) return false;
 	return true;
 };
 
-export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
+export const isEqual = (a: any, b: any, c = new WeakSet()): boolean => {
 	if (a === b) return true;
 	if (!(a && b && typeof a == "object" && typeof b == "object")) return false;
-	if (checked.has(a) || checked.has(b)) return a === b;
+	if (c.has(a) || c.has(b)) return a === b;
 
-	checked.add(a);
-	checked.add(b);
+	c.add(a);
+	c.add(b);
 
-	const isABuf = a instanceof ArrayBuffer || ArrayBuffer.isView(a);
-	const isBBuf = b instanceof ArrayBuffer || ArrayBuffer.isView(b);
+	const isA = a instanceof ArrayBuffer || ArrayBuffer.isView(a);
+	const isB = b instanceof ArrayBuffer || ArrayBuffer.isView(b);
 
-	if (isABuf && isBBuf) {
-		const [aView, bView] = [toUint8Array(a), toUint8Array(b)];
-		if (aView.length !== bView.length) return false;
-		for (let i = 0; i < aView.length; i++) {
-			if (aView[i] !== bView[i]) return false;
-		}
+	if (isA || isB) {
+		if (isA !== isB) return false; // If one is buffer, other must be too
+		const [vA, vB] = [_toUint8Array(a), _toUint8Array(b)];
+		if (vA.length !== vB.length) return false;
+		for (let i = 0; i < vA.length; i++) if (vA[i] !== vB[i]) return false;
 		return true;
-	} else if (isABuf !== isBBuf) return false;
+	}
 
-	const [classA, classB] = [a.constructor, b.constructor];
-	if (classA !== classB && !(classA === Object && classB === Object))
-		return false;
+	const cA = a.constructor;
+	const cB = b.constructor;
+	if (cA !== cB && !(cA === Object && cB === Object)) return false;
 
-	switch (classA) {
+	switch (cA) {
 		case Array:
-			return compareArrays(a, b, checked);
+			return compareArrays(a, b, c);
 		case Date:
 			return a.getTime() === b.getTime();
 		case Map:
 			if (a.size !== b.size) return false;
-			for (const [key, valA] of a.entries()) {
-				if (!b.has(key) || !isEqual(valA, b.get(key), checked))
-					return false;
-			}
+			for (const [k, vA] of a.entries())
+				if (!b.has(k) || !isEqual(vA, b.get(k), c)) return false;
 			return true;
 		case Set:
 			if (a.size !== b.size) return false;
-			for (const item of a) {
-				let found = false;
-				for (const bItem of b) {
-					if (isEqual(item, bItem, checked)) {
-						found = true;
+			for (const i of a) {
+				let f = false;
+				for (const iB of b) {
+					if (isEqual(i, iB, c)) {
+						f = true;
 						break;
 					}
 				}
-				if (!found) return false;
+				if (!f) return false;
 			}
 			return true;
 		case URL:
@@ -73,12 +69,10 @@ export const isEqual = (a: any, b: any, checked = new WeakSet()): boolean => {
 			return false;
 	}
 
-	const keysA = Reflect.ownKeys(a);
-	if (keysA.length !== Reflect.ownKeys(b).length) return false;
+	const kA = Reflect.ownKeys(a);
+	if (kA.length !== Reflect.ownKeys(b).length) return false;
 
-	for (const key of keysA) {
-		if (!Reflect.has(b, key) || !isEqual(a[key], b[key], checked))
-			return false;
-	}
+	for (const k of kA)
+		if (!Reflect.has(b, k) || !isEqual(a[k], b[k], c)) return false;
 	return true;
 };

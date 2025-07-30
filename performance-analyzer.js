@@ -8,9 +8,9 @@
  */
 
 import { performance } from "perf_hooks";
-import { State } from "./State.js";
-import { RegEl } from "./registry.js";
-import { evaluateExpression } from "./expression-parser.js";
+import { State } from "./src/State.js";
+import { RegEl } from "./src/registry.js";
+import { evaluateExpression } from "./src/expression-parser.js";
 
 // Test Configuration
 const TEST_CONFIG = {

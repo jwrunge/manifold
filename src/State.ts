@@ -24,6 +24,7 @@ const flushPendingEffects = () => {
 	isFlushingEffects = true;
 	try {
 		while (pendingEffects.size > 0 && batchDepth < 10) {
+			``;
 			batchDepth++;
 			const effectsToRun = new Set(pendingEffects);
 			pendingEffects.clear();
@@ -74,7 +75,7 @@ class Effect {
 		updateStack.add(this);
 		updateDepth++;
 
-		for (const cleanup of this._dependencies) cleanup();
+		this._dependencies.forEach((cleanup) => cleanup());
 		this._dependencies.clear();
 
 		const prevEffect = currentEffect;
@@ -95,7 +96,7 @@ class Effect {
 
 	_stop() {
 		this._isActive = false;
-		for (const cleanup of this._dependencies) cleanup();
+		this._dependencies.forEach((cleanup) => cleanup());
 		this._dependencies.clear();
 	}
 }
@@ -135,9 +136,10 @@ export class State<T = unknown> {
 	private _updateValue() {
 		const newValue = this._derive ? this._derive() : this._value;
 		if (!isEqual(this._value, newValue)) {
+			const oldValue = this._value;
 			this._value = newValue;
 			this._reactive = this._createProxy(newValue);
-			this._triggerEffects();
+			this._triggerEffects(oldValue);
 		}
 	}
 
@@ -147,8 +149,53 @@ export class State<T = unknown> {
 	): T {
 		if (!obj || typeof obj !== "object") return obj;
 
+		const commonProxyHandler: ProxyHandler<any> = {
+			get: (target, key) => {
+				this._track(key);
+				const value = Reflect.get(target, key);
+				return typeof value === "object" && value !== null
+					? this._createProxy(value as any, { state: this, key })
+					: value;
+			},
+			set: (target, key, value) => {
+				if (isEqual(Reflect.get(target, key), value)) return true;
+				const result = Reflect.set(target, key, value);
+				if (result) {
+					this._triggerGranularEffects(key);
+					if (parent) {
+						parent.state._triggerGranularEffects(parent.key);
+					} else {
+						// Trigger general effects (those that watch the whole state)
+						// but exclude those that are already handled by granular effects
+						const granularEffectsForKey =
+							this._granularEffects.get(key);
+						for (const effect of this._effects) {
+							if (effect._isActive) {
+								const effectKeys =
+									this._effectToKeys.get(effect);
+								// Only trigger if this effect has no granular dependencies
+								// (i.e., it's a pure general effect watching the whole state)
+								if (!effectKeys || effectKeys.size === 0) {
+									// Skip if already triggered by granular effects
+									if (
+										!granularEffectsForKey ||
+										!granularEffectsForKey.has(effect)
+									) {
+										pendingEffects.add(effect);
+									}
+								}
+							}
+						}
+					}
+					processEffectsBatched();
+				}
+				return result;
+			},
+		};
+
 		if (obj instanceof Map || obj instanceof Set) {
 			return new Proxy(obj, {
+				...commonProxyHandler,
 				get: (target, key) => {
 					this._track(key);
 					const value = Reflect.get(target, key);
@@ -158,24 +205,14 @@ export class State<T = unknown> {
 						? this._createProxy(value as any, { state: this, key })
 						: value;
 				},
-				set: (target, key, value) => {
-					if (isEqual(Reflect.get(target, key), value)) return true;
-					const result = Reflect.set(target, key, value);
-					if (result) {
-						this._triggerGranularEffects(key);
-						if (parent)
-							parent.state._triggerGranularEffects(parent.key);
-					}
-					return result;
-				},
 			}) as T;
 		}
 
 		if (Array.isArray(obj)) {
 			return new Proxy(obj, {
+				...commonProxyHandler,
 				get: (target, key) => {
-					this._track(key);
-					this._track(key);
+					this._track(key); // Track both direct index access and method access
 					const value = Reflect.get(target, key);
 					if (
 						typeof value === "function" &&
@@ -191,50 +228,39 @@ export class State<T = unknown> {
 							const effectsToProcess = new Set<Effect>();
 
 							if (oldLength !== newLength) {
-								const lengthEffects =
-									this._granularEffects.get("length");
-								if (lengthEffects) {
-									for (const effect of lengthEffects) {
-										if (effect._isActive)
-											effectsToProcess.add(effect);
-									}
-								}
-								for (const effect of this._effects) {
-									if (effect._isActive)
-										effectsToProcess.add(effect);
-								}
+								this._addEffectsToSet(
+									effectsToProcess,
+									this._granularEffects.get("length")
+								);
+								this._addEffectsToSet(
+									effectsToProcess,
+									this._effects
+								);
 							} else {
 								for (let i = 0; i < target.length; i++) {
-									const indexEffects =
-										this._granularEffects.get(String(i));
-									if (indexEffects) {
-										for (const effect of indexEffects) {
-											if (effect._isActive)
-												effectsToProcess.add(effect);
-										}
-									}
+									this._addEffectsToSet(
+										effectsToProcess,
+										this._granularEffects.get(String(i))
+									);
 								}
-								for (const effect of this._effects) {
-									if (effect._isActive)
-										effectsToProcess.add(effect);
-								}
+								this._addEffectsToSet(
+									effectsToProcess,
+									this._effects
+								);
 							}
 
 							if (parent) {
-								const parentGranularEffects =
+								this._addEffectsToSet(
+									effectsToProcess,
 									parent.state._granularEffects.get(
 										parent.key
-									);
-								if (parentGranularEffects) {
-									for (const effect of parentGranularEffects) {
-										if (effect._isActive)
-											effectsToProcess.add(effect);
-									}
-								}
+									)
+								);
 							}
 
-							for (const effect of effectsToProcess)
-								pendingEffects.add(effect);
+							effectsToProcess.forEach((effect) =>
+								pendingEffects.add(effect)
+							);
 							processEffectsBatched();
 							return result;
 						};
@@ -243,59 +269,22 @@ export class State<T = unknown> {
 						? this._createProxy(value as any, { state: this, key })
 						: value;
 				},
-				set: (target, key, value) => {
-					if (isEqual(Reflect.get(target, key), value)) return true;
-					const result = Reflect.set(target, key, value);
-					if (result) {
-						this._triggerGranularEffects(key);
-						if (parent)
-							parent.state._triggerGranularEffects(parent.key);
-					}
-					return result;
-				},
 			}) as T;
 		}
 
-		return new Proxy(obj, {
-			get: (target, key) => {
-				this._track(key);
-				const value = Reflect.get(target, key);
-				return typeof value === "object" && value !== null
-					? this._createProxy(value as any, { state: this, key })
-					: value;
-			},
-			set: (target, key, value) => {
-				if (isEqual(Reflect.get(target, key), value)) return true;
-				const result = Reflect.set(target, key, value);
-				if (result) {
-					this._triggerGranularEffects(key);
-					if (parent) {
-						parent.state._triggerGranularEffectsWithParent(
-							parent.key,
-							parent
-						);
-					} else {
-						for (const effect of this._effects) {
-							if (
-								effect._isActive &&
-								!pendingEffects.has(effect)
-							) {
-								let isGranular = false;
-								for (const granularEffects of this._granularEffects.values()) {
-									if (granularEffects.has(effect)) {
-										isGranular = true;
-										break;
-									}
-								}
-								if (!isGranular) pendingEffects.add(effect);
-							}
-						}
-					}
-					processEffectsBatched();
-				}
-				return result;
-			},
-		}) as T;
+		return new Proxy(obj, commonProxyHandler) as T;
+	}
+
+	private _addEffectsToSet(
+		targetSet: Set<Effect>,
+		sourceSet?: Set<Effect> | Iterable<Effect>
+	) {
+		if (!sourceSet) return;
+		for (const effect of sourceSet) {
+			if (effect._isActive) {
+				targetSet.add(effect);
+			}
+		}
 	}
 
 	private _track(key: string | symbol) {
@@ -325,7 +314,7 @@ export class State<T = unknown> {
 					keySet.delete(key);
 					if (keySet.size === 0) {
 						this._effectToKeys.delete(effect);
-						this._effects.delete(effect);
+						this._effects.delete(effect); // Only delete from _effects if no more granular keys
 					}
 				}
 				if (granularEffects!.size === 0) {
@@ -336,58 +325,46 @@ export class State<T = unknown> {
 		}
 	}
 
-	private _triggerEffects() {
+	private _triggerEffects(oldValue: T) {
 		reusableTriggeredSet.clear();
-		for (const effect of this._effects) {
-			if (effect._isActive && !reusableTriggeredSet.has(effect)) {
-				reusableTriggeredSet.add(effect);
-				pendingEffects.add(effect);
-			}
-		}
-		for (const effects of this._granularEffects.values()) {
-			for (const effect of effects) {
-				if (effect._isActive && !reusableTriggeredSet.has(effect)) {
-					reusableTriggeredSet.add(effect);
-					pendingEffects.add(effect);
+		this._addEffectsToSet(reusableTriggeredSet, this._effects);
+
+		// Only trigger granular effects for properties that have actually changed
+		if (
+			oldValue &&
+			typeof oldValue === "object" &&
+			this._value &&
+			typeof this._value === "object"
+		) {
+			for (const [key, effects] of this._granularEffects.entries()) {
+				const oldPropValue = (oldValue as any)[key];
+				const newPropValue = (this._value as any)[key];
+				if (!isEqual(oldPropValue, newPropValue)) {
+					this._addEffectsToSet(reusableTriggeredSet, effects);
 				}
 			}
+		} else {
+			// If not objects, trigger all granular effects
+			for (const effects of this._granularEffects.values()) {
+				this._addEffectsToSet(reusableTriggeredSet, effects);
+			}
 		}
+
+		reusableTriggeredSet.forEach((effect) => pendingEffects.add(effect));
 		processEffectsBatched();
 	}
 
 	private _triggerGranularEffects(key: string | symbol) {
 		const granularEffects = this._granularEffects.get(key);
 		if (granularEffects) {
-			for (const effect of granularEffects) {
+			granularEffects.forEach((effect) => {
 				if (
 					effect._isActive &&
 					this._effectToLastKey.get(effect) === key
 				) {
 					pendingEffects.add(effect);
 				}
-			}
-		}
-		processEffectsBatched();
-	}
-
-	private _triggerGranularEffectsWithParent(
-		key: string | symbol,
-		parentInfo?: { state: State<any>; key: string | symbol }
-	) {
-		const granularEffects = this._granularEffects.get(key);
-		if (granularEffects) {
-			for (const effect of granularEffects) {
-				if (
-					effect._isActive &&
-					this._effectToLastKey.get(effect) === key
-				) {
-					pendingEffects.add(effect);
-				}
-			}
-		}
-
-		if (parentInfo) {
-			parentInfo.state._triggerGranularEffects(parentInfo.key);
+			});
 		}
 		processEffectsBatched();
 	}
@@ -404,9 +381,10 @@ export class State<T = unknown> {
 	set value(newValue: T) {
 		if (this._derive) return;
 		if (!isEqual(this._value, newValue)) {
+			const oldValue = this._value;
 			this._value = newValue;
 			this._reactive = this._createProxy(newValue);
-			this._triggerEffects();
+			this._triggerEffects(oldValue);
 		}
 	}
 
