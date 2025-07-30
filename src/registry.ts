@@ -835,15 +835,15 @@ export class RegEl {
 		this._process = asyncConfig?.process;
 		this._target = asyncConfig?.target;
 
-		// Initially hide all async elements (data-await, data-then, data-catch) except buttons
+		// Initially show data-await elements (loading content) but hide data-then/data-catch except buttons
 		if (
 			element.dataset["await"] &&
 			(element as HTMLElement).tagName !== "BUTTON"
 		) {
-			console.log("Hiding data-await element:", element);
-			(element as HTMLElement).style.display = "none";
+			console.log("Showing data-await element (loading content):", element);
+			(element as HTMLElement).style.display = "";
 			console.log(
-				"✅ data-await element hidden, style:",
+				"✅ data-await element shown, style:",
 				(element as HTMLElement).style.display
 			);
 		}
@@ -933,29 +933,13 @@ export class RegEl {
 				// Extract the raw promise if it's wrapped in a proxy
 
 				if (promiseValue instanceof Promise) {
-					// Try to get the raw promise
 					try {
-						// First try to use the raw promise directly if available
-						let promise: Promise<unknown> = promiseValue;
-
-						// Check if there's a stored raw promise on window
-						if ((window as any).currentPromise instanceof Promise) {
-							console.log("🔄 Using raw promise from window");
-							promise = (window as any).currentPromise;
-						}
-
-						// Test if the promise works by calling .then() directly
-						const testThen = promise.then;
-						if (typeof testThen === "function") {
-							console.log("✅ Promise.then is accessible");
-							// Try a simple then call to test it
-							promise.then(() => {}).catch(() => {});
-							console.log("✅ Promise.then test successful");
-						} else {
-							console.log("❌ Promise.then is not accessible");
-						}
-
-						this._handlePromise(promise, "await");
+						// Create a new promise to avoid proxy issues
+						const cleanPromise = new Promise((resolve, reject) => {
+							promiseValue.then(resolve).catch(reject);
+						});
+						console.log("✅ Created clean promise wrapper");
+						this._handlePromise(cleanPromise, "await");
 					} catch (error) {
 						console.warn("⚠️ Error accessing promise:", error);
 					}
