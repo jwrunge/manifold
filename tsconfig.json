@@ -20,6 +20,6 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true
 	},
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "performance-analyzer.js"],
 	"exclude": ["src/tests/**/*"]
 }
