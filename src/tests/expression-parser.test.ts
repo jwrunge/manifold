@@ -202,11 +202,11 @@ describe("Expression Parser", () => {
 		test("should execute simple assignments", () => {
 			const context: Record<string, unknown> = {};
 			// Clear any existing global variable
-			if ('name' in window) delete (window as any).name;
-			
+			if ("name" in window) delete (window as any).name;
+
 			evaluate("name = 'Alice'", context);
 			expect((window as any).name).toBe("Alice");
-			
+
 			// Clean up
 			delete (window as any).name;
 		});
@@ -220,12 +220,12 @@ describe("Expression Parser", () => {
 		test("should handle assignment with expressions", () => {
 			const context: Record<string, unknown> = { a: 5, b: 3 };
 			// Clear any existing global variable
-			if ('total' in window) delete (window as any).total;
-			
+			if ("total" in window) delete (window as any).total;
+
 			const result = evaluate("total = a + b", context);
 			expect((window as any).total).toBe(8);
 			expect(result).toBe(8); // Assignment should return the assigned value
-			
+
 			// Clean up
 			delete (window as any).total;
 		});
@@ -302,7 +302,7 @@ describe("Expression Parser", () => {
 		test("should handle DOM insertion functions in arrow function", () => {
 			const context = {
 				arg: "<div>Hello World</div>",
-				"append": (selector: string, content?: string) =>
+				append: (selector: string, content?: string) =>
 					`append(${selector}, ${content || context.arg})`,
 			};
 
@@ -493,7 +493,7 @@ describe("Expression Parser", () => {
 			const domContext: Record<string, unknown> = {
 				...leftContext,
 				arg: leftResult,
-				"append": (selector: string, content: string) =>
+				append: (selector: string, content: string) =>
 					`APPEND(${selector}): ${content}`,
 			};
 			const domResult = rightExpr.fn(domContext);
