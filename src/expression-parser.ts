@@ -45,6 +45,9 @@ const _evaluateExpression = (expr?: string): ExpressionResult => {
 	expr = expr?.trim();
 	if (!expr) return { fn: () => undefined, _stateRefs: new Set() };
 
+	// Preprocess @ symbols to convert @variable to variable
+	expr = expr.replace(/@([a-zA-Z_$][a-zA-Z0-9_.$]*)/g, '$1');
+
 	// Handle parameterized arrow functions: (param) => expression
 	const a = expr.match(/^\s*\(\s*(\w+)\s*\)\s*=>\s*(.+)$/);
 	if (a?.[1] && a[2]) {
