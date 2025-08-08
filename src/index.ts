@@ -1,33 +1,25 @@
-import { State, computed } from "./State";
-import { MANIFOLD_ATTRIBUTES, RegEl } from "./registry";
+import { State, effect } from "./State";
+import { RegEl } from "./registry";
+import _isEqual from "./equality";
 
-export { State, computed };
-export { RegEl } from "./registry";
-
-const init = (
-	container: HTMLElement | SVGElement | MathMLElement | Document = document
+export const register = (
+	container?: HTMLElement | SVGElement | MathMLElement
 ) => {
-	// Find all elements with data attributes
-	for (const el of Array.from(
-		container.querySelectorAll(
-			MANIFOLD_ATTRIBUTES.map((attr) => `[data-${attr}]`).join(", ")
-		)
-	))
-		RegEl.register(el as HTMLElement | SVGElement | MathMLElement);
-};
-
-// Factory function for creating reactive state
-function watch<T>(deriveFn: () => T): State<T>;
-function watch<T>(value: T): State<T>;
-function watch<T>(value: T | (() => T)): State<T> {
-	if (typeof value === "function") {
-		return computed(value as () => T);
+	if (container) {
+		return RegEl.register(container);
+	} else {
+		// Register all elements with data-mf-register attribute
+		document.querySelectorAll("[data-mf-register]").forEach((element) => {
+			RegEl.register(element as HTMLElement | SVGElement | MathMLElement);
+		});
 	}
-	return new State(value as T);
-}
-
-export default {
-	State,
-	watch,
-	init,
 };
+
+export const state = <T>(value: T, name?: string): State<T> =>
+	new State(value, name);
+
+export const derived = <T>(deriveFn: () => T, name?: string): State<T> =>
+	State.createComputed(deriveFn, name);
+
+export { effect };
+export { State };
