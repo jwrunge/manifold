@@ -1,9 +1,10 @@
 {
 	"compilerOptions": {
-		"target": "esnext",
-		"module": "esnext",
+		"target": "ES2022",
+		"useDefineForClassFields": true,
+		"module": "ES2022",
 		"moduleResolution": "bundler",
-		"lib": ["esnext", "dom"],
+		"lib": ["ES2022", "dom", "dom.iterable"],
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
 		"forceConsistentCasingInFileNames": true,
@@ -22,6 +23,11 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true
 	},
-	"include": ["src/**/*", "performance-analyzer.js"],
+	"include": [
+		"src/**/*",
+		"performance-analyzer.js",
+		"alt/template.ts",
+		"alt/tidbits.ts"
+	],
 	"exclude": ["src/tests/**/*"]
 }

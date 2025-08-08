@@ -4,86 +4,241 @@ Manifold is a reactive state management and front-end templating library that ai
 
 **Design Philosophy**: Simple things should be simple, complex things should be possible.
 
-**Event Disambiguation**: When an element has multiple events (e.g., both `data-await` and `data-bind="onclick: ..."`), Manifold requires explicit event labels in `data-process` and `data-target` attributes. If labels are missing in ambiguous cases, Manifold will throw a warning instructing you to disambiguate with `event:` prefixes.
-
 ## API
 
-Manifold uses data attributes on regular HTML elements for all reactive templating.
+Manifold uses a combination of data attributes for control flow and standard HTML attributes with expression syntax for binding, syncing, and event handling.
 
-### Data Attributes
+## Element Registration
 
-| Attribute    | Purpose                                                                                                       | Example                                                                                                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| data-bind    | Binds element properties to state using `property: value` syntax                                              | `<input data-bind="value: @username" />`                                                                                                                    |
-| data-sync    | Two-way data binding for form inputs (shorthand for value + events)                                           | `<input data-sync="@username" />`                                                                                                                           |
-| data-if      | Conditional rendering - shows element when expression is truthy                                               | `<div data-if="@isVisible">Content</div>`                                                                                                                   |
-| data-else-if | Alternative condition - sibling of data-if for additional conditions                                          | `<div data-else-if="@showAlternative">Alt content</div>`                                                                                                    |
-| data-else    | Fallback content - works with data-if, data-each, and data-await                                              | `<div data-else>Default content</div>`                                                                                                                      |
-| data-each    | Repeats element for each array item using `items as item` syntax                                              | `<div data-each="@items as item">${item.name}</div>`                                                                                                        |
-| data-scope   | Creates scoped variables for child elements using `state as alias` syntax                                     | `<div data-scope="@user as u">Hello ${u.name}</div>`                                                                                                        |
-| data-await   | Shows loading content while promise is pending                                                                | `<div data-await="fetchUser()">Loading...</div>`                                                                                                            |
-| data-then    | Shows content when promise resolves, creates named variable                                                   | `<div data-then="profile">${profile.name}</div>`                                                                                                            |
-| data-process | Processes promise result before passing to data-then. Use `event: fn` syntax when element has multiple events | `<div data-process="response => response.json()">...` or `<div data-process="await: response => response.json(), onclick: response => response.text()">...` |
-| data-target  | Targets another element to receive async results using `event: selector`                                      | `<button data-target="onclick: #content">Refresh</button>`                                                                                                  |
+Elements and their children can be registered for Manifold processing using `data-mf-register`. Within registered elements, Manifold will process all attributes looking for expression syntax. Use `data-mf-ignore` to exclude specific elements from processing.
+
+```html
+<!-- Register an element and its children for Manifold processing -->
+<div data-mf-register>
+	<!-- All attributes on this and child elements will be processed -->
+	<input
+		type="${inputType}"
+		value="${user.name}"
+		onchange="${event => user.name = event.currentTarget.value}"
+	/>
+
+	<!-- Ignore this specific element -->
+	<div data-mf-ignore>
+		<input type="text" onchange="regularJavaScript()" />
+	</div>
+</div>
+```
+
+## Expression Syntax
+
+Within registered elements, Manifold uses `${}` syntax for:
+
+-   **Property Binding**: `<input type="${myInputType}" />`
+-   **Binding with Sync**: `<input value="${user.name >> (name) => processedName = validateName(name)}" />`
+-   **Event Handlers**: `<input onchange="${event => user.name = event.currentTarget.value}" />`
+
+**Context-Aware Expression Syntax**:
+
+-   **Simple binding**: Single expression only (no `>>` processing)
+-   **Sync binding**: `expression >> (resultVar) => syncExpression` - The `>>` operator splits binding from syncing
+-   **Event handlers**: Single expression only - event handlers cannot use `>>` syntax
+-   **DOM insertion**: Use `@` prefixed functions like `@append`, `@prepend`, `@replace`, `@swap`
+
+### Data Attributes for Control Flow
+
+| Attribute   | Purpose                                                                                           | Example                                                                                                                                                     |
+| ----------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| data-if     | Conditional rendering - shows element when expression is truthy                                   | `<div data-if="isVisible">Content</div>`                                                                                                                    |
+| data-elseif | Alternative condition - sibling of data-if for additional conditions                              | `<div data-elseif="showAlternative">Alt content</div>`                                                                                                      |
+| data-else   | Fallback content - works with data-if and data-each. For async operations, use data-catch instead | `<div data-else>Default content</div>`                                                                                                                      |
+| data-each   | Repeats element for each array item, with optional aliasing using `as` syntax                     | `<div data-each="items">Item: ${value}</div>`, `<div data-each="items as item">Item: ${item.name}</div>`                                                    |
+| data-await  | Shows loading content while promise is pending                                                    | `<div data-await="fetchUser()">Loading...</div>`                                                                                                            |
+| data-then   | Enhanced: Variable scoping, processing, or DOM insertion for async results                        | `<div data-then="profile">${profile.name}</div>`, `<div data-then="response >> (res) => @replace('#content', res.html)">${data.name}</div>`                 |
+| data-catch  | Shows content when promise rejects, with error available as $error                                | `<div data-catch="error">Error: ${error.message}</div>`, `<div data-catch="err >> (error) => @append('#errors', error.message)">Something went wrong</div>` |
+
+### Registration Attributes
+
+| Attribute        | Purpose                                                          | Example                                                        |
+| ---------------- | ---------------------------------------------------------------- | -------------------------------------------------------------- |
+| data-mf-register | Registers element and children for Manifold processing           | `<div data-mf-register><!-- Manifold processes this --></div>` |
+| data-mf-ignore   | Excludes element from Manifold processing within registered tree | `<div data-mf-ignore><!-- Regular HTML --></div>`              |
+
+**State Aliasing**: Use `state.property as alias` syntax in data-each and data-then for readable aliases.
 
 **Interpolation**: Use `${expression}` syntax within element content to display dynamic values.
 
+### DOM Insertion Functions
+
+Manifold provides built-in DOM insertion functions prefixed with `@`:
+
+| Function   | Purpose                           | Syntax                                                      |
+| ---------- | --------------------------------- | ----------------------------------------------------------- |
+| `@append`  | Append content to target element  | `@append("#selector", content)` or `@append("#selector")`   |
+| `@prepend` | Prepend content to target element | `@prepend("#selector", content)` or `@prepend("#selector")` |
+| `@replace` | Replace target element's content  | `@replace("#selector", content)` or `@replace("#selector")` |
+| `@swap`    | Replace target element entirely   | `@swap("#selector", content)` or `@swap("#selector")`       |
+
+When content parameter is omitted, the result variable is automatically used as string content.
+
 #### Examples
+
+**Element Registration:**
+
+```html
+<!-- Register a form and its children for processing -->
+<form data-mf-register onsubmit="${event => handleSubmit(event)}">
+	<input
+		type="text"
+		value="${user.name}"
+		onchange="${event => user.name = event.currentTarget.value}"
+	/>
+	<input
+		type="email"
+		value="${user.email}"
+		onchange="${event => user.email = event.currentTarget.value}"
+	/>
+	<button type="submit" disabled="${!user.name || !user.email}">
+		Submit
+	</button>
+</form>
+
+<!-- Selectively ignore elements -->
+<div data-mf-register>
+	<!-- This input is processed by Manifold -->
+	<input type="text" value="${dynamicValue}" />
+
+	<!-- This div and its children are ignored -->
+	<div data-mf-ignore>
+		<input type="text" onchange="regularJavaScript()" />
+	</div>
+</div>
+```
 
 **Conditional rendering:**
 
 ```html
-<div data-if="@user.isLoggedIn">Welcome back, ${@user.name}!</div>
-<div data-else-if="@user.isGuest">Hello, guest!</div>
-<div data-else>Please log in</div>
+<div data-mf-register>
+	<div data-if="user.isLoggedIn">Welcome back, ${user.name}!</div>
+	<div data-elseif="user.isGuest">Hello, guest!</div>
+	<div data-else>Please log in</div>
+</div>
 ```
 
 **List rendering:**
 
 ```html
-<!-- Default: key maps to "key", value maps to "value" -->
-<ul>
-	<li data-each="@products">${key}: ${value.name} - $${value.price}</li>
-</ul>
+<div data-mf-register>
+	<!-- Basic iteration -->
+	<ul>
+		<li data-each="products">Product: ${value.name} - $${value.price}</li>
+	</ul>
 
-<!-- Custom naming: array as keyName, valueName -->
-<ul>
-	<li data-each="@products as id, product">
-		${id}: ${product.name} - $${product.price}
-	</li>
-</ul>
+	<!-- With aliasing for readability -->
+	<ul>
+		<li data-each="products as product">
+			${product.name} - $${product.price}
+		</li>
+	</ul>
 
-<!-- With fallback for empty arrays -->
-<ul>
-	<li data-each="@products as product">${product.name} - ${product.price}</li>
-	<li data-else>No products available</li>
-</ul>
+	<!-- Complex state aliasing -->
+	<ul>
+		<li data-each="store.inventory.items as product">
+			${product.name} - $${product.price}
+		</li>
+	</ul>
+
+	<!-- With fallback for empty arrays -->
+	<ul>
+		<li data-each="products as product">
+			${product.name} - ${product.price}
+		</li>
+		<li data-else>No products available</li>
+	</ul>
+</div>
 ```
 
 **Property binding:**
 
 ```html
-<!-- Two-way binding -->
-<input type="text" data-sync="value: @username" />
-<input type="email" data-sync="value: @email" />
-<textarea data-sync="value: @message"></textarea>
+<div data-mf-register>
+	<!-- Simple property binding -->
+	<input type="${inputType}" value="${username}" />
+	<input type="email" value="${email}" disabled="${isReadonly}" />
+	<button disabled="${isLoading}">Click me</button>
 
-<!-- One-way binding -->
-<input type="text" data-bind="value: @username" />
-<button data-bind="disabled: @isDisabled">Click me</button>
-<button data-bind="onclick: @handleClick">Click me</button>
-<input data-bind="value: @email, disabled: @isReadonly" />
+	<!-- Binding with sync processing -->
+	<input
+		type="text"
+		value="${username >> (name) => processedName = name.trim()}"
+	/>
+	<input
+		type="email"
+		value="${email >> (email) => validatedEmail = validateEmail(email)}"
+	/>
+	<textarea
+		value="${message >> (msg) => wordCount = updateWordCount(msg)}"
+	></textarea>
+
+	<!-- Event handlers (no >> syntax allowed) -->
+	<button onclick="${handleClick}">Click me</button>
+	<button onclick="${() => user.save()}">Save User</button>
+	<form onsubmit="${event => handleSubmit(event)}">...</form>
+	<input onchange="${event => user.name = event.currentTarget.value}" />
+
+	<!-- Event handlers with DOM insertion -->
+	<button
+		onclick="${() => fetchPosts().then(posts => @append('#posts-list', posts.html))}"
+	>
+		Load More Posts
+	</button>
+	<button
+		onclick="${() => getNotification().then(notif => @prepend('#notifications', notif.html))}"
+	>
+		Add Alert
+	</button>
+	<button
+		onclick="${() => generateReport().then(report => @replace('#main-content', report.html))}"
+	>
+		Generate Report
+	</button>
+</div>
 ```
 
-**Scoped variables:**
+**State aliasing:**
 
 ```html
-<div data-scope="@currentUser as user, @cartItems as items">
-	<h1>Hello ${user.name}</h1>
-	<div data-if="items.length > 0">
-		<div data-each="items as item">${item.title} - $${item.price}</div>
+<div data-mf-register>
+	<!-- Aliasing in data-each for readability -->
+	<div data-each="store.inventory.items as product">
+		<h3>${product.name}</h3>
+		<p>Price: $${product.price}</p>
+		<div data-if="product.inStock">Available</div>
 	</div>
-	<div data-else>Your cart is empty</div>
+
+	<!-- Aliasing in data-then for processing -->
+	<div data-await="fetch('/api/user')">Loading...</div>
+	<div data-then="response >> (res) => res.json() as userData">
+		<h1>Welcome, ${userData.name}!</h1>
+		<p>Email: ${userData.email}</p>
+	</div>
+
+	<!-- Direct state references (clean and simple) -->
+	<div data-if="currentUser.isLoggedIn">
+		<h1>Hello ${currentUser.name}</h1>
+		<div data-if="cartItems.length > 0">
+			<div data-each="cartItems as item">
+				${item.title} - $${item.price}
+			</div>
+		</div>
+		<div data-else>Your cart is empty</div>
+	</div>
+
+	<!-- Complex state references with aliasing -->
+	<div data-if="app.user.preferences.theme as theme">
+		<div class="${theme === 'dark' ? 'dark-mode' : 'light-mode'}">
+			Current theme: ${theme}
+		</div>
+	</div>
 </div>
 ```
 
@@ -92,175 +247,253 @@ Manifold uses data attributes on regular HTML elements for all reactive templati
 **Async content:**
 
 ```html
-<!-- Basic async content -->
-<div data-await="@fetchUserProfile()">Loading user profile...</div>
-<div data-then="profile">
-	<h2>${profile.name}</h2>
-	<p>${profile.bio}</p>
-</div>
-<div data-else="error">Error: ${error.message}</div>
-
-<!-- Processing JSON responses -->
-<div
-	data-await="fetch('/api/users')"
-	data-process="response => response.json()"
->
-	Loading users...
-</div>
-<div data-then="users">
-	<div data-each="users as user">${user.name}</div>
-</div>
-
-<!-- Processing HTML content (HTMx-style) -->
-<div
-	data-await="fetch('/partial/sidebar')"
-	data-process="response => response.text()"
->
-	Loading sidebar...
-</div>
-<div data-then="html" data-bind="innerHTML: html"></div>
-
-<!-- Complex processing with error handling -->
-<div
-	data-await="fetch('/api/data')"
-	data-process="async response => {
-       if (!response.ok) throw new Error('Failed to fetch');
-       const data = await response.json();
-       return data.results.filter(item => item.active);
-     }"
->
-	Loading filtered data...
-</div>
-<div data-then="filteredData">
-	<div data-each="filteredData as item">${item.title}</div>
-</div>
-
-<!-- Multiple event processing on same element -->
-<div
-	data-await="fetch('/api/initial')"
-	data-bind="onclick: fetch('/api/refresh')"
-	data-process="await: response => response.json(), onclick: response => response.text()"
->
-	Loading initial data...
-</div>
-<div data-then="data">
-	<div data-if="typeof data === 'string'" data-bind="innerHTML: data"></div>
-	<div data-else data-each="data as item">${item.name}</div>
-</div>
-
-<!-- HTMx-style targeting with refresh button -->
-<div id="content-area">
-	<p id="content">Default content here</p>
-	<button
-		data-bind="onclick: fetch('/api/content')"
-		data-process="response => response.text()"
-		data-target="#content"
-	>
-		Refresh Content
-	</button>
-</div>
-
-<!-- Targeting with JSON processing -->
-<div>
-	<div id="user-list">
-		<p>Click to load users</p>
+<div data-mf-register>
+	<!-- Basic async content -->
+	<div data-await="fetchUserProfile()">Loading user profile...</div>
+	<div data-then="profile">
+		<h2>${profile.name}</h2>
+		<p>${profile.bio}</p>
 	</div>
-	<button
-		data-bind="onclick: fetch('/api/users')"
-		data-process="response => response.json()"
-		data-target="#user-list"
-		data-then="users"
-	>
-		Load Users
-	</button>
-	<!-- Target element gets the processed result -->
-	<div id="user-list">
+	<div data-catch="error">Error loading profile: ${error.message}</div>
+
+	<!-- Processing with aliasing -->
+	<div data-await="fetch('/api/users')">Loading users...</div>
+	<div data-then="response >> (res) => res.json() as users">
 		<div data-each="users as user">${user.name}</div>
 	</div>
-</div>
+	<div data-catch="error >> (err) => @append('#error-log', err.message)">
+		Unable to load users
+	</div>
 
-<!-- Targeting with HTML content insertion -->
-<div>
-	<div id="sidebar">Default sidebar content</div>
+	<!-- Direct content insertion -->
+	<div data-await="fetch('/partial/sidebar')">Loading sidebar...</div>
+	<div data-then="response >> (res) => @replace('#sidebar', res.text())">
+		Sidebar loaded!
+	</div>
+	<div data-catch="error">Failed to load sidebar</div>
+
+	<!-- Target-based content insertion -->
+	<div id="content-area">
+		<p>Default content here</p>
+		<button
+			onclick="${() => fetch('/api/content').then(res => @replace('#content-area', res.text()))}"
+		>
+			Refresh Content
+		</button>
+	</div>
+
+	<!-- Multiple insertion methods -->
+	<div id="messages"></div>
 	<button
-		data-bind="onclick: fetch('/api/sidebar')"
-		data-process="response => response.text()"
-		data-target="#sidebar"
-		data-then="html"
+		onclick="${() => getNewMessage().then(msg => @append('#messages', msg.html))}"
 	>
-		Load Sidebar
+		Add Message
 	</button>
-	<!-- Target element receives HTML via data-bind -->
-	<div id="sidebar" data-bind="innerHTML: html"></div>
+	<button
+		onclick="${() => getHeader().then(header => @prepend('#messages', header.html))}"
+	>
+		Add Header
+	</button>
+	<button
+		onclick="${() => getSidebar().then(sidebar => @replace('#messages', sidebar.html))}"
+	>
+		Replace with Sidebar
+	</button>
+
+	<!-- Complex processing chain with DOM insertion -->
+	<div data-await="fetch('/api/data')">Loading filtered data...</div>
+	<div
+		data-then="response >> (res) => res.json().filter(item => item.active) >> (filtered) => @replace('#filtered-results', filtered.map(item => item.html).join(''))"
+	></div>
+</div>
+```
+
+**Three data-then usage patterns:**
+
+```html
+<div data-mf-register>
+	<!-- 1. Simple variable scoping -->
+	<div data-await="fetchUserProfile()">Loading profile...</div>
+	<div data-then="profile">
+		<h2>${profile.name}</h2>
+		<p>${profile.email}</p>
+		<p>Joined: ${profile.joinDate}</p>
+	</div>
+
+	<!-- 2. Processing with aliasing -->
+	<div data-await="fetch('/api/posts')">Loading posts...</div>
+	<div data-then="response >> (res) => res.json() as posts">
+		<div data-each="posts as post">
+			<h3>${post.title}</h3>
+			<p>${post.excerpt}</p>
+		</div>
+	</div>
+
+	<!-- 3. DOM insertion into other elements -->
+	<div data-await="generateReport()">Generating report...</div>
+	<div
+		data-then="report >> (rep) => formatReport(rep) >> (formatted) => @replace('#report-container', formatted)"
+	>
+		Report processing complete!
+	</div>
+
+	<!-- Mixed patterns in a complete workflow -->
+	<div id="user-dashboard">
+		<div data-await="fetchDashboardData()">Loading dashboard...</div>
+
+		<!-- Display user info -->
+		<div data-then="data >> (d) => d.user as user">
+			<h1>Welcome, ${user.name}!</h1>
+		</div>
+
+		<!-- Process and display notifications -->
+		<div
+			data-then="data >> (d) => markAsRead(d.notifications) as notifications"
+		>
+			<div data-each="notifications as notification">
+				${notification.message}
+			</div>
+		</div>
+
+		<!-- Insert sidebar content -->
+		<div
+			data-then="data >> (d) => renderSidebar(d.sidebar) >> (html) => @replace('#sidebar', html)"
+		></div>
+	</div>
 </div>
 ```
 
 **Event handlers:**
 
 ```html
-<button data-bind="onclick: @handleClick">Click me</button>
-<form data-bind="onsubmit: @handleSubmit">...</form>
+<div data-mf-register>
+	<!-- Function calls -->
+	<button onclick="${handleClick}">Click me</button>
+	<form onsubmit="${event => handleSubmit(event)}">...</form>
+	<input onchange="${event => validateInput(event.target.value)}" />
+
+	<!-- State assignments -->
+	<button onclick="${() => isLoading = true}">Start Loading</button>
+	<input onchange="${event => user.name = event.target.value}" />
+
+	<!-- Arrow functions -->
+	<button onclick="${() => counter++}">Increment</button>
+	<button onclick="${e => console.log('Clicked:', e)}">Log Click</button>
+
+	<!-- Complex expressions -->
+	<button
+		onclick="${() => cart.items.length > 0 ? checkout() : showEmptyCart()}"
+	>
+		Checkout
+	</button>
+
+	<!-- Event handlers with async and DOM insertion -->
+	<button
+		onclick="${() => fetchUserData().then(user => @replace('#user-info', user.html))}"
+	>
+		Refresh User Info
+	</button>
+	<button
+		onclick="${async () => { const data = await getData(); @append('#results', data.html); }}"
+	>
+		Load More Data
+	</button>
+</div>
 ```
 
-**Multiple properties:**
+**Multiple properties with new syntax:**
 
 ```typescript
-const buttonState = $.create({
+const buttonState = State.create({
 	innerText: "Click me",
 	disabled: false,
-	onclick: () => alert("Hello!"),
+});
+
+const user = State.create({
+	name: "John",
+	email: "john@example.com",
+	isActive: true,
 });
 ```
 
 ```html
-<button data-bind="@buttonState"></button>
+<div data-mf-register>
+	<!-- Property binding with expression syntax -->
+	<button
+		innerText="${buttonState.innerText}"
+		disabled="${buttonState.disabled}"
+	>
+		Default text (will be overridden)
+	</button>
+
+	<!-- Direct state references (simple and clear) -->
+	<div>
+		<input value="${user.name}" />
+		<input value="${user.email}" />
+		<div data-if="user.isActive">User is active</div>
+	</div>
+
+	<!-- Binding with sync processing -->
+	<input value="${user.name >> (name) => displayName = name.toUpperCase()}" />
+	<input
+		value="${user.email >> (email) => validEmail = validateEmail(email)}"
+	/>
+</div>
 ```
 
 ### State Creation & Binding
 
-Manifold provides two ways to create reactive state:
+Manifold provides reactive state management with two main approaches:
 
-1. **JavaScript/TypeScript constructors** with full typing support
-2. **Simple expressions** parsed directly in data attributes
+1. **JavaScript/TypeScript state creation** using the State API
+2. **Expression-based binding** with automatic state tracking and aliasing
 
-**Typed constructors:**
+**State creation:**
 
 ```typescript
-// Element-specific constructors with full type inference
-const submitButton = $.button({
-	innerText: "Submit Form",
-	disabled: false,
-	onclick: (e) => handleSubmit(e),
+// Basic state creation
+const user = State.create({
+	name: "John Doe",
+	email: "john@example.com",
+	isActive: true,
 });
 
-const emailInput = $.input({
-	type: "email",
-	value: "",
-	placeholder: "Enter your email",
-	required: true,
-	oninput: (e) => validateEmail(e.target.value),
-});
+// Computed states
+const userDisplay = State.computed(() => `${user.name} (${user.email})`);
 
-// Generic state creation for custom scenarios
-const customState = $.create({
-	isVisible: true,
-	count: 0,
-	items: ["apple", "banana", "cherry"],
+// State with methods
+const counter = State.create({
+	value: 0,
+	increment: () => counter.value++,
+	decrement: () => counter.value--,
 });
 ```
 
 **Expression-based state:**
 
 ```html
-<!-- Expressions are automatically converted to reactive State -->
-<div data-if="@user.age >= 18">Adult content</div>
-<div data-each="@products.filter(p => p.inStock)">Available: ${value.name}</div>
-<input data-bind="value: @user.email || 'Enter email'" />
+<div data-mf-register>
+	<!-- Expressions are automatically converted to reactive state -->
+	<div data-if="user.age >= 18">Adult content</div>
+	<div data-each="products.filter(p => p.inStock) as product">
+		Available: ${product.name}
+	</div>
+	<input value="${user.email || 'Enter email'}" />
 
-<!-- Complex expressions with scoping -->
-<div data-scope="@user.profile as profile, @settings.theme as theme">
-	<div data-if="profile.isVisible && theme === 'dark'">
+	<!-- Direct state references work great -->
+	<div data-if="app.user.profile.isVisible && app.settings.theme === 'dark'">
 		Dark mode profile content
+	</div>
+
+	<!-- Or use computed states for complex logic -->
+	<div data-if="isDarkModeProfile">Computed dark mode profile content</div>
+
+	<!-- Aliasing in loops and expressions -->
+	<div data-each="store.inventory.electronics as device">
+		<h3>${device.name}</h3>
+		<p data-if="device.inStock as available">
+			${available ? 'In Stock' : 'Out of Stock'}
+		</p>
 	</div>
 </div>
 ```
@@ -268,29 +501,152 @@ const customState = $.create({
 **Usage examples:**
 
 ```html
-<!-- Using typed constructors -->
-<button data-bind="@submitButton">This text will be overridden</button>
-<input data-bind="@emailInput" />
+<div data-mf-register>
+	<!-- Property binding with expression syntax -->
+	<button
+		innerText="${submitButton.text}"
+		disabled="${submitButton.disabled}"
+		onclick="${submitForm}"
+	>
+		Default text
+	</button>
+	<input
+		value="${emailInput.value}"
+		placeholder="${emailInput.placeholder}"
+		onchange="${event => validateEmail(event.target.value)}"
+	/>
 
-<!-- Using custom state with scoping -->
-<div data-scope="@customState as state">
-	<div data-if="state.isVisible">
-		<p>Count: ${state.count}</p>
+	<!-- Direct state references work perfectly -->
+	<div data-if="customState.isVisible">
+		<p>Count: ${customState.count}</p>
 		<ul>
-			<li data-each="state.items as item">${item}</li>
+			<li data-each="customState.items as item">${item}</li>
 			<li data-else>No items available</li>
 		</ul>
 	</div>
-</div>
 
-<!-- Complex property binding -->
-<select data-bind="value: @selectedValue, options: @optionsList">
-	<option
-		data-each="@optionsList as option"
-		data-bind="value: option.value"
-		selected="${option.value === @selectedValue}"
+	<!-- Complex property binding with processing -->
+	<select
+		value="${selectedValue}"
+		onchange="${event => selectedValue = event.target.value}"
 	>
-		${option.label}
-	</option>
-</select>
+		<option
+			data-each="optionsList as option"
+			value="${option.value}"
+			selected="${option.value === selectedValue}"
+		>
+			${option.label}
+		</option>
+	</select>
+
+	<!-- Reactive forms with sync -->
+	<form onsubmit="${event => handleSubmit(event)}">
+		<input
+			type="text"
+			value="${user.firstName >> (name) => validatedName = validateName(name)}"
+			placeholder="First Name"
+		/>
+		<input
+			type="email"
+			value="${user.email >> (email) => validatedEmail = validateEmail(email)}"
+			placeholder="Email"
+		/>
+		<button type="submit" disabled="${!user.firstName || !user.email}">
+			Submit
+		</button>
+	</form>
+</div>
 ```
+
+## TODO: Areas for Improvement & Missing Framework Features
+
+### 🏗️ Component System (Planned)
+
+-   [ ] **Component Abstraction**: Create reusable UI components with props/slots equivalent
+    -   Custom element integration: `<user-card data-props="@user" data-emit="userUpdated"></user-card>`
+    -   Component composition patterns
+    -   Slot/children content projection
+-   [ ] **Component Registration**: System for registering and managing custom components
+-   [ ] **Component State**: Isolated state management within components
+-   [ ] **Component Communication**: Parent-child and sibling component communication patterns
+
+### 🗄️ Advanced State Management (Planned)
+
+-   [ ] **Global State Store**: Built-in store pattern for application-wide state
+    -   Centralized state management
+    -   State modules/namespacing
+    -   State persistence/hydration
+-   [ ] **State Middleware**: Pluggable middleware system for state transformations
+    -   Logging middleware
+    -   Validation middleware
+    -   Async action middleware
+-   [ ] **State Debugging**: Development tools for state inspection
+    -   State change logging
+    -   Time-travel debugging capabilities
+    -   State diff visualization
+
+### 🛠️ Developer Experience Improvements
+
+-   [ ] **Runtime Type Checking**: Optional runtime validation for state and expressions
+    -   State schema validation
+    -   Expression type checking without build step
+    -   Runtime warnings for type mismatches
+-   [ ] **Better Error Messages**: Enhanced error reporting and debugging
+    -   More descriptive error messages with context
+    -   Stack traces that point to template locations
+    -   Suggestions for common mistakes
+-   [ ] **IDE Support**: Language server for better development experience
+    -   Autocomplete for state references in templates
+    -   Syntax highlighting for expressions
+    -   Error squiggles in HTML attributes
+-   [ ] **Development Tools**: Browser extension for debugging
+    -   State inspector similar to React DevTools
+    -   Component tree visualization
+    -   Performance profiling
+
+### 📚 API Enhancements
+
+-   [ ] **Simplified Syntax Options**: More beginner-friendly alternatives
+    -   `data-show="@isVisible"` as alternative to `data-if`
+    -   `data-hide="@isLoading"` for inverse conditions
+    -   `data-text="@userName"` as alternative to `${}`
+-   [ ] **Animation/Transition Support**: Built-in animation helpers
+    -   Integration with View Transitions API
+    -   CSS transition helpers
+    -   Animation lifecycle hooks
+-   [ ] **Form Validation**: Enhanced form handling
+    -   Built-in validation patterns
+    -   Form state management
+    -   Validation error handling
+-   [ ] **Accessibility**: Enhanced a11y features
+    -   ARIA attribute binding
+    -   Screen reader announcements
+    -   Keyboard navigation helpers
+
+### 🔧 Performance & Optimization
+
+-   [ ] **Bundle Size Optimization**: Tree-shaking and modular imports
+-   [ ] **Performance Monitoring**: Built-in performance metrics
+-   [ ] **Memory Management**: Better cleanup and garbage collection
+-   [ ] **Lazy Loading**: Component and state lazy loading patterns
+
+### 📖 Documentation & Ecosystem
+
+-   [ ] **Migration Guides**: From React/Vue/Svelte to Manifold
+-   [ ] **Best Practices**: Patterns and anti-patterns documentation
+-   [ ] **Plugin System**: Extensibility for third-party additions
+-   [ ] **Community Tools**: Linting rules, code formatters, testing utilities
+
+### ❓ Research Items
+
+-   [ ] **TypeScript Integration**: Explore options for typed templates without build pipeline
+    -   Runtime type generation from TypeScript interfaces
+    -   JSDoc-based type hints for expressions
+    -   Optional type declaration files for better IDE support
+-   [ ] **Server-Side Integration**: Better SSR/hydration patterns for MPA
+-   [ ] **Progressive Enhancement**: Graceful degradation strategies
+-   [ ] **Web Standards Alignment**: Leverage emerging web platform features
+
+---
+
+**Note**: The TypeScript templating integration remains challenging without introducing a build pipeline, which conflicts with Manifold's core philosophy of avoiding complex build steps. Research is ongoing for runtime-based solutions that could provide type safety without compilation requirements.
