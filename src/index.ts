@@ -1,4 +1,4 @@
-import { State, effect } from "./State";
+import { State, effect } from "./state";
 import { RegEl } from "./registry";
 import _isEqual from "./equality";
 

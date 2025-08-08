@@ -138,7 +138,7 @@ export class State<T = unknown> {
 	_name: string;
 	#derive?: () => T;
 	#cachedValue?: T;
-	#isComputed = false;
+	#isDerived = false;
 
 	static #registry = new Map<string, State<unknown>>();
 
@@ -151,7 +151,7 @@ export class State<T = unknown> {
 	static createComputed<T>(deriveFn: () => T, name?: string): State<T> {
 		const state = new State(undefined as any, name);
 		state.#derive = deriveFn;
-		state.#isComputed = true;
+		state.#isDerived = true;
 
 		effect(() => {
 			const newValue = deriveFn();
