@@ -1,5 +1,5 @@
 import { expect, test, describe, beforeEach, afterEach } from "vitest";
-import { State, effect as stateEffect, _effect } from "../State.ts";
+import { State, effect as stateEffect, _effect } from "../state.ts";
 
 describe("Reactivity Performance & Overhead Tests", () => {
 	let performanceData: {
