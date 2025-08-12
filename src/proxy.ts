@@ -16,7 +16,7 @@ const proxy = (obj: any, prefix = ""): any => {
 			return typeof v === _objStr && v ? proxy(v, path) : v;
 		},
 		set(t, k, v) {
-			const path = prefix ? `${prefix}.${_S(k)}` : _S(k);
+			// const path = prefix ? `${prefix}.${_S(k)}` : _S(k);
 			if (isEqual(t[k], v)) return true;
 			t[k] = v;
 
