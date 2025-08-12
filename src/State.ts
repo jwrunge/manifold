@@ -2,81 +2,84 @@ import proxy from "./proxy.ts";
 
 // type Effect = () => void; // Unused for now
 
-type StateConstraint = Record<string, unknown>;
-type FuncsConstraint = Record<string, Function>;
+export type StateConstraint = Record<string, unknown>;
+export type FuncsConstraint = Record<string, (...args: never[]) => unknown>;
 type LifeCycleHook = () => void;
 
-export let globalState: State<any, any>;
+export let globalState: State<StateConstraint, FuncsConstraint>;
 
+/**
+ * A fluent builder for creating type-safe state management instances
+ * @template TState - The state object type
+ * @template TFuncs - The functions object type
+ */
 export class Builder<
 	TState extends StateConstraint,
-	TFuncs extends FuncsConstraint = {},
+	TFuncs extends FuncsConstraint
 > {
-	#globalState = {} as TState;
-	#globalFuncs = {} as TFuncs;
+	#scopedState = {} as TState;
+	#scopedFuncs = {} as TFuncs;
 	#startUp: LifeCycleHook[] = [];
 	#updates: LifeCycleHook[] = [];
 
 	constructor(initialState?: TState, initialFuncs?: TFuncs) {
-		this.#globalState = (initialState || {}) as TState;
-		this.#globalFuncs = (initialFuncs || {}) as TFuncs;
+		this.#scopedState = (initialState || {}) as TState;
+		this.#scopedFuncs = (initialFuncs || {}) as TFuncs;
 	}
 
 	onStart(hook: LifeCycleHook) {
 		this.#startUp.push(hook);
+		return this;
 	}
 
 	onUpdate(hook: LifeCycleHook) {
 		this.#updates.push(hook);
+		return this;
 	}
 
-	// Add a property and return a new builder with updated type
-	addState<K extends string, V>(
-		key: K,
-		value: V,
-	): Builder<TState & Record<K, V>> {
-		const newState = { ...this.#globalState, [key]: value } as TState &
-			Record<K, V>;
-		const next = new Builder<TState & Record<K, V>>(
-			newState,
-			this.#globalFuncs as unknown as TFuncs,
-		);
-		// Preserve lifecycle hooks when chaining
+	#createNext<
+		NewState extends StateConstraint,
+		NewFuncs extends FuncsConstraint
+	>(newState: NewState, newFuncs: NewFuncs): Builder<NewState, NewFuncs> {
+		const next = new Builder<NewState, NewFuncs>(newState, newFuncs);
 		next.#startUp = [...this.#startUp];
 		next.#updates = [...this.#updates];
 		return next;
 	}
 
+	/**
+	 * Add a state property to the builder
+	 * @param key - The property name
+	 * @param value - The initial value
+	 * @returns A new builder with the added state property
+	 */
+	addState<K extends string, V>(
+		key: K,
+		value: V
+	): Builder<TState & Record<K, V>, TFuncs> {
+		const newState = { ...this.#scopedState, [key]: value } as TState &
+			Record<K, V>;
+		return this.#createNext(newState, this.#scopedFuncs as TFuncs);
+	}
+
 	addSyncState<K extends string, V>(
 		key: K,
 		get: () => V | Promise<V>,
-		set: (value: V) => void | Promise<void>,
-	): Builder<TState & Record<K, V>> {
+		set: (value: V) => void | Promise<void>
+	): Builder<TState & Record<K, V>, TFuncs> {
 		const res = get();
-		const isPromise = !!(res && typeof (res as any).then === "function");
+		const isPromise = !!(
+			res && typeof (res as Promise<V>).then === "function"
+		);
 		const initial = isPromise ? (undefined as unknown as V) : (res as V);
+		const next = this.addState(
+			key,
+			isPromise ? (undefined as unknown as V) : (res as V)
+		);
 
-		// First, add the key with an initial value to maintain the type chain
-		const next = this.addState(key, initial);
+		// TODO: Handle set
 
-		// Define an accessor on the underlying state to call `set` when mutated
 		let current = initial;
-		Object.defineProperty((next as any).#globalState, key, {
-			configurable: true,
-			enumerable: true,
-			get() {
-				return current;
-			},
-			set(v: V) {
-				if (current === v) return;
-				current = v;
-				const ret = set(v);
-				if (ret && typeof (ret as any).then === "function")
-					(ret as Promise<void>).catch(() => {});
-			},
-		});
-
-		// If the getter was async, populate the value on startup
 		if (isPromise) {
 			next.onStart(async () => {
 				try {
@@ -87,10 +90,9 @@ export class Builder<
 				}
 			});
 		} else {
-			// Optionally sync the initial value outward on startup
 			next.onStart(() => {
 				const ret = set(current);
-				if (ret && typeof (ret as any).then === "function")
+				if (ret && typeof (ret as Promise<V>).then === "function")
 					(ret as Promise<void>).catch(() => {});
 			});
 		}
@@ -98,46 +100,42 @@ export class Builder<
 		return next;
 	}
 
-	addFunc<K extends string, F extends Function>(
+	addFunc<K extends string, F extends (...args: never[]) => unknown>(
 		key: K,
-		func: F,
+		func: F
 	): Builder<TState, TFuncs & Record<K, F>> {
-		const newFuncs = { ...this.#globalFuncs, [key]: func } as TFuncs &
+		const newFuncs = { ...this.#scopedFuncs, [key]: func } as TFuncs &
 			Record<K, F>;
-		return new Builder<TState, TFuncs & Record<K, F>>(
-			this.#globalState,
-			newFuncs,
-		);
+		return this.#createNext(this.#scopedState, newFuncs);
 	}
 
 	// Build the final App instance
 	build(option?: "global") {
-		// Create a new State instance with the current global state
-		const app = new State<TState>(
-			this.#globalState,
-			this.#globalFuncs,
+		const app = new State<TState, TFuncs>(
+			this.#scopedState,
+			this.#scopedFuncs,
 			this.#startUp,
-			this.#updates,
+			this.#updates
 		);
 		if (option) globalState = app;
 		return {
-			store: proxy(app.store) as TState,
-			fn: this.#globalFuncs as TFuncs,
+			store: proxy(app.store, app) as TState,
+			fn: this.#scopedFuncs as TFuncs,
 		};
 	}
 }
 
 export class State<
 	TState extends StateConstraint,
-	TFuncs extends FuncsConstraint = {},
+	TFuncs extends FuncsConstraint
 > {
 	store = {} as TState;
 	funcs = {} as TFuncs;
 	updates: LifeCycleHook[] = [];
 
-	static create<S extends StateConstraint = {}, F extends FuncsConstraint = {}>(
+	static create<S extends StateConstraint, F extends FuncsConstraint>(
 		initialState?: S,
-		initialFuncs?: F,
+		initialFuncs?: F
 	): Builder<S, F> {
 		return new Builder<S, F>(initialState, initialFuncs);
 	}
@@ -146,7 +144,7 @@ export class State<
 		state: TState,
 		funcs: TFuncs,
 		startup: LifeCycleHook[],
-		updates: LifeCycleHook[],
+		updates: LifeCycleHook[]
 	) {
 		this.store = state;
 		this.funcs = funcs ?? ({} as TFuncs);
