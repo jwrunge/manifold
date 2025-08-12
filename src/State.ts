@@ -1,4 +1,5 @@
 import proxy from "./proxy.ts";
+
 // type Effect = () => void; // Unused for now
 
 type StateConstraint = Record<string, unknown>;
@@ -9,7 +10,7 @@ export let globalState: State<any, any>;
 
 export class Builder<
 	TState extends StateConstraint,
-	TFuncs extends FuncsConstraint = {}
+	TFuncs extends FuncsConstraint = {},
 > {
 	#globalState = {} as TState;
 	#globalFuncs = {} as TFuncs;
@@ -32,13 +33,13 @@ export class Builder<
 	// Add a property and return a new builder with updated type
 	addState<K extends string, V>(
 		key: K,
-		value: V
+		value: V,
 	): Builder<TState & Record<K, V>> {
 		const newState = { ...this.#globalState, [key]: value } as TState &
 			Record<K, V>;
 		const next = new Builder<TState & Record<K, V>>(
 			newState,
-			this.#globalFuncs as unknown as TFuncs
+			this.#globalFuncs as unknown as TFuncs,
 		);
 		// Preserve lifecycle hooks when chaining
 		next.#startUp = [...this.#startUp];
@@ -49,7 +50,7 @@ export class Builder<
 	addSyncState<K extends string, V>(
 		key: K,
 		get: () => V | Promise<V>,
-		set: (value: V) => void | Promise<void>
+		set: (value: V) => void | Promise<void>,
 	): Builder<TState & Record<K, V>> {
 		const res = get();
 		const isPromise = !!(res && typeof (res as any).then === "function");
@@ -99,13 +100,13 @@ export class Builder<
 
 	addFunc<K extends string, F extends Function>(
 		key: K,
-		func: F
+		func: F,
 	): Builder<TState, TFuncs & Record<K, F>> {
 		const newFuncs = { ...this.#globalFuncs, [key]: func } as TFuncs &
 			Record<K, F>;
 		return new Builder<TState, TFuncs & Record<K, F>>(
 			this.#globalState,
-			newFuncs
+			newFuncs,
 		);
 	}
 
@@ -116,7 +117,7 @@ export class Builder<
 			this.#globalState,
 			this.#globalFuncs,
 			this.#startUp,
-			this.#updates
+			this.#updates,
 		);
 		if (option) globalState = app;
 		return {
@@ -128,16 +129,16 @@ export class Builder<
 
 export class State<
 	TState extends StateConstraint,
-	TFuncs extends FuncsConstraint = {}
+	TFuncs extends FuncsConstraint = {},
 > {
 	store = {} as TState;
 	funcs = {} as TFuncs;
 	updates: LifeCycleHook[] = [];
 
-	static create<
-		S extends StateConstraint = {},
-		F extends FuncsConstraint = {}
-	>(initialState?: S, initialFuncs?: F): Builder<S, F> {
+	static create<S extends StateConstraint = {}, F extends FuncsConstraint = {}>(
+		initialState?: S,
+		initialFuncs?: F,
+	): Builder<S, F> {
 		return new Builder<S, F>(initialState, initialFuncs);
 	}
 
@@ -145,7 +146,7 @@ export class State<
 		state: TState,
 		funcs: TFuncs,
 		startup: LifeCycleHook[],
-		updates: LifeCycleHook[]
+		updates: LifeCycleHook[],
 	) {
 		this.store = state;
 		this.funcs = funcs ?? ({} as TFuncs);
