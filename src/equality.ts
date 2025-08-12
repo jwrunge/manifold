@@ -4,8 +4,10 @@ const _objStr = "object",
 
 // Note: Map/Set contents are not deeply compared - this is intentional
 // for granular reactivity (UI updates happen via property access, not container equality)
+// biome-ignore lint/suspicious/noExplicitAny: Type checking is dynamic here
 const _isEqual = (a: any, b: any): boolean => {
 	if (a === b) return true;
+	// biome-ignore lint/suspicious/noDoubleEquals: We are only doing a loose check
 	if (!(a && b && typeof a == _objStr && typeof b == _objStr)) return false;
 
 	const cA = a[_constructor],
@@ -15,14 +17,14 @@ const _isEqual = (a: any, b: any): boolean => {
 	const ret =
 		cA === Array
 			? a.length === b.length &&
-				(() => {
+			  (() => {
 					for (let i = 0; i < a.length; i++)
 						if (!_isEqual(a[i], b[i])) return false;
 					return true;
-				})()
+			  })()
 			: cA === Date
-				? a.getTime() === b.getTime()
-				: null;
+			? a.getTime() === b.getTime()
+			: null;
 
 	if (ret !== null) return ret;
 

@@ -1,9 +1,15 @@
 import isEqual from "./equality.ts";
+import type { FuncsConstraint, State, StateConstraint } from "./State.ts";
 
 const _objStr = "object",
 	_S = String;
 
-const proxy = (obj: any, prefix = ""): any => {
+const proxy = (
+	// biome-ignore lint/suspicious/noExplicitAny: non-user-facing types can be flexible
+	obj: any,
+	parentState: State<StateConstraint, FuncsConstraint>,
+	prefix = "",
+): StateConstraint => {
 	if (!obj || typeof obj !== _objStr) return obj;
 	return new Proxy(obj, {
 		get(t, k) {
@@ -13,7 +19,7 @@ const proxy = (obj: any, prefix = ""): any => {
 			// _flush();
 
 			const v = t[k];
-			return typeof v === _objStr && v ? proxy(v, path) : v;
+			return typeof v === _objStr && v ? proxy(v, parentState, path) : v;
 		},
 		set(t, k, v) {
 			// const path = prefix ? `${prefix}.${_S(k)}` : _S(k);
