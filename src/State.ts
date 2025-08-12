@@ -8,11 +8,6 @@ type LifeCycleHook = () => void;
 
 export let globalState: State<StateConstraint, FuncsConstraint>;
 
-/**
- * A fluent builder for creating type-safe state management instances
- * @template TState - The state object type
- * @template TFuncs - The functions object type
- */
 export class Builder<
 	TState extends StateConstraint,
 	TFuncs extends FuncsConstraint
@@ -47,12 +42,6 @@ export class Builder<
 		return next;
 	}
 
-	/**
-	 * Add a state property to the builder
-	 * @param key - The property name
-	 * @param value - The initial value
-	 * @returns A new builder with the added state property
-	 */
 	addState<K extends string, V>(
 		key: K,
 		value: V
@@ -85,9 +74,7 @@ export class Builder<
 				try {
 					const v = await Promise.resolve(get());
 					current = v as V;
-				} catch {
-					/* swallow */
-				}
+				} catch {}
 			});
 		} else {
 			next.onStart(() => {
@@ -109,7 +96,6 @@ export class Builder<
 		return this.#createNext(this.#scopedState, newFuncs);
 	}
 
-	// Build the final App instance
 	build(option?: "global") {
 		const app = new State<TState, TFuncs>(
 			this.#scopedState,
