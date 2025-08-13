@@ -1,8 +1,6 @@
 import { Effect, type EffectDependency } from "./Effect.ts";
 import proxy from "./proxy.ts";
 
-// type Effect = () => void; // Unused for now
-
 export type StateConstraint = Record<string, unknown>;
 export type FuncsConstraint = Record<string, (...args: never[]) => unknown>;
 
