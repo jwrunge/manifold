@@ -6,7 +6,7 @@ import proxy from "./proxy.ts";
 export type StateConstraint = Record<string, unknown>;
 export type FuncsConstraint = Record<string, (...args: never[]) => unknown>;
 
-export let globalState: State<StateConstraint, FuncsConstraint>;
+export let globalState: StateBuilder<StateConstraint, FuncsConstraint>;
 export let useHierarchicalFlushing = true; // Global flag for flush strategy - modified by build()
 
 // Effect hierarchy tracking
@@ -103,7 +103,7 @@ export function cleanupEffectTracking(effect: Effect) {
 	effectLevels.delete(effect);
 }
 
-export class Builder<
+export class StateBuilder<
 	TState extends StateConstraint,
 	TFuncs extends FuncsConstraint
 > {
@@ -121,38 +121,49 @@ export class Builder<
 		this.#derivations = derivations || new Map();
 	}
 
+	static create<S extends StateConstraint, F extends FuncsConstraint>(
+		initialState?: S,
+		initialFuncs?: F
+	): StateBuilder<S, F> {
+		return new StateBuilder<S, F>(initialState, initialFuncs);
+	}
+
+	static effect(fn: EffectDependency) {
+		return effect(fn);
+	}
+
 	addState<K extends string, V>(
 		key: K,
 		value: V,
 		sync?: () => void
-	): Builder<TState & Record<K, V>, TFuncs> {
+	): StateBuilder<TState & Record<K, V>, TFuncs> {
 		const newState = { ...this.#scopedState, [key]: value } as TState &
 			Record<K, V>;
 		if (sync) sync(); // TODO: this should be an effect that runs on state change -- account for deep props, too
-		return new Builder(
+		return new StateBuilder(
 			newState,
 			this.#scopedFuncs as TFuncs,
 			this.#derivations
-		) as Builder<TState & Record<K, V>, TFuncs>;
+		) as StateBuilder<TState & Record<K, V>, TFuncs>;
 	}
 
 	addFunc<K extends string, F extends (...args: never[]) => unknown>(
 		key: K,
 		func: F
-	): Builder<TState, TFuncs & Record<K, F>> {
+	): StateBuilder<TState, TFuncs & Record<K, F>> {
 		const newFuncs = { ...this.#scopedFuncs, [key]: func } as TFuncs &
 			Record<K, F>;
-		return new Builder(
+		return new StateBuilder(
 			this.#scopedState,
 			newFuncs,
 			this.#derivations
-		) as Builder<TState, TFuncs & Record<K, F>>;
+		) as StateBuilder<TState, TFuncs & Record<K, F>>;
 	}
 
 	addDerived<K extends string, T>(
 		key: K,
 		fn: (store: TState) => T
-	): Builder<TState & Record<K, T>, TFuncs> {
+	): StateBuilder<TState & Record<K, T>, TFuncs> {
 		// Add a placeholder value to state (will be computed in build())
 		const newState = {
 			...this.#scopedState,
@@ -163,73 +174,43 @@ export class Builder<
 		const newDerivations = new Map(this.#derivations);
 		newDerivations.set(key, fn as (store: StateConstraint) => unknown);
 
-		return new Builder(
+		return new StateBuilder(
 			newState,
 			this.#scopedFuncs,
 			newDerivations
-		) as Builder<TState & Record<K, T>, TFuncs>;
+		) as StateBuilder<TState & Record<K, T>, TFuncs>;
 	}
 
 	build(local?: boolean, options?: { hierarchical?: boolean }) {
-		const app = new State<TState, TFuncs>(
-			this.#scopedState,
-			this.#scopedFuncs
-		);
-
 		if (!local) {
 			if (globalState) throw "Global state redefined";
-			globalState = app;
+			globalState = this;
 
 			// Set global flush strategy based on options
 			useHierarchicalFlushing = options?.hierarchical ?? true;
 		}
 
-		const store = proxy(app.store, app) as TState;
+		const state = proxy(this.#scopedState) as TState;
 
 		// Initialize derived state values and set up effects
 		for (const [key, deriveFn] of this.#derivations) {
 			// Initialize the derived value immediately
-			(store as Record<string, unknown>)[key] = (
+			(state as Record<string, unknown>)[key] = (
 				deriveFn as (store: TState) => unknown
-			)(store);
+			)(state);
 
 			// Set up effect to keep it updated
 			effect(() => {
 				const newValue = (deriveFn as (store: TState) => unknown)(
-					store
+					state
 				);
-				(store as Record<string, unknown>)[key] = newValue;
+				(state as Record<string, unknown>)[key] = newValue;
 			});
 		}
 
 		return {
-			store,
+			state,
 			fn: this.#scopedFuncs as TFuncs,
 		};
-	}
-}
-
-export class State<
-	TState extends StateConstraint,
-	TFuncs extends FuncsConstraint
-> {
-	store = {} as TState;
-	funcs = {} as TFuncs;
-
-	static create<S extends StateConstraint, F extends FuncsConstraint>(
-		initialState?: S,
-		initialFuncs?: F
-	): Builder<S, F> {
-		return new Builder<S, F>(initialState, initialFuncs);
-	}
-
-	// Static effect method - doesn't require a State instance
-	static effect(fn: EffectDependency) {
-		return effect(fn);
-	}
-
-	constructor(state: TState, funcs: TFuncs) {
-		this.store = state;
-		this.funcs = funcs ?? ({} as TFuncs);
 	}
 }

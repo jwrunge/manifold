@@ -1,6 +1,6 @@
 import { Effect } from "./Effect.ts";
 import isEqual from "./equality.ts";
-import type { FuncsConstraint, State, StateConstraint } from "./State.ts";
+import type { StateConstraint } from "./State.ts";
 import { useHierarchicalFlushing } from "./State.ts";
 
 const _objStr = "object",
@@ -42,7 +42,6 @@ const flushEffectsHierarchical = () => {
 const proxy = (
 	// biome-ignore lint/suspicious/noExplicitAny: non-user-facing types can be flexible
 	obj: any,
-	parentState: State<StateConstraint, FuncsConstraint>,
 	prefix = ""
 ): StateConstraint => {
 	if (!obj || typeof obj !== _objStr) return obj;
@@ -71,7 +70,7 @@ const proxy = (
 
 			const target = state[key];
 			return typeof target === _objStr && target
-				? proxy(target, parentState, path)
+				? proxy(target, path)
 				: target;
 		},
 		set(state, key, value) {

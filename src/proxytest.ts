@@ -1,6 +1,6 @@
 import $ from "./main.ts";
 
-const { store, fn } = $.create()
+const { state: store, fn } = $.create()
 	.addState("count", 0)
 	.addState("name", "MyApp")
 	.addFunc("increment", (by: number) => {

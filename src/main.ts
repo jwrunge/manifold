@@ -1,3 +1,3 @@
-import { State } from "./State.ts";
+import { StateBuilder } from "./State.ts";
 
-export default State;
+export default StateBuilder;
