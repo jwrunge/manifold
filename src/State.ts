@@ -109,10 +109,16 @@ export class Builder<
 > {
 	#scopedState = {} as TState;
 	#scopedFuncs = {} as TFuncs;
+	#derivations = new Map<string, (store: StateConstraint) => unknown>();
 
-	constructor(initialState?: TState, initialFuncs?: TFuncs) {
+	constructor(
+		initialState?: TState,
+		initialFuncs?: TFuncs,
+		derivations?: Map<string, (store: StateConstraint) => unknown>
+	) {
 		this.#scopedState = (initialState || {}) as TState;
 		this.#scopedFuncs = (initialFuncs || {}) as TFuncs;
+		this.#derivations = derivations || new Map();
 	}
 
 	addState<K extends string, V>(
@@ -123,10 +129,11 @@ export class Builder<
 		const newState = { ...this.#scopedState, [key]: value } as TState &
 			Record<K, V>;
 		if (sync) sync(); // TODO: this should be an effect that runs on state change -- account for deep props, too
-		return new Builder(newState, this.#scopedFuncs as TFuncs) as Builder<
-			TState & Record<K, V>,
-			TFuncs
-		>;
+		return new Builder(
+			newState,
+			this.#scopedFuncs as TFuncs,
+			this.#derivations
+		) as Builder<TState & Record<K, V>, TFuncs>;
 	}
 
 	addFunc<K extends string, F extends (...args: never[]) => unknown>(
@@ -135,10 +142,32 @@ export class Builder<
 	): Builder<TState, TFuncs & Record<K, F>> {
 		const newFuncs = { ...this.#scopedFuncs, [key]: func } as TFuncs &
 			Record<K, F>;
-		return new Builder(this.#scopedState, newFuncs) as Builder<
-			TState,
-			TFuncs & Record<K, F>
-		>;
+		return new Builder(
+			this.#scopedState,
+			newFuncs,
+			this.#derivations
+		) as Builder<TState, TFuncs & Record<K, F>>;
+	}
+
+	addDerived<K extends string, T>(
+		key: K,
+		fn: (store: TState) => T
+	): Builder<TState & Record<K, T>, TFuncs> {
+		// Add a placeholder value to state (will be computed in build())
+		const newState = {
+			...this.#scopedState,
+			[key]: undefined as T,
+		} as TState & Record<K, T>;
+
+		// Create new derivations map with the new derivation
+		const newDerivations = new Map(this.#derivations);
+		newDerivations.set(key, fn as (store: StateConstraint) => unknown);
+
+		return new Builder(
+			newState,
+			this.#scopedFuncs,
+			newDerivations
+		) as Builder<TState & Record<K, T>, TFuncs>;
 	}
 
 	build(local?: boolean, options?: { hierarchical?: boolean }) {
@@ -155,11 +184,27 @@ export class Builder<
 			useHierarchicalFlushing = options?.hierarchical ?? true;
 		}
 
+		const store = proxy(app.store, app) as TState;
+
+		// Initialize derived state values and set up effects
+		for (const [key, deriveFn] of this.#derivations) {
+			// Initialize the derived value immediately
+			(store as Record<string, unknown>)[key] = (
+				deriveFn as (store: TState) => unknown
+			)(store);
+
+			// Set up effect to keep it updated
+			effect(() => {
+				const newValue = (deriveFn as (store: TState) => unknown)(
+					store
+				);
+				(store as Record<string, unknown>)[key] = newValue;
+			});
+		}
+
 		return {
-			store: proxy(app.store, app) as TState,
+			store,
 			fn: this.#scopedFuncs as TFuncs,
-			effect,
-			derived,
 		};
 	}
 }
@@ -178,23 +223,13 @@ export class State<
 		return new Builder<S, F>(initialState, initialFuncs);
 	}
 
+	// Static effect method - doesn't require a State instance
+	static effect(fn: EffectDependency) {
+		return effect(fn);
+	}
+
 	constructor(state: TState, funcs: TFuncs) {
 		this.store = state;
 		this.funcs = funcs ?? ({} as TFuncs);
 	}
 }
-
-// Derived state: creates a reactive computed value
-const derived = <T>(fn: () => T) => {
-	// Create a state to hold the derived value
-	const derivedApp = new State({ value: fn() } as { value: T }, {});
-	const derivedStore = proxy(derivedApp.store, derivedApp) as { value: T };
-
-	// Create an effect that updates the derived state when dependencies change
-	effect(() => {
-		const newValue = fn();
-		derivedStore.value = newValue;
-	});
-
-	return derivedStore;
-};

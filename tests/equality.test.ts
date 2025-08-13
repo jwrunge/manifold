@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import isEqual from "../src/equality.ts";
-import $ from "../src/index.ts";
+import $ from "../src/main.ts";
 
 test("primitive equality", () => {
 	expect(isEqual(1, 1)).toBe(true);
@@ -84,12 +84,12 @@ test("Date equality", () => {
 });
 
 test("equality prevents unnecessary updates", async () => {
-	const { store, effect } = $.State.create()
+	const { store } = $.create()
 		.addState("value", { count: 0, _name: "test" })
 		.build(true);
 	let updateCount = 0;
 
-	effect(() => {
+	$.effect(() => {
 		store.value; // Access the value to create dependency
 		updateCount++;
 	});
@@ -123,7 +123,7 @@ test("equality prevents unnecessary updates", async () => {
 
 test("Complex object equality with reactive updates", () => {
 	let updateCount = 0;
-	const { store, effect } = $.State.create()
+	const { store } = $.create()
 		.addState("value", {
 			users: new Map([
 				[
@@ -138,7 +138,7 @@ test("Complex object equality with reactive updates", () => {
 		})
 		.build(true);
 
-	effect(() => {
+	$.effect(() => {
 		store.value; // Access the value to create dependency
 		updateCount++;
 	});
