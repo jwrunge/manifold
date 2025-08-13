@@ -6,10 +6,14 @@ export class Effect {
 	deps: Set<EffectDependency>;
 	#active = true;
 	fn: () => void;
+	level: number; // Store level directly on the effect instance
 
 	constructor(fn: () => void) {
 		this.fn = fn;
 		this.deps = new Set<EffectDependency>();
+
+		// Calculate level based on current effect stack depth
+		this.level = Effect.current ? Effect.current.level + 1 : 0;
 	}
 
 	run() {
@@ -29,6 +33,8 @@ export class Effect {
 	stop() {
 		this.#active = false;
 		this.#clean();
+		// Import cleanupEffectTracking from State.ts when needed
+		// cleanupEffectTracking(this);
 	}
 
 	#clean() {

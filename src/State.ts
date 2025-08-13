@@ -1,3 +1,4 @@
+import { Effect, type EffectDependency } from "./Effect.ts";
 import proxy from "./proxy.ts";
 
 // type Effect = () => void; // Unused for now
@@ -6,6 +7,103 @@ export type StateConstraint = Record<string, unknown>;
 export type FuncsConstraint = Record<string, (...args: never[]) => unknown>;
 
 export let globalState: State<StateConstraint, FuncsConstraint>;
+export let useHierarchicalFlushing = true; // Global flag for flush strategy - modified by build()
+
+// Effect hierarchy tracking
+const effectGraph = new Map<Effect, Set<Effect>>(); // parent -> children
+const effectParents = new Map<Effect, Effect | null>(); // child -> parent
+const effectLevels = new Map<Effect, number>(); // effect -> depth level
+
+const effect = (fn: EffectDependency) => {
+	const currentParent = Effect.current;
+	const newEffect = new Effect(fn);
+
+	// Track parent-child relationship
+	if (currentParent) {
+		// Add to parent's children
+		if (!effectGraph.has(currentParent)) {
+			effectGraph.set(currentParent, new Set());
+		}
+		const children = effectGraph.get(currentParent);
+		if (children) children.add(newEffect);
+		effectParents.set(newEffect, currentParent);
+
+		// Calculate level (parent level + 1)
+		const parentLevel = effectLevels.get(currentParent) ?? 0;
+		effectLevels.set(newEffect, parentLevel + 1);
+
+		// Circular dependency check - O(log n) traversal up the chain
+		if (hasCircularDependency(newEffect, currentParent)) {
+			throw new Error(
+				`Circular dependency detected: effect would create infinite loop`
+			);
+		}
+	} else {
+		// Top-level effect
+		effectParents.set(newEffect, null);
+		effectLevels.set(newEffect, 0);
+	}
+
+	newEffect.run();
+	return newEffect;
+};
+
+// Efficient circular dependency detection
+function hasCircularDependency(
+	newEffect: Effect,
+	potentialAncestor: Effect
+): boolean {
+	let current: Effect | null = potentialAncestor;
+	const visited = new Set<Effect>();
+
+	while (current && !visited.has(current)) {
+		if (current === newEffect) return true;
+		visited.add(current);
+		current = effectParents.get(current) ?? null;
+	}
+	return false;
+}
+
+// Get all top-level effects (level 0)
+export function getTopLevelEffects(): Effect[] {
+	return Array.from(effectLevels.entries())
+		.filter(([_, level]) => level === 0)
+		.map(([effect]) => effect);
+}
+
+// Get effects by level for batched execution
+export function getEffectsByLevel(): Map<number, Effect[]> {
+	const levelMap = new Map<number, Effect[]>();
+
+	for (const [effect, level] of effectLevels.entries()) {
+		if (!levelMap.has(level)) {
+			levelMap.set(level, []);
+		}
+		const effects = levelMap.get(level);
+		if (effects) effects.push(effect);
+	}
+
+	return levelMap;
+}
+
+// Get children of an effect
+export function getEffectChildren(effect: Effect): Effect[] {
+	return Array.from(effectGraph.get(effect) ?? []);
+}
+
+// Clean up effect from tracking when it's stopped
+export function cleanupEffectTracking(effect: Effect) {
+	// Remove from parent's children
+	const parent = effectParents.get(effect);
+	if (parent) {
+		effectGraph.get(parent)?.delete(effect);
+	}
+
+	// Remove all children relationships
+	effectGraph.delete(effect);
+	effectParents.delete(effect);
+	effectLevels.delete(effect);
+}
 
 export class Builder<
 	TState extends StateConstraint,
@@ -45,7 +143,7 @@ export class Builder<
 		>;
 	}
 
-	build(local?: boolean) {
+	build(local?: boolean, options?: { hierarchical?: boolean }) {
 		const app = new State<TState, TFuncs>(
 			this.#scopedState,
 			this.#scopedFuncs
@@ -54,11 +152,15 @@ export class Builder<
 		if (!local) {
 			if (globalState) throw "Global state redefined";
 			globalState = app;
+
+			// Set global flush strategy based on options
+			useHierarchicalFlushing = options?.hierarchical ?? true;
 		}
 
 		return {
 			store: proxy(app.store, app) as TState,
 			fn: this.#scopedFuncs as TFuncs,
+			effect,
 		};
 	}
 }
