@@ -84,7 +84,7 @@ test("Date equality", () => {
 });
 
 test("equality prevents unnecessary updates", async () => {
-	const { store } = $.create()
+	const { state: store } = $.create()
 		.addState("value", { count: 0, _name: "test" })
 		.build(true);
 	let updateCount = 0;
@@ -123,7 +123,7 @@ test("equality prevents unnecessary updates", async () => {
 
 test("Complex object equality with reactive updates", () => {
 	let updateCount = 0;
-	const { store } = $.create()
+	const { state: store } = $.create()
 		.addState("value", {
 			users: new Map([
 				[

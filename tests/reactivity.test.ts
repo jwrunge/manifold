@@ -3,7 +3,7 @@ import type { Effect } from "../src/Effect.ts";
 import $ from "../src/main.ts";
 
 test("new store", async () => {
-	const { store } = $.create().addState("value", 0).build(true);
+	const { state: store } = $.create().addState("value", 0).build(true);
 
 	let myStateValue: number | null = null;
 	let updateCount = 0;
@@ -30,7 +30,7 @@ test("new store", async () => {
 });
 
 test("update triggers", async () => {
-	const { store } = $.create()
+	const { state: store } = $.create()
 		.addState("value", { name: "Jake", age: 37 })
 		.build(true);
 
@@ -90,7 +90,7 @@ test("update triggers", async () => {
 });
 
 test("derived data", async () => {
-	const { store } = $.create()
+	const { state: store } = $.create()
 		.addState("value", { name: "Jake", age: 37 })
 		.addDerived("derived", (s) => ({
 			name: s.value.name.toUpperCase(),
@@ -138,8 +138,8 @@ test("derived data", async () => {
 
 test("Circular update detection", async () => {
 	// Test that batching prevents infinite circular updates
-	const { store: storeA } = $.create().addState("value", 0).build(true);
-	const { store: storeB } = $.create().addState("value", 0).build(true);
+	const { state: storeA } = $.create().addState("value", 0).build(true);
+	const { state: storeB } = $.create().addState("value", 0).build(true);
 
 	let effectACount = 0;
 	let effectBCount = 0;
@@ -174,7 +174,7 @@ test("Max update depth detection", async () => {
 	// Test that very deep effect chains are controlled by batching
 	const states = Array.from(
 		{ length: 20 },
-		(_) => $.create().addState("value", 0).build(true).store
+		(_) => $.create().addState("value", 0).build(true).state
 	);
 	const effectCounts: number[] = Array.from({ length: 20 }, () => 0);
 
@@ -208,7 +208,7 @@ test("Max update depth detection", async () => {
 });
 
 test("hierarchical effect execution order", async () => {
-	const { store } = $.create().addState("count", 0).build(true);
+	const { state: store } = $.create().addState("count", 0).build(true);
 	const executionOrder: string[] = [];
 
 	// Level 0 effect
@@ -268,7 +268,7 @@ test("hierarchical effect execution order", async () => {
 });
 
 test("effect deduplication across multiple property accesses", async () => {
-	const { store } = $.create()
+	const { state: store } = $.create()
 		.addState("user", { name: "John", age: 30 })
 		.addState("settings", { theme: "dark" })
 		.build(true);
@@ -312,7 +312,7 @@ test("performance mode vs hierarchical mode", async () => {
 
 	// Create nested effects in hierarchical mode
 	$.effect(() => {
-		hierarchicalApp.store.count; // Make this effect depend on state
+		hierarchicalApp.state.count; // Make this effect depend on state
 		hierarchicalOrder.push("parent");
 		$.effect(() => {
 			hierarchicalOrder.push("child");
@@ -321,7 +321,7 @@ test("performance mode vs hierarchical mode", async () => {
 
 	// Create nested effects in performance mode
 	$.effect(() => {
-		performanceApp.store.count; // Make this effect depend on state
+		performanceApp.state.count; // Make this effect depend on state
 		performanceOrder.push("parent");
 		$.effect(() => {
 			performanceOrder.push("child");
@@ -333,8 +333,8 @@ test("performance mode vs hierarchical mode", async () => {
 	performanceOrder.length = 0;
 
 	// Trigger changes
-	hierarchicalApp.store.count = 1;
-	performanceApp.store.count = 1;
+	hierarchicalApp.state.count = 1;
+	performanceApp.state.count = 1;
 
 	// Wait for effects to complete
 	await new Promise((resolve) => setTimeout(resolve, 10));
@@ -360,7 +360,7 @@ test("performance mode vs hierarchical mode", async () => {
 });
 
 test("effect cleanup and memory management", async () => {
-	const { store } = $.create().addState("count", 0).build(true);
+	const { state: store } = $.create().addState("count", 0).build(true);
 
 	let effect1RunCount = 0;
 	let effect2RunCount = 0;
@@ -399,7 +399,7 @@ test("effect cleanup and memory management", async () => {
 });
 
 test("deep nested object reactivity", async () => {
-	const { store } = $.create()
+	const { state: store } = $.create()
 		.addState("data", {
 			user: {
 				profile: {
@@ -451,7 +451,7 @@ test("deep nested object reactivity", async () => {
 });
 
 test("circular dependency detection", async () => {
-	const { store } = $.create().build(true);
+	const { state: store } = $.create().build(true);
 
 	// This should not throw an error for normal nested effects
 	expect(() => {
@@ -470,7 +470,7 @@ test("circular dependency detection", async () => {
 // === ENHANCED CIRCULAR DEPENDENCY AND HIERARCHICAL TESTS ===
 
 test("circular dependency detection - should throw error", async () => {
-	const { store } = $.create().addState("count", 0).build(true);
+	const { state: store } = $.create().addState("count", 0).build(true);
 
 	// This test verifies that the circular dependency detection actually works
 	// by creating a scenario that would cause a circular reference
@@ -501,7 +501,7 @@ test("circular dependency detection - should throw error", async () => {
 });
 
 test("deep hierarchical effect execution order - comprehensive", async () => {
-	const { store } = $.create()
+	const { state: store } = $.create()
 		.addState("trigger", 0)
 		.addState("counter", 0)
 		.build(true);
@@ -565,7 +565,7 @@ test("deep hierarchical effect execution order - comprehensive", async () => {
 });
 
 test("effect hierarchy with state mutations", async () => {
-	const { store } = $.create()
+	const { state: store } = $.create()
 		.addState("source", 1)
 		.addState("derived1", 0)
 		.addState("derived2", 0)
@@ -625,7 +625,7 @@ test("effect hierarchy with state mutations", async () => {
 });
 
 test("complex circular dependency prevention", async () => {
-	const { store } = $.create()
+	const { state: store } = $.create()
 		.addState("a", 1)
 		.addState("b", 1)
 		.addState("c", 1)
@@ -686,7 +686,7 @@ test("complex circular dependency prevention", async () => {
 });
 
 test("effect hierarchy with conditional execution", async () => {
-	const { store } = $.create()
+	const { state: store } = $.create()
 		.addState("enabled", true)
 		.addState("counter", 0)
 		.addState("multiplier", 1)
