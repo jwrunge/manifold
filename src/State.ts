@@ -10,7 +10,7 @@ export let globalState: State<StateConstraint, FuncsConstraint>;
 export let useHierarchicalFlushing = true; // Global flag for flush strategy - modified by build()
 
 // Effect hierarchy tracking
-const effectGraph = new Map<Effect, Set<Effect>>(); // parent -> children
+const effectChildren = new Map<Effect, Set<Effect>>(); // parent -> children
 const effectParents = new Map<Effect, Effect | null>(); // child -> parent
 const effectLevels = new Map<Effect, number>(); // effect -> depth level
 
@@ -20,17 +20,15 @@ const effect = (fn: EffectDependency) => {
 
 	// Track parent-child relationship
 	if (currentParent) {
-		// Add to parent's children
-		if (!effectGraph.has(currentParent)) {
-			effectGraph.set(currentParent, new Set());
+		if (!effectChildren.has(currentParent)) {
+			effectChildren.set(currentParent, new Set());
 		}
-		const children = effectGraph.get(currentParent);
+		const children = effectChildren.get(currentParent);
 		if (children) children.add(newEffect);
 		effectParents.set(newEffect, currentParent);
 
 		// Calculate level (parent level + 1)
-		const parentLevel = effectLevels.get(currentParent) ?? 0;
-		effectLevels.set(newEffect, parentLevel + 1);
+		effectLevels.set(newEffect, (effectLevels.get(currentParent) ?? 0) + 1);
 
 		// Circular dependency check - O(log n) traversal up the chain
 		if (hasCircularDependency(newEffect, currentParent)) {
@@ -88,7 +86,7 @@ export function getEffectsByLevel(): Map<number, Effect[]> {
 
 // Get children of an effect
 export function getEffectChildren(effect: Effect): Effect[] {
-	return Array.from(effectGraph.get(effect) ?? []);
+	return Array.from(effectChildren.get(effect) ?? []);
 }
 
 // Clean up effect from tracking when it's stopped
@@ -96,11 +94,11 @@ export function cleanupEffectTracking(effect: Effect) {
 	// Remove from parent's children
 	const parent = effectParents.get(effect);
 	if (parent) {
-		effectGraph.get(parent)?.delete(effect);
+		effectChildren.get(parent)?.delete(effect);
 	}
 
 	// Remove all children relationships
-	effectGraph.delete(effect);
+	effectChildren.delete(effect);
 	effectParents.delete(effect);
 	effectLevels.delete(effect);
 }
@@ -161,6 +159,7 @@ export class Builder<
 			store: proxy(app.store, app) as TState,
 			fn: this.#scopedFuncs as TFuncs,
 			effect,
+			derived,
 		};
 	}
 }
@@ -184,3 +183,18 @@ export class State<
 		this.funcs = funcs ?? ({} as TFuncs);
 	}
 }
+
+// Derived state: creates a reactive computed value
+const derived = <T>(fn: () => T) => {
+	// Create a state to hold the derived value
+	const derivedApp = new State({ value: fn() } as { value: T }, {});
+	const derivedStore = proxy(derivedApp.store, derivedApp) as { value: T };
+
+	// Create an effect that updates the derived state when dependencies change
+	effect(() => {
+		const newValue = fn();
+		derivedStore.value = newValue;
+	});
+
+	return derivedStore;
+};
