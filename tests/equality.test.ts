@@ -86,7 +86,7 @@ test("Date equality", () => {
 test("equality prevents unnecessary updates", async () => {
 	const { state: store } = $.create()
 		.addState("value", { count: 0, _name: "test" })
-		.build(true);
+		.build({ local: true });
 	let updateCount = 0;
 
 	$.effect(() => {
@@ -136,7 +136,7 @@ test("Complex object equality with reactive updates", () => {
 			]),
 			settings: { theme: "dark", notifications: true },
 		})
-		.build(true);
+		.build({ local: true });
 
 	$.effect(() => {
 		store.value; // Access the value to create dependency

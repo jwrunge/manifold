@@ -179,13 +179,15 @@ export class StateBuilder<
 		) as StateBuilder<TState & Record<K, T>, TFuncs>;
 	}
 
-	build(local?: boolean, options?: { hierarchical?: boolean }) {
+	build(options?: { local?: boolean; hierarchical?: boolean }) {
+		const { local, hierarchical } = options || {};
+
 		if (!local) {
 			if (globalState) throw "Global state redefined";
 			globalState = this;
 
 			// Set global flush strategy based on options
-			useHierarchicalFlushing = options?.hierarchical ?? true;
+			useHierarchicalFlushing = hierarchical ?? true;
 		}
 
 		const state = proxy(this.#scopedState) as TState;
