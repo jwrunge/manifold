@@ -53,7 +53,7 @@ class PerformanceProfiler {
 			averageEffectTime:
 				this.effectTimes.length > 0
 					? this.effectTimes.reduce((a, b) => a + b, 0) /
-					  this.effectTimes.length
+						this.effectTimes.length
 					: 0,
 		};
 
@@ -82,15 +82,11 @@ class PerformanceProfiler {
 		console.log(`   💾 Memory: ${metrics.memoryUsed.toFixed(2)}MB`);
 		console.log(`   🔄 Effect runs: ${metrics.effectRuns}`);
 		if (metrics.operationsPerSecond) {
-			console.log(
-				`   📈 Ops/sec: ${metrics.operationsPerSecond.toFixed(0)}`
-			);
+			console.log(`   📈 Ops/sec: ${metrics.operationsPerSecond.toFixed(0)}`);
 		}
 		if (metrics.averageEffectTime) {
 			console.log(
-				`   ⚡ Avg effect time: ${metrics.averageEffectTime.toFixed(
-					4
-				)}ms`
+				`   ⚡ Avg effect time: ${metrics.averageEffectTime.toFixed(4)}ms`,
 			);
 		}
 	}
@@ -115,7 +111,7 @@ describe("Performance Profiling", () => {
 					store.name;
 					store.data.value;
 					effectRuns++;
-				})
+				}),
 			);
 
 			// Perform 1000 state updates
@@ -133,10 +129,7 @@ describe("Performance Profiling", () => {
 			// Wait for effects to settle
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
-			const metrics = profiler.finish(
-				"Basic State Operations",
-				operations
-			);
+			const metrics = profiler.finish("Basic State Operations", operations);
 
 			// Performance assertions
 			expect(metrics.duration).toBeLessThan(1000); // Should complete in under 1 second
@@ -144,7 +137,7 @@ describe("Performance Profiling", () => {
 			expect(effectRuns).toBeGreaterThan(0);
 			// With batching, effect runs will be much lower than operations
 			console.log(
-				`   📊 Effect efficiency: ${effectRuns} runs for ${operations} operations`
+				`   📊 Effect efficiency: ${effectRuns} runs for ${operations} operations`,
 			);
 		});
 
@@ -157,10 +150,7 @@ describe("Performance Profiling", () => {
 				.add("multiplier", 2)
 				.addDerived("doubled", (s) => s.base * 2)
 				.addDerived("tripled", (s) => s.base * 3)
-				.addDerived(
-					"computed",
-					(s) => s.doubled + s.tripled + s.multiplier
-				)
+				.addDerived("computed", (s) => s.doubled + s.tripled + s.multiplier)
 				.build(true);
 
 			let derivedAccessCount = 0;
@@ -169,7 +159,7 @@ describe("Performance Profiling", () => {
 					store.computed;
 					store.doubled;
 					derivedAccessCount++;
-				})
+				}),
 			);
 
 			// Update base state 500 times
@@ -183,10 +173,7 @@ describe("Performance Profiling", () => {
 
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
-			const metrics = profiler.finish(
-				"Derived State Performance",
-				operations
-			);
+			const metrics = profiler.finish("Derived State Performance", operations);
 
 			// Verify derived state is correct
 			expect(store.doubled).toBe(operations * 2);
@@ -218,7 +205,7 @@ describe("Performance Profiling", () => {
 					if (value > 0) {
 						store.level1 = value * 2;
 					}
-				})
+				}),
 			);
 
 			// Level 1 effect
@@ -229,7 +216,7 @@ describe("Performance Profiling", () => {
 					if (value > 0) {
 						store.level2 = value + 10;
 					}
-				})
+				}),
 			);
 
 			// Level 2 effect
@@ -240,7 +227,7 @@ describe("Performance Profiling", () => {
 					if (value > 0) {
 						store.level3 = value * 3;
 					}
-				})
+				}),
 			);
 
 			// Trigger cascade 200 times
@@ -253,7 +240,7 @@ describe("Performance Profiling", () => {
 
 			const metrics = profiler.finish(
 				"Hierarchical Effects Performance",
-				operations
+				operations,
 			);
 
 			// Verify final state
@@ -266,7 +253,7 @@ describe("Performance Profiling", () => {
 			expect(metrics.duration).toBeLessThan(300);
 			expect(totalEffectRuns).toBeGreaterThan(0); // Effects should run, but batching may reduce count
 			console.log(
-				`   📊 Hierarchical effects: ${totalEffectRuns} runs for ${operations} operations`
+				`   📊 Hierarchical effects: ${totalEffectRuns} runs for ${operations} operations`,
 			);
 		});
 	});
@@ -294,7 +281,7 @@ describe("Performance Profiling", () => {
 						(store as Record<string, number>)[`prop${index}`];
 						effectCounts[index]++;
 						effectRunCount++;
-					})
+					}),
 				);
 			}
 
@@ -309,7 +296,7 @@ describe("Performance Profiling", () => {
 
 			const metrics = profiler.finish(
 				"Mass State Updates Stress Test",
-				operations
+				operations,
 			);
 
 			// Performance assertions
@@ -317,7 +304,7 @@ describe("Performance Profiling", () => {
 			expect(effectRunCount).toBeGreaterThan(0); // Effects should run, batching affects count
 			expect(effectCounts.every((count) => count > 0)).toBe(true);
 			console.log(
-				`   📊 Mass updates: ${effectRunCount} effect runs for ${operations} operations`
+				`   📊 Mass updates: ${effectRunCount} effect runs for ${operations} operations`,
 			);
 		});
 
@@ -333,13 +320,10 @@ describe("Performance Profiling", () => {
 							level4: {
 								level5: {
 									value: 0,
-									data: Array.from(
-										{ length: 100 },
-										(_, i) => ({
-											id: i,
-											value: i * 2,
-										})
-									),
+									data: Array.from({ length: 100 }, (_, i) => ({
+										id: i,
+										value: i * 2,
+									})),
 								},
 							},
 						},
@@ -359,14 +343,14 @@ describe("Performance Profiling", () => {
 				profiler.trackEffect(() => {
 					store.deep.level1.level2.level3.level4.level5.value;
 					deepAccessCount++;
-				})
+				}),
 			);
 
 			$.effect(
 				profiler.trackEffect(() => {
 					store.deep.level1.level2.level3.level4.level5.data.length;
 					arrayAccessCount++;
-				})
+				}),
 			);
 
 			// Update deep nested value many times
@@ -387,12 +371,12 @@ describe("Performance Profiling", () => {
 
 			const metrics = profiler.finish(
 				"Deep Object Nesting Stress Test",
-				operations
+				operations,
 			);
 
 			// Verify final state
 			expect(store.deep.level1.level2.level3.level4.level5.value).toBe(
-				operations - 1
+				operations - 1,
 			);
 			expect(deepAccessCount).toBeGreaterThan(0);
 			expect(arrayAccessCount).toBeGreaterThan(0);
@@ -409,7 +393,7 @@ describe("Performance Profiling", () => {
 			const storeCount = 10;
 			const stores = Array.from(
 				{ length: 20 },
-				() => $.create().add("value", 0).build(true).state
+				() => $.create().add("value", 0).build(true).state,
 			);
 
 			let totalEffectRuns = 0;
@@ -431,7 +415,7 @@ describe("Performance Profiling", () => {
 						if (value > 0 && value < 5) {
 							stores[nextIndex].value = value + 1;
 						}
-					})
+					}),
 				);
 			}
 
@@ -454,14 +438,14 @@ describe("Performance Profiling", () => {
 
 			const metrics = profiler.finish(
 				"Circular Dependency Stress Test",
-				operations
+				operations,
 			);
 
 			// Performance assertions - should not hang or crash
 			expect(metrics.duration).toBeLessThan(3000);
 			expect(totalEffectRuns).toBeLessThan(500); // Should be controlled by maxRuns safety valve
 			console.log(
-				`   📊 Circular dependency control: ${totalEffectRuns} runs (max allowed: ${maxRuns})`
+				`   📊 Circular dependency control: ${totalEffectRuns} runs (max allowed: ${maxRuns})`,
 			);
 		});
 
@@ -482,7 +466,7 @@ describe("Performance Profiling", () => {
 					const value = store.rapidValue;
 					effectRuns++;
 					lastSeenValue = value;
-				})
+				}),
 			);
 
 			// Rapid fire state updates (should be batched)
@@ -503,7 +487,7 @@ describe("Performance Profiling", () => {
 
 			const metrics = profiler.finish(
 				"Rapid State Changes Stress Test",
-				operations
+				operations,
 			);
 
 			// Verify final state
@@ -516,9 +500,8 @@ describe("Performance Profiling", () => {
 			expect(effectRuns).toBeLessThan(operations / 2);
 			console.log(
 				`   📊 Batching efficiency: ${(
-					(1 - effectRuns / operations) *
-					100
-				).toFixed(1)}%`
+					(1 - effectRuns / operations) * 100
+				).toFixed(1)}%`,
 			);
 		});
 	});
@@ -540,7 +523,7 @@ describe("Performance Profiling", () => {
 					profiler.trackEffect(() => {
 						store.value;
 						activeEffectRuns++;
-					})
+					}),
 				);
 				effects.push(effect);
 			}
@@ -565,15 +548,12 @@ describe("Performance Profiling", () => {
 
 			// Verify cleanup worked
 			expect(afterCleanupRuns).toBeLessThan(baselineRuns);
-			expect(afterCleanupRuns).toBeCloseTo(
-				effectCount / 2,
-				effectCount * 0.1
-			);
+			expect(afterCleanupRuns).toBeCloseTo(effectCount / 2, effectCount * 0.1);
 
 			// Performance assertions
 			expect(metrics.duration).toBeLessThan(500);
 			console.log(
-				`   🧹 Cleanup efficiency: ${baselineRuns} -> ${afterCleanupRuns} effect runs`
+				`   🧹 Cleanup efficiency: ${baselineRuns} -> ${afterCleanupRuns} effect runs`,
 			);
 		});
 	});
@@ -594,9 +574,9 @@ describe("Performance Profiling", () => {
 					$.effect(
 						hierarchicalProfiler.trackEffect(() => {
 							// Child effect
-						})
+						}),
 					);
-				})
+				}),
 			);
 
 			for (let i = 0; i < operations; i++) {
@@ -606,7 +586,7 @@ describe("Performance Profiling", () => {
 
 			const hierarchicalMetrics = hierarchicalProfiler.finish(
 				"Hierarchical Mode",
-				operations
+				operations,
 			);
 
 			// Test performance mode
@@ -621,9 +601,9 @@ describe("Performance Profiling", () => {
 					$.effect(
 						performanceProfiler.trackEffect(() => {
 							// Child effect
-						})
+						}),
 					);
-				})
+				}),
 			);
 
 			for (let i = 0; i < operations; i++) {
@@ -633,21 +613,21 @@ describe("Performance Profiling", () => {
 
 			const performanceMetrics = performanceProfiler.finish(
 				"Performance Mode",
-				operations
+				operations,
 			);
 
 			// Compare results
 			console.log(`\n🏁 Performance Comparison:`);
 			console.log(
-				`   Hierarchical: ${hierarchicalMetrics.duration.toFixed(2)}ms`
+				`   Hierarchical: ${hierarchicalMetrics.duration.toFixed(2)}ms`,
 			);
 			console.log(
-				`   Performance:  ${performanceMetrics.duration.toFixed(2)}ms`
+				`   Performance:  ${performanceMetrics.duration.toFixed(2)}ms`,
 			);
 			console.log(
 				`   Difference:   ${(
 					hierarchicalMetrics.duration - performanceMetrics.duration
-				).toFixed(2)}ms`
+				).toFixed(2)}ms`,
 			);
 
 			// Both should complete reasonably fast

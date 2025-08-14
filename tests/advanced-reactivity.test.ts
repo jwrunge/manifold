@@ -49,7 +49,7 @@ describe("Advanced Reactivity Features", () => {
 		test("should handle complex circular chains", async () => {
 			const stores = Array.from(
 				{ length: 5 },
-				() => $.create().add("value", 0).build(true).state
+				() => $.create().add("value", 0).build(true).state,
 			);
 			const effectCounts = Array.from({ length: 5 }, () => 0);
 			const maxRuns = 20;
@@ -315,7 +315,7 @@ describe("Advanced Reactivity Features", () => {
 				hierarchicalOrder.includes("child")
 			) {
 				expect(hierarchicalOrder.indexOf("parent")).toBeLessThan(
-					hierarchicalOrder.indexOf("child")
+					hierarchicalOrder.indexOf("child"),
 				);
 			}
 		});
@@ -361,9 +361,7 @@ describe("Advanced Reactivity Features", () => {
 		});
 
 		test("should handle nested effect cleanup", async () => {
-			const { state: store } = $.create()
-				.add("enabled", true)
-				.build(true);
+			const { state: store } = $.create().add("enabled", true).build(true);
 
 			let parentRuns = 0;
 			let childRuns = 0;

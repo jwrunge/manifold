@@ -32,10 +32,7 @@ export default defineConfig({
 									// Remove spaces around operators (conservative)
 									.replace(/\s*([{}();,])\s*/g, "$1")
 									// Remove extra spaces but preserve single spaces in strings and comments
-									.replace(
-										/([^"'/*])\s{2,}([^"'/*])/g,
-										"$1 $2"
-									)
+									.replace(/([^"'/*])\s{2,}([^"'/*])/g, "$1 $2")
 									.trim();
 							}
 						}

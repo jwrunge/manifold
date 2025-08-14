@@ -14,7 +14,7 @@ const effect = (fn: EffectDependency) => {
 
 class StateBuilder<
 	TState extends StateConstraint,
-	TFuncs extends FuncsConstraint
+	TFuncs extends FuncsConstraint,
 > {
 	#scopedState = {} as TState;
 	#scopedFuncs = {} as TFuncs;
@@ -23,7 +23,7 @@ class StateBuilder<
 	constructor(
 		initialState?: TState,
 		initialFuncs?: TFuncs,
-		derivations?: Map<string, (store: StateConstraint) => unknown>
+		derivations?: Map<string, (store: StateConstraint) => unknown>,
 	) {
 		this.#scopedState = (initialState || {}) as TState;
 		this.#scopedFuncs = (initialFuncs || {}) as TFuncs;
@@ -32,7 +32,7 @@ class StateBuilder<
 
 	static create<S extends StateConstraint, F extends FuncsConstraint>(
 		initialState?: S,
-		initialFuncs?: F
+		initialFuncs?: F,
 	): StateBuilder<S, F> {
 		return new StateBuilder<S, F>(initialState, initialFuncs);
 	}
@@ -44,7 +44,7 @@ class StateBuilder<
 	add<K extends string, V>(
 		key: K,
 		value: V,
-		sync?: () => void
+		sync?: () => void,
 	): StateBuilder<TState & Record<K, V>, TFuncs> {
 		const newState = { ...this.#scopedState, [key]: value } as TState &
 			Record<K, V>;
@@ -52,13 +52,13 @@ class StateBuilder<
 		return new StateBuilder(
 			newState,
 			this.#scopedFuncs as TFuncs,
-			this.#derivations
+			this.#derivations,
 		) as StateBuilder<TState & Record<K, V>, TFuncs>;
 	}
 
 	addDerived<K extends string, T>(
 		key: K,
-		fn: (store: TState) => T
+		fn: (store: TState) => T,
 	): StateBuilder<TState & Record<K, T>, TFuncs> {
 		// Placeholder derived value to extend type
 		const newState = {
@@ -70,7 +70,7 @@ class StateBuilder<
 		return new StateBuilder(
 			newState,
 			this.#scopedFuncs,
-			newDerivations
+			newDerivations,
 		) as StateBuilder<TState & Record<K, T>, TFuncs>;
 	}
 
@@ -88,9 +88,7 @@ class StateBuilder<
 				deriveFn as (store: TState) => unknown
 			)(state);
 			effect(() => {
-				const newValue = (deriveFn as (store: TState) => unknown)(
-					state
-				);
+				const newValue = (deriveFn as (store: TState) => unknown)(state);
 				(state as Record<string, unknown>)[key] = newValue;
 			});
 		}

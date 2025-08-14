@@ -21,7 +21,7 @@ const flushEffects = () => {
 const proxy = (
 	// biome-ignore lint/suspicious/noExplicitAny: internal
 	obj: any,
-	prefix = ""
+	prefix = "",
 ): StateConstraint => {
 	if (!obj || typeof obj !== _objStr) return obj;
 	return new Proxy(obj, {
@@ -41,9 +41,7 @@ const proxy = (
 				});
 			}
 			const target = state[key];
-			return typeof target === _objStr && target
-				? proxy(target, path)
-				: target;
+			return typeof target === _objStr && target ? proxy(target, path) : target;
 		},
 		set(state, key, value) {
 			if (isEqual(state[key], value)) return true;

@@ -174,7 +174,7 @@ test("Max update depth detection", async () => {
 	// Test that very deep effect chains are controlled by batching
 	const states = Array.from(
 		{ length: 20 },
-		(_) => $.create().add("value", 0).build(true).state
+		(_) => $.create().add("value", 0).build(true).state,
 	);
 	const effectCounts: number[] = Array.from({ length: 20 }, () => 0);
 
@@ -182,10 +182,7 @@ test("Max update depth detection", async () => {
 		const currentIndex = i;
 		$.effect(() => {
 			effectCounts[currentIndex]++;
-			if (
-				states[currentIndex].value > 0 &&
-				states[currentIndex].value < 3
-			) {
+			if (states[currentIndex].value > 0 && states[currentIndex].value < 3) {
 				states[currentIndex + 1].value = states[currentIndex].value;
 			}
 		});
@@ -349,7 +346,7 @@ test("performance mode vs hierarchical mode", async () => {
 		hierarchicalOrder.includes("child")
 	) {
 		expect(hierarchicalOrder.indexOf("parent")).toBeLessThan(
-			hierarchicalOrder.indexOf("child")
+			hierarchicalOrder.indexOf("child"),
 		);
 	}
 
@@ -557,9 +554,7 @@ test("deep hierarchical effect execution order - comprehensive", async () => {
 	await new Promise((resolve) => setTimeout(resolve, 10));
 
 	// Verify child effect executed when counter changed
-	expect(hierarchicalOrder.some((item) => item.includes("child-5"))).toBe(
-		true
-	);
+	expect(hierarchicalOrder.some((item) => item.includes("child-5"))).toBe(true);
 });
 
 test("effect hierarchy with state mutations", async () => {
@@ -679,7 +674,7 @@ test("complex circular dependency prevention", async () => {
 	expect(store.c).toBeGreaterThanOrEqual(2);
 
 	console.log(
-		`Final state: a=${store.a}, b=${store.b}, c=${store.c}, effectCount=${effectCount}`
+		`Final state: a=${store.a}, b=${store.b}, c=${store.c}, effectCount=${effectCount}`,
 	);
 });
 
