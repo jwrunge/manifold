@@ -6,7 +6,7 @@ export class Effect {
 	deps: Set<EffectDependency>;
 	#active = true;
 	fn: () => void;
-	level: number; // Store level directly on the effect instance
+	level: number; // depth level for hierarchical ordering
 
 	constructor(fn: () => void) {
 		this.fn = fn;
@@ -33,8 +33,6 @@ export class Effect {
 	stop() {
 		this.#active = false;
 		this.#clean();
-		// Import cleanupEffectTracking from State.ts when needed
-		// cleanupEffectTracking(this);
 	}
 
 	#clean() {
