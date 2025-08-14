@@ -3,9 +3,7 @@ import type { Effect } from "../src/Effect.ts";
 import $ from "../src/main.ts";
 
 test("new store", async () => {
-	const { state: store } = $.create()
-		.addState("value", 0)
-		.build({ local: true });
+	const { state: store } = $.create().add("value", 0).build(true);
 
 	let myStateValue: number | null = null;
 	let updateCount = 0;
@@ -33,8 +31,8 @@ test("new store", async () => {
 
 test("update triggers", async () => {
 	const { state: store } = $.create()
-		.addState("value", { name: "Jake", age: 37 })
-		.build({ local: true });
+		.add("value", { name: "Jake", age: 37 })
+		.build(true);
 
 	let trackedStateValue: { name: string; age: number } | null = null;
 	let trackedStateName: string | null = null;
@@ -93,12 +91,12 @@ test("update triggers", async () => {
 
 test("derived data", async () => {
 	const { state: store } = $.create()
-		.addState("value", { name: "Jake", age: 37 })
+		.add("value", { name: "Jake", age: 37 })
 		.addDerived("derived", (s) => ({
 			name: s.value.name.toUpperCase(),
 			age: s.value.age + 10,
 		}))
-		.build({ local: true });
+		.build(true);
 
 	let trackedDerivedStateName: string | null = null;
 	let trackedDerivedStateAge: number | null = null;
@@ -140,12 +138,8 @@ test("derived data", async () => {
 
 test("Circular update detection", async () => {
 	// Test that batching prevents infinite circular updates
-	const { state: storeA } = $.create()
-		.addState("value", 0)
-		.build({ local: true });
-	const { state: storeB } = $.create()
-		.addState("value", 0)
-		.build({ local: true });
+	const { state: storeA } = $.create().add("value", 0).build(true);
+	const { state: storeB } = $.create().add("value", 0).build(true);
 
 	let effectACount = 0;
 	let effectBCount = 0;
@@ -180,7 +174,7 @@ test("Max update depth detection", async () => {
 	// Test that very deep effect chains are controlled by batching
 	const states = Array.from(
 		{ length: 20 },
-		(_) => $.create().addState("value", 0).build({ local: true }).state
+		(_) => $.create().add("value", 0).build(true).state
 	);
 	const effectCounts: number[] = Array.from({ length: 20 }, () => 0);
 
@@ -214,9 +208,7 @@ test("Max update depth detection", async () => {
 });
 
 test("hierarchical effect execution order", async () => {
-	const { state: store } = $.create()
-		.addState("count", 0)
-		.build({ local: true });
+	const { state: store } = $.create().add("count", 0).build(true);
 	const executionOrder: string[] = [];
 
 	// Level 0 effect
@@ -277,9 +269,9 @@ test("hierarchical effect execution order", async () => {
 
 test("effect deduplication across multiple property accesses", async () => {
 	const { state: store } = $.create()
-		.addState("user", { name: "John", age: 30 })
-		.addState("settings", { theme: "dark" })
-		.build({ local: true });
+		.add("user", { name: "John", age: 30 })
+		.add("settings", { theme: "dark" })
+		.build(true);
 
 	let effectRunCount = 0;
 
@@ -308,14 +300,10 @@ test("effect deduplication across multiple property accesses", async () => {
 
 test("performance mode vs hierarchical mode", async () => {
 	// Test hierarchical mode (default)
-	const hierarchicalApp = $.create()
-		.addState("count", 0)
-		.build({ local: true }); // hierarchical: true by default
+	const hierarchicalApp = $.create().add("count", 0).build(true); // hierarchical always on
 
-	// Test performance mode
-	const performanceApp = $.create()
-		.addState("count", 0)
-		.build({ local: true, hierarchical: false });
+	// Test performance mode (removed option, still build local instance)
+	const performanceApp = $.create().add("count", 0).build(true);
 
 	const hierarchicalOrder: string[] = [];
 	const performanceOrder: string[] = [];
@@ -370,9 +358,7 @@ test("performance mode vs hierarchical mode", async () => {
 });
 
 test("effect cleanup and memory management", async () => {
-	const { state: store } = $.create()
-		.addState("count", 0)
-		.build({ local: true });
+	const { state: store } = $.create().add("count", 0).build(true);
 
 	let effect1RunCount = 0;
 	let effect2RunCount = 0;
@@ -412,7 +398,7 @@ test("effect cleanup and memory management", async () => {
 
 test("deep nested object reactivity", async () => {
 	const { state: store } = $.create()
-		.addState("data", {
+		.add("data", {
 			user: {
 				profile: {
 					name: "John",
@@ -423,7 +409,7 @@ test("deep nested object reactivity", async () => {
 				},
 			},
 		})
-		.build({ local: true });
+		.build(true);
 
 	let nameChangeCount = 0;
 	let themeChangeCount = 0;
@@ -463,7 +449,7 @@ test("deep nested object reactivity", async () => {
 });
 
 test("circular dependency detection", async () => {
-	const { state: store } = $.create().build({ local: true });
+	const { state: store } = $.create().build(true);
 
 	// This should not throw an error for normal nested effects
 	expect(() => {
@@ -482,9 +468,7 @@ test("circular dependency detection", async () => {
 // === ENHANCED CIRCULAR DEPENDENCY AND HIERARCHICAL TESTS ===
 
 test("circular dependency detection - should throw error", async () => {
-	const { state: store } = $.create()
-		.addState("count", 0)
-		.build({ local: true });
+	const { state: store } = $.create().add("count", 0).build(true);
 
 	// This test verifies that the circular dependency detection actually works
 	// by creating a scenario that would cause a circular reference
@@ -516,9 +500,9 @@ test("circular dependency detection - should throw error", async () => {
 
 test("deep hierarchical effect execution order - comprehensive", async () => {
 	const { state: store } = $.create()
-		.addState("trigger", 0)
-		.addState("counter", 0)
-		.build({ local: true });
+		.add("trigger", 0)
+		.add("counter", 0)
+		.build(true);
 
 	const executionOrder: string[] = [];
 	const effectLevels: string[] = [];
@@ -580,11 +564,11 @@ test("deep hierarchical effect execution order - comprehensive", async () => {
 
 test("effect hierarchy with state mutations", async () => {
 	const { state: store } = $.create()
-		.addState("source", 1)
-		.addState("derived1", 0)
-		.addState("derived2", 0)
-		.addState("derived3", 0)
-		.build({ local: true });
+		.add("source", 1)
+		.add("derived1", 0)
+		.add("derived2", 0)
+		.add("derived3", 0)
+		.build(true);
 
 	const executionLog: string[] = [];
 
@@ -640,10 +624,10 @@ test("effect hierarchy with state mutations", async () => {
 
 test("complex circular dependency prevention", async () => {
 	const { state: store } = $.create()
-		.addState("a", 1)
-		.addState("b", 1)
-		.addState("c", 1)
-		.build({ local: true });
+		.add("a", 1)
+		.add("b", 1)
+		.add("c", 1)
+		.build(true);
 
 	let effectCount = 0;
 	const maxEffectRuns = 20; // Reasonable limit to prevent infinite loops
@@ -701,10 +685,10 @@ test("complex circular dependency prevention", async () => {
 
 test("effect hierarchy with conditional execution", async () => {
 	const { state: store } = $.create()
-		.addState("enabled", true)
-		.addState("counter", 0)
-		.addState("multiplier", 1)
-		.build({ local: true });
+		.add("enabled", true)
+		.add("counter", 0)
+		.add("multiplier", 1)
+		.build(true);
 
 	const executionOrder: string[] = [];
 

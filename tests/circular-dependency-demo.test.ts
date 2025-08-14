@@ -4,10 +4,10 @@ import $ from "../src/main.ts";
 describe("True Circular Dependency Detection", () => {
 	test("should demonstrate circular dependency prevention in action", async () => {
 		const { state: store } = $.create()
-			.addState("a", 0)
-			.addState("b", 0)
-			.addState("c", 0)
-			.build({ local: true });
+			.add("a", 0)
+			.add("b", 0)
+			.add("c", 0)
+			.build(true);
 
 		const executionLog: Array<{
 			effect: string;
@@ -104,10 +104,10 @@ describe("True Circular Dependency Detection", () => {
 
 	test("should maintain proper execution order even with circular potential", async () => {
 		const { state: store } = $.create()
-			.addState("source", 0)
-			.addState("derived1", 0)
-			.addState("derived2", 0)
-			.build({ local: true });
+			.add("source", 0)
+			.add("derived1", 0)
+			.add("derived2", 0)
+			.build(true);
 
 		const executionOrder: string[] = [];
 
@@ -172,12 +172,12 @@ describe("True Circular Dependency Detection", () => {
 	test("should demonstrate that the system can handle realistic dependency scenarios", async () => {
 		// Create a realistic state management scenario
 		const { state: store } = $.create()
-			.addState("user", { name: "John", age: 25 })
-			.addState("preferences", { theme: "dark", notifications: true })
-			.addState("ui", { currentPage: "home", loading: false })
+			.add("user", { name: "John", age: 25 })
+			.add("preferences", { theme: "dark", notifications: true })
+			.add("ui", { currentPage: "home", loading: false })
 			.addDerived("canVote", (s) => s.user.age >= 18)
 			.addDerived("displayTheme", (s) => s.preferences.theme)
-			.build({ local: true });
+			.build(true);
 
 		const effectLog: string[] = [];
 

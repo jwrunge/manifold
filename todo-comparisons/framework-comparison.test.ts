@@ -6,14 +6,14 @@ describe("Framework Comparison Benchmarks", () => {
 		test("should handle React-like frequent re-renders efficiently", async () => {
 			// Simulate React component with multiple props that trigger re-renders
 			const { state: store } = $.create()
-				.addState("count", 0)
-				.addState("user", { name: "John", age: 25 })
-				.addState(
+				.add("count", 0)
+				.add("user", { name: "John", age: 25 })
+				.add(
 					"todos",
 					[] as Array<{ id: number; text: string; done: boolean }>
 				)
-				.addState("ui", { loading: false, error: null })
-				.build({ local: true, hierarchical: true }); // Safe mode
+				.add("ui", { loading: false, error: null })
+				.build(true); // local instance
 
 			let renderCount = 0;
 			const renderTimes: number[] = [];
@@ -99,12 +99,12 @@ describe("Framework Comparison Benchmarks", () => {
 	describe("Vue-style Reactive Properties", () => {
 		test("should handle Vue-like computed properties efficiently", async () => {
 			const { state: store } = $.create()
-				.addState(
+				.add(
 					"items",
 					[] as Array<{ id: number; price: number; quantity: number }>
 				)
-				.addState("taxRate", 0.1)
-				.addState("discountCode", "")
+				.add("taxRate", 0.1)
+				.add("discountCode", "")
 				.addDerived("subtotal", (s) =>
 					s.items.reduce(
 						(sum, item) => sum + item.price * item.quantity,
@@ -116,7 +116,7 @@ describe("Framework Comparison Benchmarks", () => {
 				)
 				.addDerived("tax", (s) => (s.subtotal - s.discount) * s.taxRate)
 				.addDerived("total", (s) => s.subtotal - s.discount + s.tax)
-				.build({ local: true, hierarchical: true }); // Safe mode
+				.build(true); // local instance
 
 			let computationCount = 0;
 			const computationTimes: number[] = [];
@@ -188,14 +188,14 @@ describe("Framework Comparison Benchmarks", () => {
 	describe("Svelte-style Reactive Statements", () => {
 		test("should handle Svelte-like reactive statements efficiently", async () => {
 			const { state: store } = $.create()
-				.addState("name", "")
-				.addState("email", "")
-				.addState("age", 0)
-				.addState("preferences", {
+				.add("name", "")
+				.add("email", "")
+				.add("age", 0)
+				.add("preferences", {
 					theme: "light",
 					notifications: true,
 				})
-				.build({ local: true, hierarchical: true }); // Safe mode
+				.build(true); // local instance
 
 			let reactiveStatementRuns = 0;
 			const validationResults: Array<{
@@ -361,13 +361,13 @@ describe("Framework Comparison Benchmarks", () => {
 			const safeStartMemory = getMemoryUsage();
 
 			const { state: safeStore } = $.create()
-				.addState("count", 0)
-				.addState("user", { name: "Initial", age: 0 })
-				.addState(
+				.add("count", 0)
+				.add("user", { name: "Initial", age: 0 })
+				.add(
 					"todos",
 					[] as Array<{ id: number; text: string; done: boolean }>
 				)
-				.build({ local: true, hierarchical: true }); // Explicit safe mode
+				.build(true); // hierarchical always on
 
 			let safeEffectRuns = 0;
 			$.effect(() => {
@@ -400,13 +400,13 @@ describe("Framework Comparison Benchmarks", () => {
 			const perfStartMemory = getMemoryUsage();
 
 			const { state: perfStore } = $.create()
-				.addState("count", 0)
-				.addState("user", { name: "Initial", age: 0 })
-				.addState(
+				.add("count", 0)
+				.add("user", { name: "Initial", age: 0 })
+				.add(
 					"todos",
 					[] as Array<{ id: number; text: string; done: boolean }>
 				)
-				.build({ local: true, hierarchical: false }); // Explicit performance mode
+				.build(true); // same behavior
 
 			let perfEffectRuns = 0;
 			$.effect(() => {

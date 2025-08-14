@@ -85,8 +85,8 @@ test("Date equality", () => {
 
 test("equality prevents unnecessary updates", async () => {
 	const { state: store } = $.create()
-		.addState("value", { count: 0, _name: "test" })
-		.build({ local: true });
+		.add("value", { count: 0, _name: "test" })
+		.build(true);
 	let updateCount = 0;
 
 	$.effect(() => {
@@ -124,7 +124,7 @@ test("equality prevents unnecessary updates", async () => {
 test("Complex object equality with reactive updates", () => {
 	let updateCount = 0;
 	const { state: store } = $.create()
-		.addState("value", {
+		.add("value", {
 			users: new Map([
 				[
 					"user1",
@@ -136,7 +136,7 @@ test("Complex object equality with reactive updates", () => {
 			]),
 			settings: { theme: "dark", notifications: true },
 		})
-		.build({ local: true });
+		.build(true);
 
 	$.effect(() => {
 		store.value; // Access the value to create dependency
