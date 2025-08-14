@@ -1,0 +1,11 @@
+{
+	"editor.formatOnSave": true,
+	"editor.codeActionsOnSave": {
+		"source.organizeImports": "explicit",
+		"source.fixAll": "explicit"
+	},
+	"biome.lsp.bin": "node_modules/.bin/biome",
+	"biome.enabled": true,
+	"biome.requireConfiguration": true,
+	"biome.useServer": true
+}
