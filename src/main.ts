@@ -22,6 +22,11 @@ class StateBuilder<
 	#scopedFuncs = {} as TFuncs;
 	#derivations = new Map<string, (store: StateConstraint) => unknown>();
 
+	static _globalState:
+		| StateBuilder<StateConstraint, FuncsConstraint>
+		| undefined;
+	static _currentState: StateConstraint | undefined;
+
 	constructor(
 		initialState?: TState,
 		initialFuncs?: TFuncs,

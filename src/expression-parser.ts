@@ -7,6 +7,10 @@ export interface ParsedExpression {
 	assignTarget?: string;
 }
 
+// Exposed dev metrics
+export let cacheHits = 0;
+export let cacheMisses = 0;
+
 // LRU cache (simple FIFO trim) for parsed expressions
 const CACHE = new Map<string, ParsedExpression>();
 const CACHE_MAX = 500;
@@ -18,18 +22,25 @@ const LITS: Record<string, unknown> = {
 	null: null,
 	undefined: undefined,
 };
-const NUM = /^-?\d+(?:\.\d+)?$/;
+const NUM = /^-?\d+(?:\.[\d]+)?$/;
 
-// Evaluate dotted / indexed path with dynamic index expressions
+// Evaluate dotted / indexed path with dynamic index expressions + optional chaining
 interface ChainSegmentProp {
 	t: "prop";
 	k: string;
+	opt?: boolean;
 }
 interface ChainSegmentIdx {
 	t: "idx";
 	e: ParsedExpression;
+	opt?: boolean;
 }
-type ChainSeg = ChainSegmentProp | ChainSegmentIdx;
+interface ChainSegmentCall {
+	t: "call";
+	args: ParsedExpression[];
+	opt?: boolean;
+}
+type ChainSeg = ChainSegmentProp | ChainSegmentIdx | ChainSegmentCall;
 
 const buildChain = (
 	expr: string
@@ -38,21 +49,23 @@ const buildChain = (
 	if (!/^[a-zA-Z_$]/.test(expr)) return null;
 	let i = 0;
 	let base = "";
-	while (i < expr.length && /[\w$]/.test(expr[i])) {
-		base += expr[i++];
-	}
+	while (i < expr.length && /[\w$]/.test(expr[i])) base += expr[i++];
 	const segs: ChainSeg[] = [];
 	while (i < expr.length) {
-		const c = expr[i];
-		if (c === ".") {
+		if (expr[i] === ".") {
+			// . or ?. handled uniformly here (previous char could be ?)
+			let opt = false;
+			if (expr[i - 1] === "?" && segs.at(-1)?.t !== "call") opt = true; // "?." pattern captured because previous char ?
+			// advance past dot
 			i++;
 			let prop = "";
 			if (!/[a-zA-Z_$]/.test(expr[i])) return null;
 			while (i < expr.length && /[\w$]/.test(expr[i])) prop += expr[i++];
-			segs.push({ t: "prop", k: prop });
+			segs.push({ t: "prop", k: prop, opt });
 			continue;
 		}
-		if (c === "[") {
+		if (expr[i] === "[") {
+			const opt = expr[i - 1] === "?"; // ?[
 			let depth = 1;
 			i++;
 			const start = i;
@@ -61,18 +74,34 @@ const buildChain = (
 				else if (expr[i] === "]") depth--;
 				i++;
 			}
-			if (depth !== 0) return null; // unmatched
+			if (depth !== 0) return null;
 			const inner = expr.slice(start, i - 1).trim();
 			if (!inner) return null;
-			segs.push({ t: "idx", e: parse(inner) });
+			segs.push({ t: "idx", e: parse(inner), opt });
 			continue;
 		}
-		return null; // unexpected char
+		if (expr[i] === "(") {
+			// function call on previous segment / base
+			const opt = expr[i - 1] === "?"; // ?(
+			let depth = 1;
+			i++;
+			const start = i;
+			while (i < expr.length && depth) {
+				if (expr[i] === "(") depth++;
+				else if (expr[i] === ")") depth--;
+				i++;
+			}
+			const innerArgs = expr.slice(start, i - 1);
+			const argsRaw = splitArgs(innerArgs).map((a) => parse(a));
+			segs.push({ t: "call", args: argsRaw, opt });
+			continue;
+		}
+		return null;
 	}
 	return { base, segs };
 };
 
-// Evaluate dynamic chain against ctx + currentState fallback
+// Evaluate dynamic chain against ctx + currentState fallback with optional chaining semantics
 const evalChain = (
 	chain: { base: string; segs: ChainSeg[] },
 	ctx: Record<string, unknown>
@@ -85,12 +114,21 @@ const evalChain = (
 	else root = undefined;
 	let cur = root;
 	for (const seg of chain.segs) {
-		if (cur == null) return undefined;
-		if (seg.t === "prop") {
+		if (cur == null) {
+			if (seg.opt) return undefined;
+			else return undefined;
+		}
+		if (seg.t === "prop")
 			cur = (cur as Record<string, unknown>)[seg.k as never];
-		} else {
+		else if (seg.t === "idx") {
 			const key = seg.e.fn(ctx);
 			cur = (cur as Record<string, unknown>)[key as never];
+		} else if (seg.t === "call") {
+			const fn = cur as unknown;
+			if (typeof fn === "function") {
+				const argVals = seg.args.map((a) => a.fn(ctx));
+				cur = (fn as (...x: unknown[]) => unknown)(...argVals);
+			} else return undefined;
 		}
 	}
 	return cur;
@@ -119,6 +157,42 @@ const splitTop = (expr: string, ops: string[]) => {
 			const l = expr.slice(0, i).trim();
 			const r = expr.slice(i + 1).trim();
 			if (l && r) return [l, c, r] as const;
+		}
+	}
+	return null;
+};
+
+// Helper to split top-level two-char operator (e.g., ??)
+const splitTop2 = (expr: string, op: string) => {
+	let depth = 0,
+		bDepth = 0;
+	let quote = "";
+	for (let i = expr.length - op.length; i >= 0; i--) {
+		if (expr.slice(i, i + op.length) !== op) continue;
+		if (quote) continue;
+		// scan leftwards to ensure not inside quotes/paren
+		depth = 0;
+		bDepth = 0;
+		quote = "";
+		for (let j = 0; j < i + op.length; j++) {
+			const c = expr[j];
+			if (quote) {
+				if (c === quote && expr[j - 1] !== "\\") quote = "";
+				continue;
+			}
+			if (c === '"' || c === "'" || c === "`") {
+				quote = c;
+				continue;
+			}
+			if (c === "(") depth++;
+			else if (c === ")") depth--;
+			else if (c === "[") bDepth++;
+			else if (c === "]") bDepth--;
+		}
+		if (depth === 0 && bDepth === 0) {
+			const l = expr.slice(0, i).trim();
+			const r = expr.slice(i + op.length).trim();
+			if (l && r) return [l, r] as const;
 		}
 	}
 	return null;
@@ -193,7 +267,11 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 							const keys: (string | number | unknown)[] = [
 								chain.base,
 								...chain.segs.map((s) =>
-									s.t === "prop" ? s.k : s.e.fn(ctx)
+									s.t === "prop"
+										? s.k
+										: s.t === "idx"
+										? s.e.fn(ctx)
+										: undefined
 								),
 							];
 							for (let i = 0; i < keys.length - 1; i++) {
@@ -205,7 +283,11 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 								if (obj == null) return val;
 							}
 							const lastKey = keys[keys.length - 1];
-							if (obj && typeof obj === "object")
+							if (
+								obj &&
+								typeof obj === "object" &&
+								lastKey !== undefined
+							)
 								(obj as Record<string, unknown>)[
 									lastKey as never
 								] = val as unknown as never;
@@ -269,6 +351,20 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 				...b2.stateRefs,
 				...d2.stateRefs,
 			]),
+		};
+	}
+
+	// Nullish coalescing ??
+	const nullishSplit = splitTop2(expr, "??");
+	if (nullishSplit) {
+		const l = parse(nullishSplit[0]);
+		const r = parse(nullishSplit[1]);
+		return {
+			fn: (c) => {
+				const v = l.fn(c);
+				return v === null || v === undefined ? r.fn(c) : v;
+			},
+			stateRefs: new Set([...l.stateRefs, ...r.stateRefs]),
 		};
 	}
 
@@ -355,65 +451,6 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 		return { fn: (c) => -(v.fn(c) as number), stateRefs: v.stateRefs };
 	}
 
-	// Function call target(args)
-	if (expr.endsWith(")")) {
-		let depthCall = 0,
-			bDepthCall = 0;
-		let callIdx = -1;
-		let quote2 = "";
-		for (let i = 0; i < expr.length; i++) {
-			const ch = expr[i];
-			if (quote2) {
-				if (ch === quote2 && expr[i - 1] !== "\\") quote2 = "";
-				continue;
-			}
-			if (ch === '"' || ch === "'" || ch === "`") {
-				quote2 = ch;
-				continue;
-			}
-			if (ch === "(") {
-				if (depthCall === 0 && bDepthCall === 0 && callIdx === -1)
-					callIdx = i;
-				depthCall++;
-			} else if (ch === ")") depthCall--;
-			else if (ch === "[") bDepthCall++;
-			else if (ch === "]") bDepthCall--;
-			if (
-				depthCall === 0 &&
-				bDepthCall === 0 &&
-				callIdx !== -1 &&
-				i === expr.length - 1
-			) {
-				const targetRaw = expr.slice(0, callIdx).trim();
-				if (targetRaw) {
-					const argsRaw = expr.slice(callIdx + 1, -1);
-					const parts = splitArgs(argsRaw).map((a) => parse(a));
-					const targetChain = buildChain(targetRaw);
-					if (targetChain) {
-						const rootRefs = new Set<string>([targetChain.base]);
-						const argRefs = parts.flatMap((p) =>
-							Array.from(p.stateRefs)
-						);
-						return {
-							fn: (c = {}) => {
-								const fnTarget = evalChain(targetChain, c);
-								const argVals = parts.map((p) => p.fn(c));
-								return typeof fnTarget === "function"
-									? (
-											fnTarget as (
-												...x: unknown[]
-											) => unknown
-									  )(...argVals)
-									: undefined;
-							},
-							stateRefs: new Set([...rootRefs, ...argRefs]),
-						};
-					}
-				}
-			}
-		}
-	}
-
 	// Literals
 	if (expr in LITS) return { fn: () => LITS[expr], stateRefs: new Set() };
 	if (NUM.test(expr)) return { fn: () => +expr, stateRefs: new Set() };
@@ -421,21 +458,24 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 	if (str)
 		return { fn: () => str[1] ?? str[2] ?? str[3], stateRefs: new Set() };
 
-	// Property / identifier chain (dynamic index capable)
+	// Property / identifier chain (dynamic index capable + optional chaining + calls)
 	const chain = buildChain(expr);
-	if (chain) {
+	if (chain)
 		return {
 			fn: (c = {}) => evalChain(chain, c as Record<string, unknown>),
 			stateRefs: new Set([chain.base]),
 		};
-	}
 
 	return { fn: () => expr, stateRefs: new Set() };
 };
 
 export const evaluateExpression = (expr: string) => {
 	const existing = CACHE.get(expr);
-	if (existing) return existing;
+	if (existing) {
+		cacheHits++;
+		return existing;
+	}
+	cacheMisses++;
 	const parsed = parse(expr);
 	CACHE.set(expr, parsed);
 	if (CACHE.size > CACHE_MAX) {
