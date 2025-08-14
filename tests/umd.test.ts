@@ -1,19 +1,19 @@
-import { expect, test } from 'vitest';
+import { expect, test } from "vitest";
 // Import the UMD bundle. In a Node + Vitest environment with ESM, dynamic import via createRequire or eval would be needed.
 // Since the UMD builds attaches to a namespace when required, we can import it directly and access exports.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - TypeScript doesn't know the shape of the UMD bundle
-import * as UMD from '../dist/manifold.umd.js';
+import * as UMD from "../dist/manifold.umd.js";
 
 const { default: StateBuilder, globalState } = UMD as unknown as {
-	default: typeof import('../src/main.ts').default;
+	default: typeof import("../src/main.ts").default;
 	globalState: unknown;
 };
 
-test('UMD build: create store, effect, update, derived', async () => {
+test("UMD build: create store, effect, update, derived", async () => {
 	const { state } = StateBuilder.create()
-		.add('count', 1)
-		.addDerived('triple', (s) => s.count * 3)
+		.add("count", 1)
+		.addDerived("triple", (s) => s.count * 3)
 		.build(true);
 
 	let observed: number | null = null;
