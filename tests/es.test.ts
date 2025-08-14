@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+// @ts-ignore - ignore type checking for built dist file
 import StateBuilder, { globalState } from "../dist/manifold.es.js";
 
 // Basic sanity tests for ES module bundle
