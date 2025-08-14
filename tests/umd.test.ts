@@ -12,7 +12,7 @@ const { default: StateBuilder, globalState } = UMD as unknown as {
 test("UMD build: create store, effect, update, derived", async () => {
 	const { state } = StateBuilder.create()
 		.add("count", 1)
-		.addDerived("triple", (s) => s.count * 3)
+		.derive("triple", (s) => s.count * 3)
 		.build(true);
 
 	let observed: number | null = null;

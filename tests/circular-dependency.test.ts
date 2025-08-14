@@ -84,8 +84,8 @@ describe("True Circular Dependency Detection", () => {
 			"Execution log:",
 			executionLog.map(
 				(entry) =>
-					`${entry.effect}: a=${entry.values.a}, b=${entry.values.b}, c=${entry.values.c}`,
-			),
+					`${entry.effect}: a=${entry.values.a}, b=${entry.values.b}, c=${entry.values.c}`
+			)
 		);
 
 		// The batching system should prevent infinite loops
@@ -175,8 +175,8 @@ describe("True Circular Dependency Detection", () => {
 			.add("user", { name: "John", age: 25 })
 			.add("preferences", { theme: "dark", notifications: true })
 			.add("ui", { currentPage: "home", loading: false })
-			.addDerived("canVote", (s) => s.user.age >= 18)
-			.addDerived("displayTheme", (s) => s.preferences.theme)
+			.derive("canVote", (s) => s.user.age >= 18)
+			.derive("displayTheme", (s) => s.preferences.theme)
 			.build(true);
 
 		const effectLog: string[] = [];
@@ -227,13 +227,13 @@ describe("True Circular Dependency Detection", () => {
 
 		// Verify effects executed
 		expect(effectLog.some((log) => log.includes("Jane, 30"))).toBe(true);
-		expect(effectLog.some((log) => log.includes("Theme-change: light"))).toBe(
-			true,
-		);
+		expect(
+			effectLog.some((log) => log.includes("Theme-change: light"))
+		).toBe(true);
 		expect(
 			effectLog.some((log) =>
-				log.includes("Voting-eligibility: true for Jane"),
-			),
+				log.includes("Voting-eligibility: true for Jane")
+			)
 		).toBe(true);
 
 		// No infinite loops should have occurred

@@ -7,7 +7,7 @@ import StateBuilder, { globalState } from "../dist/manifold.es.js";
 test("ES build: create store, effect, update, derived", async () => {
 	const { state } = StateBuilder.create()
 		.add("count", 0)
-		.addDerived("double", (s) => s.count * 2)
+		.derive("double", (s) => s.count * 2)
 		.build(true);
 
 	let observed: number | null = null;
