@@ -134,14 +134,14 @@ const { state: store } = $.create()
 	.addState("items", [])
 	.addState("taxRate", 0.1)
 	.addState("discountCode", "")
-	.addDerived("subtotal", (s) =>
+	.derive("subtotal", (s) =>
 		s.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 	)
-	.addDerived("discount", (s) =>
+	.derive("discount", (s) =>
 		s.discountCode === "SAVE10" ? s.subtotal * 0.1 : 0
 	)
-	.addDerived("tax", (s) => (s.subtotal - s.discount) * s.taxRate)
-	.addDerived("total", (s) => s.subtotal - s.discount + s.tax)
+	.derive("tax", (s) => (s.subtotal - s.discount) * s.taxRate)
+	.derive("total", (s) => s.subtotal - s.discount + s.tax)
 	.build(true); // Safe mode
 
 // 500 shopping cart operations
@@ -609,14 +609,14 @@ const { state: store } = $.create()
 	.addState("items", [])
 	.addState("taxRate", 0.1)
 	.addState("discountCode", "")
-	.addDerived("subtotal", (s) =>
+	.derive("subtotal", (s) =>
 		s.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 	)
-	.addDerived("discount", (s) =>
+	.derive("discount", (s) =>
 		s.discountCode === "SAVE10" ? s.subtotal * 0.1 : 0
 	)
-	.addDerived("tax", (s) => (s.subtotal - s.discount) * s.taxRate)
-	.addDerived("total", (s) => s.subtotal - s.discount + s.tax)
+	.derive("tax", (s) => (s.subtotal - s.discount) * s.taxRate)
+	.derive("total", (s) => s.subtotal - s.discount + s.tax)
 	.build({ local: true, hierarchical: true });
 
 // Effect accessing computed chain

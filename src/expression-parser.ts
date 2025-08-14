@@ -1,4 +1,4 @@
-import { currentState } from "./main.ts";
+// Expression parser no longer falls back to a global currentState; callers must inject state via ctx.__state
 
 export interface ParsedExpression {
 	fn: (ctx?: Record<string, unknown>) => unknown;
@@ -101,16 +101,19 @@ const buildChain = (
 	return { base, segs };
 };
 
-// Evaluate dynamic chain against ctx + currentState fallback with optional chaining semantics
+// Evaluate dynamic chain against ctx with optional chaining semantics (state must be injected via ctx.__state)
 const evalChain = (
 	chain: { base: string; segs: ChainSeg[] },
 	ctx: Record<string, unknown>
 ) => {
 	let root: unknown;
+	// 1. explicit injected state under __state (Option C)
+	const injected = (ctx as Record<string, unknown>).__state as
+		| Record<string, unknown>
+		| undefined;
 	if (ctx && chain.base in ctx)
 		root = (ctx as Record<string, unknown>)[chain.base];
-	else if (currentState && chain.base in currentState)
-		root = (currentState as Record<string, unknown>)[chain.base];
+	else if (injected && chain.base in injected) root = injected[chain.base];
 	else root = undefined;
 	let cur = root;
 	for (const seg of chain.segs) {
@@ -261,9 +264,14 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 				return {
 					fn: (ctx) => {
 						const val = rhs.fn(ctx);
-						// Walk for assignment only on currentState root
-						if (currentState) {
-							let obj: unknown = currentState;
+						// prefer injected state only (no global fallback)
+						const injected =
+							ctx && (ctx as Record<string, unknown>).__state
+								? ((ctx as Record<string, unknown>)
+										.__state as Record<string, unknown>)
+								: undefined;
+						if (injected) {
+							let obj: unknown = injected;
 							const keys: (string | number | unknown)[] = [
 								chain.base,
 								...chain.segs.map((s) =>

@@ -1,12 +1,9 @@
 import { Effect, type EffectDependency } from "./Effect.ts";
 import proxy from "./proxy.ts";
+import RegEl from "./registry.ts";
 
 export type StateConstraint = Record<string, unknown>;
 export type FuncsConstraint = Record<string, (...args: never[]) => unknown>;
-
-export let globalState: StateBuilder<StateConstraint, FuncsConstraint>;
-// Expose the currently built (reactive proxied) global state object for helpers like the expression parser
-export let currentState: StateConstraint | undefined;
 
 const effect = (fn: EffectDependency) => {
 	const newEffect = new Effect(fn);
@@ -21,11 +18,6 @@ class StateBuilder<
 	#scopedState = {} as TState;
 	#scopedFuncs = {} as TFuncs;
 	#derivations = new Map<string, (store: StateConstraint) => unknown>();
-
-	static _globalState:
-		| StateBuilder<StateConstraint, FuncsConstraint>
-		| undefined;
-	static _currentState: StateConstraint | undefined;
 
 	constructor(
 		initialState?: TState,
@@ -48,6 +40,22 @@ class StateBuilder<
 		return effect(fn);
 	}
 
+	register = (container?: HTMLElement | SVGElement | MathMLElement) => {
+		if (container) {
+			return RegEl.register(container, this.#scopedState);
+		} else {
+			// Register all elements with data-mf-register attribute
+			document
+				.querySelectorAll("[data-mf-register]")
+				.forEach((element) => {
+					RegEl.register(
+						element as HTMLElement | SVGElement | MathMLElement,
+						this.#scopedState
+					);
+				});
+		}
+	};
+
 	add<K extends string, V>(
 		key: K,
 		value: V,
@@ -63,7 +71,7 @@ class StateBuilder<
 		) as StateBuilder<TState & Record<K, V>, TFuncs>;
 	}
 
-	addDerived<K extends string, T>(
+	derive<K extends string, T>(
 		key: K,
 		fn: (store: TState) => T
 	): StateBuilder<TState & Record<K, T>, TFuncs> {
@@ -81,14 +89,10 @@ class StateBuilder<
 		) as StateBuilder<TState & Record<K, T>, TFuncs>;
 	}
 
-	build(local?: boolean) {
-		if (!local) {
-			if (globalState) throw "Global state redefined";
-			globalState = this;
-		}
-
+	build() {
 		const state = proxy(this.#scopedState) as TState;
-		currentState = state; // store globally for expression parsing
+
+		// ui flag retained for backward-compat API shape; no global state side-effects (currentState removed)
 
 		// Initialize & effect-sync derived values
 		for (const [key, deriveFn] of this.#derivations) {

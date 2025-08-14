@@ -1,6 +1,7 @@
 import { Effect } from "./Effect.ts";
 import evaluateExpression from "./expression-parser.ts";
-import { currentState } from "./main.ts";
+
+// Removed global StateBuilder.currentState; registry now requires explicit state injection
 
 // Lightweight effect helper
 const runEffect = (fn: () => void) => {
@@ -57,11 +58,14 @@ const extractAliases = (raw: string): ParsedExprMeta => {
 // Build context (alias values captured live each evaluation)
 const buildCtx = (
 	aliases: Record<string, string[]>,
+	stateRef: Record<string, unknown> | undefined,
 	extra?: Record<string, unknown>
 ) => {
 	const ctx: Record<string, unknown> = extra ? { ...extra } : {};
 	for (const [alias, path] of Object.entries(aliases))
-		ctx[alias] = getPath(currentState, path);
+		ctx[alias] = getPath(stateRef, path);
+	// inject explicit state for expression parser (Option C)
+	ctx.__state = stateRef;
 	return ctx;
 };
 
@@ -80,12 +84,16 @@ interface EachItem {
 
 export class RegEl {
 	static #registry = new WeakMap<Element, RegEl>();
-	static register(el: HTMLElement | SVGElement | MathMLElement) {
+	static register(
+		el: HTMLElement | SVGElement | MathMLElement,
+		state: Record<string, unknown>
+	) {
 		const existing = RegEl.#registry.get(el);
-		return existing || new RegEl(el);
+		return existing || new RegEl(el, state);
 	}
 
 	#el: HTMLElement | SVGElement | MathMLElement;
+	#state?: Record<string, unknown>;
 	#showExpr?: ReturnType<typeof evaluateExpression>;
 	#showAliases: Record<string, string[]> = {};
 	#awaitExpr?: ReturnType<typeof evaluateExpression>;
@@ -100,8 +108,12 @@ export class RegEl {
 	#awaitPending = false;
 	#effects: Effect[] = [];
 
-	constructor(el: HTMLElement | SVGElement | MathMLElement) {
+	constructor(
+		el: HTMLElement | SVGElement | MathMLElement,
+		state: Record<string, unknown>
+	) {
 		this.#el = el;
+		this.#state = state;
 		RegEl.#registry.set(el, this);
 		this.#processAttributes();
 		this.#setupConditionals();
@@ -130,8 +142,14 @@ export class RegEl {
 			const inner = value.slice(2, -1);
 			if (isConditionalAttr(name)) this.#parseShow(name, inner);
 			else if (isAsyncAttr(name)) this.#parseAsync(name, inner);
-			else if (isEachAttr(name)) this.#parseEach(inner);
-			else if (name.startsWith("on")) this.#bindEvent(name, inner);
+			else if (isEachAttr(name)) {
+				this.#parseEach(inner);
+				// If the element has children (e.g., <ul data-each> <li>...</li></ul>) register them for interpolation.
+				for (const child of Array.from(this.#el.children)) {
+					RegEl.register(child as HTMLElement, this.#state!);
+				}
+			} else if (name.startsWith("on") || name.startsWith("data-on"))
+				this.#bindEvent(name, inner);
 			else this.#bindProp(name, inner);
 		}
 	}
@@ -208,7 +226,7 @@ export class RegEl {
 		}
 		let last: unknown;
 		this.#addEffect(() => {
-			const v = bindingExpr.fn(buildCtx(aliases));
+			const v = bindingExpr.fn(buildCtx(aliases, this.#state));
 			if (v !== last) {
 				last = v;
 				this.#setProp(name, v);
@@ -224,8 +242,8 @@ export class RegEl {
 				const elObj: Record<string, unknown> = this
 					.#el as unknown as Record<string, unknown>;
 				const newVal = elObj[name];
-				if (assignPath && currentState)
-					setPath(currentState, assignPath, newVal);
+				if (assignPath && this.#state)
+					setPath(this.#state, assignPath, newVal);
 				else if (syncExpr) {
 					const ctx = buildCtx(
 						aliases,
@@ -240,8 +258,12 @@ export class RegEl {
 	#bindEvent(name: string, raw: string) {
 		const { clean, aliases } = extractAliases(raw);
 		const parsed = evaluateExpression(clean);
-		(this.#el as HTMLElement).addEventListener(name.slice(2), (event) => {
-			parsed.fn(buildCtx(aliases, { event }));
+		let evtName: string;
+		if (name.startsWith("data-on"))
+			evtName = name.slice(7); // data-onclick => click
+		else evtName = name.slice(2); // onclick => click
+		(this.#el as HTMLElement).addEventListener(evtName, (event) => {
+			parsed.fn(buildCtx(aliases, this.#state, { event }));
 		});
 	}
 
@@ -294,7 +316,7 @@ export class RegEl {
 	}
 	#evalShow() {
 		return this.#showExpr
-			? this.#showExpr.fn(buildCtx(this.#showAliases))
+			? this.#showExpr.fn(buildCtx(this.#showAliases, this.#state))
 			: false;
 	}
 
@@ -305,7 +327,7 @@ export class RegEl {
 		this.#addEffect(() => {
 			const expr = this.#awaitExpr;
 			if (!expr) return;
-			const p = expr.fn(buildCtx(this.#awaitAliases));
+			const p = expr.fn(buildCtx(this.#awaitAliases, this.#state));
 			if (!(p instanceof Promise)) return;
 			this.#awaitPending = true;
 			this.#el.style.display = "";
@@ -353,7 +375,7 @@ export class RegEl {
 		base: string
 	) {
 		el.style.display = base;
-		RegEl.register(el);
+		if (this.#state) RegEl.register(el, this.#state);
 		this.#traverseText(el, { [varName]: value });
 	}
 
@@ -367,8 +389,10 @@ export class RegEl {
 		this.#addEffect(() => {
 			const expr = this.#eachExpr;
 			if (!expr) return;
-			const arr = expr.fn(buildCtx(this.#eachAliases));
+			const arr = expr.fn(buildCtx(this.#eachAliases, this.#state));
 			if (!Array.isArray(arr)) return;
+			// Touch length so we subscribe to structural changes
+			void arr.length;
 			const newItems: { key: unknown; value: unknown; index: number }[] =
 				[];
 			for (let i = 0; i < arr.length; i++) {
@@ -390,7 +414,7 @@ export class RegEl {
 					el.removeAttribute("data-each");
 					el.style.display = "";
 					parent.insertBefore(el, template.nextSibling);
-					RegEl.register(el);
+					if (this.#state) RegEl.register(el, this.#state);
 					clone = { el, key: item.key };
 					this.#traverseText(el, {
 						[this.#eachItemAlias]: item.value,
@@ -404,8 +428,14 @@ export class RegEl {
 				}
 				nextClones.push(clone);
 			}
-			for (const c of old)
-				if (!newItems.some((n) => n.key === c.key)) c.el.remove();
+			for (const c of old) {
+				if (!newItems.some((n) => n.key === c.key)) {
+					// Dispose RegEl instance & effects before removing DOM node
+					const inst = RegEl.#registry.get(c.el);
+					(inst as RegEl | undefined)?.dispose();
+					c.el.remove();
+				}
+			}
 			this.#eachClones = nextClones;
 		});
 	}
@@ -469,7 +499,8 @@ export class RegEl {
 					out += p.static;
 					continue;
 				}
-				const ctx = buildCtx(p.aliases || {}, injectedCtx);
+				// injectedCtx contains loop item/key or async then/catch vars; pass as extra context
+				const ctx = buildCtx(p.aliases || {}, this.#state, injectedCtx);
 				const v = p.expr.fn(ctx);
 				out += v == null ? "" : String(v);
 			}

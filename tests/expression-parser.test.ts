@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import evaluateExpression from "../src/expression-parser";
-import StateBuilder, { currentState } from "../src/main";
+import StateBuilder from "../src/main";
 
-// Helper to (re)initialize global state for tests
+let rootState: Record<string, unknown> = {};
 const initState = (data: Record<string, unknown>) => {
-	// Build a new global state (only allowed once per process; using local build to avoid redef error)
-	StateBuilder.create(data as Record<string, unknown>).build(true); // local build sets currentState via build()
+	rootState = StateBuilder.create(data as Record<string, unknown>).build()
+		.state as Record<string, unknown>;
 };
 
 describe("Expression Parser", () => {
@@ -15,7 +15,8 @@ describe("Expression Parser", () => {
 
 	const run = (expr: string, ctx: Record<string, unknown> = {}) => {
 		const parsed = evaluateExpression(expr);
-		return parsed.fn(ctx);
+		// Always provide injected state for resolution
+		return parsed.fn({ ...ctx, __state: rootState });
 	};
 
 	const refs = (expr: string) =>
@@ -54,9 +55,10 @@ describe("Expression Parser", () => {
 			expect(run("user.x", { user: {} })).toBeUndefined();
 			expect(run("missing.prop", {})).toBeUndefined();
 		});
-		test("global state fallback", () => {
+		test("state via injected context (__state)", () => {
 			initState({ count: 5 });
-			expect(run("count")).toBe(5);
+			const parsed = evaluateExpression("count");
+			expect(parsed.fn({ __state: rootState })).toBe(5);
 		});
 		test("dynamic index access", () => {
 			initState({
@@ -121,37 +123,38 @@ describe("Expression Parser", () => {
 		});
 	});
 
-	describe("Assignments (global currentState)", () => {
+	describe("Assignments (injected state)", () => {
 		beforeEach(() => initState({ count: 1, user: { age: 30 } }));
 		test("simple root (must be wrapped in ()=> to allow assignment)", () => {
-			expect(run("()=> count = count + 1")).toBe(2);
-			expect((currentState as Record<string, unknown>).count).toBe(2);
+			const parsed = evaluateExpression("()=> count = count + 1");
+			expect(parsed.fn({ __state: rootState })).toBe(2);
+			expect(rootState.count).toBe(2);
 		});
 		test("nested object property", () => {
-			expect(run("()=> user.age = 31")).toBe(31);
-			const root = currentState as Record<string, unknown>;
-			const user = root.user as Record<string, unknown> | undefined;
+			const parsed = evaluateExpression("()=> user.age = 31");
+			expect(parsed.fn({ __state: rootState })).toBe(31);
+			const user = rootState.user as Record<string, unknown> | undefined;
 			expect(user?.age).toBe(31);
 		});
 		test("broken path early exit", () => {
-			const result = run("()=> user.missing.prop = 5");
+			const parsed = evaluateExpression("()=> user.missing.prop = 5");
+			const result = parsed.fn({ __state: rootState });
 			// traversal stops early; no throw; returns RHS
 			expect(result).toBe(5);
-			const root = currentState as Record<string, unknown>;
-			const user = root.user as Record<string, unknown> | undefined;
+			const user = rootState.user as Record<string, unknown> | undefined;
 			expect(user?.missing).toBeUndefined();
 		});
 		test("parentheses cannot enable assignment", () => {
 			// Without ()=> wrapper, treated as plain string fallback (no assignment performed)
 			const r = run("(count = 10)");
 			expect(r).toBe("count = 10");
-			expect((currentState as Record<string, unknown>)["count"]).toBe(1); // unchanged
+			expect(rootState["count"]).toBe(1); // unchanged
 		});
 		test("bare assignment without ()=> wrapper is not executed", () => {
 			initState({ count: 7 });
-			const res = run("count = 9");
+			const res = run("count = 9"); // no assignment executed
 			expect(res).toBe("count = 9");
-			expect((currentState as Record<string, unknown>).count).toBe(7);
+			expect(rootState.count).toBe(7);
 		});
 	});
 
@@ -169,9 +172,10 @@ describe("Expression Parser", () => {
 		test("no param arrow", () => {
 			expect(run("()=> 42")).toBe(42);
 		});
-		test("captures state var", () => {
+		test("captures state var via injected context", () => {
 			initState({ count: 2 });
-			expect(run("()=> count + 3")).toBe(5);
+			const parsed = evaluateExpression("()=> count + 3");
+			expect(parsed.fn({ __state: rootState })).toBe(5);
 		});
 	});
 
