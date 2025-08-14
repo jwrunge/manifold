@@ -146,9 +146,22 @@ const proxy = (
 			}
 			const rec = state as Record<string, unknown>;
 			if (isEqual(rec[key as string], value)) return true;
+			const isArr = Array.isArray(state);
+			const prevLen = isArr ? (state as unknown[]).length : 0;
 			rec[key as string] = value;
 			const path = prefix ? `${prefix}.${_S(key)}` : _S(key);
 			notifyPath(path);
+			// If setting an array index directly, also notify the base array path so collection effects rerun
+			if (isArr && key !== "length") {
+				const numeric = Number(key);
+				if (!Number.isNaN(numeric) && Number.isInteger(numeric)) {
+					if (prefix) notifyPath(prefix); // collection dependency
+					// If length changed (extending array), notify length
+					const newLen = (state as unknown[]).length;
+					if (newLen !== prevLen && prefix)
+						notifyPath(`${prefix}.length`);
+				}
+			}
 			return true;
 		},
 	});

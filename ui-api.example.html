@@ -66,12 +66,13 @@
 		.expose("secondary")
 		.build();
 
-	// After DOM ready, register all states
-	window.addEventListener("DOMContentLoaded", () => {
-		// Register named states (they auto-build here if not built). Avoid anonymous create().
+	// Register all states (immediately if DOM is already parsed) so :each renders synchronously
+	const registerAll = () => {
 		StateBuilder.create("ui").register();
 		StateBuilder.create("secondary").register();
-	});
+	};
+	if (document.readyState !== "loading") registerAll();
+	else window.addEventListener("DOMContentLoaded", registerAll);
 </script>
 
 <div data-mf-register="ui">
@@ -86,6 +87,7 @@
 
 	<p :if="count >= 15">Count is 15 or more!</p>
 	<p :elseif="count >= 10">Count is between 10 and 14!</p>
+	<p :elseif="count === 10">Count is 9!</p>
 	<p :else>Count is less than 10!</p>
 
 	<button :onclick="count = count + 1">Increment Count</button>
@@ -122,8 +124,9 @@
 	</ul>
 	<button :onclick="items = [...items, items.length + 1]">Add Item</button>
 	<button :onclick="items = items.slice(0, -1)">Remove Item</button>
-	<button :onclick="items.push(items.length)">Add Item (alt)</button>
+	<button :onclick="items.push(items.length + 1)">Add Item (alt)</button>
 	<button :onclick="items.pop()">Remove Item</button>
+	<button :onclick="items[3] = 'Jake!'">Change 3</button>
 
 	<section style="margin-top: 1em; padding: 0.5em; border: 1px dashed #888">
 		<h4>Diagnostics</h4>

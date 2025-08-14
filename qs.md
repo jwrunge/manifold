@@ -1,0 +1,5 @@
+We've had a lot of broken UI to fix, and it seems somewhat fragile. Can you implement some dom-mocking tests so we can see the impact our state updates are having on the DOM in multiple contexts (updating individual array items, conditionals with multiple elseifs, async and then/catch, etc.)?
+
+Please review this codebase. Are there significant opportunities to optimize for performance? Do you believe this library to be competitive in terms of effect batching efficiency, safety, and speed?
+
+The minified bundle size is getting much larger than I had hoped. I was hoping to keep the library under 10KB, which is quite small. We may not reach that goal, but I would like you to aggressively optimize for file size toward that end. There is no need to mangle variable names or remove white space or comments (our minifier will do that); please focus on removing dead code; unnecessary comments, logs, and developer hooks; and consolidating duplicated functionality. Please do not sacrifice features or performance or change user-facing behavior at this time.
