@@ -14,6 +14,18 @@ const flushEffects = () => {
 	const effectsToRun = Array.from(pendingEffects);
 	pendingEffects.clear();
 	isFlushScheduled = false;
+	const g = globalThis as unknown as Record<string, unknown>;
+	if (g?.MF_TRACE) {
+		try {
+			console.log(
+				"[mf][flush:start]",
+				"count",
+				effectsToRun.length,
+				"ids",
+				effectsToRun.map((e) => e.id)
+			);
+		} catch {}
+	}
 	effectsToRun.sort((a, b) => a.level - b.level);
 	for (const effect of effectsToRun) effect.run();
 };
@@ -27,6 +39,17 @@ const proxy = (
 	const notifyPath = (path: string) => {
 		const effectSet = pathEffects.get(path);
 		if (effectSet) {
+			const g = globalThis as unknown as Record<string, unknown>;
+			if (g?.MF_TRACE) {
+				try {
+					console.log(
+						"[mf][notify]",
+						path,
+						"effects",
+						Array.from(effectSet).map((e) => e.id)
+					);
+				} catch {}
+			}
 			for (const effect of effectSet) pendingEffects.add(effect);
 			if (!isFlushScheduled) {
 				isFlushScheduled = true;
@@ -51,6 +74,18 @@ const proxy = (
 					effectSet?.delete(curEffect);
 					if (effectSet?.size === 0) pathEffects.delete(path);
 				});
+				const g = globalThis as unknown as Record<string, unknown>;
+				if (g?.MF_TRACE) {
+					try {
+						console.log(
+							"[mf][track]",
+							"effect",
+							curEffect.id,
+							"path",
+							path
+						);
+					} catch {}
+				}
 			}
 			const target = state[key as keyof typeof state];
 			// Array mutating methods: wrap to emit structural notifications WITHOUT generic parent bubbling for objects

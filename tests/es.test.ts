@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 // @ts-ignore - ignore type checking for built dist file
-import StateBuilder, { globalState } from "../dist/manifold.es.js";
+import StateBuilder from "../dist/manifold.es.js";
 
 // Basic sanity tests for ES module bundle
 
@@ -8,7 +8,7 @@ test("ES build: create store, effect, update, derived", async () => {
 	const { state } = StateBuilder.create()
 		.add("count", 0)
 		.derive("double", (s) => s.count * 2)
-		.build(true);
+		.build();
 
 	let observed: number | null = null;
 	let runs = 0;
@@ -31,6 +31,5 @@ test("ES build: create store, effect, update, derived", async () => {
 	expect(observed).toBe(4);
 	expect(runs).toBe(2);
 
-	// Ensure globalState not set when built local
-	expect(globalState).toBeUndefined();
+	// No global state export anymore; ensure derived works after update
 });

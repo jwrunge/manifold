@@ -1,0 +1,139 @@
+<!-- The following should be possible in a manifold project -->
+
+<!-- Enable tracing & debug BEFORE loading the module so internal instrumentation activates -->
+<script>
+	window.MF_TRACE = true; // verbose internal instrumentation
+	window.MF_DEBUG = true; // lighter setProp logging
+	console.log("[mf] tracing enabled");
+	// Periodically show queued effect counts (simple poll)
+	setInterval(() => {
+		try {
+			console.log("[mf][heartbeat]");
+		} catch {}
+	}, 5000);
+</script>
+<script type="module">
+	import StateBuilder from "./dist/manifold.es.js";
+
+	// Primary UI state (named 'ui')
+	const { state } = StateBuilder.create(
+		"ui",
+		{
+			count: 10,
+			count2: 4,
+			items: [1, 2, 3],
+			userId: 1,
+			asyncToggle: true,
+		},
+		{
+			increment(value) {
+				state.count += value ?? 1;
+			},
+			setCount2(v) {
+				state.count2 = +v;
+			},
+			loadUser() {
+				// Example async function returning a promise used by data-await
+				return new Promise((resolve, reject) => {
+					setTimeout(() => {
+						if (state.asyncToggle)
+							resolve({ id: state.userId, name: "Ada" });
+						else reject(new Error("User load failed"));
+					}, 50);
+				});
+			},
+		}
+	)
+		.derive("sum", (s) => s.count + s.count2)
+		.expose("ui")
+		.derive("doubleCount", (s) => s.count * 2)
+		.add("syncBackCount2", (value) => {
+			state.count2 = +value;
+			console.log("Synced back count2 to:", value, state.count2);
+		})
+		.build();
+
+	// Secondary state to demonstrate cross registration & ignore boundary
+	StateBuilder.create(
+		"secondary",
+		{ label: "Secondary Zone", clicks: 0 },
+		{
+			inc() {
+				this.clicks++;
+			},
+		}
+	)
+		.expose("secondary")
+		.build();
+
+	// After DOM ready, register all states
+	window.addEventListener("DOMContentLoaded", () => {
+		// Register named states (they auto-build here if not built). Avoid anonymous create().
+		StateBuilder.create("ui").register();
+		StateBuilder.create("secondary").register();
+	});
+</script>
+
+<div data-mf-register="ui">
+	<h2>Primary UI</h2>
+	<p>The current count is: ${count}</p>
+	<p>The second count is: ${count2}</p>
+	<p>The sum of both counts is: ${sum}</p>
+	<p>The double of count is: ${doubleCount}</p>
+
+	<p :if="count >= 15">Count is 15 or more!</p>
+	<p :elseif="count >= 10">Count is between 10 and 14!</p>
+	<p :else>Count is less than 10!</p>
+
+	<button :onclick="count = count + 1">Increment Count</button>
+	<button :onclick="count2 = count2 + 2">Increment Count2</button>
+	<button :onclick="increment(5)">+5</button>
+	<button
+		:onclick="console.log('[mf][manual] count before', count); increment(5); console.log('[mf][manual] count after', count);"
+	>
+		+5 (trace)
+	</button>
+
+	<!-- Two-way binding shorthand -->
+	<label>Count 1: <input type="number" :value="count >>" /></label>
+	<!-- Explicit sync via function -->
+	<label
+		>Count 2:
+		<input type="number" :value="count2 >> (value)=> syncBackCount2(value)"
+	/></label>
+
+	<!-- Async demo: data-await / data-then / data-catch chain -->
+	<div>
+		<button :onclick="asyncToggle = !asyncToggle;">
+			Toggle Async Success (currently: ${asyncToggle ? 'success' :
+			'fail'})
+		</button>
+		<p :await="loadUser()">Loading user...</p>
+		<p :then="user">Loaded: ID=${user.id} Name=${user.name}</p>
+		<p :catch="err">Error: ${err.message}</p>
+	</div>
+
+	<!-- Each loop with alias exposure -->
+	<ul>
+		<li :each="items as item, idx">Item ${idx}: ${item}</li>
+	</ul>
+	<button :onclick="items = [...items, items.length + 1]">Add Item</button>
+	<button :onclick="items = items.slice(0, -1)">Remove Item</button>
+
+	<section style="margin-top: 1em; padding: 0.5em; border: 1px dashed #888">
+		<h4>Diagnostics</h4>
+		<p>
+			Open console to view [mf][...] logs. Use the special +5 (trace)
+			button to force extra logging around the increment function call.
+		</p>
+	</section>
+</div>
+
+<!-- Ignore boundary: separate region can register another state inside -->
+<div data-mf-ignore>
+	<div data-mf-register="secondary">
+		<h3>${label}</h3>
+		<p>Clicks: ${clicks}</p>
+		<button :onclick="clicks = clicks + 1">Click Secondary</button>
+	</div>
+</div>

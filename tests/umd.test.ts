@@ -4,16 +4,15 @@ import { expect, test } from "vitest";
 // @ts-ignore - ignore type checking for built dist file
 import * as UMD from "../dist/manifold.umd.js";
 
-const { default: StateBuilder, globalState } = UMD as unknown as {
+const { default: StateBuilder } = UMD as unknown as {
 	default: typeof import("../src/main.ts").default;
-	globalState: unknown;
 };
 
 test("UMD build: create store, effect, update, derived", async () => {
 	const { state } = StateBuilder.create()
 		.add("count", 1)
 		.derive("triple", (s) => s.count * 3)
-		.build(true);
+		.build();
 
 	let observed: number | null = null;
 	let runs = 0;
@@ -36,6 +35,5 @@ test("UMD build: create store, effect, update, derived", async () => {
 	expect(observed).toBe(12);
 	expect(runs).toBe(2);
 
-	// Ensure globalState not set when built local
-	expect(globalState).toBeUndefined();
+	// No globalState export anymore
 });

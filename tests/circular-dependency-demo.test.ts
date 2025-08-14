@@ -7,7 +7,7 @@ describe("True Circular Dependency Detection", () => {
 			.add("a", 0)
 			.add("b", 0)
 			.add("c", 0)
-			.build(true);
+			.build();
 
 		const executionLog: Array<{
 			effect: string;
@@ -107,7 +107,7 @@ describe("True Circular Dependency Detection", () => {
 			.add("source", 0)
 			.add("derived1", 0)
 			.add("derived2", 0)
-			.build(true);
+			.build();
 
 		const executionOrder: string[] = [];
 
@@ -177,7 +177,7 @@ describe("True Circular Dependency Detection", () => {
 			.add("ui", { currentPage: "home", loading: false })
 			.derive("canVote", (s) => s.user.age >= 18)
 			.derive("displayTheme", (s) => s.preferences.theme)
-			.build(true);
+			.build();
 
 		const effectLog: string[] = [];
 

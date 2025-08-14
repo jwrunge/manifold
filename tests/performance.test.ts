@@ -106,7 +106,7 @@ describe("Performance Profiling", () => {
 				.add("counter", 0)
 				.add("name", "test")
 				.add("data", { value: 1 })
-				.build(true);
+				.build();
 
 			let effectRuns = 0;
 			$.effect(
@@ -158,7 +158,7 @@ describe("Performance Profiling", () => {
 				.derive("doubled", (s) => s.base * 2)
 				.derive("tripled", (s) => s.base * 3)
 				.derive("computed", (s) => s.doubled + s.tripled + s.multiplier)
-				.build(true);
+				.build();
 
 			let derivedAccessCount = 0;
 			$.effect(
@@ -203,7 +203,7 @@ describe("Performance Profiling", () => {
 				.add("level1", 0)
 				.add("level2", 0)
 				.add("level3", 0)
-				.build(true);
+				.build();
 
 			let totalEffectRuns = 0;
 
@@ -278,7 +278,7 @@ describe("Performance Profiling", () => {
 			for (let i = 0; i < 50; i++) {
 				builder = builder.add(`prop${i}`, i);
 			}
-			const { state: store } = builder.build(true);
+			const { state: store } = builder.build();
 
 			let effectRunCount = 0;
 			const effectCounts = new Array(50).fill(0);
@@ -347,7 +347,7 @@ describe("Performance Profiling", () => {
 			const { state: store } = $.create()
 				.add("deep", deepObject)
 				.add("counter", 0)
-				.build(true);
+				.build();
 
 			let deepAccessCount = 0;
 			let arrayAccessCount = 0;
@@ -406,7 +406,7 @@ describe("Performance Profiling", () => {
 			const storeCount = 10;
 			const stores = Array.from(
 				{ length: 20 },
-				() => $.create().add("value", 0).build(true).state
+				() => $.create().add("value", 0).build().state
 			);
 
 			let totalEffectRuns = 0;
@@ -469,7 +469,7 @@ describe("Performance Profiling", () => {
 			const { state: store } = $.create()
 				.add("rapidValue", 0)
 				.add("batchCounter", 0)
-				.build(true);
+				.build();
 
 			let effectRuns = 0;
 			let lastSeenValue = -1;
@@ -525,7 +525,7 @@ describe("Performance Profiling", () => {
 			const profiler = new PerformanceProfiler();
 			profiler.start("Effect Cleanup Performance");
 
-			const { state: store } = $.create().add("value", 0).build(true);
+			const { state: store } = $.create().add("value", 0).build();
 
 			// Create many effects
 			const effectCount = 1000;
@@ -583,7 +583,7 @@ describe("Performance Profiling", () => {
 			const hierarchicalProfiler = new PerformanceProfiler();
 			hierarchicalProfiler.start("Hierarchical Mode");
 
-			const hierarchicalApp = $.create().add("count", 0).build(true);
+			const hierarchicalApp = $.create().add("count", 0).build();
 
 			$.effect(
 				hierarchicalProfiler.trackEffect(() => {
@@ -610,7 +610,7 @@ describe("Performance Profiling", () => {
 			const performanceProfiler = new PerformanceProfiler();
 			performanceProfiler.start("Performance Mode");
 
-			const performanceApp = $.create().add("count", 0).build(true);
+			const performanceApp = $.create().add("count", 0).build();
 
 			$.effect(
 				performanceProfiler.trackEffect(() => {
