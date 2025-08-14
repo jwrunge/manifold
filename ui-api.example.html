@@ -39,7 +39,7 @@
 						if (state.asyncToggle)
 							resolve({ id: state.userId, name: "Ada" });
 						else reject(new Error("User load failed"));
-					}, 50);
+					}, 5000);
 				});
 			},
 		}
@@ -79,7 +79,10 @@
 	<p>The current count is: ${count}</p>
 	<p>The second count is: ${count2}</p>
 	<p>The sum of both counts is: ${sum}</p>
-	<p>The double of count is: ${doubleCount}</p>
+	<p>
+		The double of count is: ${doubleCount}; the double of count 2 is:
+		${count2 * 2}
+	</p>
 
 	<p :if="count >= 15">Count is 15 or more!</p>
 	<p :elseif="count >= 10">Count is between 10 and 14!</p>
@@ -119,6 +122,8 @@
 	</ul>
 	<button :onclick="items = [...items, items.length + 1]">Add Item</button>
 	<button :onclick="items = items.slice(0, -1)">Remove Item</button>
+	<button :onclick="items.push(items.length)">Add Item (alt)</button>
+	<button :onclick="items.pop()">Remove Item</button>
 
 	<section style="margin-top: 1em; padding: 0.5em; border: 1px dashed #888">
 		<h4>Diagnostics</h4>

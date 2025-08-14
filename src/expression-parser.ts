@@ -116,21 +116,29 @@ const evalChain = (
 	else if (injected && chain.base in injected) root = injected[chain.base];
 	else root = undefined;
 	let cur = root;
+	let lastObjForCall: unknown;
 	for (const seg of chain.segs) {
 		if (cur == null) {
 			if (seg.opt) return undefined;
 			else return undefined;
 		}
-		if (seg.t === "prop")
+		if (seg.t === "prop") {
+			lastObjForCall = cur;
 			cur = (cur as Record<string, unknown>)[seg.k as never];
-		else if (seg.t === "idx") {
+		} else if (seg.t === "idx") {
+			lastObjForCall = cur;
 			const key = seg.e.fn(ctx);
 			cur = (cur as Record<string, unknown>)[key as never];
 		} else if (seg.t === "call") {
 			const fn = cur as unknown;
 			if (typeof fn === "function") {
 				const argVals = seg.args.map((a) => a.fn(ctx));
-				cur = (fn as (...x: unknown[]) => unknown)(...argVals);
+				// Preserve method context when available
+				cur = (fn as (...x: unknown[]) => unknown).apply(
+					lastObjForCall !== undefined ? lastObjForCall : undefined,
+					argVals
+				);
+				lastObjForCall = cur;
 			} else return undefined;
 		}
 	}
@@ -473,6 +481,59 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 			fn: (c = {}) => evalChain(chain, c as Record<string, unknown>),
 			stateRefs: new Set([chain.base]),
 		};
+
+	// Array literal with optional spreads: [a, b, ...list, x + 1]
+	if (expr.startsWith("[") && expr.endsWith("]")) {
+		let depth = 0;
+		let bDepth = 0;
+		let quote = "";
+		const inner = expr.slice(1, -1);
+		const parts: string[] = [];
+		let last = 0;
+		for (let i = 0; i < inner.length; i++) {
+			const c = inner[i];
+			if (quote) {
+				if (c === quote && inner[i - 1] !== "\\") quote = "";
+				continue;
+			}
+			if (c === '"' || c === "'" || c === "`") {
+				quote = c;
+				continue;
+			}
+			if (c === "(") depth++;
+			else if (c === ")") depth--;
+			else if (c === "[") bDepth++;
+			else if (c === "]") bDepth--;
+			if (c === "," && depth === 0 && bDepth === 0) {
+				parts.push(inner.slice(last, i).trim());
+				last = i + 1;
+			}
+		}
+		const tail = inner.slice(last).trim();
+		if (tail) parts.push(tail);
+		const parsedItems = parts
+			.filter((p) => p.length > 0)
+			.map((seg) => {
+				const spread = seg.startsWith("...");
+				const body = spread ? seg.slice(3).trim() : seg;
+				const parsed = parse(body);
+				return { spread, parsed };
+			});
+		return {
+			fn: (c) => {
+				const out: unknown[] = [];
+				for (const it of parsedItems) {
+					const val = it.parsed.fn(c);
+					if (it.spread && Array.isArray(val)) out.push(...val);
+					else out.push(val);
+				}
+				return out;
+			},
+			stateRefs: new Set(
+				parsedItems.flatMap((it) => Array.from(it.parsed.stateRefs))
+			),
+		};
+	}
 
 	return { fn: () => expr, stateRefs: new Set() };
 };

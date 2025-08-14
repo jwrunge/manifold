@@ -60,8 +60,24 @@ const buildCtx = (
 	extra?: Record<string, unknown>
 ) => {
 	const ctx: Record<string, unknown> = extra ? { ...extra } : {};
-	for (const [alias, path] of Object.entries(aliases))
-		ctx[alias] = getPath(stateRef, path);
+	// Resolve alias paths against either injected extra context (loop/async vars) or state
+		for (const [alias, path] of Object.entries(aliases)) {
+			if (!path.length) {
+				ctx[alias] = undefined;
+				continue;
+			}
+			const rootKey = path[0];
+			let base: Record<string, unknown> | undefined;
+			if (extra && Object.hasOwn(extra, rootKey)) {
+				base = extra as Record<string, unknown>;
+			} else if (stateRef && Object.hasOwn(stateRef, rootKey)) {
+				base = stateRef;
+			} else {
+				// Fallback: attempt state first
+				base = stateRef;
+			}
+			ctx[alias] = getPath(base, path);
+		}
 	ctx.__state = stateRef;
 	return ctx;
 };
@@ -178,7 +194,11 @@ export class RegEl {
 		this.#setupConditionals();
 		this.#setupAwait();
 		this.#setupEach();
-		this.#traverseText(el);
+		// IMPORTANT: Skip processing text on :each template itself so placeholders remain for clones.
+		// Skip only the original :each template so its raw interpolation remains for cloning
+		if (!el.hasAttribute(":each") && !el.hasAttribute("data-each")) {
+			this.#traverseText(el);
+		}
 		// Recursively scan descendants for binding attributes or interpolation.
 		// When a descendant with bindings is found, register it and skip scanning inside it (its own constructor will handle deeper levels).
 		const scan = (rootEl: Element) => {
@@ -289,6 +309,17 @@ export class RegEl {
 					].includes(bindName)
 				) {
 					const mapped = `data-${bindName}`;
+					// Mirror colon conditionals to data-* attributes so sibling chains (if/elseif/else) are detectable consistently
+					if (
+						["if", "elseif"].includes(bindName) &&
+						!this.#el.hasAttribute(mapped)
+					) {
+						// Wrap expression as ${...} to reuse existing data-* parsing logic paths if needed elsewhere
+						this.#el.setAttribute(mapped, `\${${value.trim()}}`);
+					}
+					if (bindName === "else" && !this.#el.hasAttribute(mapped)) {
+						this.#el.setAttribute(mapped, "");
+					}
 					if (["if", "elseif", "else"].includes(bindName))
 						this.#parseShow(mapped, value.trim());
 					else if (["await", "then", "catch"].includes(bindName))
@@ -673,6 +704,8 @@ export class RegEl {
 			const next: EachItem[] = [];
 			const oldMap = new Map<unknown, EachItem>();
 			for (const c of old) oldMap.set(c.key, c);
+			// Maintain stable DOM order matching array order by inserting/moving after the previous processed element.
+			let last: Node = template; // anchor (template remains hidden)
 			for (const item of newItems) {
 				let clone = oldMap.get(item.key);
 				if (!clone) {
@@ -680,19 +713,26 @@ export class RegEl {
 					el.removeAttribute("data-each");
 					el.removeAttribute(":each");
 					el.style.display = "";
-					parent.insertBefore(el, template.nextSibling);
+					el.dataset.mfEachClone = "1";
+					parent.insertBefore(el, last.nextSibling);
 					if (this.#state) RegEl.register(el, this.#state);
-					clone = { el, key: item.key };
+					// Process text after registration so effects attach and injected context is applied
 					this.#traverseText(el, {
 						[this.#eachItemAlias]: item.value,
 						[this.#eachKeyAlias]: item.key,
 					});
+					clone = { el, key: item.key };
 				} else {
+					// Reposition if necessary to maintain order
+					if (clone.el.previousSibling !== last) {
+						parent.insertBefore(clone.el, last.nextSibling);
+					}
 					this.#traverseText(clone.el, {
 						[this.#eachItemAlias]: item.value,
 						[this.#eachKeyAlias]: item.key,
 					});
 				}
+				last = clone.el;
 				next.push(clone);
 			}
 			for (const c of old)
