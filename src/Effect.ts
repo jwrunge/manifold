@@ -99,7 +99,8 @@ export class Effect {
 		let enable = false;
 		try {
 			const g = globalThis as unknown as Record<string, unknown>;
-			if (g?.MF_ENABLE_VERSION_SKIP && !g?.MF_DISABLE_VERSION_SKIP) enable = true;
+			if (g?.MF_ENABLE_VERSION_SKIP && !g?.MF_DISABLE_VERSION_SKIP)
+				enable = true;
 			if (g?.MF_DEBUG_FORCE_RUN) return true;
 		} catch {}
 		if (!enable) return true;
@@ -163,8 +164,10 @@ export class Effect {
 				bucket.effects[d.index] = null;
 				bucket.map.delete(this);
 				// Track hole + free list
-				if (bucket.holes != null) bucket.holes++; else bucket.holes = 1;
-				if (bucket.free) bucket.free.push(d.index); else bucket.free = [d.index];
+				if (bucket.holes != null) bucket.holes++;
+				else bucket.holes = 1;
+				if (bucket.free) bucket.free.push(d.index);
+				else bucket.free = [d.index];
 				// Adaptive compaction threshold
 				// Compact when holes exceed max(8, 25% of length) and at least 4 existing effects
 				const len = bucket.effects.length;
@@ -174,10 +177,11 @@ export class Effect {
 					bucket.holes = 0;
 					bucket.map.clear();
 					bucket.free = [];
-					for (const eff of bucket.effects) if (eff) {
-						bucket.map.set(eff, newArr.length);
-						newArr.push(eff);
-					}
+					for (const eff of bucket.effects)
+						if (eff) {
+							bucket.map.set(eff, newArr.length);
+							newArr.push(eff);
+						}
 					bucket.effects = newArr;
 				}
 			}
