@@ -94,6 +94,8 @@ export default defineConfig({
 							// Misc
 							"m.s",
 							"Promise",
+							"object",
+							"string",
 						];
 						const counts: Record<string, number> =
 							Object.create(null);

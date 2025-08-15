@@ -2,9 +2,9 @@
 
 export interface ParsedExpression {
 	fn: (ctx?: Record<string, unknown>) => unknown;
-	stateRefs: Set<string>;
 	isAssignment?: boolean;
 	assignTarget?: string;
+	stateRefs: Set<string>;
 }
 
 // LRU cache (simple FIFO trim) for parsed expressions
@@ -24,78 +24,16 @@ const NUM = /^-?\d+(?:\.[\d]+)?$/;
 interface ChainSegmentProp {
 	t: "prop";
 	k: string;
-	opt?: boolean;
 }
 interface ChainSegmentIdx {
 	t: "idx";
 	e: ParsedExpression;
-	opt?: boolean;
 }
 interface ChainSegmentCall {
 	t: "call";
 	args: ParsedExpression[];
-	opt?: boolean;
 }
 type ChainSeg = ChainSegmentProp | ChainSegmentIdx | ChainSegmentCall;
-
-const buildChain = (
-	expr: string
-): { base: string; segs: ChainSeg[] } | null => {
-	if (!/^[a-zA-Z_$]/.test(expr)) return null;
-	let i = 0,
-		base = "";
-	while (i < expr.length && /[\w$]/.test(expr[i])) base += expr[i++];
-	const segs: ChainSeg[] = [];
-	while (i < expr.length) {
-		if (expr[i] === ".") {
-			let opt = false;
-			if (expr[i - 1] === "?" && segs.at(-1)?.t !== "call") opt = true;
-			i++;
-			let prop = "";
-			if (!/[a-zA-Z_$]/.test(expr[i])) return null;
-			while (i < expr.length && /[\w$]/.test(expr[i])) prop += expr[i++];
-			segs.push({ t: "prop", k: prop, opt });
-			continue;
-		}
-		if (expr[i] === "[") {
-			const opt = expr[i - 1] === "?";
-			let depth = 1;
-			i++;
-			const start = i;
-			while (i < expr.length && depth) {
-				if (expr[i] === "[") depth++;
-				else if (expr[i] === "]") depth--;
-				i++;
-			}
-			if (depth !== 0) return null;
-			const inner = expr.slice(start, i - 1).trim();
-			if (!inner) return null;
-			segs.push({ t: "idx", e: parse(inner), opt });
-			continue;
-		}
-		if (expr[i] === "(") {
-			const opt = expr[i - 1] === "?";
-			let depth = 1;
-			i++;
-			const start = i;
-			while (i < expr.length && depth) {
-				if (expr[i] === "(") depth++;
-				else if (expr[i] === ")") depth--;
-				i++;
-			}
-			const innerArgs = expr.slice(start, i - 1);
-			const argsRaw = splitCSV(innerArgs).map((a: string) => parse(a));
-			segs.push({ t: "call", args: argsRaw, opt });
-			continue;
-		}
-		return null;
-	}
-	return { base, segs };
-};
-
-// (evalChain inlined at call site below)
-
-// Generic top-level splitter utilities retained via splitOuterRightmost/splitByPrecedence
 
 const splitCSV = (src: string): string[] => {
 	const out: string[] = [];
@@ -192,10 +130,61 @@ const splitByPrecedence = (expr: string): [string, string, string] | null => {
 	return null;
 };
 
+const buildChain = (
+	expr: string
+): { base: string; segs: ChainSeg[] } | null => {
+	if (!/^[a-zA-Z_$]/.test(expr)) return null;
+	let i = 0,
+		base = "";
+	while (i < expr.length && /[\w$]/.test(expr[i])) base += expr[i++];
+	const segs: ChainSeg[] = [];
+	while (i < expr.length) {
+		if (expr[i] === ".") {
+			i++;
+			let prop = "";
+			if (!/[a-zA-Z_$]/.test(expr[i])) return null;
+			while (i < expr.length && /[\w$]/.test(expr[i])) prop += expr[i++];
+			segs.push({ t: "prop", k: prop });
+			continue;
+		}
+		if (expr[i] === "[") {
+			let depth = 1;
+			i++;
+			const start = i;
+			while (i < expr.length && depth) {
+				if (expr[i] === "[") depth++;
+				else if (expr[i] === "]") depth--;
+				i++;
+			}
+			if (depth !== 0) return null;
+			const inner = expr.slice(start, i - 1).trim();
+			if (!inner) return null;
+			segs.push({ t: "idx", e: parse(inner) });
+			continue;
+		}
+		if (expr[i] === "(") {
+			let depth = 1;
+			i++;
+			const start = i;
+			while (i < expr.length && depth) {
+				if (expr[i] === "(") depth++;
+				else if (expr[i] === ")") depth--;
+				i++;
+			}
+			const innerArgs = expr.slice(start, i - 1);
+			const argsRaw = splitCSV(innerArgs).map((a: string) => parse(a));
+			segs.push({ t: "call", args: argsRaw });
+			continue;
+		}
+		return null;
+	}
+	return { base, segs };
+};
+
 const parse = (raw: string, allowAssign = false): ParsedExpression => {
 	const expr = raw.trim();
 	if (!expr) return { fn: () => undefined, stateRefs: new Set() };
-	const S = (a: Set<string>, b: Set<string>) => new Set<string>([...a, ...b]);
+
 	const emptyArrow = expr.match(/^\(\)\s*=>\s*(.+)$/);
 	if (emptyArrow) return parse(emptyArrow[1], true);
 	const singleParamArrow = expr.match(
@@ -203,6 +192,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 	);
 	if (singleParamArrow) {
 		const body = parse(singleParamArrow[2], false);
+		// Remove the arrow param from root refs (treated as local)
 		body.stateRefs.delete(singleParamArrow[1]);
 		return body;
 	}
@@ -234,6 +224,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 		}
 		if (wraps) return parse(expr.slice(1, -1), allowAssign);
 	}
+
 	if (allowAssign) {
 		const assign = expr.match(/^(.*?)\s*=\s*([^=].*)$/);
 		if (assign) {
@@ -277,13 +268,13 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 							)
 								(obj as Record<string, unknown>)[
 									lastKey as never
-								] = val as unknown as never;
+								] = val as never;
 						}
 						return val;
 					},
-					stateRefs: rhs.stateRefs,
 					isAssignment: true,
 					assignTarget: target,
+					stateRefs: rhs.stateRefs,
 				};
 			}
 		}
@@ -336,10 +327,11 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 				const els = parse(elseP);
 				return {
 					fn: (ctx) => (cnd.fn(ctx) ? thn.fn(ctx) : els.fn(ctx)),
-					stateRefs: S(
-						S(cnd.stateRefs, thn.stateRefs),
-						els.stateRefs
-					),
+					stateRefs: new Set<string>([
+						...cnd.stateRefs,
+						...thn.stateRefs,
+						...els.stateRefs,
+					]),
 				};
 			}
 		}
@@ -354,12 +346,18 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 			case "||":
 				return {
 					fn: (c) => l.fn(c) || r.fn(c),
-					stateRefs: S(l.stateRefs, r.stateRefs),
+					stateRefs: new Set<string>([
+						...l.stateRefs,
+						...r.stateRefs,
+					]),
 				};
 			case "&&":
 				return {
 					fn: (c) => l.fn(c) && r.fn(c),
-					stateRefs: S(l.stateRefs, r.stateRefs),
+					stateRefs: new Set<string>([
+						...l.stateRefs,
+						...r.stateRefs,
+					]),
 				};
 			case "??":
 				return {
@@ -367,7 +365,10 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 						const v = l.fn(c);
 						return v == null ? r.fn(c) : v;
 					},
-					stateRefs: S(l.stateRefs, r.stateRefs),
+					stateRefs: new Set<string>([
+						...l.stateRefs,
+						...r.stateRefs,
+					]),
 				};
 			case "+":
 			case "-":
@@ -390,7 +391,10 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 							? undefined
 							: (A as number) / (B as number);
 					},
-					stateRefs: S(l.stateRefs, r.stateRefs),
+					stateRefs: new Set<string>([
+						...l.stateRefs,
+						...r.stateRefs,
+					]),
 				};
 			default:
 				return {
@@ -412,10 +416,14 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 								return (A as number) < (B as number);
 						}
 					},
-					stateRefs: S(l.stateRefs, r.stateRefs),
+					stateRefs: new Set<string>([
+						...l.stateRefs,
+						...r.stateRefs,
+					]),
 				};
 		}
 	}
+
 	if (expr[0] === "!" && expr.length > 1) {
 		const v = parse(expr.slice(1));
 		return { fn: (c) => !v.fn(c), stateRefs: v.stateRefs };
@@ -424,11 +432,13 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 		const v = parse(expr.slice(1));
 		return { fn: (c) => -(v.fn(c) as number), stateRefs: v.stateRefs };
 	}
+
 	if (expr in LITS) return { fn: () => LITS[expr], stateRefs: new Set() };
 	if (NUM.test(expr)) return { fn: () => +expr, stateRefs: new Set() };
 	const str = expr.match(/^(?:'([^']*)'|"([^"]*)"|`([^`]*)`)$/);
 	if (str)
 		return { fn: () => str[1] ?? str[2] ?? str[3], stateRefs: new Set() };
+
 	const chain = buildChain(expr);
 	if (chain)
 		return {
@@ -478,6 +488,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 			},
 			stateRefs: new Set([chain.base]),
 		};
+
 	if (expr.startsWith("[") && expr.endsWith("]")) {
 		const parsedItems = splitCSV(expr.slice(1, -1)).map((seg: string) => {
 			const spread = seg.startsWith("...");
@@ -499,6 +510,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 			),
 		};
 	}
+
 	if (expr.startsWith("{") && expr.endsWith("}")) {
 		const segsRaw = splitCSV(expr.slice(1, -1));
 		const segs = segsRaw.map((rawSeg) => {
@@ -553,15 +565,14 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 					if (s.v) o.push(...s.v.stateRefs);
 					if (s.computed && s.k && typeof s.k !== "string")
 						o.push(...(s.k as ParsedExpression).stateRefs);
-					else if (!s.spread && s.k && typeof s.k === "string") {
-						if (s.v?.stateRefs.has(s.k)) o.push(s.k);
-					}
 					return o;
 				})
 			),
 		};
 	}
-	return { fn: () => expr, stateRefs: new Set() }; // fallback: raw string
+
+	// fallback: raw string
+	return { fn: () => expr, stateRefs: new Set() };
 };
 
 const evaluateExpression = (expr: string): ParsedExpression => {

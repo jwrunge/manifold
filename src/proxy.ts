@@ -2,9 +2,6 @@ import { type DepBucket, Effect } from "./Effect.ts";
 import isEqual from "./equality.ts";
 import type { StateConstraint } from "./main.ts";
 
-const _objStr = "object",
-	_S = String;
-
 // Cache proxies per original object + path prefix to avoid recreating proxies on every nested access.
 // WeakMap -> (prefix -> proxy)
 const proxyCache = new WeakMap<object, Map<string, unknown>>();
@@ -126,7 +123,7 @@ const getOrCreateProxy = (obj: any, prefix: string, factory: () => unknown) => {
 };
 // biome-ignore lint/suspicious/noExplicitAny: internal proxy factory
 const proxy = (obj: any, prefix = ""): StateConstraint => {
-	if (!obj || typeof obj !== _objStr) return obj;
+	if (!obj || typeof obj !== "object") return obj;
 	return getOrCreateProxy(
 		obj,
 		prefix,
@@ -137,22 +134,26 @@ const proxy = (obj: any, prefix = ""): StateConstraint => {
 						return Reflect.get(state, key, receiver);
 					const curEffect = Effect.current;
 					const target = Reflect.get(state as object, key);
-					const isObj = target && typeof target === _objStr;
+					const isObj = target && typeof target === "object";
 					let path: string | undefined;
 					const needPath = !!curEffect || isObj;
 					if (needPath)
-						path = prefix ? `${prefix}.${_S(key)}` : _S(key);
+						path = prefix
+							? `${prefix}.${String(key)}`
+							: String(key);
 					if (curEffect && path)
 						track(state as object, key, curEffect, path);
 					if (Array.isArray(state) && typeof target === "function") {
 						if (
-							key === "push" ||
-							key === "pop" ||
-							key === "splice" ||
-							key === "shift" ||
-							key === "unshift" ||
-							key === "sort" ||
-							key === "reverse"
+							[
+								"push",
+								"pop",
+								"splice",
+								"shift",
+								"unshift",
+								"sort",
+								"reverse",
+							].includes(key)
 						) {
 							return function (
 								this: unknown[],
@@ -174,7 +175,9 @@ const proxy = (obj: any, prefix = ""): StateConstraint => {
 					}
 					if (isObj) {
 						if (!path)
-							path = prefix ? `${prefix}.${_S(key)}` : _S(key);
+							path = prefix
+								? `${prefix}.${String(key)}`
+								: String(key);
 						addParentRef(
 							target as object,
 							state as object,
@@ -196,8 +199,8 @@ const proxy = (obj: any, prefix = ""): StateConstraint => {
 					const bothObjects =
 						prev &&
 						value &&
-						typeof prev === _objStr &&
-						typeof value === _objStr;
+						typeof prev === "object" &&
+						typeof value === "object";
 					if (bothObjects && isEqual(prev, value)) return true;
 					const isArr = Array.isArray(state);
 					const prevLen = isArr ? (state as unknown[]).length : 0;

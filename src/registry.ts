@@ -1,8 +1,6 @@
 import { Effect } from "./Effect.ts";
 import evaluateExpression from "./expression-runtime.ts";
 
-// (Inlined previously standalone helpers: runEffect, getPath, setPath)
-
 // Alias extraction
 interface ParsedExprMeta {
 	clean: string;
