@@ -3,6 +3,7 @@ export type EffectDependency = () => void;
 const NOOP = () => {};
 
 interface EffectOptions {
+	Ephemeral?: boolean; // legacy (not used) - keeping casing safety
 	ephemeral?: boolean;
 }
 
@@ -20,6 +21,8 @@ export interface DepBucket {
 	version: number; // increments on writes
 	// Optional hole tracking for compaction
 	holes?: number;
+	// Free list of reusable indices (LIFO)
+	free?: number[];
 }
 
 export class Effect {
@@ -92,8 +95,21 @@ export class Effect {
 
 	// Pre-pass to determine if any dependency version changed
 	shouldRun(): boolean {
-		// Disable skip optimization for now (stability over micro perf) – infra retained for future tuning
-		return true;
+		// Feature flag controlled. Default: always run for correctness.
+		let enable = false;
+		try {
+			const g = globalThis as unknown as Record<string, unknown>;
+			if (g?.MF_ENABLE_VERSION_SKIP && !g?.MF_DISABLE_VERSION_SKIP) enable = true;
+			if (g?.MF_DEBUG_FORCE_RUN) return true;
+		} catch {}
+		if (!enable) return true;
+		for (let i = 0; i < this.#deps.length; i++) {
+			const d = this.#deps[i];
+			const curEff = d.bucket.effects[d.index];
+			if (curEff !== this) return true; // conservative run
+			if (d.bucket.version !== d.versionAtTrack) return true;
+		}
+		return false;
 	}
 
 	run() {
@@ -146,21 +162,22 @@ export class Effect {
 			if (bucket.effects[d.index] === this) {
 				bucket.effects[d.index] = null;
 				bucket.map.delete(this);
-				if (bucket.holes != null) bucket.holes++;
-				else bucket.holes = 1;
-				// Compact if holes large relative to size
-				if (
-					bucket.holes > 16 &&
-					bucket.holes > bucket.effects.length / 2
-				) {
+				// Track hole + free list
+				if (bucket.holes != null) bucket.holes++; else bucket.holes = 1;
+				if (bucket.free) bucket.free.push(d.index); else bucket.free = [d.index];
+				// Adaptive compaction threshold
+				// Compact when holes exceed max(8, 25% of length) and at least 4 existing effects
+				const len = bucket.effects.length;
+				const holeThresh = Math.max(8, (len * 0.25) | 0);
+				if (len >= 4 && bucket.holes > holeThresh) {
 					const newArr: (Effect | null)[] = [];
 					bucket.holes = 0;
 					bucket.map.clear();
-					for (const eff of bucket.effects)
-						if (eff) {
-							bucket.map.set(eff, newArr.length);
-							newArr.push(eff);
-						}
+					bucket.free = [];
+					for (const eff of bucket.effects) if (eff) {
+						bucket.map.set(eff, newArr.length);
+						newArr.push(eff);
+					}
 					bucket.effects = newArr;
 				}
 			}
