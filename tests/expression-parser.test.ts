@@ -19,7 +19,8 @@ describe("Expression Parser", () => {
 		return parsed.fn({ ...ctx, __state: rootState });
 	};
 
-	const refs = (expr: string) => Array.from(evaluateExpression(expr).stateRefs);
+	const refs = (expr: string) =>
+		Array.from(evaluateExpression(expr).stateRefs);
 
 	describe("Literals", () => {
 		test("booleans / null / undefined", () => {
@@ -36,7 +37,6 @@ describe("Expression Parser", () => {
 		test("strings", () => {
 			expect(run("'hi'")).toBe("hi");
 			expect(run('"world"')).toBe("world");
-			expect(run("`template`")).toBe("template");
 		});
 	});
 
@@ -190,7 +190,7 @@ describe("Expression Parser", () => {
 		test("multiple roots", () => {
 			initState({ a: 1, user: { name: "A" }, count: 0 });
 			expect(refs("a + user.name + count").sort()).toEqual(
-				["a", "count", "user"].sort(),
+				["a", "count", "user"].sort()
 			);
 		});
 	});
@@ -200,7 +200,7 @@ describe("Expression Parser", () => {
 			initState({
 				inc: (x: number) => x + 1,
 				sum: (a: number, b: number) => a + b,
-			}),
+			})
 		);
 		test("calls state functions", () => {
 			expect(run("inc(4)")).toBe(5);

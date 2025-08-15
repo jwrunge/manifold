@@ -8,8 +8,6 @@
 		"dev": "vite",
 		"build": "tsc && node ./scripts/build.mjs",
 		"build:debug": "MF_DEBUG_BUILD=1 tsc && MF_DEBUG_BUILD=1 node ./scripts/build.mjs",
-		"build:full": "MF_VARIANT=full tsc && vite build",
-		"build:light": "MF_VARIANT=light tsc && MF_LIGHT=1 vite build",
 		"test": "vitest --run",
 		"test:watch": "vitest",
 		"lint": "biome check .",
