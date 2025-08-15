@@ -198,17 +198,44 @@ describe("extended registry features", () => {
 		Array.from(root.children).forEach((el) =>
 			RegEl.register(el as HTMLElement, local)
 		);
+		// Initial: loading visible, then/catch hidden
+		expect(
+			(document.getElementById("await") as HTMLElement).style.display
+		).toBe("");
+		expect(
+			(document.getElementById("then") as HTMLElement).style.display
+		).toBe("none");
+		expect(
+			(document.getElementById("catch") as HTMLElement).style.display
+		).toBe("none");
 		for (let i = 0; i < 4; i++) await flush();
-		// Only assert that the 'then' content became visible
+		// After resolution: loading hidden, then visible with interpolated value, catch hidden
+		expect(
+			(document.getElementById("await") as HTMLElement).style.display
+		).toBe("none");
 		expect(
 			(document.getElementById("then") as HTMLElement).style.display
 		).toBe("");
+		expect(
+			(document.getElementById("then") as HTMLElement).textContent
+		).toBe("Val: 42");
+		expect(
+			(document.getElementById("catch") as HTMLElement).style.display
+		).toBe("none");
 		// trigger failure path
 		local.ok = false;
 		for (let i = 0; i < 4; i++) await flush();
+		// After rejection: loading hidden (promise already processed), then remains visible? we expect it to hide on new pending
+		// Implementation currently only hides loading block when new promise starts; manual check: new await effect should set loading visible again
+		// So perform additional flush cycle to allow re-pending state
+		for (let i = 0; i < 2; i++) await flush();
+		// Because we reused same nodes, check that catch becomes visible
 		expect(
 			(document.getElementById("catch") as HTMLElement).style.display
 		).toBe("");
+		expect(
+			(document.getElementById("catch") as HTMLElement).textContent
+		).toBe("Err: fail");
 	});
 
 	test("named state registration & ignore boundary", async () => {

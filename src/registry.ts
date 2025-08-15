@@ -155,8 +155,6 @@ export class RegEl {
 	#showAliases: Record<string, string[]> = {};
 	#awaitExpr?: ReturnType<typeof evaluateExpression>;
 	#awaitAliases: Record<string, string[]> = {};
-	#thenVar?: string;
-	#catchVar?: string;
 	#eachExpr?: ReturnType<typeof evaluateExpression>;
 	#eachAliases: Record<string, string[]> = {};
 	#eachItemAlias = "item";
@@ -484,16 +482,11 @@ export class RegEl {
 			this.#awaitAliases = aliases;
 			this.#awaitExpr = evaluateExpression(clean);
 			this.#awaitPending = true;
-		} else if (attr === "data-then")
-			this.#thenVar = raw
-				.trim()
-				.replace(/@/g, "")
-				.replace(/[^a-zA-Z0-9_$].*$/, "");
-		else if (attr === "data-catch")
-			this.#catchVar = raw
-				.trim()
-				.replace(/@/g, "")
-				.replace(/[^a-zA-Z0-9_$].*$/, "");
+		} else if (attr === "data-then") {
+			// Variable name extracted on demand from attribute later
+		} else if (attr === "data-catch") {
+			// Variable name extracted on demand from attribute later
+		}
 	}
 	#parseEach(raw: string) {
 		const { clean, aliases } = extractAliases(raw);
@@ -640,13 +633,40 @@ export class RegEl {
 	#setupAwait() {
 		if (!this.#awaitExpr) return;
 		const baseDisplay = this.#el.style.display;
+		// Initial hide of then/catch siblings (handle both colon ':' and normalized data-* forms)
+		const parent = this.#el.parentElement;
+		const allSibs = Array.from(parent?.children || []);
+		for (const sib of allSibs) {
+			if (
+				sib.hasAttribute("data-then") ||
+				sib.hasAttribute("data-catch") ||
+				sib.hasAttribute(":then") ||
+				sib.hasAttribute(":catch")
+			) {
+				(sib as HTMLElement).style.display = "none";
+				// Prevent initial text interpolation (no value yet)
+				sib.setAttribute("data-mf-skip-text", "");
+			}
+		}
 		this.#addEffect(() => {
 			const expr = this.#awaitExpr;
 			if (!expr) return;
 			const p = expr.fn(buildCtx(this.#awaitAliases, this.#state));
 			if (!(p instanceof Promise)) return;
 			this.#awaitPending = true;
-			this.#el.style.display = "";
+			// Re-hide any then/catch branches for new pending promise (preserve skip-text until injection)
+			for (const sib of Array.from(parent?.children || []))
+				if (
+					sib.hasAttribute("data-then") ||
+					sib.hasAttribute("data-catch") ||
+					sib.hasAttribute(":then") ||
+					sib.hasAttribute(":catch")
+				) {
+					(sib as HTMLElement).style.display = "none";
+					if (!sib.hasAttribute("data-mf-skip-text"))
+						sib.setAttribute("data-mf-skip-text", "");
+				}
+			this.#el.style.display = ""; // show loading block
 			p.then((res) =>
 				this.#handlePromiseResult(res, true, baseDisplay)
 			).catch((err) =>
@@ -659,29 +679,37 @@ export class RegEl {
 		this.#awaitPending = false;
 		this.#el.style.display = "none";
 		const sibs = Array.from(this.#el.parentElement?.children || []);
+		// Hide all then/catch before showing the chosen one
+		for (const sib of sibs)
+			if (
+				sib.hasAttribute("data-then") ||
+				sib.hasAttribute("data-catch") ||
+				sib.hasAttribute(":then") ||
+				sib.hasAttribute(":catch")
+			)
+				(sib as HTMLElement).style.display = "none";
 		for (const sib of sibs) {
 			if (
 				ok &&
-				this.#thenVar &&
-				sib.getAttribute("data-then") === this.#thenVar
-			)
-				this.#injectThenCatch(
-					sib as HTMLElement,
-					this.#thenVar,
-					val,
-					base
-				);
-			else if (
+				(sib.hasAttribute("data-then") || sib.hasAttribute(":then"))
+			) {
+				const varName =
+					sib.getAttribute("data-then") ||
+					sib.getAttribute(":then") ||
+					"value";
+				this.#injectThenCatch(sib as HTMLElement, varName, val, base);
+				break;
+			} else if (
 				!ok &&
-				this.#catchVar &&
-				sib.getAttribute("data-catch") === this.#catchVar
-			)
-				this.#injectThenCatch(
-					sib as HTMLElement,
-					this.#catchVar,
-					val,
-					base
-				);
+				(sib.hasAttribute("data-catch") || sib.hasAttribute(":catch"))
+			) {
+				const varName =
+					sib.getAttribute("data-catch") ||
+					sib.getAttribute(":catch") ||
+					"err";
+				this.#injectThenCatch(sib as HTMLElement, varName, val, base);
+				break;
+			}
 		}
 	}
 	#injectThenCatch(
@@ -691,6 +719,10 @@ export class RegEl {
 		base: string
 	) {
 		el.style.display = base;
+		el.removeAttribute("data-mf-skip-text");
+		// Dispose existing registration (if any) to avoid duplicate effects
+		const existing = RegEl.#registry.get(el);
+		(existing as RegEl | undefined)?.dispose();
 		if (this.#state) RegEl.register(el, this.#state);
 		this.#traverseText(el, { [varName]: value });
 	}
