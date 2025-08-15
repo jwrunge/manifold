@@ -543,6 +543,17 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 		};
 	}
 
+	// Simple object literal {a:1, b: x+2} (no spreads, methods, or nested objects beyond braces balance)
+	if (expr.startsWith("{") && expr.endsWith("}")) {
+		let depth = 0; let bDepth = 0; let quote = ""; const inner = expr.slice(1, -1); const parts: string[] = []; let last = 0;
+		for (let i=0;i<inner.length;i++) { const c = inner[i]; if (quote) { if (c===quote && inner[i-1] !== "\\") quote=""; continue } if (c==='"' || c==='\'' || c==='`') { quote=c; continue } if (c==='(') depth++; else if (c===')') depth--; else if (c==='[') bDepth++; else if (c===']') bDepth--; else if (c==='{' ) depth++; else if (c==='}') depth--; if (c===',' && depth===0 && bDepth===0) { parts.push(inner.slice(last,i).trim()); last=i+1 } }
+		const tail = inner.slice(last).trim(); if (tail) parts.push(tail);
+		const entries = parts.filter(Boolean).map(seg=>{ const m = seg.match(/^("([^"]+)"|'([^']+)'|`([^`]+)`|([a-zA-Z_$][\w$]*))\s*:\s*(.+)$/); if(!m) return null; const key = m[2] ?? m[3] ?? m[4] ?? m[5]; const valExpr = parse(m[6]); return { key, valExpr }; }).filter(Boolean) as { key: string; valExpr: ParsedExpression }[];
+		if (entries.length) {
+			return { fn: (c)=> { const o: Record<string, unknown> = {}; for (const e of entries) o[e.key] = e.valExpr.fn(c); return o; }, stateRefs: new Set(entries.flatMap(e=>Array.from(e.valExpr.stateRefs))) };
+		}
+	}
+
 	return { fn: () => expr, stateRefs: new Set() };
 };
 

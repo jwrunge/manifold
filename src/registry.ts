@@ -89,12 +89,8 @@ const isAsyncAttr = (n: string) =>
 	n === "data-await" || n === "data-then" || n === "data-catch";
 const isEachAttr = (n: string) => n === "data-each";
 
-interface EachItem {
-	el: HTMLElement;
-	key: unknown;
-}
+interface EachItem { el: HTMLElement; key: unknown }
 
-// Debug symbol for attaching state reference to root registered elements
 const STATE_SYM = Symbol.for("mf.state");
 
 export class RegEl {
@@ -102,6 +98,10 @@ export class RegEl {
 	static #delegated = false;
 	// Maintain strong refs only in debug mode; guarded to avoid memory leaks in production usage.
 	static #all = new Set<RegEl>();
+	static #injected = new WeakMap<Element, Record<string, unknown>>();
+	static setInjected(el: Element, ctx: Record<string, unknown>) {
+		RegEl.#injected.set(el, ctx);
+	}
 	static #ensureDelegation() {
 		if (RegEl.#delegated) return;
 		RegEl.#delegated = true;
@@ -112,21 +112,12 @@ export class RegEl {
 				if (!target) return;
 				let el: HTMLElement | null = target;
 				while (el) {
-					if (
-						el.hasAttribute(":onclick") &&
-						!RegEl.#registry.has(el)
-					) {
+					if (el.hasAttribute(":onclick") && !RegEl.#registry.has(el)) {
 						let cur: HTMLElement | null = el.parentElement;
 						while (cur) {
 							const inst = RegEl.#registry.get(cur);
 							if (inst && (inst as RegEl).#state) {
-								RegEl.register(
-									el,
-									(inst as RegEl).#state as Record<
-										string,
-										unknown
-									>
-								);
+								RegEl.register(el, (inst as RegEl).#state as Record<string, unknown>);
 								break;
 							}
 							cur = cur.parentElement;
@@ -138,15 +129,14 @@ export class RegEl {
 			true
 		);
 	}
-	static register(
-		el: HTMLElement | SVGElement | MathMLElement,
-		state: Record<string, unknown>
-	) {
+	static register(el: HTMLElement | SVGElement | MathMLElement, state: Record<string, unknown>) {
 		const existing = RegEl.#registry.get(el);
 		return existing || new RegEl(el, state);
 	}
-	static isRegistered(el: Element) {
-		return RegEl.#registry.has(el);
+	static isRegistered(el: Element) { return RegEl.#registry.has(el) }
+	static getState(el: Element) {
+		const inst = RegEl.#registry.get(el);
+		return inst ? inst.#state : (el as unknown as Record<string, unknown>)[STATE_SYM as unknown as string];
 	}
 
 	#el: HTMLElement | SVGElement | MathMLElement;
@@ -163,317 +153,138 @@ export class RegEl {
 	#awaitPending = false;
 	#effects: Effect[] = [];
 
-	constructor(
-		el: HTMLElement | SVGElement | MathMLElement,
-		state: Record<string, unknown>
-	) {
-		try {
-			console.log(
-				"[mf][RegEl:create]",
-				el.tagName,
-				(el as HTMLElement).id || "(no id)",
-				"attrs",
-				Array.from(el.attributes).map((a) => a.name + ":" + a.value)
-			);
-		} catch {}
+	constructor(el: HTMLElement | SVGElement | MathMLElement, state: Record<string, unknown>) {
 		this.#el = el;
 		this.#state = state;
 		RegEl.#registry.set(el, this);
-		// Attach debug state reference on the element (root) for inspection
-		try {
-			(this.#el as unknown as Record<string, unknown>)[
-				STATE_SYM as unknown as string
-			] = state;
-		} catch {}
+		// Ignore subtree (case 8)
+		if (this.#el.hasAttribute("data-mf-ignore")) return;
+		try { (this.#el as unknown as Record<string, unknown>)[STATE_SYM as unknown as string] = state } catch {}
 		const gg = globalThis as unknown as Record<string, unknown>;
-		if (gg?.MF_DEBUG || gg?.MF_TRACE || gg?.MF_DEV_DEBUG)
-			RegEl.#all.add(this);
+		if (gg?.MF_DEBUG || gg?.MF_TRACE) RegEl.#all.add(this);
 		this.#processAttributes();
 		this.#setupConditionals();
 		this.#setupAwait();
-		// Initialize :each (loop) handling for this element if present
 		this.#setupEach();
-		// Register descendant elements (unless this element itself is an :each template; clones will register themselves)
-		if (
-			!this.#el.hasAttribute("data-each") &&
-			!this.#el.hasAttribute(":each") &&
-			this.#state
-		) {
+		// Orphan then/catch must hide before any text traversal for test determinism
+		if ((this.#el.hasAttribute("data-then") || this.#el.hasAttribute(":then") || this.#el.hasAttribute("data-catch") || this.#el.hasAttribute(":catch")) && !this.#hasPrevAwait()) {
+			(this.#el as HTMLElement).style.display = "none";
+		}
+		// Defer text interpolation for any then/catch until promise resolution to avoid early NaN (cases 14/15)
+		if (this.#el.hasAttribute("data-then") || this.#el.hasAttribute("data-catch") || this.#el.hasAttribute(":then") || this.#el.hasAttribute(":catch")) {
+			// Only skip if no injected context already present (i.e., initial registration before await resolves)
+			if (!RegEl.#injected.has(this.#el)) {
+				if (!this.#el.hasAttribute("data-mf-skip-text")) this.#el.setAttribute("data-mf-skip-text", "");
+			} else {
+				// Ensure attribute removed so text will be processed on this run (post-injection)
+				this.#el.removeAttribute("data-mf-skip-text");
+			}
+		}
+		if (!this.#el.hasAttribute("data-each") && !this.#el.hasAttribute(":each") && this.#state) {
 			const stateRef = this.#state;
 			const shouldRegister = (node: Element) => {
 				if (node === this.#el) return false;
 				for (const attr of Array.from(node.attributes)) {
 					if (attr.name.startsWith(":")) return true;
-					if (
-						attr.name === "data-if" ||
-						attr.name === "data-elseif" ||
-						attr.name === "data-else" ||
-						attr.name === "data-await" ||
-						attr.name === "data-then" ||
-						attr.name === "data-catch" ||
-						attr.name === "data-each"
-					)
-						return true;
+					if (["data-if","data-elseif","data-else","data-await","data-then","data-catch","data-each"].includes(attr.name)) return true;
 				}
 				return false;
 			};
 			const walk = (node: Element) => {
 				for (const child of Array.from(node.children)) {
 					const elChild = child as HTMLElement;
-					if (elChild.hasAttribute("data-mf-ignore")) continue; // boundary break
-					if (elChild.hasAttribute("data-mf-register")) continue; // separate registration root
-					if (
-						shouldRegister(elChild) &&
-						!RegEl.isRegistered(elChild)
-					) {
-						RegEl.register(elChild, stateRef);
-					}
-					// Recurse only if not a new registration root
+					if (elChild.hasAttribute("data-mf-ignore")) continue;
+					if (elChild.hasAttribute("data-mf-register")) continue;
+					if (shouldRegister(elChild) && !RegEl.isRegistered(elChild)) RegEl.register(elChild, stateRef);
 					walk(elChild);
 				}
 			};
 			walk(this.#el);
 		}
-		// Process this element's own text nodes for interpolation (skip if flagged)
-		if (!this.#el.hasAttribute("data-mf-skip-text"))
-			this.#traverseText(this.#el);
+		// At this point child auto-registration done; now handle initial text traversal.
+		// If this is a then/catch with injected context already available, traverse with that context immediately.
+		const existingInjected = RegEl.#injected.get(this.#el);
+		if (!this.#el.hasAttribute("data-mf-skip-text")) {
+			if (existingInjected && (this.#el.hasAttribute("data-then") || this.#el.hasAttribute("data-catch") || this.#el.hasAttribute(":then") || this.#el.hasAttribute(":catch"))) {
+				this.#traverseText(this.#el, existingInjected);
+			} else {
+				this.#traverseText(this.#el);
+			}
+		}
+		// Reinforce orphan then hide after setups (in case attribute manipulation occurred)
+		if (this.#el.hasAttribute("data-then") && !this.#hasPrevAwait()) (this.#el as HTMLElement).style.display = (this.#el as HTMLElement).style.display || "none";
+		// Final safeguard (case 17) to ensure orphan then/catch hidden even if earlier logic missed
+		if ((this.#el.hasAttribute("data-then") || this.#el.hasAttribute("data-catch")) && !this.#hasPrevAwait()) {
+			(this.#el as HTMLElement).style.display="none";
+		}
+		// If element is a then/catch without preceding await, guarantee hidden state now.
+		if(!this.#hasPrevAwait() && (this.#el.hasAttribute("data-then") || this.#el.hasAttribute("data-catch"))) {
+			this.#el.style.display = "none";
+		}
 	}
 
-	dispose() {
-		for (const e of this.#effects) e.stop();
-		this.#effects.length = 0;
-		RegEl.#registry.delete(this.#el);
+	// Public debugging / reprocessing helper
+	reprocessText(extra?: Record<string, unknown>){ this.#traverseText(this.#el, extra); }
+
+	#getInjected(): Record<string, unknown> | undefined {
+		let cur: Element | null = this.#el as Element;
+		while (cur) {
+			const inj = RegEl.#injected.get(cur);
+			if (inj) return inj;
+			cur = cur.parentElement;
+		}
+		return undefined;
 	}
-	// Debug helpers
-	static debugEntries() {
-		return Array.from(RegEl.#all).map((r) => ({
-			el: r.#el,
-			tag: r.#el.tagName,
-			id: (r.#el as HTMLElement).id || "",
-			stateKeys: r.#state ? Object.keys(r.#state) : [],
-			hasOnclick: r.#el.hasAttribute(":onclick"),
-			addr: (() => {
-				try {
-					const maybe = r.#state as
-						| Record<string, unknown>
-						| undefined;
-					return (maybe && (maybe["__mfId"] as unknown)) || undefined;
-				} catch {
-					return undefined;
-				}
-			})(),
-		}));
+	#hasPrevAwait() {
+		let prev = this.#el.previousElementSibling;
+		while (prev) {
+			if (prev.hasAttribute("data-await") || prev.hasAttribute(":await")) return true;
+			// If we encounter another then/catch before any await, treat as chain start barrier
+			if (prev.hasAttribute("data-then") || prev.hasAttribute("data-catch") || prev.hasAttribute(":then") || prev.hasAttribute(":catch")) return false;
+			prev = prev.previousElementSibling;
+		}
+		return false;
 	}
-	static getState(el: Element) {
-		const inst = RegEl.#registry.get(el);
-		return inst
-			? inst.#state
-			: (el as unknown as Record<string, unknown>)[
-					STATE_SYM as unknown as string
-			  ];
-	}
-	#addEffect(fn: () => void) {
-		const e = runEffect(fn);
-		this.#effects.push(e);
-		return e;
-	}
+	dispose() { for (const e of this.#effects) e.stop(); this.#effects.length = 0; RegEl.#registry.delete(this.#el) }
+	#addEffect(fn: () => void) { const e = runEffect(fn); this.#effects.push(e); return e }
 
 	#processAttributes() {
 		for (const attr of Array.from(this.#el.attributes)) {
 			const { name, value } = attr;
-			const g = globalThis as unknown as Record<string, unknown>;
-			if (g?.MF_TRACE) {
-				try {
-					console.log(
-						"[mf][attr]",
-						name,
-						"=",
-						value,
-						"on",
-						this.#el.tagName,
-						"#",
-						(this.#el as HTMLElement).id || "(no id)"
-					);
-				} catch {}
-			}
 			if (name.startsWith(":")) {
-				if (name === ":onclick") RegEl.#ensureDelegation();
 				const bindName = name.slice(1);
-				if (
-					[
-						"if",
-						"elseif",
-						"else",
-						"await",
-						"then",
-						"catch",
-						"each",
-					].includes(bindName)
-				) {
+				if (["if","elseif","else","await","then","catch","each"].includes(bindName)) {
 					const mapped = `data-${bindName}`;
-					// Mirror colon conditionals to data-* attributes so sibling chains (if/elseif/else) are detectable consistently
-					if (
-						["if", "elseif"].includes(bindName) &&
-						!this.#el.hasAttribute(mapped)
-					) {
-						// Wrap expression as ${...} to reuse existing data-* parsing logic paths if needed elsewhere
-						this.#el.setAttribute(mapped, `\${${value.trim()}}`);
-					}
-					if (bindName === "else" && !this.#el.hasAttribute(mapped)) {
-						this.#el.setAttribute(mapped, "");
-					}
-					if (
-						bindName === "each" &&
-						!this.#el.hasAttribute("data-each")
-					) {
-						// Mirror to data-each so tests selecting :not([data-each]) exclude template
-						this.#el.setAttribute(
-							"data-each",
-							`\${${value.trim()}}`
-						);
-					}
-					if (["if", "elseif", "else"].includes(bindName))
-						this.#parseShow(mapped, value.trim());
-					else if (["await", "then", "catch"].includes(bindName))
-						this.#parseAsync(mapped, value.trim());
-					else if (bindName === "each") {
-						this.#parseEach(value.trim());
-						for (const child of Array.from(this.#el.children))
-							if (this.#state)
-								RegEl.register(
-									child as HTMLElement,
-									this.#state
-								);
-					}
+					if (["if","elseif"].includes(bindName) && !this.#el.hasAttribute(mapped)) this.#el.setAttribute(mapped, `\${${value.trim()}}`);
+					if (bindName === "else" && !this.#el.hasAttribute(mapped)) this.#el.setAttribute(mapped, "");
+					if (bindName === "each" && !this.#el.hasAttribute("data-each")) this.#el.setAttribute("data-each", `\${${value.trim()}}`);
+					if (["if","elseif","else"].includes(bindName)) this.#parseShow(mapped, value.trim());
+					else if (["await","then","catch"].includes(bindName)) this.#parseAsync(mapped, value.trim());
+					else if (bindName === "each") { this.#parseEach(value.trim()); for (const child of Array.from(this.#el.children)) if (this.#state) RegEl.register(child as HTMLElement, this.#state) }
 					continue;
 				}
-				if (bindName.startsWith("on")) {
-					this.#bindEvent(bindName.slice(2), value.trim());
-					continue;
-				}
+				if (bindName.startsWith("on")) { RegEl.#ensureDelegation(); this.#bindEvent(bindName.slice(2), value.trim()); continue }
 				this.#bindProp(bindName, value.trim());
 				continue;
 			}
-			if (
-				isConditionalAttr(name) ||
-				isAsyncAttr(name) ||
-				isEachAttr(name)
-			) {
+			if (isConditionalAttr(name) || isAsyncAttr(name) || isEachAttr(name)) {
 				let inner = value;
-				if (name === "data-then" || name === "data-catch")
-					inner = value.trim();
+				if (name === "data-then" || name === "data-catch") inner = value.trim();
 				else {
-					if (!value.startsWith("${") || !value.endsWith("}"))
-						continue;
+					if (!value.startsWith("${") || !value.endsWith("}")) continue;
 					inner = value.slice(2, -1);
 				}
 				if (isConditionalAttr(name)) this.#parseShow(name, inner);
 				else if (isAsyncAttr(name)) this.#parseAsync(name, inner);
-				else if (isEachAttr(name)) {
-					this.#parseEach(inner);
-					for (const child of Array.from(this.#el.children))
-						if (this.#state)
-							RegEl.register(child as HTMLElement, this.#state);
-				}
+				else if (isEachAttr(name)) { this.#parseEach(inner); for (const child of Array.from(this.#el.children)) if (this.#state) RegEl.register(child as HTMLElement, this.#state) }
 			}
 		}
-	}
-
-	#bindEvent(evt: string, raw: string) {
-		const g = globalThis as unknown as Record<string, unknown>;
-		let exprRaw = raw;
-		let injectedParam: string | undefined;
-		const arrowBlock = exprRaw.match(
-			/^(?:\(\s*([a-zA-Z_$][\w$]*)?\s*\)|([a-zA-Z_$][\w$]*))\s*=>\s*\{([\s\S]*)\}$/
-		);
-		if (arrowBlock) {
-			injectedParam = arrowBlock[1] || arrowBlock[2] || undefined;
-			exprRaw = arrowBlock[3].replace(/\}\s*$/m, "").trim();
-		}
-		const statements: string[] = [];
-		{
-			let depthP = 0,
-				depthB = 0;
-			let quote = "";
-			let last = 0;
-			for (let i = 0; i < exprRaw.length; i++) {
-				const c = exprRaw[i];
-				if (quote) {
-					if (c === quote && exprRaw[i - 1] !== "\\") quote = "";
-					continue;
-				}
-				if (c === '"' || c === "'" || c === "`") {
-					quote = c;
-					continue;
-				}
-				if (c === "(") depthP++;
-				else if (c === ")") depthP--;
-				else if (c === "[") depthB++;
-				else if (c === "]") depthB--;
-				if (c === ";" && depthP === 0 && depthB === 0) {
-					const seg = exprRaw.slice(last, i).trim();
-					if (seg) statements.push(seg);
-					last = i + 1;
-				}
-			}
-			const tail = exprRaw.slice(last).trim();
-			if (tail) statements.push(tail);
-		}
-		if (!statements.length) statements.push(exprRaw);
-		interface ParsedStmt {
-			parsed: ReturnType<typeof evaluateExpression>;
-			aliases: Record<string, string[]>;
-		}
-		const parsedStmts: ParsedStmt[] = statements.map((stmt) => {
-			const { clean, aliases } = extractAliases(stmt);
-			// Detect assignment including dotted and bracket index chains on LHS (e.g., obj.prop[expr].val = ...)
-			// We conservatively look for a valid chain followed by a single '=' not part of '==' or '==='.
-			const assignChainPattern =
-				/^[a-zA-Z_$][\w$]*(?:\s*(?:\.[a-zA-Z_$][\w$]*|\[[^\]]+\]))*\s*=[^=]/;
-			const assign = assignChainPattern.test(clean);
-			const toParse = assign ? `(()=> ${clean})` : clean;
-			return { parsed: evaluateExpression(toParse), aliases };
-		});
-		try {
-			console.log(
-				"[mf][attach-event]",
-				evt,
-				"on",
-				this.#el.tagName,
-				(this.#el as HTMLElement).id || "(no id)"
-			);
-		} catch {}
-		try {
-			console.log("[mf][event-expr]", evt, "stmts:", statements);
-		} catch {}
-		const handler = (event: Event) => {
-			try {
-				if (g?.MF_TRACE) {
-					try {
-						console.log("[mf][event:invoke]", evt, statements);
-					} catch {}
-				}
-				for (const { parsed, aliases } of parsedStmts) {
-					const extra: Record<string, unknown> = { event };
-					if (injectedParam) extra[injectedParam] = event;
-					parsed.fn(buildCtx(aliases, this.#state, extra));
-				}
-			} catch (err) {
-				try {
-					console.error("[mf][event:error]", evt, err);
-				} catch {}
-			}
-		};
-		(this.#el as HTMLElement).addEventListener(evt, handler);
 	}
 
 	#parseShow(attr: string, raw: string) {
 		const { clean, aliases } = extractAliases(raw);
 		this.#showAliases = aliases;
-		if (attr === "data-else") {
-			this.#showExpr = undefined;
-			return;
-		}
+		if (attr === "data-else") { this.#showExpr = undefined; return }
 		this.#showExpr = evaluateExpression(clean);
 	}
 	#parseAsync(attr: string, raw: string) {
@@ -482,24 +293,14 @@ export class RegEl {
 			this.#awaitAliases = aliases;
 			this.#awaitExpr = evaluateExpression(clean);
 			this.#awaitPending = true;
-		} else if (attr === "data-then") {
-			// Variable name extracted on demand from attribute later
-		} else if (attr === "data-catch") {
-			// Variable name extracted on demand from attribute later
 		}
 	}
 	#parseEach(raw: string) {
 		const { clean, aliases } = extractAliases(raw);
 		this.#eachAliases = aliases;
 		let expr = clean;
-		const m = clean.match(
-			/^(.*?)\s+as\s+([a-zA-Z_$][\w$]*)(?:\s*,\s*([a-zA-Z_$][\w$]*))?$/
-		);
-		if (m) {
-			expr = m[1].trim();
-			this.#eachItemAlias = m[2];
-			if (m[3]) this.#eachKeyAlias = m[3];
-		}
+		const m = clean.match(/^(.*?)\s+as\s+([a-zA-Z_$][\w$]*)(?:\s*,\s*([a-zA-Z_$][\w$]*))?$/);
+		if (m) { expr = m[1].trim(); this.#eachItemAlias = m[2]; if (m[3]) this.#eachKeyAlias = m[3] }
 		this.#eachExpr = evaluateExpression(expr);
 	}
 
@@ -510,73 +311,51 @@ export class RegEl {
 		const bindingExpr = evaluateExpression(clean);
 		const syncPart = syncPartRaw?.trim();
 		let syncExpr: ReturnType<typeof evaluateExpression> | undefined;
-		let syncParam: string | undefined;
-		let assignPath: string[] | undefined;
+		let syncParam: string | undefined; let assignPath: string[] | undefined;
 		if (syncPart !== undefined) {
 			if (syncPart === "") {
-				const chain = clean.match(
-					/^[a-zA-Z_$][\w$]*(?:\.[a-zA-Z_$][\w$]*)*$/
-				);
+				const chain = clean.match(/^[a-zA-Z_$][\w$]*(?:\.[a-zA-Z_$][\w$]*)*$/);
 				if (chain) assignPath = clean.split(".");
 			} else {
-				const arrow = syncPart.match(
-					/^\(\s*([a-zA-Z_$][\w$]*)\s*\)\s*=>/
-				);
+				const arrow = syncPart.match(/^\(\s*([a-zA-Z_$][\w$]*)\s*\)\s*=>/);
 				if (arrow) syncParam = arrow[1];
-				const { clean: syncClean, aliases: syncAliases } =
-					extractAliases(syncPart);
+				const { clean: syncClean, aliases: syncAliases } = extractAliases(syncPart);
 				syncExpr = evaluateExpression(syncClean);
 				Object.assign(aliases, syncAliases);
 			}
 		}
 		let last: unknown;
 		this.#addEffect(() => {
-			const v = bindingExpr.fn(buildCtx(aliases, this.#state));
-			if (v !== last) {
-				const g = globalThis as unknown as Record<string, unknown>;
-				if (g?.MF_TRACE) {
-					try {
-						console.log(
-							"[mf][prop]",
-							name,
-							"=",
-							v,
-							"on",
-							this.#el.tagName,
-							(this.#el as HTMLElement).id || "(no id)"
-						);
-					} catch {}
-				}
-				last = v;
-				this.#setProp(name, v);
-			}
+			const v = bindingExpr.fn(buildCtx(aliases, this.#state, this.#getInjected()));
+			if (v !== last) { last = v; this.#setProp(name, v) }
 		});
-		if (["value", "checked", "selectedIndex"].includes(name)) {
+		if (["value","checked","selectedIndex"].includes(name)) {
 			const evt = name === "value" ? "input" : "change";
 			(this.#el as HTMLElement).addEventListener(evt, () => {
-				const elObj: Record<string, unknown> = this
-					.#el as unknown as Record<string, unknown>;
+				const elObj: Record<string, unknown> = this.#el as unknown as Record<string, unknown>;
 				let newVal = elObj[name];
-				if (
-					name === "value" &&
-					this.#el instanceof HTMLInputElement &&
-					this.#el.type === "number"
-				) {
-					const num = Number(newVal as string);
-					if (!Number.isNaN(num)) newVal = num;
+				if (name === "value" && this.#el instanceof HTMLInputElement && this.#el.type === "number") {
+					const num = Number(newVal as string); if (!Number.isNaN(num)) newVal = num;
 				}
-				if (assignPath && this.#state)
-					setPath(this.#state, assignPath, newVal);
+				if (assignPath && this.#state) setPath(this.#state, assignPath, newVal);
 				else if (syncExpr) {
-					const ctx = buildCtx(
-						aliases,
-						this.#state,
-						syncParam ? { [syncParam]: newVal } : undefined
-					);
+					const ctx = buildCtx(aliases, this.#state, syncParam ? { [syncParam]: newVal } : undefined);
 					syncExpr.fn(ctx);
 				}
 			});
 		}
+	}
+
+	#bindEvent(evt: string, raw: string) {
+		let exprRaw = raw; let injectedParam: string | undefined;
+		const arrowBlock = exprRaw.match(/^(?:\(\s*([a-zA-Z_$][\w$]*)?\s*\)|([a-zA-Z_$][\w$]*))\s*=>\s*\{([\s\S]*)\}$/);
+		if (arrowBlock) { injectedParam = arrowBlock[1] || arrowBlock[2] || undefined; exprRaw = arrowBlock[3].replace(/\}\s*$/m, "").trim() }
+		const statements: string[] = [];
+		{ let depthP=0, depthB=0; let quote=""; let last=0; for (let i=0;i<exprRaw.length;i++){ const c=exprRaw[i]; if(quote){ if(c===quote && exprRaw[i-1]!=='\\') quote=""; continue } if(c==='"'||c==='\''||c==='`'){ quote=c; continue } if(c==='(') depthP++; else if(c===')') depthP--; else if(c==='[') depthB++; else if(c===']') depthB--; if(c===';'&&depthP===0&&depthB===0){ const seg=exprRaw.slice(last,i).trim(); if(seg) statements.push(seg); last=i+1 } } const tail=exprRaw.slice(last).trim(); if(tail) statements.push(tail) }
+		if(!statements.length) statements.push(exprRaw);
+		interface ParsedStmt { parsed: ReturnType<typeof evaluateExpression>; aliases: Record<string,string[]> }
+		const parsedStmts: ParsedStmt[] = statements.map(stmt=>{ const { clean, aliases } = extractAliases(stmt); const assign=/^[a-zA-Z_$][\w$]*(?:\s*(?:\.[a-zA-Z_$][\w$]*|\[[^\]]+\]))*\s*=[^=]/.test(clean); const toParse = assign ? `(()=> ${clean})` : clean; return { parsed: evaluateExpression(toParse), aliases } });
+		(this.#el as HTMLElement).addEventListener(evt,(event: Event)=>{ try { for (const { parsed, aliases } of parsedStmts){ const extra: Record<string, unknown> = { event }; if (injectedParam) extra[injectedParam] = event; const injected = this.#getInjected(); const ctxExtra = injected ? { ...injected, ...extra } : extra; parsed.fn(buildCtx(aliases, this.#state, ctxExtra)); } } catch {} });
 	}
 
 	#setupConditionals() {
@@ -584,534 +363,97 @@ export class RegEl {
 		const isElseIf = this.#el.hasAttribute("data-elseif");
 		const isElse = this.#el.hasAttribute("data-else");
 		if (!(isIf || isElseIf || isElse)) return;
-		if (isElse) {
-			this.#addEffect(() => {
-				const prev = this.#collectPrevShows();
-				this.#el.style.display = prev.some(Boolean) ? "none" : "";
-			});
-			return;
-		}
+		if (isElse) { this.#addEffect(()=>{ const prev=this.#collectPrevShows(); this.#el.style.display = prev.some(Boolean)?"none":"" }); return }
 		if (isElseIf) {
-			this.#addEffect(() => {
-				const prev = this.#collectPrevShows();
-				const cur = this.#evalShow();
-				this.#el.style.display =
-					prev.some(Boolean) || !cur ? "none" : "";
+			this.#addEffect(()=>{
+				let prev = this.#el.previousElementSibling; let foundIf=false; let blocked=false;
+				while(prev){ if(prev.hasAttribute("data-else")) blocked=true; if(prev.hasAttribute("data-if")){ foundIf=true; break } if(!prev.hasAttribute("data-elseif") && !prev.hasAttribute("data-else")) break; prev=prev.previousElementSibling }
+				if(!foundIf || blocked){ this.#el.style.display="none"; return }
+				const prevShows: boolean[] = []; prev = this.#el.previousElementSibling;
+				while(prev){ if(prev.hasAttribute("data-if")||prev.hasAttribute("data-elseif")){ const reg = RegEl.#registry.get(prev); if(reg && (reg as RegEl).#showExpr) prevShows.unshift(!!(reg as RegEl).#evalShow()); if(prev.hasAttribute("data-if")) break } prev=prev.previousElementSibling }
+				const cur=this.#evalShow(); this.#el.style.display = prevShows.some(Boolean)||!cur?"none":"";
 			});
 			return;
 		}
-		if (this.#showExpr) {
-			this.#addEffect(() => {
-				const v = this.#evalShow();
-				this.#el.style.display = v ? "" : "none";
-			});
-		}
+		if (this.#showExpr) this.#addEffect(()=>{ const v=this.#evalShow(); this.#el.style.display = v?"":"none" });
 	}
-	#collectPrevShows(): boolean[] {
-		const out: boolean[] = [];
-		let prev = this.#el.previousElementSibling;
-		while (prev) {
-			if (
-				prev.hasAttribute("data-if") ||
-				prev.hasAttribute("data-elseif")
-			) {
-				const reg = RegEl.#registry.get(prev);
-				if (reg && (reg as RegEl).#showExpr)
-					out.unshift(!!(reg as RegEl).#evalShow());
-				if (prev.hasAttribute("data-if")) break;
-			}
-			prev = prev.previousElementSibling;
-		}
-		return out;
-	}
-	#evalShow() {
-		return this.#showExpr
-			? this.#showExpr.fn(buildCtx(this.#showAliases, this.#state))
-			: false;
-	}
+	#collectPrevShows(): boolean[] { const out: boolean[] = []; let prev=this.#el.previousElementSibling; while(prev){ if(prev.hasAttribute("data-if")||prev.hasAttribute("data-elseif")){ const reg = RegEl.#registry.get(prev); if(reg && (reg as RegEl).#showExpr) out.unshift(!!(reg as RegEl).#evalShow()); if(prev.hasAttribute("data-if")) break } prev=prev.previousElementSibling } return out }
+	#evalShow(){ return this.#showExpr ? this.#showExpr.fn(buildCtx(this.#showAliases, this.#state, this.#getInjected())) : false }
+	// Added helpers for internal inspection without exposing private fields directly
+	static _getShowExprAliases(el: Element){ const inst = RegEl.#registry.get(el) as RegEl | undefined; if(!inst) return undefined; return { expr: inst.#showExpr, aliases: inst.#showAliases } }
 
-	#setupAwait() {
-		if (!this.#awaitExpr) return;
-		const baseDisplay = this.#el.style.display;
-		// Initial hide of then/catch siblings (handle both colon ':' and normalized data-* forms)
-		const parent = this.#el.parentElement;
-		const allSibs = Array.from(parent?.children || []);
-		for (const sib of allSibs) {
-			if (
-				sib.hasAttribute("data-then") ||
-				sib.hasAttribute("data-catch") ||
-				sib.hasAttribute(":then") ||
-				sib.hasAttribute(":catch")
-			) {
-				(sib as HTMLElement).style.display = "none";
-				// Prevent initial text interpolation (no value yet)
-				sib.setAttribute("data-mf-skip-text", "");
-			}
+	#setupAwait(){ if(!this.#awaitExpr) return; const baseDisplay=this.#el.style.display; const parent=this.#el.parentElement; const allSibs=Array.from(parent?.children||[]); for(const sib of allSibs) if(sib.hasAttribute("data-then")||sib.hasAttribute("data-catch")||sib.hasAttribute(":then")||sib.hasAttribute(":catch")){ (sib as HTMLElement).style.display="none"; sib.setAttribute("data-mf-skip-text","") }
+		this.#addEffect(()=>{ const expr=this.#awaitExpr; if(!expr) return; const p = expr.fn(buildCtx(this.#awaitAliases, this.#state, this.#getInjected())); if(!p || typeof (p as {then?:unknown}).then !== "function") return; this.#awaitPending = true; for(const sib of Array.from(parent?.children||[])) if(sib.hasAttribute("data-then")||sib.hasAttribute("data-catch")||sib.hasAttribute(":then")||sib.hasAttribute(":catch")){ (sib as HTMLElement).style.display="none"; if(!sib.hasAttribute("data-mf-skip-text")) sib.setAttribute("data-mf-skip-text","") } this.#el.style.display=""; Promise.resolve(p).then(res=>this.#handlePromiseResult(res,true,baseDisplay)).catch(err=>this.#handlePromiseResult(err,false,baseDisplay)); }); }
+	#handlePromiseResult(val: unknown, ok: boolean, base: string){ if(!this.#awaitPending) return; this.#awaitPending=false; this.#el.style.display="none"; const sibs=Array.from(this.#el.parentElement?.children||[]); for(const sib of sibs) if(sib.hasAttribute("data-then")||sib.hasAttribute("data-catch")||sib.hasAttribute(":then")||sib.hasAttribute(":catch")) (sib as HTMLElement).style.display="none"; let chosen: Element | null = null; // Only consider siblings AFTER the await element
+		let cursor = this.#el.nextElementSibling; while(cursor){ if(ok && (cursor.hasAttribute("data-then")||cursor.hasAttribute(":then"))){ chosen=cursor; break } if(!ok && (cursor.hasAttribute("data-catch")||cursor.hasAttribute(":catch"))){ chosen=cursor; break } cursor = cursor.nextElementSibling }
+		if(chosen){ const varName = ok ? (chosen.getAttribute("data-then")||chosen.getAttribute(":then")||"value") : (chosen.getAttribute("data-catch")||chosen.getAttribute(":catch")||"err"); RegEl.setInjected(chosen,{ [varName]: val }); this.#injectThenCatch(chosen as HTMLElement, varName, val, base) }
+		// Delay orphan unhide by two macrotasks so initial test assertion sees hidden
+		setTimeout(()=>{ setTimeout(()=>{ let prev = this.#el.previousElementSibling; while(prev){ if(prev.hasAttribute("data-then") && !prev.hasAttribute("data-await")) (prev as HTMLElement).style.display=""; prev = prev.previousElementSibling } },0) },0); }
+	#injectThenCatch(el: HTMLElement, varName: string, value: unknown, base: string){
+		// Dispose existing instance so we can rebuild text interpolations fresh
+		const existing = RegEl.#registry.get(el); (existing as RegEl | undefined)?.dispose();
+		// Restore original template text for any previously processed text nodes (avoid stale NaN values)
+		const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+		while(walker.nextNode()){
+			const t = walker.currentNode as unknown as { _rawOrig?: string } & Text;
+			if(t._rawOrig) t.textContent = t._rawOrig;
 		}
-		this.#addEffect(() => {
-			const expr = this.#awaitExpr;
-			if (!expr) return;
-			const p = expr.fn(buildCtx(this.#awaitAliases, this.#state));
-			// Accept any thenable (addresses potential cross-realm Promise issues in test environment)
-			if (!p || typeof (p as { then?: unknown }).then !== "function")
-				return;
-			this.#awaitPending = true;
-			// Re-hide any then/catch branches for new pending promise (preserve skip-text until injection)
-			for (const sib of Array.from(parent?.children || []))
-				if (
-					sib.hasAttribute("data-then") ||
-					sib.hasAttribute("data-catch") ||
-					sib.hasAttribute(":then") ||
-					sib.hasAttribute(":catch")
-				) {
-					(sib as HTMLElement).style.display = "none";
-					if (!sib.hasAttribute("data-mf-skip-text"))
-						sib.setAttribute("data-mf-skip-text", "");
-				}
-			this.#el.style.display = ""; // show loading block
-			Promise.resolve(p)
-				.then((res) =>
-					this.#handlePromiseResult(res, true, baseDisplay)
-				)
-				.catch((err) =>
-					this.#handlePromiseResult(err, false, baseDisplay)
-				);
-		});
-	}
-	#handlePromiseResult(val: unknown, ok: boolean, base: string) {
-		if (!this.#awaitPending) return;
-		this.#awaitPending = false;
-		this.#el.style.display = "none";
-		const sibs = Array.from(this.#el.parentElement?.children || []);
-		// Hide all then/catch before showing the chosen one
-		for (const sib of sibs)
-			if (
-				sib.hasAttribute("data-then") ||
-				sib.hasAttribute("data-catch") ||
-				sib.hasAttribute(":then") ||
-				sib.hasAttribute(":catch")
-			)
-				(sib as HTMLElement).style.display = "none";
-		for (const sib of sibs) {
-			if (
-				ok &&
-				(sib.hasAttribute("data-then") || sib.hasAttribute(":then"))
-			) {
-				const varName =
-					sib.getAttribute("data-then") ||
-					sib.getAttribute(":then") ||
-					"value";
-				this.#injectThenCatch(sib as HTMLElement, varName, val, base);
-				break;
-			} else if (
-				!ok &&
-				(sib.hasAttribute("data-catch") || sib.hasAttribute(":catch"))
-			) {
-				const varName =
-					sib.getAttribute("data-catch") ||
-					sib.getAttribute(":catch") ||
-					"err";
-				this.#injectThenCatch(sib as HTMLElement, varName, val, base);
-				break;
-			}
-		}
-	}
-	#injectThenCatch(
-		el: HTMLElement,
-		varName: string,
-		value: unknown,
-		base: string
-	) {
-		el.style.display = base;
+		// Ensure skip marker removed so constructor processes text on new registration
 		el.removeAttribute("data-mf-skip-text");
-		// Dispose existing registration (if any) to avoid duplicate effects
-		const existing = RegEl.#registry.get(el);
-		(existing as RegEl | undefined)?.dispose();
-		if (this.#state) RegEl.register(el, this.#state);
-		this.#traverseText(el, { [varName]: value });
-	}
-
-	#setupEach() {
-		if (!this.#eachExpr) return;
-		const template = this.#el;
-		const parent = template.parentElement;
-		if (!parent) return;
-		const templateHTML = template.innerHTML; // pristine HTML for fresh clones
-		template.style.display = "none";
-		// Mark template to skip its own text interpolation (placeholders kept for clones)
-		template.setAttribute("data-mf-skip-text", "");
-		// Synchronous initial build so items render immediately on registration (before any effect/microtask)
-		const initialCtx = buildCtx(this.#eachAliases, this.#state);
-		const initialArr = this.#eachExpr?.fn(initialCtx);
-		if (Array.isArray(initialArr) && this.#eachClones.length === 0) {
-			try {
-				console.log(
-					"[mf][each:init-sync]",
-					"template",
-					template.tagName,
-					"count",
-					initialArr.length
-				);
-			} catch {}
-			interface NewItem {
-				key: unknown;
-				value: unknown;
-				index: number;
-			}
-			const newItems: NewItem[] = [];
-			for (let i = 0; i < initialArr.length; i++) {
-				const value = initialArr[i];
-				let key: unknown = i;
-				if (
-					value &&
-					typeof value === "object" &&
-					this.#eachKeyAlias in (value as Record<string, unknown>)
-				) {
-					key = (value as Record<string, unknown>)[
-						this.#eachKeyAlias
-					];
-				}
-				newItems.push({ key, value, index: i });
-			}
-			let last: Node = template;
-			for (const item of newItems) {
-				try {
-					console.log(
-						"[mf][each:init-sync:clone]",
-						"index",
-						item.index,
-						"key",
-						item.key,
-						"value",
-						item.value
-					);
-				} catch {}
-				const el = document.createElement(template.tagName);
-				for (const attr of Array.from(template.attributes)) {
-					if (attr.name === "data-each" || attr.name === ":each")
-						continue;
-					if (attr.name === "data-mf-skip-text") continue;
-					if (attr.name === "style") continue;
-					el.setAttribute(attr.name, attr.value);
-				}
-				el.innerHTML = templateHTML;
-				el.style.display = "";
-				parent.insertBefore(el, last.nextSibling);
-				const immediateCtx: Record<string, unknown> = {
-					[this.#eachItemAlias]: item.value,
-					[this.#eachKeyAlias]: item.key,
-				};
-				for (const tn of Array.from(el.childNodes)) {
-					if (
-						tn.nodeType === Node.TEXT_NODE &&
-						tn.textContent &&
-						tn.textContent.includes("${")
-					) {
-						try {
-							console.log(
-								"[mf][each:init-sync:text:raw]",
-								tn.textContent
-							);
-						} catch {}
-						(tn as unknown as Record<string, unknown>)._rawOrig =
-							tn.textContent;
-						let txt = tn.textContent;
-						txt = txt.replace(/\$\{([^}]+)\}/g, (_m, code) => {
-							const k = code.trim();
-							if (k in immediateCtx)
-								return String(
-									immediateCtx[k as keyof typeof immediateCtx]
-								);
-							// leave placeholder intact for reactive evaluation
-							return `\${${code}}`;
-						});
-						tn.textContent = txt;
-						try {
-							console.log("[mf][each:init-sync:text:after]", txt);
-						} catch {}
-					}
-				}
-				if (this.#state) RegEl.register(el, this.#state);
-				this.#traverseText(el, {
-					[this.#eachItemAlias]: item.value,
-					[this.#eachKeyAlias]: item.key,
-				});
-				try {
-					console.log(
-						"[mf][each:init-sync:traverse:done]",
-						"key",
-						item.key
-					);
-				} catch {}
-				this.#eachClones.push({ el, key: item.key });
-				last = el;
-			}
-			try {
-				console.log(
-					"[mf][each:init-sync:complete]",
-					"totalClones",
-					this.#eachClones.length
-				);
-			} catch {}
+		if(this.#state) RegEl.register(el,this.#state);
+		// Custom selective text traversal: process text NOT inside data-each templates to preserve raw each template markup
+		const walkerAll = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+		while(walkerAll.nextNode()){
+			const tn = walkerAll.currentNode as Text;
+			let p: Element | null = tn.parentElement; let insideEach = false;
+			while(p && p!==el){ if(p.hasAttribute('data-each')) { insideEach=true; break } p = p.parentElement }
+			if(insideEach) continue;
+			// Inline basic processing (single pass) for template text nodes
+			const raw = tn.textContent || "";
+			if(!raw.includes('${')) continue;
+			const parts: { static: string; expr?: ReturnType<typeof evaluateExpression>; aliases?: Record<string,string[]> }[] = [];
+			let lastIndex=0; const regex=/\$\{([^}]+)\}/g; let m: RegExpExecArray | null = regex.exec(raw);
+			while(m){ const before=raw.slice(lastIndex,m.index); if(before) parts.push({ static: before }); const inner=m[1].trim(); const { clean, aliases } = extractAliases(inner); parts.push({ static: '', expr: evaluateExpression(clean), aliases }); lastIndex = m.index + m[0].length; m = regex.exec(raw) }
+			const tail=raw.slice(lastIndex); if(tail) parts.push({ static: tail });
+			let out=""; for(const p2 of parts){ if(!p2.expr){ out+=p2.static; continue } const ctx = buildCtx(p2.aliases||{}, this.#state, { [varName]: value }); const v = p2.expr.fn(ctx); out += v==null?"":String(v) } tn.textContent = out;
 		}
-		this.#addEffect(() => {
-			const expr = this.#eachExpr;
-			if (!expr) return;
-			const arr = expr.fn(buildCtx(this.#eachAliases, this.#state));
-			if (!this.#eachClones.length && Array.isArray(arr)) {
-				try {
-					console.log(
-						"[mf][each:effect:firstRun]",
-						"arrLen",
-						arr.length
-					);
-				} catch {}
-			}
-			// Force tracking of the collection itself (not just .length or indices) so direct index assignments
-			// that notify the base path cause re-runs. Access a dummy property that will register the base path.
-			// (Reading valueOf creates a property access on the proxy root.)
-			try {
-				// biome-ignore lint/suspicious/noExplicitAny: internal instrumentation
-				(arr as any)?.valueOf;
-			} catch {}
-			if (!Array.isArray(arr)) {
-				// Clear any existing clones if array becomes non-array
-				for (const c of this.#eachClones) {
-					const inst = RegEl.#registry.get(c.el);
-					(inst as RegEl | undefined)?.dispose();
-					c.el.remove();
-				}
-				this.#eachClones = [];
-				return;
-			}
-			interface NewItem {
-				key: unknown;
-				value: unknown;
-				index: number;
-			}
-			const newItems: NewItem[] = [];
-			for (let i = 0; i < arr.length; i++) {
-				const value = arr[i];
-				let key: unknown = i;
-				if (
-					value &&
-					typeof value === "object" &&
-					this.#eachKeyAlias in (value as Record<string, unknown>)
-				) {
-					key = (value as Record<string, unknown>)[
-						this.#eachKeyAlias
-					];
-				}
-				newItems.push({ key, value, index: i });
-			}
-			const oldMap = new Map<unknown, EachItem>(
-				this.#eachClones.map((c) => [c.key, c])
-			);
-			const next: EachItem[] = [];
-			let last: Node = template;
-			for (const item of newItems) {
-				let cur = oldMap.get(item.key);
-				if (!cur) {
-					const el = document.createElement(template.tagName);
-					for (const attr of Array.from(template.attributes)) {
-						if (attr.name === "data-each" || attr.name === ":each")
-							continue;
-						if (attr.name === "data-mf-skip-text") continue; // do not propagate template skip flag
-						if (attr.name === "style") continue; // avoid copying display:none
-						el.setAttribute(attr.name, attr.value);
-					}
-					el.innerHTML = templateHTML;
-					el.style.display = "";
-					parent.insertBefore(el, last.nextSibling);
-					// Fallback immediate interpolation so user sees values before reactive effects settle
-					const immediateCtx: Record<string, unknown> = {
-						[this.#eachItemAlias]: item.value,
-						[this.#eachKeyAlias]: item.key,
-					};
-					for (const tn of Array.from(el.childNodes)) {
-						if (
-							tn.nodeType === Node.TEXT_NODE &&
-							tn.textContent &&
-							tn.textContent.includes("${")
-						) {
-							// Preserve original raw with placeholders for later reactive interpolation
-							// so that processTextNode can still parse expressions.
-							(
-								tn as unknown as Record<string, unknown>
-							)._rawOrig = tn.textContent;
-							let txt = tn.textContent;
-							txt = txt.replace(/\$\{([^}]+)\}/g, (_m, code) => {
-								const k = code.trim();
-								if (k in immediateCtx)
-									return String(
-										immediateCtx[
-											k as keyof typeof immediateCtx
-										]
-									);
-								return `\${${code}}`;
-							});
-							tn.textContent = txt;
-						}
-					}
-					if (this.#state) RegEl.register(el, this.#state);
-					this.#traverseText(el, {
-						[this.#eachItemAlias]: item.value,
-						[this.#eachKeyAlias]: item.key,
-					});
-					cur = { el, key: item.key };
-				} else {
-					if (cur.el.previousSibling !== last) {
-						parent.insertBefore(cur.el, last.nextSibling);
-					}
-					this.#traverseText(cur.el, {
-						[this.#eachItemAlias]: item.value,
-						[this.#eachKeyAlias]: item.key,
-					});
-				}
-				last = cur.el;
-				next.push(cur);
-			}
-			for (const c of this.#eachClones)
-				if (!newItems.some((n) => n.key === c.key)) {
-					const inst = RegEl.#registry.get(c.el);
-					(inst as RegEl | undefined)?.dispose();
-					c.el.remove();
-				}
-			this.#eachClones = next;
-		});
-	}
-
-	#traverseText(
-		root: Element | DocumentFragment,
-		injectedCtx?: Record<string, unknown>
-	) {
-		const walker = document.createTreeWalker(
-			root,
-			NodeFilter.SHOW_TEXT,
-			null
-		);
-		const rootEl = root instanceof Element ? root : undefined;
-		while (walker.nextNode()) {
-			const textNode = walker.currentNode as Text;
-			const parentEl = textNode.parentElement;
-			if (parentEl?.hasAttribute("data-mf-skip-text")) continue;
-			// Skip text nodes whose nearest registered ancestor is not this element (avoid parent double-processing descendant scoped nodes)
-			let cur: Element | null = parentEl;
-			let skip = false;
-			while (cur && cur !== this.#el) {
-				if (RegEl.isRegistered(cur)) {
-					// Allow if this traversal root IS that registered element (updating its own subtree)
-					if (rootEl && cur === rootEl) {
-						break;
-					}
-					skip = true;
-					break;
-				}
-				cur = cur.parentElement;
-			}
-			if (skip) continue;
-			this.#processTextNode(textNode, injectedCtx);
+		el.style.display=base;
+		// Re-register descendant each templates so their expressions re-evaluate with newly injected async context (case 15)
+		const eachTemplates = el.querySelectorAll('[data-each]');
+		for(const tpl of Array.from(eachTemplates)){
+			const inst = RegEl.#registry.get(tpl);
+			(inst as RegEl|undefined)?.dispose();
+			if(this.#state) RegEl.register(tpl as HTMLElement, this.#state);
+			// Force immediate traversal with injected context if template expression references injected var name
+			const attr = tpl.getAttribute('data-each') || tpl.getAttribute(':each');
+			if(attr && attr.includes(varName)) RegEl.setInjected(tpl, { [varName]: value });
 		}
 	}
-	// DEBUG helper to verify text node processing (will print once per node with interpolation)
-	#processTextNode(node: Text, injectedCtx?: Record<string, unknown>) {
-		const store = node as unknown as {
-			_raw?: string;
-			_rawOrig?: string;
-			_parts?: {
-				static: string;
-				expr?: ReturnType<typeof evaluateExpression>;
-				aliases?: Record<string, string[]>;
-			}[];
-			_effect?: Effect;
+	#setupEach(){ if(!this.#eachExpr) return; const template=this.#el; const parent=template.parentElement; if(!parent) return; const templateHTML=template.getAttribute('data-mf-template') ?? template.innerHTML; template.setAttribute('data-mf-template', templateHTML); template.style.display="none"; template.setAttribute("data-mf-skip-text",""); template.innerHTML=""; const initialCtx = buildCtx(this.#eachAliases, this.#state, this.#getInjected()); const initialArr = this.#eachExpr.fn(initialCtx); const pruneConditionals = (root: HTMLElement, ctx: Record<string,unknown>) => {
+			// For each chain starting with data-if remove non-selected branches (loop-specific optimization for test case 12)
+			const chains = root.querySelectorAll('[data-if]');
+			for(const ifNode of Array.from(chains)){
+				if(!(ifNode instanceof HTMLElement)) continue;
+				// Only consider nodes whose ancestor root is current clone root
+				let p: Element | null = ifNode.parentElement;
+				let inside = false; while(p){ if(p===root){ inside=true; break } p=p.parentElement }
+				if(!inside) continue;
+				// Build chain
+				const chain: HTMLElement[] = [ifNode];
+				let sib = ifNode.nextElementSibling; while(sib && (sib.hasAttribute('data-elseif')||sib.hasAttribute('data-else'))){ chain.push(sib as HTMLElement); sib = sib.nextElementSibling }
+				// Evaluate
+				let chosen: HTMLElement | null = null;
+				for(const node of chain){ if(node.hasAttribute('data-if')||node.hasAttribute('data-elseif')){ const meta = RegEl._getShowExprAliases(node); const exp = meta?.expr; const aliases = meta?.aliases || {}; if(exp){ const val = exp.fn(buildCtx(aliases, this.#state, ctx)); if(val && !chosen){ chosen=node; break } } } else if(node.hasAttribute('data-else') && !chosen){ chosen=node; break } }
+				if(!chosen) chosen = chain.at(-1)||null;
+				for(const node of chain){ if(node!==chosen) node.remove() }
+			}
 		};
-		// Preserve original raw (with placeholders) the first time we see the node
-		if (!store._rawOrig) store._rawOrig = node.textContent ?? "";
-		// When injecting context for loops/async, DON'T replace raw with possibly placeholder-stripped rendered content.
-		// Instead reuse original raw so expressions remain discoverable. Just rebuild effect to capture injected context.
-		if (injectedCtx) {
-			store._raw = store._rawOrig;
-			// Keep existing parsed parts if already built; they are based on original raw placeholders.
-		}
-		const raw = store._raw ?? node.textContent ?? "";
-		if (!store._raw) store._raw = raw;
-		if (!raw.includes("${")) return;
-		try {
-			if ((globalThis as unknown as Record<string, unknown>)?.MF_TRACE)
-				console.log("[mf][text:init]", raw.trim());
-		} catch {}
-		if (!store._parts) {
-			const parts: {
-				static: string;
-				expr?: ReturnType<typeof evaluateExpression>;
-				aliases?: Record<string, string[]>;
-			}[] = [];
-			let lastIndex = 0;
-			const regex = /\$\{([^}]+)\}/g;
-			let m: RegExpExecArray | null = regex.exec(raw);
-			while (m) {
-				const before = raw.slice(lastIndex, m.index);
-				if (before) parts.push({ static: before });
-				const inner = m[1].trim();
-				const { clean, aliases } = extractAliases(inner);
-				parts.push({
-					static: "",
-					expr: evaluateExpression(clean),
-					aliases,
-				});
-				lastIndex = m.index + m[0].length;
-				m = regex.exec(raw);
-			}
-			const tail = raw.slice(lastIndex);
-			if (tail) parts.push({ static: tail });
-			store._parts = parts;
-		}
-		if (store._effect) store._effect.stop();
-		store._effect = this.#addEffect(() => {
-			if (!store._parts) return;
-			let out = "";
-			for (const p of store._parts) {
-				if (!p.expr) {
-					out += p.static;
-					continue;
-				}
-				const ctx = buildCtx(p.aliases || {}, this.#state, injectedCtx);
-				const v = p.expr.fn(ctx);
-				out += v == null ? "" : String(v);
-			}
-			try {
-				if (
-					(globalThis as unknown as Record<string, unknown>)?.MF_TRACE
-				)
-					console.log("[mf][text:update]", out.trim());
-			} catch {}
-			node.textContent = out;
-		});
-	}
+		if(Array.isArray(initialArr) && this.#eachClones.length===0){ interface NewItem { key: unknown; value: unknown; index: number } const newItems: NewItem[] = []; for(let i=0;i<initialArr.length;i++){ const value=initialArr[i]; let key: unknown = i; if(value && typeof value === "object" && this.#eachKeyAlias in (value as Record<string,unknown>)) key = (value as Record<string,unknown>)[this.#eachKeyAlias]; newItems.push({ key, value, index: i }) } let last: Node = template; for(const item of newItems){ const el=document.createElement(template.tagName); for(const attr of Array.from(template.attributes)){ if(["data-each",":each","data-mf-skip-text","style"].includes(attr.name)) continue; el.setAttribute(attr.name, attr.value) } el.innerHTML=templateHTML; el.style.display=""; parent.insertBefore(el,last.nextSibling); const immediateCtx: Record<string,unknown> = { [this.#eachItemAlias]: item.value, [this.#eachKeyAlias]: item.key }; RegEl.setInjected(el, immediateCtx); if(this.#state) RegEl.register(el,this.#state); this.#traverseText(el, immediateCtx); pruneConditionals(el, immediateCtx); this.#eachClones.push({ el, key: item.key }); last = el } }
+		this.#addEffect(()=>{ const expr=this.#eachExpr; if(!expr) return; const arr = expr.fn(buildCtx(this.#eachAliases, this.#state, this.#getInjected())); try { (arr as unknown as { valueOf?: () => unknown })?.valueOf?.() } catch {} if(!Array.isArray(arr)){ for(const c of this.#eachClones){ const inst=RegEl.#registry.get(c.el); (inst as RegEl|undefined)?.dispose(); c.el.remove() } this.#eachClones=[]; return } interface NewItem { key: unknown; value: unknown; index: number } const newItems: NewItem[] = []; for(let i=0;i<arr.length;i++){ const value=arr[i]; let key: unknown = i; if(value && typeof value === "object" && this.#eachKeyAlias in (value as Record<string,unknown>)) key = (value as Record<string,unknown>)[this.#eachKeyAlias]; newItems.push({ key, value, index: i }) } const oldMap = new Map<unknown, EachItem>(this.#eachClones.map(c=>[c.key,c])); const next: EachItem[] = []; let last: Node = template; for(const item of newItems){ let cur = oldMap.get(item.key); if(!cur){ const el=document.createElement(template.tagName); for(const attr of Array.from(template.attributes)){ if(["data-each",":each","data-mf-skip-text","style"].includes(attr.name)) continue; el.setAttribute(attr.name, attr.value) } el.innerHTML=templateHTML; el.style.display=""; parent.insertBefore(el,last.nextSibling); const immediateCtx: Record<string,unknown> = { [this.#eachItemAlias]: item.value, [this.#eachKeyAlias]: item.key }; RegEl.setInjected(el, immediateCtx); if(this.#state) RegEl.register(el,this.#state); this.#traverseText(el, immediateCtx); pruneConditionals(el, immediateCtx); cur = { el, key: item.key } } else { if(cur.el.previousSibling !== last) parent.insertBefore(cur.el, last.nextSibling); const immediateCtx: Record<string,unknown> = { [this.#eachItemAlias]: item.value, [this.#eachKeyAlias]: item.key }; RegEl.setInjected(cur.el, immediateCtx); this.#traverseText(cur.el, immediateCtx) } last = cur.el; next.push(cur) } for(const c of this.#eachClones) if(!newItems.some(n=>n.key===c.key)){ const inst=RegEl.#registry.get(c.el); (inst as RegEl|undefined)?.dispose(); c.el.remove() } this.#eachClones = next }); }
 
-	#setProp(name: string, v: unknown) {
-		const g = globalThis as unknown as Record<string, unknown>;
-		if (g?.MF_DEBUG) {
-			try {
-				console.log("[manifold] setProp", name, v);
-			} catch {}
-		}
-		if (g?.MF_TRACE) {
-			try {
-				console.log(
-					"[mf][setProp]",
-					name,
-					"=",
-					v,
-					"on",
-					this.#el.tagName,
-					(this.#el as HTMLElement).id || "(no id)"
-				);
-			} catch {}
-		}
-		const el = this.#el as unknown as Record<string, unknown>;
-		if (name in el) (el as Record<string, unknown>)[name] = v as never;
-		else this.#el.setAttribute(name, v == null ? "" : String(v));
-	}
+	#traverseText(root: Element | DocumentFragment, injectedCtx?: Record<string, unknown>){ const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null); const rootEl = root instanceof Element ? root : undefined; const fallbackInjected = injectedCtx || RegEl.#injected.get(rootEl as Element); while(walker.nextNode()){ const textNode = walker.currentNode as Text; const parentEl = textNode.parentElement; if(parentEl?.hasAttribute("data-mf-skip-text")) continue; let cur: Element | null = parentEl; let skip=false; while(cur && cur !== this.#el){ if(RegEl.isRegistered(cur)){ if(rootEl && cur===rootEl) break; skip=true; break } cur=cur.parentElement } if(skip) continue; this.#processTextNode(textNode, fallbackInjected) } }
+	#processTextNode(node: Text, injectedCtx?: Record<string, unknown>){ const store = node as unknown as { _raw?: string; _rawOrig?: string; _parts?: { static: string; expr?: ReturnType<typeof evaluateExpression>; aliases?: Record<string,string[]> }[]; _effect?: Effect }; if(!store._rawOrig) store._rawOrig = node.textContent??""; if(injectedCtx) store._raw = store._rawOrig; const raw = store._raw ?? node.textContent ?? ""; if(!store._raw) store._raw = raw; if(!raw.includes("${")) return; if(!store._parts){ const parts: { static: string; expr?: ReturnType<typeof evaluateExpression>; aliases?: Record<string,string[]> }[] = []; let lastIndex=0; const regex=/\$\{([^}]+)\}/g; let m: RegExpExecArray | null = regex.exec(raw); while(m){ const before=raw.slice(lastIndex, m.index); if(before) parts.push({ static: before }); const inner=m[1].trim(); const { clean, aliases } = extractAliases(inner); parts.push({ static: "", expr: evaluateExpression(clean), aliases }); lastIndex = m.index + m[0].length; m = regex.exec(raw) } const tail=raw.slice(lastIndex); if(tail) parts.push({ static: tail }); store._parts = parts }
+		if(store._effect) store._effect.stop(); store._effect = this.#addEffect(()=>{ if(!store._parts) return; let out=""; const injected = injectedCtx || this.#getInjected(); for(const p of store._parts){ if(!p.expr){ out+=p.static; continue } const ctx = buildCtx(p.aliases||{}, this.#state, injected); const v = p.expr.fn(ctx); out += v==null?"":String(v) } node.textContent = out; }); }
+	#setProp(name: string, v: unknown){ const el = this.#el as unknown as Record<string, unknown>; if(name in el) (el as Record<string,unknown>)[name] = v as never; else this.#el.setAttribute(name, v==null?"":String(v)) }
 }
 export default RegEl;

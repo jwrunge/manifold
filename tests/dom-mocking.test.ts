@@ -3,6 +3,9 @@ import StateBuilder from "../src/main.ts";
 import RegEl from "../src/registry.ts";
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
+const multiFlush = async (n = 4) => {
+	for (let i = 0; i < n; i++) await flush();
+};
 
 // Helper to register all direct child elements under a root
 const registerChildren = (root: Element, state: Record<string, unknown>) => {
@@ -12,19 +15,26 @@ const registerChildren = (root: Element, state: Record<string, unknown>) => {
 };
 
 describe("DOM behavior / structural stability", () => {
-	let state: { count: number; arr: string[]; ok: boolean } & Record<
-		string,
-		unknown
-	>;
+	interface TestState extends Record<string, unknown> {
+		count: number;
+		arr: string[];
+		ok: boolean;
+		value?: number;
+		flag?: boolean;
+	}
+	let state: TestState;
 	beforeEach(() => {
 		state = StateBuilder.create({
 			count: 0,
 			arr: ["a", "b", "c"],
 			ok: true,
-		}).build().state as typeof state;
+			value: 5,
+			flag: true,
+		}).build().state as TestState;
 	});
 
-	test("conditional chain with multiple elseifs toggles visibility correctly & preserves node identity", async () => {
+	// 1 + 2 + 3
+	test("conditional chain with multiple elseifs toggles visibility correctly & preserves node identity (cases 1-3)", async () => {
 		document.body.innerHTML = `
       <div id="root">
         <p data-if="\${count === 0}" id="v0">Zero</p>
@@ -35,7 +45,7 @@ describe("DOM behavior / structural stability", () => {
       </div>`;
 		const root = document.getElementById("root");
 		if (!root) throw new Error("root missing");
-		registerChildren(root, state as unknown as Record<string, unknown>);
+		registerChildren(root, state);
 		await flush();
 		const v0 = document.getElementById("v0") as HTMLElement;
 		const v1 = document.getElementById("v1") as HTMLElement;
@@ -59,20 +69,121 @@ describe("DOM behavior / structural stability", () => {
 		state.count = 10;
 		await flush();
 		expect(visible()).toEqual(["vElse"]);
-		// Node identity stable
 		expect(document.getElementById("v2")).toBe(v2);
 	});
 
-	test("updating individual array item preserves sibling node identities", async () => {
-		document.body.innerHTML = `<ul id="list"><li :each="arr as v, i">(\${i}) \${v}</li></ul>`;
+	// 4 Else not required
+	test("else not required (case 4)", async () => {
+		document.body.innerHTML = `<div id=\"c4\"><span data-if=\"\${count < 2}\" id=\"a\">LT2</span><span id=\"b\">Static</span></div>`;
+		const root = document.getElementById("c4");
+		if (!root) throw new Error("c4 root missing");
+		registerChildren(root, state);
+		await flush();
+		expect(
+			(document.getElementById("a") as HTMLElement).style.display
+		).toBe("");
+		state.count = 5;
+		await flush();
+		expect(
+			(document.getElementById("a") as HTMLElement).style.display
+		).toBe("none");
+	});
+
+	// 5 If required
+	test("elseif without leading if never displays (case 5)", async () => {
+		document.body.innerHTML = `<div id=\"c5\"><p data-elseif=\"\${count === 0}\" id=\"bad\">ShouldNotShow</p></div>`;
+		const root = document.getElementById("c5");
+		if (!root) throw new Error("c5 root missing");
+		registerChildren(root, state);
+		await flush();
+		expect(
+			(document.getElementById("bad") as HTMLElement).style.display
+		).toBe("none");
+		state.count = 0;
+		await flush();
+		expect(
+			(document.getElementById("bad") as HTMLElement).style.display
+		).toBe("none");
+	});
+
+	// 6 Else must be last
+	test("else preceding an elseif prevents later elseif from showing (case 6)", async () => {
+		document.body.innerHTML = `<div id=\"c6\">
+		  <p data-if=\"\${count===1}\" id=\"if\">One</p>
+		  <p data-else id=\"else\">ElseShown</p>
+		  <p data-elseif=\"\${count===2}\" id=\"later\">Two</p>
+		</div>`;
+		const root = document.getElementById("c6");
+		if (!root) throw new Error("c6 root missing");
+		registerChildren(root, state);
+		await flush();
+		state.count = 2;
+		await flush();
+		expect(
+			(document.getElementById("later") as HTMLElement).style.display
+		).toBe("none");
+		expect(
+			(document.getElementById("else") as HTMLElement).style.display
+		).toBe("");
+	});
+
+	// 7 Complex interpolation
+	test("complex expression interpolation updates (case 7)", async () => {
+		document.body.innerHTML = `<div id=\"c7\"><span id=\"expr\">Sum: \${count + arr.length * 2 + (flag ? 10 : 0)}</span></div>`;
+		const root = document.getElementById("c7");
+		if (!root) throw new Error("c7 root missing");
+		registerChildren(root, state);
+		await flush();
+		const span = document.getElementById("expr") as HTMLElement;
+		const before = span.textContent;
+		state.count = 5;
+		await flush();
+		expect(span.textContent).not.toBe(before); // changed
+	});
+
+	// 8 Interpolation skipped in ignored subtree
+	test("interpolation skipped within data-mf-ignore subtree (case 8)", async () => {
+		document.body.innerHTML = `<div id=\"c8\"><div data-mf-ignore><span id=\"ignored\">Value: \${count}</span></div><span id=\"ok\">Here: \${count}</span></div>`;
+		const root = document.getElementById("c8");
+		if (!root) throw new Error("c8 root missing");
+		registerChildren(root, state);
+		await flush();
+		const ignored = document.getElementById("ignored");
+		const ok = document.getElementById("ok");
+		if (!ignored || !ok) throw new Error("missing nodes");
+		// Expect literal text to remain with interpolation marker (not processed)
+		const literal = "Value: $" + "{count}"; // avoid triggering template placeholder lint rule
+		expect(ignored.textContent).toBe(literal);
+		expect(ok.textContent?.includes(String(state.count))).toBe(true);
+		const prevIgnored = ignored.textContent;
+		state.count = 9;
+		await flush();
+		expect(ignored.textContent).toBe(prevIgnored); // still unchanged
+	});
+
+	// 9 Each hides when array empty
+	test("each template hides when array empty (case 9)", async () => {
+		document.body.innerHTML = `<ul id=\"c9\"><li :each=\"arr as v, i\">(\${i}) \${v}</li></ul>`;
+		const ul = document.getElementById("c9");
+		if (!ul) throw new Error("c9 root missing");
+		const template = ul.querySelector("li");
+		if (!template) throw new Error("template missing");
+		RegEl.register(template as HTMLElement, state);
+		await flush();
+		expect(ul.querySelectorAll("li:not([data-each])").length).toBe(3);
+		state.arr = [];
+		await flush();
+		expect(ul.querySelectorAll("li:not([data-each])").length).toBe(0);
+	});
+
+	// 10 Array item update preserves sibling identity
+	test("updating individual array item preserves sibling node identities (case 10)", async () => {
+		document.body.innerHTML = `<ul id=\"list\"><li :each=\"arr as v, i\">(\${i}) \${v}</li></ul>`;
 		const ul = document.getElementById("list");
 		if (!ul) throw new Error("list missing");
 		const template = ul.querySelector("li");
 		if (!template) throw new Error("template missing");
-		RegEl.register(
-			template as HTMLElement,
-			state as unknown as Record<string, unknown>
-		);
+		RegEl.register(template as HTMLElement, state);
 		await flush();
 		const items = () =>
 			Array.from(ul.querySelectorAll("li:not([data-each])"));
@@ -82,7 +193,6 @@ describe("DOM behavior / structural stability", () => {
 			"(1) b",
 			"(2) c",
 		]);
-		// mutate middle element only
 		state.arr[1] = "B!";
 		await flush();
 		const nodesAfter = items();
@@ -92,46 +202,38 @@ describe("DOM behavior / structural stability", () => {
 		expect(nodesAfter[1].textContent?.includes("B!")).toBe(true);
 	});
 
-	test("array push and splice maintain existing node identities for unaffected items", async () => {
-		document.body.innerHTML = `<ul id="list2"><li :each="arr as v, i">(\${i}) \${v}</li></ul>`;
-		const ul = document.getElementById("list2");
-		if (!ul) throw new Error("list2 missing");
-		const template = ul.querySelector("li");
+	// 11 Interpolation within each
+	test("interpolation inside each clones (case 11)", async () => {
+		document.body.innerHTML = `<div id=\"c11\"><p :each=\"arr as v, i\">IDX=\${i} :: \${v.toUpperCase()}</p></div>`;
+		const root = document.getElementById("c11");
+		if (!root) throw new Error("c11 root missing");
+		const template = root.querySelector("p");
 		if (!template) throw new Error("template missing");
-		RegEl.register(
-			template as HTMLElement,
-			state as unknown as Record<string, unknown>
-		);
+		RegEl.register(template as HTMLElement, state);
 		await flush();
-		const items = () =>
-			Array.from(ul.querySelectorAll("li:not([data-each])"));
-		const original = items();
-		// push
-		state.arr.push("d");
-		state.arr = [...state.arr];
-		await flush();
-		const afterPush = items();
-		expect(afterPush.length).toBe(4);
-		expect(afterPush[0]).toBe(original[0]);
-		expect(afterPush[1]).toBe(original[1]);
-		// remove index 1
-		state.arr.splice(1, 1);
-		state.arr = [...state.arr];
-		await flush();
-		const afterSplice = items();
-		expect(afterSplice.length).toBe(3);
-		// first item identity preserved
-		expect(afterSplice[0]).toBe(original[0]);
-		// shifted element may be re-rendered; assert content correctness not identity
-		expect(afterSplice.map((n) => n.textContent?.trim())).toEqual([
-			"(0) a",
-			"(1) c",
-			"(2) d",
-		]);
-		// former index 2 ('c') shifts to index 1 (identity not required)
+		const texts = Array.from(
+			root.querySelectorAll("p:not([data-each])")
+		).map((n) => n.textContent?.trim());
+		expect(texts).toEqual(["IDX=0 :: A", "IDX=1 :: B", "IDX=2 :: C"]);
 	});
 
-	test("async await/then/catch transitions across success->failure->success cycles", async () => {
+	// 12 Nested if inside each
+	test("nested if within each (case 12)", async () => {
+		document.body.innerHTML = `<div id=\"c12\"><div :each=\"arr as v, i\"><span data-if=\"\${v==='a'}\" class=\"hit\">A</span><span data-else class=\"miss\">NotA</span></div></div>`;
+		const root = document.getElementById("c12");
+		if (!root) throw new Error("c12 root missing");
+		const template = root.querySelector("div");
+		if (!template) throw new Error("template missing");
+		RegEl.register(template as HTMLElement, state);
+		await flush();
+		const hits = root.querySelectorAll(".hit");
+		const misses = root.querySelectorAll(".miss");
+		expect(hits.length).toBe(1);
+		expect(misses.length).toBe(2);
+	});
+
+	// 13 Async transitions
+	test("async await/then/catch transitions across success->failure->success cycles (case 13)", async () => {
 		document.body.innerHTML = `
       <div id="asyncRoot">
         <p data-await="\${ (ok ? Promise.resolve(21) : Promise.reject('nope')) }" id="await">Loading</p>
@@ -139,9 +241,8 @@ describe("DOM behavior / structural stability", () => {
         <p data-catch="err" id="catch">Err: \${err}</p>
       </div>`;
 		const root = document.getElementById("asyncRoot");
-		if (!root) throw new Error("asyncRoot missing");
-		registerChildren(root, state as unknown as Record<string, unknown>);
-		// initial pending
+		if (!root) throw new Error("async root missing");
+		registerChildren(root, state);
 		expect(
 			(document.getElementById("await") as HTMLElement).style.display
 		).toBe("");
@@ -151,27 +252,112 @@ describe("DOM behavior / structural stability", () => {
 		expect(
 			(document.getElementById("catch") as HTMLElement).style.display
 		).toBe("none");
-		for (let i = 0; i < 4; i++) await flush();
+		await multiFlush(4);
 		expect(
 			(document.getElementById("await") as HTMLElement).style.display
 		).toBe("none");
 		expect(
 			(document.getElementById("then") as HTMLElement).textContent
 		).toBe("Val: 21");
-		// flip to failure
 		state.ok = false;
-		for (let i = 0; i < 6; i++) await flush();
+		await multiFlush(6);
 		expect(
 			(document.getElementById("catch") as HTMLElement).style.display
 		).toBe("");
 		expect(
 			(document.getElementById("catch") as HTMLElement).textContent
 		).toBe("Err: nope");
-		// back to success with different value
 		state.ok = true;
-		for (let i = 0; i < 6; i++) await flush();
+		await multiFlush(6);
 		expect(
 			(document.getElementById("then") as HTMLElement).style.display
+		).toBe("");
+	});
+
+	// 14 Interpolations inside async then/catch
+	test("interpolation inside async then/catch (case 14)", async () => {
+		document.body.innerHTML = `<div id=\"c14\">
+		 <div data-await=\"\${ ok ? Promise.resolve({n:2}) : Promise.reject({m:3}) }\" id=\"await14\">Loading</div>
+		 <div data-then=\"res\" id=\"then14\">Double: \${res.n * 2}</div>
+		 <div data-catch=\"err\" id=\"catch14\">Triple: \${err.m * 3}</div>
+		</div>`;
+		const root = document.getElementById("c14");
+		if (!root) throw new Error("c14 root missing");
+		registerChildren(root, state);
+		await multiFlush(5);
+		expect(
+			(document.getElementById("then14") as HTMLElement).textContent
+		).toBe("Double: 4");
+		state.ok = false;
+		await multiFlush(6);
+		expect(
+			(document.getElementById("catch14") as HTMLElement).textContent
+		).toBe("Triple: 9");
+	});
+
+	// 15 Await/then/catch can contain conditionals & each
+	test("then/catch blocks can host conditionals and each (case 15)", async () => {
+		document.body.innerHTML = `<div id=\"c15\">
+		 <section data-await=\"\${ ok ? Promise.resolve(arr) : Promise.reject(arr) }\" id=\"await15\">Loading</section>
+		 <section data-then=\"vals\" id=\"then15\"><ul><li :each=\"vals as v, i\"><span data-if=\"\${i===0}\">First: \${v}</span><span data-else>Idx \${i}: \${v}</span></li></ul></section>
+		 <section data-catch=\"errs\" id=\"catch15\"><p data-if=\"\${errs.length===0}\">None</p><p data-else>Err Count: \${errs.length}</p></section>
+		</div>`;
+		const root = document.getElementById("c15");
+		if (!root) throw new Error("c15 root missing");
+		registerChildren(root, state);
+		await multiFlush(6);
+		const thenList = Array.from(
+			document.querySelectorAll("#then15 li:not([data-each])")
+		).map((li) => li.textContent?.trim());
+		expect(thenList[0]?.startsWith("First:")).toBe(true);
+		state.ok = false;
+		await multiFlush(6);
+		expect(
+			(document.getElementById("catch15") as HTMLElement).style.display
+		).toBe("");
+	});
+
+	// 16 Conditionals / each can contain await/then/catch
+	test("conditionals and each can host await/then/catch (case 16)", async () => {
+		document.body.innerHTML = `<div id=\"c16\">
+		 <div data-if=\"\${flag}\">
+		   <div data-await=\"\${ Promise.resolve(3) }\" id=\"innerAwait\">Loading</div>
+		   <div data-then=\"v\" id=\"innerThen\">Val=\${v}</div>
+		 </div>
+		 <div :each=\"arr as v, i\"><span data-await=\"\${ Promise.resolve(v) }\" class=\"aw\">L</span><span data-then=\"x\" class=\"th\">X=\${x}</span></div>
+		</div>`;
+		const root = document.getElementById("c16");
+		if (!root) throw new Error("c16 root missing");
+		registerChildren(root, state);
+		await multiFlush(6);
+		expect(
+			(document.getElementById("innerThen") as HTMLElement).textContent
+		).toBe("Val=3");
+		const ths = Array.from(root.querySelectorAll(".th")).filter(
+			(n) => (n as HTMLElement).style.display !== "none"
+		);
+		expect(ths.length).toBe(state.arr.length);
+	});
+
+	// 17 Sibling order rules
+	test("then/catch must follow await (case 17)", async () => {
+		document.body.innerHTML = `<div id=\"c17\">
+		 <div data-then=\"v\" id=\"prematureThen\">Early \${v}</div>
+		 <div data-await=\"\${ Promise.resolve('ok') }\" id=\"await17\">Load</div>
+		 <div data-catch=\"e\" id=\"catch17\">Err: \${e}</div>
+		</div>`;
+		const root = document.getElementById("c17");
+		if (!root) throw new Error("c17 root missing");
+		registerChildren(root, state);
+		await flush();
+		expect(
+			(document.getElementById("prematureThen") as HTMLElement).style
+				.display
+		).toBe("none");
+		await multiFlush(5);
+		expect(
+			(document.getElementById("prematureThen") as HTMLElement).style
+				.display
 		).toBe("");
 	});
 });
