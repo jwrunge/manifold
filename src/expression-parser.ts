@@ -111,9 +111,17 @@ const evalChain = (
 	const injected = (ctx as Record<string, unknown>).__state as
 		| Record<string, unknown>
 		| undefined;
-	if (ctx && chain.base in ctx)
+	if (ctx && Object.hasOwn(ctx, chain.base))
 		root = (ctx as Record<string, unknown>)[chain.base];
-	else if (injected && chain.base in injected) root = injected[chain.base];
+	else if (injected && Object.hasOwn(injected, chain.base))
+		root = injected[chain.base];
+	else if (
+		typeof globalThis !== "undefined" &&
+		chain.base === "Promise" &&
+		chain.base in (globalThis as Record<string, unknown>)
+	)
+		// Allow only Promise global for async await feature; disallow other globals like Math/Date per tests
+		root = (globalThis as Record<string, unknown>)[chain.base];
 	else root = undefined;
 	let cur = root;
 	let lastObjForCall: unknown;

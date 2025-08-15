@@ -652,7 +652,9 @@ export class RegEl {
 			const expr = this.#awaitExpr;
 			if (!expr) return;
 			const p = expr.fn(buildCtx(this.#awaitAliases, this.#state));
-			if (!(p instanceof Promise)) return;
+			// Accept any thenable (addresses potential cross-realm Promise issues in test environment)
+			if (!p || typeof (p as { then?: unknown }).then !== "function")
+				return;
 			this.#awaitPending = true;
 			// Re-hide any then/catch branches for new pending promise (preserve skip-text until injection)
 			for (const sib of Array.from(parent?.children || []))
@@ -667,11 +669,13 @@ export class RegEl {
 						sib.setAttribute("data-mf-skip-text", "");
 				}
 			this.#el.style.display = ""; // show loading block
-			p.then((res) =>
-				this.#handlePromiseResult(res, true, baseDisplay)
-			).catch((err) =>
-				this.#handlePromiseResult(err, false, baseDisplay)
-			);
+			Promise.resolve(p)
+				.then((res) =>
+					this.#handlePromiseResult(res, true, baseDisplay)
+				)
+				.catch((err) =>
+					this.#handlePromiseResult(err, false, baseDisplay)
+				);
 		});
 	}
 	#handlePromiseResult(val: unknown, ok: boolean, base: string) {
