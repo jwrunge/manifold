@@ -1,4 +1,3 @@
-import babel from "@rollup/plugin-babel";
 import { defineConfig } from "vite";
 
 // Access env safely via globalThis to avoid Node typings in pure ESM TS
@@ -42,24 +41,6 @@ export default defineConfig({
 		rollupOptions: { output: { compact: true } },
 	},
 	plugins: [
-		// Downlevel #private fields/methods so the dist is broadly compatible and minifiable
-		babel({
-			babelHelpers: "bundled",
-			extensions: [".ts"],
-			plugins: [
-				[
-					"@babel/plugin-transform-typescript",
-					{ allowDeclareFields: true },
-				],
-				["@babel/plugin-transform-class-properties", { loose: true }],
-				["@babel/plugin-transform-private-methods", { loose: true }],
-				[
-					"@babel/plugin-transform-private-property-in-object",
-					{ loose: true },
-				],
-			],
-			exclude: /node_modules/,
-		}),
 		{
 			name: "ultra-minify",
 			generateBundle(options, bundle) {

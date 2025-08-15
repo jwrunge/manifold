@@ -795,6 +795,63 @@ export class RegEl {
 			this._getInjected()
 		);
 		const initialArr = this.#eachExpr.fn(initialCtx);
+		// Helpers to reduce duplication in :each
+		const mapItems = (arr: unknown[]) => {
+			interface NI {
+				key: unknown;
+				value: unknown;
+				index: number;
+			}
+			const out: NI[] = [];
+			for (let i = 0; i < arr.length; i++) {
+				const value = arr[i];
+				let key: unknown = i;
+				if (
+					value &&
+					typeof value === "object" &&
+					this.#eachKeyAlias in (value as Record<string, unknown>)
+				)
+					key = (value as Record<string, unknown>)[
+						this.#eachKeyAlias
+					];
+				out.push({ key, value, index: i });
+			}
+			return out;
+		};
+		const makeClone = (
+			last: Node,
+			item: { key: unknown; value: unknown }
+		): EachItem => {
+			const el = document.createElement(template.tagName);
+			for (const attr of Array.from(template.attributes)) {
+				if (
+					[
+						":each",
+						"data-st",
+						"data-mt",
+						"style",
+						"data-each",
+					].includes(attr.name)
+				)
+					continue;
+				el.setAttribute(attr.name, attr.value);
+			}
+			const frag = (
+				eachTemplateCache.get(template) as HTMLTemplateElement
+			).content.cloneNode(true) as DocumentFragment;
+			el.appendChild(frag);
+			el.style.display = "";
+			parent.insertBefore(el, last.nextSibling);
+			const immediateCtx: Record<string, unknown> = {
+				[this.#eachItemAlias]: item.value,
+				[this.#eachKeyAlias]: item.key,
+			};
+			RegEl.setInjected(el, immediateCtx);
+			if (this.#state) RegEl.register(el, this.#state);
+			this._traverseText(el, immediateCtx);
+			pruneConditionals(el, immediateCtx);
+			return { el, key: item.key };
+		};
 		const pruneConditionals = (
 			root: HTMLElement,
 			ctx: Record<string, unknown>
@@ -856,58 +913,12 @@ export class RegEl {
 			}
 		};
 		if (Array.isArray(initialArr) && this.#eachClones.length === 0) {
-			interface NewItem {
-				key: unknown;
-				value: unknown;
-				index: number;
-			}
-			const newItems: NewItem[] = [];
-			for (let i = 0; i < initialArr.length; i++) {
-				const value = initialArr[i];
-				let key: unknown = i;
-				if (
-					value &&
-					typeof value === "object" &&
-					this.#eachKeyAlias in (value as Record<string, unknown>)
-				)
-					key = (value as Record<string, unknown>)[
-						this.#eachKeyAlias
-					];
-				newItems.push({ key, value, index: i });
-			}
+			const newItems = mapItems(initialArr);
 			let last: Node = template;
 			for (const item of newItems) {
-				const el = document.createElement(template.tagName);
-				for (const attr of Array.from(template.attributes)) {
-					if (
-						[
-							":each",
-							"data-st",
-							"data-mt",
-							"style",
-							"data-each",
-						].includes(attr.name)
-					)
-						continue;
-					el.setAttribute(attr.name, attr.value);
-				}
-				// Use cached template clone instead of reparsing innerHTML
-				const frag = (
-					eachTemplateCache.get(template) as HTMLTemplateElement
-				).content.cloneNode(true) as DocumentFragment;
-				el.appendChild(frag);
-				el.style.display = "";
-				parent.insertBefore(el, last.nextSibling);
-				const immediateCtx: Record<string, unknown> = {
-					[this.#eachItemAlias]: item.value,
-					[this.#eachKeyAlias]: item.key,
-				};
-				RegEl.setInjected(el, immediateCtx);
-				if (this.#state) RegEl.register(el, this.#state);
-				this._traverseText(el, immediateCtx);
-				pruneConditionals(el, immediateCtx);
-				this.#eachClones.push({ el, key: item.key });
-				last = el;
+				const cur = makeClone(last, item);
+				this.#eachClones.push(cur);
+				last = cur.el;
 			}
 		}
 		this._addEffect(() => {
@@ -928,25 +939,7 @@ export class RegEl {
 				this.#eachClones = [];
 				return;
 			}
-			interface NewItem {
-				key: unknown;
-				value: unknown;
-				index: number;
-			}
-			const newItems: NewItem[] = [];
-			for (let i = 0; i < arr.length; i++) {
-				const value = arr[i];
-				let key: unknown = i;
-				if (
-					value &&
-					typeof value === "object" &&
-					this.#eachKeyAlias in (value as Record<string, unknown>)
-				)
-					key = (value as Record<string, unknown>)[
-						this.#eachKeyAlias
-					];
-				newItems.push({ key, value, index: i });
-			}
+			const newItems = mapItems(arr);
 			const oldMap = new Map<unknown, EachItem>(
 				this.#eachClones.map((c) => [c.key, c])
 			);
@@ -955,36 +948,7 @@ export class RegEl {
 			for (const item of newItems) {
 				let cur = oldMap.get(item.key);
 				if (!cur) {
-					const el = document.createElement(template.tagName);
-					for (const attr of Array.from(template.attributes)) {
-						if (
-							[
-								":each",
-								"data-st",
-								"data-mt",
-								"style",
-								"data-each",
-							].includes(attr.name)
-						)
-							continue;
-						el.setAttribute(attr.name, attr.value);
-					}
-					// Clone cached template content
-					const frag = (
-						eachTemplateCache.get(template) as HTMLTemplateElement
-					).content.cloneNode(true) as DocumentFragment;
-					el.appendChild(frag);
-					el.style.display = "";
-					parent.insertBefore(el, last.nextSibling);
-					const immediateCtx: Record<string, unknown> = {
-						[this.#eachItemAlias]: item.value,
-						[this.#eachKeyAlias]: item.key,
-					};
-					RegEl.setInjected(el, immediateCtx);
-					if (this.#state) RegEl.register(el, this.#state);
-					this._traverseText(el, immediateCtx);
-					pruneConditionals(el, immediateCtx);
-					cur = { el, key: item.key };
+					cur = makeClone(last, item);
 				} else {
 					if (cur.el.previousSibling !== last)
 						parent.insertBefore(cur.el, last.nextSibling);
