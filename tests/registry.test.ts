@@ -176,8 +176,7 @@ describe("extended registry features", () => {
 	test("builder chaining preserves derived updates (single-state)", async () => {
 		const b = StateBuilder.create({ a: 1 as number })
 			.derive("b", (s) => (s as { a: number }).a + 1)
-			.add("c", 3)
-			.expose();
+			.add("c", 3);
 		const built = b.build().state as { a: number; b: number; c: number };
 		built.a = 5;
 		await flush();
@@ -250,7 +249,8 @@ describe("extended registry features", () => {
 			<div data-mf-register>
 				<span id="bVal">\${b}</span>
 			</div>`;
-		StateBuilder.create().register();
+		// build() auto-registers all [data-mf-register] regions
+		StateBuilder.create().build();
 		await flush();
 		expect(
 			(document.getElementById("aVal") as HTMLElement).textContent

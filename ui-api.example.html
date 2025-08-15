@@ -51,11 +51,11 @@
 		})
 		.build();
 
-	const registerAll = () => {
-		StateBuilder.create().register();
+	const buildAll = () => {
+		StateBuilder.create().build();
 	};
-	if (document.readyState !== "loading") registerAll();
-	else window.addEventListener("DOMContentLoaded", registerAll);
+	if (document.readyState !== "loading") buildAll();
+	else window.addEventListener("DOMContentLoaded", buildAll);
 </script>
 
 <div data-mf-register>

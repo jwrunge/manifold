@@ -54,34 +54,6 @@ class StateBuilder<
 		return e;
 	}
 
-	expose(_name?: string) {
-		return this;
-	}
-
-	register = (container?: HTMLElement | SVGElement | MathMLElement) => {
-		const ensureBuilt = () => {
-			if (!this.#built) this.build();
-			return this.#builtState as TState;
-		};
-		const bind = (el: Element, stateRef: Record<string, unknown>) => {
-			RegEl.register(
-				el as HTMLElement | SVGElement | MathMLElement,
-				stateRef
-			);
-		};
-		if (container) {
-			// Explicit container binding uses this builder's state (build if needed)
-			bind(container, ensureBuilt());
-			return;
-		}
-		// Auto-registration: prefer the first built global state if available
-		const stateToUse =
-			(__globalState as Record<string, unknown>) || ensureBuilt();
-		document
-			.querySelectorAll("[data-mf-register]")
-			.forEach((el) => bind(el, stateToUse));
-	};
-
 	add<K extends string, V>(
 		key: K,
 		value: V,
@@ -125,51 +97,72 @@ class StateBuilder<
 	}
 
 	build() {
-		if (this.#built) {
-			return {
-				state: this.#builtState as TState,
-			};
-		}
-		const state = proxy(this.#scopedState) as TState;
-		for (const [key, deriveFn] of this.#derivations) {
-			let prevVal = (deriveFn as (s: TState) => unknown)(state);
-			(state as Record<string, unknown>)[key] = prevVal;
-			const e = Effect.acquire(() => {
-				const nextVal = (deriveFn as (s: TState) => unknown)(state);
-				if (nextVal === prevVal) return;
-				const bothObjects =
-					prevVal &&
-					nextVal &&
-					typeof prevVal === "object" &&
-					typeof nextVal === "object";
-				if (bothObjects && isEqual(prevVal, nextVal)) return;
-				prevVal = nextVal;
-				(state as Record<string, unknown>)[key] = nextVal;
-			}, false);
-			e.run();
-		}
-		for (const [key, fn] of Object.entries(this.#scopedFuncs)) {
-			(state as Record<string, unknown>)[key] = ((...args: unknown[]) =>
-				(fn as (...a: unknown[]) => unknown).apply(
-					state,
-					args
-				)) as unknown as TState[Extract<keyof TState, string>];
-		}
-		this.#builtState = state;
-		this.#built = true;
-		// Preserve/refresh the global app state pointer:
-		// - In normal envs, set once (single-state model)
-		// - In test env, always refresh so tests can build isolated states
-		const penv = (
-			globalThis as unknown as {
-				process?: { env?: { NODE_ENV?: string } };
+		let state: TState;
+		if (!this.#built) {
+			state = proxy(this.#scopedState) as TState;
+			for (const [key, deriveFn] of this.#derivations) {
+				let prevVal = (deriveFn as (s: TState) => unknown)(state);
+				(state as Record<string, unknown>)[key] = prevVal;
+				const e = Effect.acquire(() => {
+					const nextVal = (deriveFn as (s: TState) => unknown)(state);
+					if (nextVal === prevVal) return;
+					const bothObjects =
+						prevVal &&
+						nextVal &&
+						typeof prevVal === "object" &&
+						typeof nextVal === "object";
+					if (bothObjects && isEqual(prevVal, nextVal)) return;
+					prevVal = nextVal;
+					(state as Record<string, unknown>)[key] = nextVal;
+				}, false);
+				e.run();
 			}
-		).process?.env;
-		const env = penv?.NODE_ENV;
-		if (env === "test") {
-			__globalState = state as unknown as Record<string, unknown>;
-		} else if (!__globalState) {
-			__globalState = state as unknown as Record<string, unknown>;
+			for (const [key, fn] of Object.entries(this.#scopedFuncs)) {
+				(state as Record<string, unknown>)[key] = ((
+					...args: unknown[]
+				) =>
+					(fn as (...a: unknown[]) => unknown).apply(
+						state,
+						args
+					)) as unknown as TState[Extract<keyof TState, string>];
+			}
+			this.#builtState = state;
+			this.#built = true;
+			// Preserve/refresh the global app state pointer:
+			// - In normal envs, set once (single-state model)
+			// - In test env, always refresh so tests can build isolated states
+			const penv = (
+				globalThis as unknown as {
+					process?: { env?: { NODE_ENV?: string } };
+				}
+			).process?.env;
+			const env = penv?.NODE_ENV;
+			if (env === "test") {
+				// In tests, keep the first non-empty state as global unless none exists yet
+				const isEmpty =
+					!state ||
+					Object.keys(state as Record<string, unknown>).length === 0;
+				if (!__globalState || !isEmpty) {
+					__globalState = state as unknown as Record<string, unknown>;
+				}
+			} else if (!__globalState) {
+				__globalState = state as unknown as Record<string, unknown>;
+			}
+		} else {
+			state = this.#builtState as TState;
+		}
+		// Auto-register on build: bind all [data-mf-register] regions to the first global state (or this one)
+		const stateToUse =
+			(__globalState as Record<string, unknown>) ||
+			(state as unknown as Record<string, unknown>);
+		if (typeof document !== "undefined") {
+			const nodes = document.querySelectorAll("[data-mf-register]");
+			nodes.forEach((el) =>
+				RegEl.register(
+					el as HTMLElement | SVGElement | MathMLElement,
+					stateToUse
+				)
+			);
 		}
 		return { state } as { state: TState };
 	}

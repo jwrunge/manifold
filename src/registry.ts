@@ -83,10 +83,6 @@ const STATE_SYM = Symbol.for("m.s");
 // Each-loop template cache (pre-parsed DOM for inner HTML)
 const eachTemplateCache = new WeakMap<Element, HTMLTemplateElement>();
 
-// Track first registered state to alert on multiple distinct states (dev-only)
-let __gState: Record<string, unknown> | undefined;
-let __gWarned = false;
-
 export class RegEl {
 	static #registry = new WeakMap<Element, RegEl>();
 	static #injected = new WeakMap<Element, Record<string, unknown>>();
@@ -97,24 +93,6 @@ export class RegEl {
 		el: HTMLElement | SVGElement | MathMLElement,
 		state: Record<string, unknown>
 	) {
-		if (!__gState) __gState = state;
-		else if (__gState !== state && !__gWarned) {
-			// Dev-only warning; suppressed in test/prod
-			const penv = (
-				globalThis as unknown as {
-					process?: { env?: { NODE_ENV?: string } };
-				}
-			).process?.env;
-			const env = penv?.NODE_ENV;
-			if (env !== "production" && env !== "test") {
-				try {
-					console.warn(
-						"Multiple states detected: Manifold favors a single app state; registering different states may be unsupported."
-					);
-				} catch {}
-			}
-			__gWarned = true;
-		}
 		const existing = RegEl.#registry.get(el);
 		return existing || new RegEl(el, state);
 	}
@@ -258,59 +236,62 @@ export class RegEl {
 	_processAttributes() {
 		for (const attr of Array.from(this.#el.attributes)) {
 			const { name, value } = attr;
-			if (name.startsWith(":")) {
-				const bindName = name.slice(1);
-				if (
-					[
-						"if",
-						"elseif",
-						"else",
-						"await",
-						"then",
-						"catch",
-						"each",
-					].includes(bindName)
-				) {
-					const mapped = `data-${bindName}`;
-					if (
-						["if", "elseif"].includes(bindName) &&
-						!this.#el.hasAttribute(mapped)
-					)
-						this.#el.setAttribute(mapped, `\${${value.trim()}}`);
-					if (bindName === "else" && !this.#el.hasAttribute(mapped))
-						this.#el.setAttribute(mapped, "");
-					if (
-						bindName === "each" &&
-						!this.#el.hasAttribute("data-each")
-					)
-						this.#el.setAttribute(
-							"data-each",
-							`\${${value.trim()}}`
-						);
-					if (["if", "elseif", "else"].includes(bindName))
-						this._parseShow(mapped, value.trim());
-					else if (["await", "then", "catch"].includes(bindName))
-						this._parseAsync(mapped, value.trim());
-					else if (bindName === "each") {
-						this._parseEach(value.trim());
-						for (const child of Array.from(this.#el.children))
-							if (this.#state)
-								RegEl.register(
-									child as HTMLElement,
-									this.#state
-								);
-					}
-					continue;
-				}
+			if (!name.startsWith(":")) continue;
+			const bindName = name.slice(1);
+			if (
+				![
+					"if",
+					"elseif",
+					"else",
+					"await",
+					"then",
+					"catch",
+					"each",
+				].includes(bindName)
+			) {
+				// Generic colon binding: property or event
 				if (bindName.startsWith("on")) {
-					this._bindEvent(bindName.slice(2), value.trim());
-					continue;
+					const evt = bindName.slice(2);
+					this._bindEvent(evt, value);
+				} else {
+					this._bindProp(bindName, value);
 				}
-				this._bindProp(bindName, value.trim());
+				continue;
+			}
+			const mapped = `data-${bindName}`;
+			if (
+				(bindName === "if" || bindName === "elseif") &&
+				!this.#el.hasAttribute(mapped)
+			) {
+				this.#el.setAttribute(mapped, `\${${value.trim()}}`);
+			}
+			if (bindName === "else" && !this.#el.hasAttribute(mapped)) {
+				this.#el.setAttribute(mapped, "");
+			}
+			if (bindName === "each" && !this.#el.hasAttribute("data-each")) {
+				this.#el.setAttribute("data-each", `\${${value.trim()}}`);
+			}
+			if (
+				bindName === "if" ||
+				bindName === "elseif" ||
+				bindName === "else"
+			) {
+				this._parseShow(mapped, value.trim());
+			} else if (
+				bindName === "await" ||
+				bindName === "then" ||
+				bindName === "catch"
+			) {
+				this._parseAsync(mapped, value.trim());
+			} else if (bindName === "each") {
+				this._parseEach(value.trim());
+				for (const child of Array.from(this.#el.children)) {
+					if (this.#state)
+						RegEl.register(child as HTMLElement, this.#state);
+				}
 			}
 		}
 	}
-
 	_parseShow(attr: string, raw: string) {
 		const { clean, aliases } = extractAliases(raw);
 		this.#showAliases = aliases;
