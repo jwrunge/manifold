@@ -1,4 +1,5 @@
 import { Effect, type EffectDependency } from "./Effect.ts";
+import isEqual from "./equality.ts";
 import proxy from "./proxy.ts";
 import RegEl from "./registry.ts";
 
@@ -6,7 +7,7 @@ export type StateConstraint = Record<string, unknown>;
 export type FuncsConstraint = Record<string, (...args: never[]) => unknown>;
 
 const effect = (fn: EffectDependency) => {
-	const e = new Effect(fn);
+	const e = Effect.acquire(fn, { ephemeral: false });
 	e.run();
 	return e;
 };
@@ -218,13 +219,21 @@ class StateBuilder<
 		}
 		const state = proxy(this.#scopedState) as TState;
 		for (const [key, deriveFn] of this.#derivations) {
-			(state as Record<string, unknown>)[key] = (
-				deriveFn as (s: TState) => unknown
-			)(state);
+			// Initial compute
+			let prevVal = (deriveFn as (s: TState) => unknown)(state);
+			(state as Record<string, unknown>)[key] = prevVal;
+			// Reactive recompute with stabilization (skip redundant deep-equal writes)
 			effect(() => {
-				(state as Record<string, unknown>)[key] = (
-					deriveFn as (s: TState) => unknown
-				)(state);
+				const nextVal = (deriveFn as (s: TState) => unknown)(state);
+				if (nextVal === prevVal) return;
+				const bothObjects =
+					prevVal &&
+					nextVal &&
+					typeof prevVal === "object" &&
+					typeof nextVal === "object";
+				if (bothObjects && isEqual(prevVal, nextVal)) return;
+				prevVal = nextVal;
+				(state as Record<string, unknown>)[key] = nextVal;
 			});
 		}
 		if (this.#name) {

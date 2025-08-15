@@ -3,7 +3,7 @@ import evaluateExpression from "./expression-parser.ts";
 
 // Lightweight effect helper
 const runEffect = (fn: () => void) => {
-	const e = new Effect(fn);
+	const e = Effect.acquire(fn, { ephemeral: true });
 	e.run();
 	return e;
 };
@@ -95,6 +95,9 @@ interface EachItem {
 }
 
 const STATE_SYM = Symbol.for("mf.state");
+
+// Each-loop template cache (pre-parsed DOM for inner HTML)
+const eachTemplateCache = new WeakMap<Element, HTMLTemplateElement>();
 
 export class RegEl {
 	static #registry = new WeakMap<Element, RegEl>();
@@ -873,7 +876,7 @@ export class RegEl {
 			// Force immediate traversal with injected context if template expression references injected var name
 			const attr =
 				tpl.getAttribute("data-each") || tpl.getAttribute(":each");
-			if (attr && attr.includes(varName))
+			if (attr?.includes(varName))
 				RegEl.setInjected(tpl, { [varName]: value });
 		}
 	}
@@ -888,6 +891,13 @@ export class RegEl {
 		template.style.display = "none";
 		template.setAttribute("data-mf-skip-text", "");
 		template.innerHTML = "";
+		// Initialize cache entry if missing
+		let cachedTpl = eachTemplateCache.get(template);
+		if (!cachedTpl) {
+			cachedTpl = document.createElement("template");
+			cachedTpl.innerHTML = templateHTML;
+			eachTemplateCache.set(template, cachedTpl);
+		}
 		const initialCtx = buildCtx(
 			this.#eachAliases,
 			this.#state,
@@ -989,7 +999,11 @@ export class RegEl {
 						continue;
 					el.setAttribute(attr.name, attr.value);
 				}
-				el.innerHTML = templateHTML;
+				// Use cached template clone instead of reparsing innerHTML
+				const frag = (
+					eachTemplateCache.get(template) as HTMLTemplateElement
+				).content.cloneNode(true) as DocumentFragment;
+				el.appendChild(frag);
 				el.style.display = "";
 				parent.insertBefore(el, last.nextSibling);
 				const immediateCtx: Record<string, unknown> = {
@@ -1062,7 +1076,11 @@ export class RegEl {
 							continue;
 						el.setAttribute(attr.name, attr.value);
 					}
-					el.innerHTML = templateHTML;
+					// Clone cached template content
+					const frag = (
+						eachTemplateCache.get(template) as HTMLTemplateElement
+					).content.cloneNode(true) as DocumentFragment;
+					el.appendChild(frag);
 					el.style.display = "";
 					parent.insertBefore(el, last.nextSibling);
 					const immediateCtx: Record<string, unknown> = {
