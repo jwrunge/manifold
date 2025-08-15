@@ -1,29 +1,49 @@
 import { defineConfig } from "vite";
 
-// Conditional console stripping: enable full logging when MF_DEBUG_BUILD=1
-// Access via globalThis to avoid needing Node typings
+// Access env safely via globalThis to avoid Node typings in pure ESM TS
 // biome-ignore lint/suspicious/noExplicitAny: env access
-const debugBuild = !!(globalThis as any).process?.env?.MF_DEBUG_BUILD;
+const env = (globalThis as any).process?.env || {};
+const debugBuild = !!env.MF_DEBUG_BUILD;
+const isLight = !!env.MF_LIGHT;
+
+// Allow limiting formats: MF_FORMAT=es | umd | es,umd (default both)
+let formats: ("es" | "umd")[] = ["es", "umd"];
+if (env.MF_FORMAT) {
+	const parts = String(env.MF_FORMAT)
+		.split(/[\s,]+/)
+		.filter(Boolean) as ("es" | "umd")[];
+	if (parts.length) formats = parts;
+}
 
 export default defineConfig({
-	define: { __MF_LIGHT__: "false" },
+	define: { __MF_LIGHT__: JSON.stringify(String(isLight)) },
+	resolve: isLight
+		? {
+				alias: {
+					"./expression-runtime.ts": "./expression-runtime.light.ts",
+				},
+		  }
+		: undefined,
 	build: {
 		minify: "esbuild",
 		lib: {
 			entry: "src/main.ts",
 			name: "Manifold",
-			fileName: (format) => `manifold.${format}.js`,
+			fileName: (format) =>
+				isLight
+					? `manifold.light.${format}.js`
+					: `manifold.${format}.js`,
+			formats,
 		},
-		rollupOptions: {
-			output: { compact: false },
-		},
+		// Keep default emptyOutDir behaviour unless user explicitly disables it
+		emptyOutDir: env.MF_EMPTY_OUT_DIR === "false" ? false : undefined,
+		rollupOptions: { output: { compact: isLight } },
 	},
 	esbuild: {
-		minifyIdentifiers: !debugBuild,
-		minifySyntax: !debugBuild,
-		minifyWhitespace: !debugBuild,
+		minifyIdentifiers: isLight ? true : !debugBuild,
+		minifySyntax: isLight ? true : !debugBuild,
+		minifyWhitespace: isLight ? true : !debugBuild,
 		legalComments: "none",
-		// Temporarily disable removal of console to aid debugging
 		pure: [],
 		drop: [],
 		target: "es2022",

@@ -6,12 +6,6 @@ import RegEl from "./registry.ts";
 export type StateConstraint = Record<string, unknown>;
 export type FuncsConstraint = Record<string, (...args: never[]) => unknown>;
 
-const effect = (fn: EffectDependency) => {
-	const e = Effect.acquire(fn, false);
-	e.run();
-	return e;
-};
-
 type AnyStateBuilder = StateBuilder<
 	Record<string, unknown>,
 	Record<string, (...args: never[]) => unknown>
@@ -73,7 +67,9 @@ class StateBuilder<
 	}
 
 	static effect(fn: EffectDependency) {
-		return effect(fn);
+		const e = Effect.acquire(fn, false);
+		e.run();
+		return e;
 	}
 
 	expose(_name?: string) {
@@ -199,7 +195,7 @@ class StateBuilder<
 		);
 	}
 
-	build() {
+	build(_local?: boolean) {
 		if (this.#built) {
 			return {
 				state: this.#builtState as TState,
@@ -210,7 +206,7 @@ class StateBuilder<
 		for (const [key, deriveFn] of this.#derivations) {
 			let prevVal = (deriveFn as (s: TState) => unknown)(state);
 			(state as Record<string, unknown>)[key] = prevVal;
-			effect(() => {
+			const e = Effect.acquire(() => {
 				const nextVal = (deriveFn as (s: TState) => unknown)(state);
 				if (nextVal === prevVal) return;
 				const bothObjects =
@@ -221,7 +217,8 @@ class StateBuilder<
 				if (bothObjects && isEqual(prevVal, nextVal)) return;
 				prevVal = nextVal;
 				(state as Record<string, unknown>)[key] = nextVal;
-			});
+			}, false);
+			e.run();
 		}
 		if (this.#name) {
 			const named = namedStores.get(this.#name);

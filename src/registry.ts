@@ -1,31 +1,7 @@
 import { Effect } from "./Effect.ts";
 import evaluateExpression from "./expression-runtime.ts";
 
-// Lightweight effect helper
-const runEffect = (fn: () => void) => {
-	const e = Effect.acquire(fn, true);
-	e.run();
-	return e;
-};
-
-// Path helpers
-const getPath = (obj: unknown, path: string[]): unknown => {
-	let cur: unknown = obj;
-	for (const k of path) {
-		if (cur == null || typeof cur !== "object") return undefined;
-		cur = (cur as Record<string, unknown>)[k];
-	}
-	return cur;
-};
-const setPath = (obj: unknown, path: string[], value: unknown) => {
-	let cur: unknown = obj;
-	for (let i = 0; i < path.length - 1; i++) {
-		if (cur == null || typeof cur !== "object") return;
-		cur = (cur as Record<string, unknown>)[path[i]];
-	}
-	if (cur && typeof cur === "object")
-		(cur as Record<string, unknown>)[path[path.length - 1]] = value;
-};
+// (Inlined previously standalone helpers: runEffect, getPath, setPath)
 
 // Alias extraction
 interface ParsedExprMeta {
@@ -76,7 +52,16 @@ const buildCtx = (
 			// Fallback: attempt state first
 			base = stateRef;
 		}
-		ctx[alias] = getPath(base, path);
+		// Inline getPath(base, path)
+		let cur: unknown = base;
+		for (const k of path) {
+			if (cur == null || typeof cur !== "object") {
+				cur = undefined;
+				break;
+			}
+			cur = (cur as Record<string, unknown>)[k];
+		}
+		ctx[alias] = cur;
 	}
 	ctx.__state = stateRef;
 	return ctx;
@@ -88,6 +73,14 @@ const isConditionalAttr = (n: string) =>
 const isAsyncAttr = (n: string) =>
 	n === "data-await" || n === "data-then" || n === "data-catch";
 const isEachAttr = (n: string) => n === "data-each";
+// Common predicate helpers to reduce repetition
+const hasThen = (el: Element) =>
+	el.hasAttribute("data-then") || el.hasAttribute(":then");
+const hasCatch = (el: Element) =>
+	el.hasAttribute("data-catch") || el.hasAttribute(":catch");
+const hasAwait = (el: Element) =>
+	el.hasAttribute("data-await") || el.hasAttribute(":await");
+const hasThenOrCatch = (el: Element) => hasThen(el) || hasCatch(el);
 
 interface EachItem {
 	el: HTMLElement;
@@ -194,22 +187,9 @@ export class RegEl {
 		this.#setupAwait();
 		this.#setupEach();
 		// Orphan then/catch must hide before any text traversal for test determinism
-		if (
-			(this.#el.hasAttribute("data-then") ||
-				this.#el.hasAttribute(":then") ||
-				this.#el.hasAttribute("data-catch") ||
-				this.#el.hasAttribute(":catch")) &&
-			!this.#hasPrevAwait()
-		) {
-			(this.#el as HTMLElement).style.display = "none";
-		}
+		this.#hideIfOrphanThenCatch();
 		// Defer text interpolation for any then/catch until promise resolution to avoid early NaN (cases 14/15)
-		if (
-			this.#el.hasAttribute("data-then") ||
-			this.#el.hasAttribute("data-catch") ||
-			this.#el.hasAttribute(":then") ||
-			this.#el.hasAttribute(":catch")
-		) {
+		if (hasThenOrCatch(this.#el)) {
 			// Only skip if no injected context already present (i.e., initial registration before await resolves)
 			if (!RegEl.#injected.has(this.#el)) {
 				if (!this.#el.hasAttribute("data-mf-skip-text"))
@@ -260,38 +240,16 @@ export class RegEl {
 		// If this is a then/catch with injected context already available, traverse with that context immediately.
 		const existingInjected = RegEl.#injected.get(this.#el);
 		if (!this.#el.hasAttribute("data-mf-skip-text")) {
-			if (
-				existingInjected &&
-				(this.#el.hasAttribute("data-then") ||
-					this.#el.hasAttribute("data-catch") ||
-					this.#el.hasAttribute(":then") ||
-					this.#el.hasAttribute(":catch"))
-			) {
+			if (existingInjected && hasThenOrCatch(this.#el)) {
 				this.#traverseText(this.#el, existingInjected);
 			} else {
 				this.#traverseText(this.#el);
 			}
 		}
 		// Reinforce orphan then hide after setups (in case attribute manipulation occurred)
-		if (this.#el.hasAttribute("data-then") && !this.#hasPrevAwait())
-			(this.#el as HTMLElement).style.display =
-				(this.#el as HTMLElement).style.display || "none";
-		// Final safeguard (case 17) to ensure orphan then/catch hidden even if earlier logic missed
-		if (
-			(this.#el.hasAttribute("data-then") ||
-				this.#el.hasAttribute("data-catch")) &&
-			!this.#hasPrevAwait()
-		) {
-			(this.#el as HTMLElement).style.display = "none";
-		}
-		// If element is a then/catch without preceding await, guarantee hidden state now.
-		if (
-			!this.#hasPrevAwait() &&
-			(this.#el.hasAttribute("data-then") ||
-				this.#el.hasAttribute("data-catch"))
-		) {
-			this.#el.style.display = "none";
-		}
+		this.#hideIfOrphanThenCatch(true);
+		// Final safeguard to ensure orphan then/catch hidden even if earlier logic missed
+		this.#hideIfOrphanThenCatch();
 	}
 
 	// Public debugging / reprocessing helper
@@ -311,19 +269,22 @@ export class RegEl {
 	#hasPrevAwait() {
 		let prev = this.#el.previousElementSibling;
 		while (prev) {
-			if (prev.hasAttribute("data-await") || prev.hasAttribute(":await"))
-				return true;
+			if (hasAwait(prev)) return true;
 			// If we encounter another then/catch before any await, treat as chain start barrier
-			if (
-				prev.hasAttribute("data-then") ||
-				prev.hasAttribute("data-catch") ||
-				prev.hasAttribute(":then") ||
-				prev.hasAttribute(":catch")
-			)
-				return false;
+			if (hasThenOrCatch(prev)) return false;
 			prev = prev.previousElementSibling;
 		}
 		return false;
+	}
+
+	// Helper: hide current element if it's a then/catch without a preceding await
+	#hideIfOrphanThenCatch(preserveExisting = false) {
+		if (hasThenOrCatch(this.#el) && !this.#hasPrevAwait()) {
+			const el = this.#el as HTMLElement;
+			el.style.display = preserveExisting
+				? el.style.display || "none"
+				: "none";
+		}
 	}
 	dispose() {
 		for (const e of this.#effects) e.stop();
@@ -331,7 +292,9 @@ export class RegEl {
 		RegEl.#registry.delete(this.#el);
 	}
 	#addEffect(fn: () => void) {
-		const e = runEffect(fn);
+		// Inline runEffect(fn)
+		const e = Effect.acquire(fn, true);
+		e.run();
 		this.#effects.push(e);
 		return e;
 	}
@@ -498,9 +461,18 @@ export class RegEl {
 					const num = Number(newVal as string);
 					if (!Number.isNaN(num)) newVal = num;
 				}
-				if (assignPath && this.#state)
-					setPath(this.#state, assignPath, newVal);
-				else if (syncExpr) {
+				if (assignPath && this.#state) {
+					// Inline setPath(this.#state, assignPath, newVal)
+					let cur: unknown = this.#state;
+					for (let i = 0; i < assignPath.length - 1; i++) {
+						if (cur == null || typeof cur !== "object") return;
+						cur = (cur as Record<string, unknown>)[assignPath[i]];
+					}
+					if (cur && typeof cur === "object")
+						(cur as Record<string, unknown>)[
+							assignPath[assignPath.length - 1]
+						] = newVal;
+				} else if (syncExpr) {
 					const ctx = buildCtx(
 						aliases,
 						this.#state,
@@ -679,17 +651,7 @@ export class RegEl {
 		if (!this.#awaitExpr) return;
 		const baseDisplay = this.#el.style.display;
 		const parent = this.#el.parentElement;
-		const allSibs = Array.from(parent?.children || []);
-		for (const sib of allSibs)
-			if (
-				sib.hasAttribute("data-then") ||
-				sib.hasAttribute("data-catch") ||
-				sib.hasAttribute(":then") ||
-				sib.hasAttribute(":catch")
-			) {
-				(sib as HTMLElement).style.display = "none";
-				sib.setAttribute("data-mf-skip-text", "");
-			}
+		this.#hideThenCatchSiblings(parent, true);
 		this.#addEffect(() => {
 			const expr = this.#awaitExpr;
 			if (!expr) return;
@@ -699,17 +661,7 @@ export class RegEl {
 			if (!p || typeof (p as { then?: unknown }).then !== "function")
 				return;
 			this.#awaitPending = true;
-			for (const sib of Array.from(parent?.children || []))
-				if (
-					sib.hasAttribute("data-then") ||
-					sib.hasAttribute("data-catch") ||
-					sib.hasAttribute(":then") ||
-					sib.hasAttribute(":catch")
-				) {
-					(sib as HTMLElement).style.display = "none";
-					if (!sib.hasAttribute("data-mf-skip-text"))
-						sib.setAttribute("data-mf-skip-text", "");
-				}
+			this.#hideThenCatchSiblings(parent, true);
 			this.#el.style.display = "";
 			Promise.resolve(p)
 				.then((res) =>
@@ -724,31 +676,15 @@ export class RegEl {
 		if (!this.#awaitPending) return;
 		this.#awaitPending = false;
 		this.#el.style.display = "none";
-		const sibs = Array.from(this.#el.parentElement?.children || []);
-		for (const sib of sibs)
-			if (
-				sib.hasAttribute("data-then") ||
-				sib.hasAttribute("data-catch") ||
-				sib.hasAttribute(":then") ||
-				sib.hasAttribute(":catch")
-			)
-				(sib as HTMLElement).style.display = "none";
+		this.#hideThenCatchSiblings(this.#el.parentElement, false);
 		let chosen: Element | null = null; // Only consider siblings AFTER the await element
 		let cursor = this.#el.nextElementSibling;
 		while (cursor) {
-			if (
-				ok &&
-				(cursor.hasAttribute("data-then") ||
-					cursor.hasAttribute(":then"))
-			) {
+			if (ok && hasThen(cursor)) {
 				chosen = cursor;
 				break;
 			}
-			if (
-				!ok &&
-				(cursor.hasAttribute("data-catch") ||
-					cursor.hasAttribute(":catch"))
-			) {
+			if (!ok && hasCatch(cursor)) {
 				chosen = cursor;
 				break;
 			}
@@ -770,15 +706,22 @@ export class RegEl {
 			setTimeout(() => {
 				let prev = this.#el.previousElementSibling;
 				while (prev) {
-					if (
-						prev.hasAttribute("data-then") &&
-						!prev.hasAttribute("data-await")
-					)
+					if (hasThen(prev) && !hasAwait(prev))
 						(prev as HTMLElement).style.display = "";
 					prev = prev.previousElementSibling;
 				}
 			}, 0);
 		}, 0);
+	}
+
+	// Helper: hide all then/catch siblings around an await element
+	#hideThenCatchSiblings(parent: Element | null, setSkip: boolean) {
+		for (const sib of Array.from(parent?.children || []))
+			if (hasThenOrCatch(sib)) {
+				(sib as HTMLElement).style.display = "none";
+				if (setSkip && !sib.hasAttribute("data-mf-skip-text"))
+					sib.setAttribute("data-mf-skip-text", "");
+			}
 	}
 	#injectThenCatch(
 		el: HTMLElement,

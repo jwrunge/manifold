@@ -33,14 +33,13 @@
 				state.count2 = +v;
 			},
 			loadUser() {
-				// Read reactive deps synchronously so :await tracks them and re-runs when toggled
-				const success = state.asyncToggle; // tracked
-				const id = state.userId; // tracked (will refetch if userId changes before start)
+				// Example async function returning a promise used by data-await
 				return new Promise((resolve, reject) => {
 					setTimeout(() => {
-						if (success) resolve({ id, name: "Ada" });
+						if (state.asyncToggle)
+							resolve({ id: state.userId, name: "Ada" });
 						else reject(new Error("User load failed"));
-					}, 2000);
+					}, 5000);
 				});
 			},
 		}

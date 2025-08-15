@@ -6,9 +6,10 @@
 	"sideEffects": false,
 	"scripts": {
 		"dev": "vite",
-		"build": "tsc && vite build",
-		"build:debug": "MF_DEBUG_BUILD=1 tsc && MF_DEBUG_BUILD=1 vite build",
-		"build:light": "MF_LIGHT=1 tsc && MF_LIGHT=1 vite build --config vite.light.config.ts",
+		"build": "tsc && node ./scripts/build.mjs",
+		"build:debug": "MF_DEBUG_BUILD=1 tsc && MF_DEBUG_BUILD=1 node ./scripts/build.mjs",
+		"build:full": "MF_VARIANT=full tsc && vite build",
+		"build:light": "MF_VARIANT=light tsc && MF_LIGHT=1 vite build",
 		"test": "vitest --run",
 		"test:watch": "vitest",
 		"lint": "biome check .",
@@ -17,6 +18,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.1.4",
+		"@types/node": "^22.7.5",
 		"esbuild": "^0.25.9",
 		"jsdom": "^26.1.0",
 		"typescript": "~5.8.3",
