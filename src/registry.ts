@@ -1,9 +1,9 @@
 import { Effect } from "./Effect.ts";
-import evaluateExpression from "./expression-parser.ts";
+import evaluateExpression from "./expression-runtime.ts";
 
 // Lightweight effect helper
 const runEffect = (fn: () => void) => {
-	const e = Effect.acquire(fn, { ephemeral: true });
+	const e = Effect.acquire(fn, true);
 	e.run();
 	return e;
 };
@@ -102,8 +102,6 @@ const eachTemplateCache = new WeakMap<Element, HTMLTemplateElement>();
 export class RegEl {
 	static #registry = new WeakMap<Element, RegEl>();
 	static #delegated = false;
-	// Maintain strong refs only in debug mode; guarded to avoid memory leaks in production usage.
-	static #all = new Set<RegEl>();
 	static #injected = new WeakMap<Element, Record<string, unknown>>();
 	static setInjected(el: Element, ctx: Record<string, unknown>) {
 		RegEl.#injected.set(el, ctx);
@@ -191,8 +189,6 @@ export class RegEl {
 				STATE_SYM as unknown as string
 			] = state;
 		} catch {}
-		const gg = globalThis as unknown as Record<string, unknown>;
-		if (gg?.MF_DEBUG || gg?.MF_TRACE) RegEl.#all.add(this);
 		this.#processAttributes();
 		this.#setupConditionals();
 		this.#setupAwait();

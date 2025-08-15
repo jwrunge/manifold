@@ -3,10 +3,12 @@
 	"private": true,
 	"version": "0.0.0",
 	"type": "module",
+	"sideEffects": false,
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc && vite build",
 		"build:debug": "MF_DEBUG_BUILD=1 tsc && MF_DEBUG_BUILD=1 vite build",
+		"build:light": "MF_LIGHT=1 tsc && MF_LIGHT=1 vite build --config vite.light.config.ts",
 		"test": "vitest --run",
 		"test:watch": "vitest",
 		"lint": "biome check .",

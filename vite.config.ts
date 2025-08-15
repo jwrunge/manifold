@@ -6,6 +6,7 @@ import { defineConfig } from "vite";
 const debugBuild = !!(globalThis as any).process?.env?.MF_DEBUG_BUILD;
 
 export default defineConfig({
+	define: { __MF_LIGHT__: "false" },
 	build: {
 		minify: "esbuild",
 		lib: {

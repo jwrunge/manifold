@@ -7,7 +7,7 @@ export type StateConstraint = Record<string, unknown>;
 export type FuncsConstraint = Record<string, (...args: never[]) => unknown>;
 
 const effect = (fn: EffectDependency) => {
-	const e = Effect.acquire(fn, { ephemeral: false });
+	const e = Effect.acquire(fn, false);
 	e.run();
 	return e;
 };
@@ -29,10 +29,8 @@ class StateBuilder<
 	#scopedFuncs: TFuncs;
 	#derivations: Map<string, (store: StateConstraint) => unknown>;
 	#name?: string;
-	#exposeName?: string;
 	#builtState?: TState;
 	#built = false;
-	static #anonCounter = 0;
 
 	constructor(
 		initialState?: TState,
@@ -60,7 +58,6 @@ class StateBuilder<
 		let funcs: F | undefined;
 		if (typeof nameOrInitial === "string") {
 			name = nameOrInitial;
-			// Reuse existing named builder if no new state/funcs provided
 			if (initialStateOrFuncs === undefined && maybeFuncs === undefined) {
 				const existing = namedStores.get(name);
 				if (existing)
@@ -79,12 +76,7 @@ class StateBuilder<
 		return effect(fn);
 	}
 
-	expose(name?: string) {
-		if (this.#built)
-			throw new Error(
-				"StateBuilder: expose() cannot be called after build()"
-			);
-		this.#exposeName = name || this.#name;
+	expose(_name?: string) {
 		return this;
 	}
 
@@ -105,9 +97,6 @@ class StateBuilder<
 				cur = cur.parentElement;
 			}
 		};
-		// NOTE: RegEl handles traversing and registering descendant elements that contain bindings or interpolation.
-		// We previously performed a second pass here (autoBindDescendants) which caused duplicate registration attempts
-		// and ancestor collision errors. Removing that duplicate walk ensures interpolation effects are established once.
 		const bind = (el: Element, stateRef: Record<string, unknown>) => {
 			ensureTopLevel(el);
 			RegEl.register(
@@ -219,10 +208,8 @@ class StateBuilder<
 		}
 		const state = proxy(this.#scopedState) as TState;
 		for (const [key, deriveFn] of this.#derivations) {
-			// Initial compute
 			let prevVal = (deriveFn as (s: TState) => unknown)(state);
 			(state as Record<string, unknown>)[key] = prevVal;
-			// Reactive recompute with stabilization (skip redundant deep-equal writes)
 			effect(() => {
 				const nextVal = (deriveFn as (s: TState) => unknown)(state);
 				if (nextVal === prevVal) return;
@@ -241,66 +228,12 @@ class StateBuilder<
 			if (named) named.built = state;
 		}
 		for (const [key, fn] of Object.entries(this.#scopedFuncs)) {
-			(state as Record<string, unknown>)[key] = ((...args: unknown[]) => {
-				const g = globalThis as unknown as Record<string, unknown>;
-				if (g?.MF_TRACE) {
-					try {
-						console.log("[mf][fn:invoke]", key, "args", args);
-					} catch {}
-				}
-				return (fn as (...a: unknown[]) => unknown).apply(state, args);
-			}) as unknown as TState[Extract<keyof TState, string>];
+			(state as Record<string, unknown>)[key] = ((...args: unknown[]) =>
+				(fn as (...a: unknown[]) => unknown).apply(
+					state,
+					args
+				)) as unknown as TState[Extract<keyof TState, string>];
 		}
-		try {
-			if (typeof window !== "undefined") {
-				const gAny = window as unknown as Record<string, unknown>;
-				const flags = gAny as Record<string, unknown>;
-				if (
-					this.#exposeName ||
-					flags.MF_DEBUG ||
-					flags.MF_TRACE ||
-					flags.MF_DEV_DEBUG
-				) {
-					let states = gAny.__MF_STATES as
-						| Record<string, unknown>
-						| undefined;
-					if (!states) {
-						states = {};
-						(gAny as Record<string, unknown>).__MF_STATES = states;
-					}
-					const id =
-						this.#exposeName ||
-						this.#name ||
-						`anon_${++StateBuilder.#anonCounter}`;
-					states[id] = state as unknown;
-					(state as Record<string, unknown>).__mfId = id;
-					let manifold = gAny.__MF_MANIFOLD as
-						| Record<string, unknown>
-						| undefined;
-					if (!manifold) {
-						manifold = {};
-						(gAny as Record<string, unknown>).__MF_MANIFOLD =
-							manifold;
-					}
-					try {
-						manifold.states = states;
-						manifold.effects = {};
-						manifold.registry = {
-							entries: (
-								RegEl as unknown as {
-									debugEntries: () => unknown;
-								}
-							).debugEntries,
-							getState: (
-								RegEl as unknown as {
-									getState: (el: Element) => unknown;
-								}
-							).getState,
-						};
-					} catch {}
-				}
-			}
-		} catch {}
 		this.#builtState = state;
 		this.#built = true;
 		return { state, fork: (name: string) => this.fork(name) };

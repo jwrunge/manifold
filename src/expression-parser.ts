@@ -1,4 +1,4 @@
-// Expression parser no longer falls back to a global currentState; callers must inject state via ctx.__state
+// Expression parser expects state injected via ctx.__state
 
 export interface ParsedExpression {
 	fn: (ctx?: Record<string, unknown>) => unknown;
@@ -6,10 +6,6 @@ export interface ParsedExpression {
 	isAssignment?: boolean;
 	assignTarget?: string;
 }
-
-// Exposed dev metrics
-export let cacheHits = 0;
-export let cacheMisses = 0;
 
 // LRU cache (simple FIFO trim) for parsed expressions
 const CACHE = new Map<string, ParsedExpression>();
@@ -24,7 +20,7 @@ const LITS: Record<string, unknown> = {
 };
 const NUM = /^-?\d+(?:\.[\d]+)?$/;
 
-// Evaluate dotted / indexed path with dynamic index expressions + optional chaining
+// Chain segments
 interface ChainSegmentProp {
 	t: "prop";
 	k: string;
@@ -45,18 +41,15 @@ type ChainSeg = ChainSegmentProp | ChainSegmentIdx | ChainSegmentCall;
 const buildChain = (
 	expr: string
 ): { base: string; segs: ChainSeg[] } | null => {
-	// Must start with identifier
 	if (!/^[a-zA-Z_$]/.test(expr)) return null;
-	let i = 0;
-	let base = "";
+	let i = 0,
+		base = "";
 	while (i < expr.length && /[\w$]/.test(expr[i])) base += expr[i++];
 	const segs: ChainSeg[] = [];
 	while (i < expr.length) {
 		if (expr[i] === ".") {
-			// . or ?. handled uniformly here (previous char could be ?)
 			let opt = false;
-			if (expr[i - 1] === "?" && segs.at(-1)?.t !== "call") opt = true; // "?." pattern captured because previous char ?
-			// advance past dot
+			if (expr[i - 1] === "?" && segs.at(-1)?.t !== "call") opt = true;
 			i++;
 			let prop = "";
 			if (!/[a-zA-Z_$]/.test(expr[i])) return null;
@@ -65,7 +58,7 @@ const buildChain = (
 			continue;
 		}
 		if (expr[i] === "[") {
-			const opt = expr[i - 1] === "?"; // ?[
+			const opt = expr[i - 1] === "?";
 			let depth = 1;
 			i++;
 			const start = i;
@@ -81,8 +74,7 @@ const buildChain = (
 			continue;
 		}
 		if (expr[i] === "(") {
-			// function call on previous segment / base
-			const opt = expr[i - 1] === "?"; // ?(
+			const opt = expr[i - 1] === "?";
 			let depth = 1;
 			i++;
 			const start = i;
@@ -101,13 +93,11 @@ const buildChain = (
 	return { base, segs };
 };
 
-// Evaluate dynamic chain against ctx with optional chaining semantics (state must be injected via ctx.__state)
 const evalChain = (
 	chain: { base: string; segs: ChainSeg[] },
 	ctx: Record<string, unknown>
 ) => {
 	let root: unknown;
-	// 1. explicit injected state under __state (Option C)
 	const injected = (ctx as Record<string, unknown>).__state as
 		| Record<string, unknown>
 		| undefined;
@@ -120,16 +110,12 @@ const evalChain = (
 		chain.base === "Promise" &&
 		chain.base in (globalThis as Record<string, unknown>)
 	)
-		// Allow only Promise global for async await feature; disallow other globals like Math/Date per tests
 		root = (globalThis as Record<string, unknown>)[chain.base];
 	else root = undefined;
-	let cur = root;
-	let lastObjForCall: unknown;
+	let cur = root,
+		lastObjForCall: unknown;
 	for (const seg of chain.segs) {
-		if (cur == null) {
-			if (seg.opt) return undefined;
-			else return undefined;
-		}
+		if (cur == null) return undefined;
 		if (seg.t === "prop") {
 			lastObjForCall = cur;
 			cur = (cur as Record<string, unknown>)[seg.k as never];
@@ -141,7 +127,6 @@ const evalChain = (
 			const fn = cur as unknown;
 			if (typeof fn === "function") {
 				const argVals = seg.args.map((a) => a.fn(ctx));
-				// Preserve method context when available
 				cur = (fn as (...x: unknown[]) => unknown).apply(
 					lastObjForCall !== undefined ? lastObjForCall : undefined,
 					argVals
@@ -153,7 +138,6 @@ const evalChain = (
 	return cur;
 };
 
-// Split top level by lowest precedence operator among list (right-to-left scan ignoring strings / parens / brackets)
 const splitTop = (expr: string, ops: string[]) => {
 	let depth = 0,
 		bDepth = 0;
@@ -181,7 +165,6 @@ const splitTop = (expr: string, ops: string[]) => {
 	return null;
 };
 
-// Helper to split top-level two-char operator (e.g., ??)
 const splitTop2 = (expr: string, op: string) => {
 	let depth = 0,
 		bDepth = 0;
@@ -189,7 +172,6 @@ const splitTop2 = (expr: string, op: string) => {
 	for (let i = expr.length - op.length; i >= 0; i--) {
 		if (expr.slice(i, i + op.length) !== op) continue;
 		if (quote) continue;
-		// scan leftwards to ensure not inside quotes/paren
 		depth = 0;
 		bDepth = 0;
 		quote = "";
@@ -217,7 +199,6 @@ const splitTop2 = (expr: string, op: string) => {
 	return null;
 };
 
-// Argument splitter for function calls (top-level commas only)
 const splitArgs = (raw: string) => {
 	const out: string[] = [];
 	if (!raw.trim()) return out;
@@ -248,39 +229,29 @@ const splitArgs = (raw: string) => {
 	return out.filter(Boolean);
 };
 
-// Core recursive descent with tiny grammar
 const parse = (raw: string, allowAssign = false): ParsedExpression => {
 	const expr = raw.trim();
 	if (!expr) return { fn: () => undefined, stateRefs: new Set() };
-
-	// Zero-param wrapper arrow: ()=> <body>  (enables assignment parsing in body)
 	const emptyArrow = expr.match(/^\(\)\s*=>\s*(.+)$/);
 	if (emptyArrow) return parse(emptyArrow[1], true);
-
-	// Single param arrow (immediately evaluated with context). No assignments allowed here.
 	const singleParamArrow = expr.match(
 		/^\(\s*([a-zA-Z_$][\w$]*)\s*\)\s*=>\s*(.+)$/
 	);
 	if (singleParamArrow) {
 		const body = parse(singleParamArrow[2], false);
-		// Exclude the parameter identifier from state refs (treat as local binding)
 		body.stateRefs.delete(singleParamArrow[1]);
 		return body;
 	}
-
-	// Assignment (only if allowed via zero-param arrow wrapper)
 	if (allowAssign) {
 		const assign = expr.match(/^(.*?)\s*=\s*([^=].*)$/);
 		if (assign) {
 			const target = assign[1].trim();
-			// target must be a chain (dynamic allowed)
 			const chain = buildChain(target);
 			if (chain) {
 				const rhs = parse(assign[2], false);
 				return {
 					fn: (ctx) => {
 						const val = rhs.fn(ctx);
-						// prefer injected state only (no global fallback)
 						const injected =
 							ctx && (ctx as Record<string, unknown>).__state
 								? ((ctx as Record<string, unknown>)
@@ -325,12 +296,10 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 			}
 		}
 	}
-
-	// Parentheses
 	if (expr[0] === "(" && expr.endsWith(")")) {
-		let d = 0;
-		let b = 0;
-		let ok = true;
+		let d = 0,
+			b = 0,
+			ok = true;
 		for (let i = 0; i < expr.length; i++) {
 			const c = expr[i];
 			if (c === "(") d++;
@@ -344,8 +313,6 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 		}
 		if (ok) return parse(expr.slice(1, -1), allowAssign);
 	}
-
-	// Ternary a?b:c
 	let q = -1,
 		cIdx = -1,
 		depth = 0,
@@ -377,8 +344,6 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 			]),
 		};
 	}
-
-	// Nullish coalescing ??
 	const nullishSplit = splitTop2(expr, "??");
 	if (nullishSplit) {
 		const l = parse(nullishSplit[0]);
@@ -386,13 +351,11 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 		return {
 			fn: (c) => {
 				const v = l.fn(c);
-				return v === null || v === undefined ? r.fn(c) : v;
+				return v == null ? r.fn(c) : v;
 			},
 			stateRefs: new Set([...l.stateRefs, ...r.stateRefs]),
 		};
 	}
-
-	// Logical OR / AND
 	const logic = /(.*)\|\|(.+)|(.*)&&(.+)/;
 	const lm = expr.match(logic);
 	if (lm) {
@@ -413,10 +376,8 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 			};
 		}
 	}
-
-	// Arithmetic + - * /
 	let arSplit = splitTop(expr, ["+", "-"]) || splitTop(expr, ["*", "/"]);
-	if (arSplit && (arSplit[0] === "!" || arSplit[0] === "-")) arSplit = null; // avoid misparse of unary
+	if (arSplit && (arSplit[0] === "!" || arSplit[0] === "-")) arSplit = null;
 	if (arSplit) {
 		const l = parse(arSplit[0]);
 		const op = arSplit[1];
@@ -438,8 +399,6 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 			stateRefs: new Set([...l.stateRefs, ...r.stateRefs]),
 		};
 	}
-
-	// Comparison
 	const comp = expr.match(/^(.*?)\s*(===|!==|>=|<=|>|<)\s*(.*)$/);
 	if (comp?.[1] && comp?.[3]) {
 		const l = parse(comp[1]);
@@ -464,8 +423,6 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 			stateRefs: new Set([...l.stateRefs, ...r.stateRefs]),
 		};
 	}
-
-	// Unary ! -
 	if (expr[0] === "!" && expr.length > 1) {
 		const v = parse(expr.slice(1));
 		return { fn: (c) => !v.fn(c), stateRefs: v.stateRefs };
@@ -474,59 +431,26 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 		const v = parse(expr.slice(1));
 		return { fn: (c) => -(v.fn(c) as number), stateRefs: v.stateRefs };
 	}
-
-	// Literals
 	if (expr in LITS) return { fn: () => LITS[expr], stateRefs: new Set() };
 	if (NUM.test(expr)) return { fn: () => +expr, stateRefs: new Set() };
 	const str = expr.match(/^(?:'([^']*)'|"([^"]*)"|`([^`]*)`)$/);
 	if (str)
 		return { fn: () => str[1] ?? str[2] ?? str[3], stateRefs: new Set() };
-
-	// Property / identifier chain (dynamic index capable + optional chaining + calls)
 	const chain = buildChain(expr);
 	if (chain)
 		return {
 			fn: (c = {}) => evalChain(chain, c as Record<string, unknown>),
 			stateRefs: new Set([chain.base]),
 		};
-
-	// Array literal with optional spreads: [a, b, ...list, x + 1]
 	if (expr.startsWith("[") && expr.endsWith("]")) {
-		let depth = 0;
-		let bDepth = 0;
-		let quote = "";
 		const inner = expr.slice(1, -1);
-		const parts: string[] = [];
-		let last = 0;
-		for (let i = 0; i < inner.length; i++) {
-			const c = inner[i];
-			if (quote) {
-				if (c === quote && inner[i - 1] !== "\\") quote = "";
-				continue;
-			}
-			if (c === '"' || c === "'" || c === "`") {
-				quote = c;
-				continue;
-			}
-			if (c === "(") depth++;
-			else if (c === ")") depth--;
-			else if (c === "[") bDepth++;
-			else if (c === "]") bDepth--;
-			if (c === "," && depth === 0 && bDepth === 0) {
-				parts.push(inner.slice(last, i).trim());
-				last = i + 1;
-			}
-		}
-		const tail = inner.slice(last).trim();
-		if (tail) parts.push(tail);
-		const parsedItems = parts
-			.filter((p) => p.length > 0)
-			.map((seg) => {
-				const spread = seg.startsWith("...");
-				const body = spread ? seg.slice(3).trim() : seg;
-				const parsed = parse(body);
-				return { spread, parsed };
-			});
+		const parts = splitArgs(inner);
+		const parsedItems = parts.map((seg) => {
+			const spread = seg.startsWith("...");
+			const body = spread ? seg.slice(3).trim() : seg;
+			const parsed = parse(body);
+			return { spread, parsed };
+		});
 		return {
 			fn: (c) => {
 				const out: unknown[] = [];
@@ -542,80 +466,123 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 			),
 		};
 	}
-
-	// Simple object literal {a:1, b: x+2} (no spreads, methods, or nested objects beyond braces balance)
 	if (expr.startsWith("{") && expr.endsWith("}")) {
-		let depth = 0;
-		let bDepth = 0;
-		let quote = "";
 		const inner = expr.slice(1, -1);
-		const parts: string[] = [];
-		let last = 0;
+		// object parts split respecting nesting
+		const segsRaw: string[] = [];
+		let p = 0,
+			b = 0,
+			cDepth = 0,
+			q = "",
+			last = 0;
 		for (let i = 0; i < inner.length; i++) {
-			const c = inner[i];
-			if (quote) {
-				if (c === quote && inner[i - 1] !== "\\") quote = "";
+			const ch = inner[i];
+			if (q) {
+				if (ch === q && inner[i - 1] !== "\\") q = "";
 				continue;
 			}
-			if (c === '"' || c === "'" || c === "`") {
-				quote = c;
+			if (ch === '"' || ch === "'" || ch === "`") {
+				q = ch;
 				continue;
 			}
-			if (c === "(") depth++;
-			else if (c === ")") depth--;
-			else if (c === "[") bDepth++;
-			else if (c === "]") bDepth--;
-			else if (c === "{") depth++;
-			else if (c === "}") depth--;
-			if (c === "," && depth === 0 && bDepth === 0) {
-				parts.push(inner.slice(last, i).trim());
+			if (ch === "(") p++;
+			else if (ch === ")") p--;
+			else if (ch === "[") b++;
+			else if (ch === "]") b--;
+			else if (ch === "{") cDepth++;
+			else if (ch === "}") cDepth--;
+			if (ch === "," && p === 0 && b === 0 && cDepth === 0) {
+				segsRaw.push(inner.slice(last, i).trim());
 				last = i + 1;
 			}
 		}
 		const tail = inner.slice(last).trim();
-		if (tail) parts.push(tail);
-		const entries = parts
-			.filter(Boolean)
-			.map((seg) => {
-				const m = seg.match(
-					/^("([^"]+)"|'([^']+)'|`([^`]+)`|([a-zA-Z_$][\w$]*))\s*:\s*(.+)$/
-				);
-				if (!m) return null;
-				const key = m[2] ?? m[3] ?? m[4] ?? m[5];
-				const valExpr = parse(m[6]);
-				return { key, valExpr };
-			})
-			.filter(Boolean) as { key: string; valExpr: ParsedExpression }[];
-		if (entries.length) {
-			return {
-				fn: (c) => {
-					const o: Record<string, unknown> = {};
-					for (const e of entries) o[e.key] = e.valExpr.fn(c);
-					return o;
-				},
-				stateRefs: new Set(
-					entries.flatMap((e) => Array.from(e.valExpr.stateRefs))
-				),
-			};
+		if (tail) segsRaw.push(tail);
+		interface ObjSeg {
+			spread: boolean;
+			k?: string | ParsedExpression;
+			v?: ParsedExpression;
+			computed?: boolean;
 		}
+		const segs: ObjSeg[] = [];
+		for (const rawSeg of segsRaw) {
+			if (!rawSeg) continue;
+			if (rawSeg.startsWith("...")) {
+				segs.push({ spread: true, v: parse(rawSeg.slice(3).trim()) });
+				continue;
+			}
+			let key: string | ParsedExpression | undefined;
+			let value: ParsedExpression | undefined;
+			let computed = false;
+			const colonIdx = rawSeg.indexOf(":");
+			if (colonIdx !== -1) {
+				const left = rawSeg.slice(0, colonIdx).trim();
+				const right = rawSeg.slice(colonIdx + 1).trim();
+				if (left.startsWith("[") && left.endsWith("]")) {
+					computed = true;
+					key = parse(left.slice(1, -1));
+				} else if (/^['"`]/.test(left)) {
+					key = (parse(left).fn() as string) ?? "";
+				} else {
+					key = left;
+				}
+				value = parse(right);
+			} else {
+				key = rawSeg;
+				value = parse(rawSeg);
+			}
+			segs.push({ spread: false, k: key, v: value, computed });
+		}
+		return {
+			fn: (c) => {
+				const out: Record<string | number | symbol, unknown> = {};
+				for (const s of segs) {
+					if (s.spread) {
+						const v = s.v?.fn(c);
+						if (v && typeof v === "object") {
+							for (const k in v as Record<string, unknown>)
+								out[k] = (v as Record<string, unknown>)[k];
+						}
+					} else if (s.k && s.v) {
+						const keyVal =
+							typeof s.k === "string" && !s.computed
+								? s.k
+								: ((s.k as ParsedExpression).fn(c) as
+										| string
+										| number
+										| symbol);
+						out[keyVal as string] = s.v.fn(c);
+					}
+				}
+				return out;
+			},
+			stateRefs: new Set(
+				segs.flatMap((s) => {
+					const out: string[] = [];
+					if (s.v) out.push(...s.v.stateRefs);
+					if (s.computed && s.k && typeof s.k !== "string")
+						out.push(...s.k.stateRefs);
+					else if (!s.spread && s.k && typeof s.k === "string") {
+						if (s.v && s.v.stateRefs.has(s.k)) out.push(s.k);
+					}
+					return out;
+				})
+			),
+		};
 	}
-
-	return { fn: () => expr, stateRefs: new Set() };
+	return { fn: () => expr, stateRefs: new Set() }; // fallback: raw string
 };
 
-export const evaluateExpression = (expr: string) => {
-	const existing = CACHE.get(expr);
-	if (existing) {
-		cacheHits++;
-		return existing;
-	}
-	cacheMisses++;
-	const parsed = parse(expr);
+const evaluateExpression = (expr: string): ParsedExpression => {
+	const cached = CACHE.get(expr);
+	if (cached) return cached;
+	const parsed = parse(expr, false);
 	CACHE.set(expr, parsed);
 	if (CACHE.size > CACHE_MAX) {
-		const first = CACHE.keys().next().value;
-		if (first !== undefined) CACHE.delete(first);
+		const k = CACHE.keys().next().value as string | undefined;
+		if (k !== undefined) CACHE.delete(k);
 	}
 	return parsed;
 };
+
 export default evaluateExpression;
