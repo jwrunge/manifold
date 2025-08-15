@@ -173,8 +173,8 @@ describe("registry basics", () => {
 });
 
 describe("extended registry features", () => {
-	test("named builder chaining preserves single instance", async () => {
-		const b = StateBuilder.create("chain", { a: 1 as number })
+	test("builder chaining preserves derived updates (single-state)", async () => {
+		const b = StateBuilder.create({ a: 1 as number })
 			.derive("b", (s) => (s as { a: number }).a + 1)
 			.add("c", 3)
 			.expose();
@@ -238,15 +238,17 @@ describe("extended registry features", () => {
 		).toBe("Err: fail");
 	});
 
-	test("named state registration & ignore boundary", async () => {
-		StateBuilder.create("ui", { a: 1 }).build();
-		StateBuilder.create("other", { b: 2 }).build();
+	test("auto-registration binds all [data-mf-register] using single state", async () => {
+		const b = StateBuilder.create({ a: 1, b: 2 }).build().state as {
+			a: number;
+			b: number;
+		};
 		document.body.innerHTML = `
-			<div data-mf-register="ui">
+			<div data-mf-register>
 				<span id="aVal">\${a}</span>
-				<div data-mf-ignore>
-					<div data-mf-register="other"><span id="bVal">\${b}</span></div>
-				</div>
+			</div>
+			<div data-mf-register>
+				<span id="bVal">\${b}</span>
 			</div>`;
 		StateBuilder.create().register();
 		await flush();
@@ -256,16 +258,16 @@ describe("extended registry features", () => {
 		expect(
 			(document.getElementById("bVal") as HTMLElement).textContent
 		).toBe("2");
-	});
-
-	test("nested registration without ignore boundary throws", () => {
-		StateBuilder.create("ui2", { a: 1 }).build();
-		StateBuilder.create("other2", { b: 2 }).build();
-		document.body.innerHTML = `
-			<div data-mf-register="ui2">
-				<div data-mf-register="other2"></div>
-			</div>`;
-		expect(() => StateBuilder.create().register()).toThrow();
+		// Update and ensure both update
+		b.a = 3;
+		b.b = 4;
+		await flush();
+		expect(
+			(document.getElementById("aVal") as HTMLElement).textContent
+		).toBe("3");
+		expect(
+			(document.getElementById("bVal") as HTMLElement).textContent
+		).toBe("4");
 	});
 
 	test("checked sync", async () => {

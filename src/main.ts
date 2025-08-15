@@ -6,14 +6,10 @@ import RegEl from "./registry.ts";
 export type StateConstraint = Record<string, unknown>;
 export type FuncsConstraint = Record<string, (...args: never[]) => unknown>;
 
-type AnyStateBuilder = StateBuilder<
-	Record<string, unknown>,
-	Record<string, (...args: never[]) => unknown>
->;
-const namedStores = new Map<
-	string,
-	{ _b: AnyStateBuilder; _s?: Record<string, unknown> }
->();
+// Single-state enforcement
+let __builderCreated = false;
+// Track first built state globally for auto-registration convenience
+let __globalState: Record<string, unknown> | undefined;
 
 class StateBuilder<
 	TState extends StateConstraint,
@@ -22,48 +18,34 @@ class StateBuilder<
 	#scopedState: TState;
 	#scopedFuncs: TFuncs;
 	#derivations: Map<string, (store: StateConstraint) => unknown>;
-	#name?: string;
 	#builtState?: TState;
 	#built = false;
 
 	constructor(
 		initialState?: TState,
 		initialFuncs?: TFuncs,
-		derivations?: Map<string, (store: StateConstraint) => unknown>,
-		name?: string
+		derivations?: Map<string, (store: StateConstraint) => unknown>
 	) {
 		this.#scopedState = (initialState || {}) as TState;
 		this.#scopedFuncs = (initialFuncs || {}) as TFuncs;
 		this.#derivations = derivations || new Map();
-		this.#name = name;
-		if (name)
-			namedStores.set(name, {
-				_b: this as unknown as AnyStateBuilder,
-			});
 	}
 
 	static create<S extends StateConstraint, F extends FuncsConstraint>(
-		nameOrInitial?: string | S,
-		initialStateOrFuncs?: S | F,
-		maybeFuncs?: F
+		initial?: S,
+		funcs?: F
 	): StateBuilder<S, F> {
-		let name: string | undefined;
-		let initialState: S | undefined;
-		let funcs: F | undefined;
-		if (typeof nameOrInitial === "string") {
-			name = nameOrInitial;
-			if (initialStateOrFuncs === undefined && maybeFuncs === undefined) {
-				const existing = namedStores.get(name);
-				if (existing)
-					return existing._b as unknown as StateBuilder<S, F>;
+		// Enforce single-state except in test environment to keep unit tests isolated
+		const penv = (
+			globalThis as unknown as {
+				process?: { env?: { NODE_ENV?: string } };
 			}
-			initialState = initialStateOrFuncs as S | undefined;
-			funcs = maybeFuncs;
-		} else {
-			initialState = nameOrInitial as S | undefined;
-			funcs = initialStateOrFuncs as F | undefined;
-		}
-		return new StateBuilder<S, F>(initialState, funcs, undefined, name);
+		).process?.env;
+		const env = penv?.NODE_ENV;
+		if (__builderCreated && env !== "test")
+			throw new Error("Only one state can be created");
+		__builderCreated = true;
+		return new StateBuilder<S, F>(initial, funcs);
 	}
 
 	static effect(fn: EffectDependency) {
@@ -81,49 +63,23 @@ class StateBuilder<
 			if (!this.#built) this.build();
 			return this.#builtState as TState;
 		};
-		const ensureTopLevel = (el: Element) => {
-			let cur: Element | null = el.parentElement;
-			while (cur) {
-				if (cur.hasAttribute("data-mf-ignore")) break;
-				if (RegEl.isRegistered(cur)) {
-					throw new Error(
-						"Cannot register element: ancestor already registered. Use data-mf-ignore on an intermediate element to create a new boundary."
-					);
-				}
-				cur = cur.parentElement;
-			}
-		};
 		const bind = (el: Element, stateRef: Record<string, unknown>) => {
-			ensureTopLevel(el);
 			RegEl.register(
 				el as HTMLElement | SVGElement | MathMLElement,
 				stateRef
 			);
 		};
 		if (container) {
+			// Explicit container binding uses this builder's state (build if needed)
 			bind(container, ensureBuilt());
 			return;
 		}
-		document.querySelectorAll("[data-mf-register]").forEach((el) => {
-			const attr = el.getAttribute("data-mf-register") || "";
-			let stateToUse: Record<string, unknown> | undefined;
-			if (attr) {
-				const named = namedStores.get(attr);
-				if (!named)
-					throw new Error(
-						`No named state '${attr}' found for registration`
-					);
-				if (!named._s) {
-					const { state } = named._b.build();
-					named._s = state;
-				}
-				stateToUse = named._s as Record<string, unknown>;
-			} else {
-				stateToUse = ensureBuilt();
-			}
-			if (!stateToUse) return;
-			bind(el, stateToUse);
-		});
+		// Auto-registration: prefer the first built global state if available
+		const stateToUse =
+			(__globalState as Record<string, unknown>) || ensureBuilt();
+		document
+			.querySelectorAll("[data-mf-register]")
+			.forEach((el) => bind(el, stateToUse));
 	};
 
 	add<K extends string, V>(
@@ -133,7 +89,7 @@ class StateBuilder<
 	): StateBuilder<TState & Record<K, V>, TFuncs> {
 		if (this.#built)
 			throw new Error(
-				"StateBuilder: add() cannot be called after build(); create a new builder or fork()"
+				"StateBuilder: add() cannot be called after build(); create a new builder"
 			);
 		const newState = { ...this.#scopedState, [key]: value } as TState &
 			Record<K, V>;
@@ -141,11 +97,8 @@ class StateBuilder<
 		const next = new StateBuilder(
 			newState,
 			this.#scopedFuncs as TFuncs,
-			this.#derivations,
-			this.#name
+			this.#derivations
 		) as StateBuilder<TState & Record<K, V>, TFuncs>;
-		if (this.#name)
-			namedStores.set(this.#name, { _b: next as AnyStateBuilder });
 		return next;
 	}
 
@@ -155,7 +108,7 @@ class StateBuilder<
 	): StateBuilder<TState & Record<K, T>, TFuncs> {
 		if (this.#built)
 			throw new Error(
-				"StateBuilder: derive() cannot be called after build(); create a new builder or fork()"
+				"StateBuilder: derive() cannot be called after build(); create a new builder"
 			);
 		const newState = {
 			...this.#scopedState,
@@ -166,40 +119,15 @@ class StateBuilder<
 		const next = new StateBuilder(
 			newState,
 			this.#scopedFuncs,
-			newDerivations,
-			this.#name
+			newDerivations
 		) as StateBuilder<TState & Record<K, T>, TFuncs>;
-		if (this.#name)
-			namedStores.set(this.#name, { _b: next as AnyStateBuilder });
 		return next;
 	}
 
-	fork<NS extends string>(newName?: NS) {
-		if (!newName)
-			throw new Error(
-				"StateBuilder: fork(name) requires a non-empty name"
-			);
-		const base: Record<string, unknown> = {};
-		const source = this.#built
-			? (this.#builtState as Record<string, unknown>)
-			: (this.#scopedState as Record<string, unknown>);
-		for (const k of Object.keys(source)) {
-			if (k === "__mfId") continue;
-			base[k] = source[k];
-		}
-		return new StateBuilder(
-			base as TState,
-			this.#scopedFuncs,
-			new Map(this.#derivations),
-			newName as string
-		);
-	}
-
-	build(_local?: boolean) {
+	build() {
 		if (this.#built) {
 			return {
 				state: this.#builtState as TState,
-				fork: (name: string) => this.fork(name),
 			};
 		}
 		const state = proxy(this.#scopedState) as TState;
@@ -220,10 +148,6 @@ class StateBuilder<
 			}, false);
 			e.run();
 		}
-		if (this.#name) {
-			const named = namedStores.get(this.#name);
-			if (named) named._s = state;
-		}
 		for (const [key, fn] of Object.entries(this.#scopedFuncs)) {
 			(state as Record<string, unknown>)[key] = ((...args: unknown[]) =>
 				(fn as (...a: unknown[]) => unknown).apply(
@@ -233,7 +157,21 @@ class StateBuilder<
 		}
 		this.#builtState = state;
 		this.#built = true;
-		return { state, fork: (name: string) => this.fork(name) };
+		// Preserve/refresh the global app state pointer:
+		// - In normal envs, set once (single-state model)
+		// - In test env, always refresh so tests can build isolated states
+		const penv = (
+			globalThis as unknown as {
+				process?: { env?: { NODE_ENV?: string } };
+			}
+		).process?.env;
+		const env = penv?.NODE_ENV;
+		if (env === "test") {
+			__globalState = state as unknown as Record<string, unknown>;
+		} else if (!__globalState) {
+			__globalState = state as unknown as Record<string, unknown>;
+		}
+		return { state } as { state: TState };
 	}
 }
 

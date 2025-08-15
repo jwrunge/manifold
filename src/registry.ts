@@ -83,53 +83,38 @@ const STATE_SYM = Symbol.for("m.s");
 // Each-loop template cache (pre-parsed DOM for inner HTML)
 const eachTemplateCache = new WeakMap<Element, HTMLTemplateElement>();
 
+// Track first registered state to alert on multiple distinct states (dev-only)
+let __gState: Record<string, unknown> | undefined;
+let __gWarned = false;
+
 export class RegEl {
 	static #registry = new WeakMap<Element, RegEl>();
-	static #delegated = false;
 	static #injected = new WeakMap<Element, Record<string, unknown>>();
 	static setInjected(el: Element, ctx: Record<string, unknown>) {
 		RegEl.#injected.set(el, ctx);
-	}
-	static _ensureDelegation() {
-		if (RegEl.#delegated) return;
-		RegEl.#delegated = true;
-		document.addEventListener(
-			"click",
-			(e) => {
-				const target = e.target as HTMLElement | null;
-				if (!target) return;
-				let el: HTMLElement | null = target;
-				while (el) {
-					if (
-						el.hasAttribute(":onclick") &&
-						!RegEl.#registry.has(el)
-					) {
-						let cur: HTMLElement | null = el.parentElement;
-						while (cur) {
-							const inst = RegEl.#registry.get(cur);
-							if (inst && (inst as RegEl).#state) {
-								RegEl.register(
-									el,
-									(inst as RegEl).#state as Record<
-										string,
-										unknown
-									>
-								);
-								break;
-							}
-							cur = cur.parentElement;
-						}
-					}
-					el = el.parentElement;
-				}
-			},
-			true
-		);
 	}
 	static register(
 		el: HTMLElement | SVGElement | MathMLElement,
 		state: Record<string, unknown>
 	) {
+		if (!__gState) __gState = state;
+		else if (__gState !== state && !__gWarned) {
+			// Dev-only warning; suppressed in test/prod
+			const penv = (
+				globalThis as unknown as {
+					process?: { env?: { NODE_ENV?: string } };
+				}
+			).process?.env;
+			const env = penv?.NODE_ENV;
+			if (env !== "production" && env !== "test") {
+				try {
+					console.warn(
+						"Multiple states detected: Manifold favors a single app state; registering different states may be unsupported."
+					);
+				} catch {}
+			}
+			__gWarned = true;
+		}
 		const existing = RegEl.#registry.get(el);
 		return existing || new RegEl(el, state);
 	}
@@ -165,8 +150,6 @@ export class RegEl {
 		this.#el = el;
 		this.#state = state;
 		RegEl.#registry.set(el, this);
-		// Ignore subtree (case 8)
-		if (this.#el.hasAttribute("data-mf-ignore")) return;
 		try {
 			(this.#el as unknown as Record<string, unknown>)[
 				STATE_SYM as unknown as string
@@ -201,7 +184,6 @@ export class RegEl {
 			const walk = (node: Element) => {
 				for (const child of Array.from(node.children)) {
 					const elChild = child as HTMLElement;
-					if (elChild.hasAttribute("data-mf-ignore")) continue;
 					if (elChild.hasAttribute("data-mf-register")) continue;
 					if (shouldRegister(elChild) && !RegEl.isRegistered(elChild))
 						RegEl.register(elChild, stateRef);
@@ -321,7 +303,6 @@ export class RegEl {
 					continue;
 				}
 				if (bindName.startsWith("on")) {
-					RegEl._ensureDelegation();
 					this._bindEvent(bindName.slice(2), value.trim());
 					continue;
 				}
@@ -590,12 +571,6 @@ export class RegEl {
 					)
 			  )
 			: false;
-	}
-	// Added helpers for internal inspection without exposing private fields directly
-	static _getShowExprAliases(el: Element) {
-		const inst = RegEl.#registry.get(el) as RegEl | undefined;
-		if (!inst) return undefined;
-		return { expr: inst.#showExpr, aliases: inst.#showAliases };
 	}
 
 	_setupAwait() {
@@ -889,9 +864,11 @@ export class RegEl {
 						node.hasAttribute("data-if") ||
 						node.hasAttribute("data-elseif")
 					) {
-						const meta = RegEl._getShowExprAliases(node);
-						const exp = meta?.expr;
-						const aliases = meta?.aliases || {};
+						const inst = RegEl.#registry.get(node) as
+							| RegEl
+							| undefined;
+						const exp = inst ? inst.#showExpr : undefined;
+						const aliases = inst ? inst.#showAliases : {};
 						if (exp) {
 							const val = exp.fn(
 								buildCtx(aliases, this.#state, ctx)

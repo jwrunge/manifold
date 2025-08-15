@@ -15,9 +15,8 @@
 <script type="module">
 	import StateBuilder from "./dist/manifold.es.js";
 
-	// Primary UI state (named 'ui')
+	// Single app state (no names). Auto-registers all [data-mf-register] regions.
 	const { state } = StateBuilder.create(
-		"ui",
 		{
 			count: 10,
 			count2: 4,
@@ -33,19 +32,18 @@
 				state.count2 = +v;
 			},
 			loadUser() {
-				// Example async function returning a promise used by data-await
+				// Example async function returning a promise used by :await
 				return new Promise((resolve, reject) => {
 					setTimeout(() => {
 						if (state.asyncToggle)
 							resolve({ id: state.userId, name: "Ada" });
 						else reject(new Error("User load failed"));
-					}, 5000);
+					}, 2000);
 				});
 			},
 		}
 	)
 		.derive("sum", (s) => s.count + s.count2)
-		.expose("ui")
 		.derive("doubleCount", (s) => s.count * 2)
 		.add("syncBackCount2", (value) => {
 			state.count2 = +value;
@@ -53,29 +51,14 @@
 		})
 		.build();
 
-	// Secondary state to demonstrate cross registration & ignore boundary
-	StateBuilder.create(
-		"secondary",
-		{ label: "Secondary Zone", clicks: 0 },
-		{
-			inc() {
-				this.clicks++;
-			},
-		}
-	)
-		.expose("secondary")
-		.build();
-
-	// Register all states (immediately if DOM is already parsed) so :each renders synchronously
 	const registerAll = () => {
-		StateBuilder.create("ui").register();
-		StateBuilder.create("secondary").register();
+		StateBuilder.create().register();
 	};
 	if (document.readyState !== "loading") registerAll();
 	else window.addEventListener("DOMContentLoaded", registerAll);
 </script>
 
-<div data-mf-register="ui">
+<div data-mf-register>
 	<h2>Primary UI</h2>
 	<p>The current count is: ${count}</p>
 	<p>The second count is: ${count2}</p>
@@ -107,7 +90,7 @@
 		<input type="number" :value="count2 >> (value)=> syncBackCount2(value)"
 	/></label>
 
-	<!-- Async demo: data-await / data-then / data-catch chain -->
+	<!-- Async demo: :await / :then / :catch chain -->
 	<div>
 		<button :onclick="asyncToggle = !asyncToggle;">
 			Toggle Async Success (currently: ${asyncToggle ? 'success' :
@@ -135,13 +118,4 @@
 			button to force extra logging around the increment function call.
 		</p>
 	</section>
-</div>
-
-<!-- Ignore boundary: separate region can register another state inside -->
-<div data-mf-ignore>
-	<div data-mf-register="secondary">
-		<h3>${label}</h3>
-		<p>Clicks: ${clicks}</p>
-		<button :onclick="clicks = clicks + 1">Click Secondary</button>
-	</div>
 </div>

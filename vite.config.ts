@@ -71,7 +71,6 @@ export default defineConfig({
 							"data-each",
 							"[data-if]",
 							"[data-each]",
-							"data-mf-ignore",
 							"data-mf-register",
 							// Short internal names
 							"data-st",

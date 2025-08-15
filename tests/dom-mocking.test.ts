@@ -141,24 +141,22 @@ describe("DOM behavior / structural stability", () => {
 		expect(span.textContent).not.toBe(before); // changed
 	});
 
-	// 8 Interpolation skipped in ignored subtree
-	test("interpolation skipped within data-mf-ignore subtree (case 8)", async () => {
-		document.body.innerHTML = `<div id=\"c8\"><div data-mf-ignore><span id=\"ignored\">Value: \${count}</span></div><span id=\"ok\">Here: \${count}</span></div>`;
+	// 8 Former ignore marker removed; both subtrees interpolate
+	test("removed ignore marker allows interpolation in subtree (case 8)", async () => {
+		document.body.innerHTML = `<div id=\"c8\"><div><span id=\"sub\">Value: \${count}</span></div><span id=\"ok\">Here: \${count}</span></div>`;
 		const root = document.getElementById("c8");
 		if (!root) throw new Error("c8 root missing");
 		registerChildren(root, state);
 		await flush();
-		const ignored = document.getElementById("ignored");
+		const sub = document.getElementById("sub");
 		const ok = document.getElementById("ok");
-		if (!ignored || !ok) throw new Error("missing nodes");
-		// Expect literal text to remain with interpolation marker (not processed)
-		const literal = "Value: $" + "{count}"; // avoid triggering template placeholder lint rule
-		expect(ignored.textContent).toBe(literal);
+		if (!sub || !ok) throw new Error("missing nodes");
+		expect(sub.textContent?.includes(String(state.count))).toBe(true);
 		expect(ok.textContent?.includes(String(state.count))).toBe(true);
-		const prevIgnored = ignored.textContent;
 		state.count = 9;
 		await flush();
-		expect(ignored.textContent).toBe(prevIgnored); // still unchanged
+		expect(sub.textContent?.includes("9")).toBe(true);
+		expect(ok.textContent?.includes("9")).toBe(true);
 	});
 
 	// 9 Each hides when array empty
