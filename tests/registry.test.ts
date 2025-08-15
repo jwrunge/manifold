@@ -31,12 +31,12 @@ describe("registry basics", () => {
 		})
 	);
 
-	test("conditional chain data-if / data-elseif / data-else", async () => {
+	test("conditional chain :if / :elseif / :else", async () => {
 		document.body.innerHTML = `
       <div>
-		<p data-if="\${count > 1}" id="ifEl">if</p>
-		<p data-elseif="\${count === 1}" id="elseifEl">elseif</p>
-		<p data-else id="elseEl">else</p>
+		<p :if="count > 1" id="ifEl">if</p>
+		<p :elseif="count === 1" id="elseifEl">elseif</p>
+		<p :else id="elseEl">else</p>
       </div>`;
 		const root = document.body.firstElementChild as HTMLElement;
 		Array.from(root.querySelectorAll("*")).forEach((el) =>
@@ -63,10 +63,10 @@ describe("registry basics", () => {
 	});
 
 	test("each loop add/remove", async () => {
-		document.body.innerHTML = `<ul><li data-each="\${list as item, key}">Item: \${item.id}-\${item.v}</li></ul>`;
+		document.body.innerHTML = `<ul><li :each="list as item, key">Item: \${item.id}-\${item.v}</li></ul>`;
 		const ul = document.querySelector("ul");
 		if (!ul) throw new Error("ul missing");
-		const template = ul.querySelector("li[data-each]");
+		const template = ul.querySelector("li");
 		if (!template) throw new Error("template missing");
 		RegEl.register(template as HTMLElement, state);
 		await flush();
@@ -189,9 +189,9 @@ describe("extended registry features", () => {
 		};
 		document.body.innerHTML = `
 			<div>
-				<p data-await="\${ (ok ? Promise.resolve(42) : Promise.reject('fail')) }" id="await">Loading</p>
-				<p data-then="val" id="then">Val: \${val}</p>
-				<p data-catch="err" id="catch">Err: \${err}</p>
+					<p :await="(ok ? Promise.resolve(42) : Promise.reject('fail'))" id="await">Loading</p>
+					<p :then="val" id="then">Val: \${val}</p>
+					<p :catch="err" id="catch">Err: \${err}</p>
 			</div>`;
 		const root = document.body.firstElementChild;
 		if (!root) throw new Error("root missing");

@@ -12,7 +12,7 @@ type AnyStateBuilder = StateBuilder<
 >;
 const namedStores = new Map<
 	string,
-	{ builder: AnyStateBuilder; built?: Record<string, unknown> }
+	{ _b: AnyStateBuilder; _s?: Record<string, unknown> }
 >();
 
 class StateBuilder<
@@ -38,7 +38,7 @@ class StateBuilder<
 		this.#name = name;
 		if (name)
 			namedStores.set(name, {
-				builder: this as unknown as AnyStateBuilder,
+				_b: this as unknown as AnyStateBuilder,
 			});
 	}
 
@@ -55,7 +55,7 @@ class StateBuilder<
 			if (initialStateOrFuncs === undefined && maybeFuncs === undefined) {
 				const existing = namedStores.get(name);
 				if (existing)
-					return existing.builder as unknown as StateBuilder<S, F>;
+					return existing._b as unknown as StateBuilder<S, F>;
 			}
 			initialState = initialStateOrFuncs as S | undefined;
 			funcs = maybeFuncs;
@@ -113,11 +113,11 @@ class StateBuilder<
 					throw new Error(
 						`No named state '${attr}' found for registration`
 					);
-				if (!named.built) {
-					const { state } = named.builder.build();
-					named.built = state;
+				if (!named._s) {
+					const { state } = named._b.build();
+					named._s = state;
 				}
-				stateToUse = named.built as Record<string, unknown>;
+				stateToUse = named._s as Record<string, unknown>;
 			} else {
 				stateToUse = ensureBuilt();
 			}
@@ -145,7 +145,7 @@ class StateBuilder<
 			this.#name
 		) as StateBuilder<TState & Record<K, V>, TFuncs>;
 		if (this.#name)
-			namedStores.set(this.#name, { builder: next as AnyStateBuilder });
+			namedStores.set(this.#name, { _b: next as AnyStateBuilder });
 		return next;
 	}
 
@@ -170,7 +170,7 @@ class StateBuilder<
 			this.#name
 		) as StateBuilder<TState & Record<K, T>, TFuncs>;
 		if (this.#name)
-			namedStores.set(this.#name, { builder: next as AnyStateBuilder });
+			namedStores.set(this.#name, { _b: next as AnyStateBuilder });
 		return next;
 	}
 
@@ -222,7 +222,7 @@ class StateBuilder<
 		}
 		if (this.#name) {
 			const named = namedStores.get(this.#name);
-			if (named) named.built = state;
+			if (named) named._s = state;
 		}
 		for (const [key, fn] of Object.entries(this.#scopedFuncs)) {
 			(state as Record<string, unknown>)[key] = ((...args: unknown[]) =>

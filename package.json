@@ -17,7 +17,13 @@
 		"format": "biome format --write ."
 	},
 	"devDependencies": {
+		"@babel/core": "^7.25.0",
+		"@babel/plugin-transform-class-properties": "^7.25.0",
+		"@babel/plugin-transform-private-methods": "^7.25.0",
+		"@babel/plugin-transform-private-property-in-object": "^7.25.0",
+		"@babel/plugin-transform-typescript": "^7.28.0",
 		"@biomejs/biome": "^2.1.4",
+		"@rollup/plugin-babel": "^6.0.4",
 		"@types/node": "^22.7.5",
 		"esbuild": "^0.25.9",
 		"jsdom": "^26.1.0",

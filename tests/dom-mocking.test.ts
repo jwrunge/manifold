@@ -37,11 +37,11 @@ describe("DOM behavior / structural stability", () => {
 	test("conditional chain with multiple elseifs toggles visibility correctly & preserves node identity (cases 1-3)", async () => {
 		document.body.innerHTML = `
       <div id="root">
-        <p data-if="\${count === 0}" id="v0">Zero</p>
-        <p data-elseif="\${count === 1}" id="v1">One</p>
-        <p data-elseif="\${count === 2}" id="v2">Two</p>
-        <p data-elseif="\${count === 3}" id="v3">Three</p>
-        <p data-else id="vElse">Other</p>
+		<p :if="count === 0" id="v0">Zero</p>
+		<p :elseif="count === 1" id="v1">One</p>
+		<p :elseif="count === 2" id="v2">Two</p>
+		<p :elseif="count === 3" id="v3">Three</p>
+		<p :else id="vElse">Other</p>
       </div>`;
 		const root = document.getElementById("root");
 		if (!root) throw new Error("root missing");
@@ -74,7 +74,7 @@ describe("DOM behavior / structural stability", () => {
 
 	// 4 Else not required
 	test("else not required (case 4)", async () => {
-		document.body.innerHTML = `<div id=\"c4\"><span data-if=\"\${count < 2}\" id=\"a\">LT2</span><span id=\"b\">Static</span></div>`;
+		document.body.innerHTML = `<div id=\"c4\"><span :if=\"count < 2\" id=\"a\">LT2</span><span id=\"b\">Static</span></div>`;
 		const root = document.getElementById("c4");
 		if (!root) throw new Error("c4 root missing");
 		registerChildren(root, state);
@@ -91,7 +91,7 @@ describe("DOM behavior / structural stability", () => {
 
 	// 5 If required
 	test("elseif without leading if never displays (case 5)", async () => {
-		document.body.innerHTML = `<div id=\"c5\"><p data-elseif=\"\${count === 0}\" id=\"bad\">ShouldNotShow</p></div>`;
+		document.body.innerHTML = `<div id=\"c5\"><p :elseif=\"count === 0\" id=\"bad\">ShouldNotShow</p></div>`;
 		const root = document.getElementById("c5");
 		if (!root) throw new Error("c5 root missing");
 		registerChildren(root, state);
@@ -109,9 +109,9 @@ describe("DOM behavior / structural stability", () => {
 	// 6 Else must be last
 	test("else preceding an elseif prevents later elseif from showing (case 6)", async () => {
 		document.body.innerHTML = `<div id=\"c6\">
-		  <p data-if=\"\${count===1}\" id=\"if\">One</p>
-		  <p data-else id=\"else\">ElseShown</p>
-		  <p data-elseif=\"\${count===2}\" id=\"later\">Two</p>
+		  <p :if=\"count===1\" id=\"if\">One</p>
+		  <p :else id=\"else\">ElseShown</p>
+		  <p :elseif=\"count===2\" id=\"later\">Two</p>
 		</div>`;
 		const root = document.getElementById("c6");
 		if (!root) throw new Error("c6 root missing");
@@ -219,7 +219,7 @@ describe("DOM behavior / structural stability", () => {
 
 	// 12 Nested if inside each
 	test("nested if within each (case 12)", async () => {
-		document.body.innerHTML = `<div id=\"c12\"><div :each=\"arr as v, i\"><span data-if=\"\${v==='a'}\" class=\"hit\">A</span><span data-else class=\"miss\">NotA</span></div></div>`;
+		document.body.innerHTML = `<div id=\"c12\"><div :each=\"arr as v, i\"><span :if=\"v==='a'\" class=\"hit\">A</span><span :else class=\"miss\">NotA</span></div></div>`;
 		const root = document.getElementById("c12");
 		if (!root) throw new Error("c12 root missing");
 		const template = root.querySelector("div");
@@ -236,9 +236,9 @@ describe("DOM behavior / structural stability", () => {
 	test("async await/then/catch transitions across success->failure->success cycles (case 13)", async () => {
 		document.body.innerHTML = `
       <div id="asyncRoot">
-        <p data-await="\${ (ok ? Promise.resolve(21) : Promise.reject('nope')) }" id="await">Loading</p>
-        <p data-then="val" id="then">Val: \${val}</p>
-        <p data-catch="err" id="catch">Err: \${err}</p>
+		<p :await="(ok ? Promise.resolve(21) : Promise.reject('nope'))" id="await">Loading</p>
+		<p :then="val" id="then">Val: \${val}</p>
+		<p :catch="err" id="catch">Err: \${err}</p>
       </div>`;
 		const root = document.getElementById("asyncRoot");
 		if (!root) throw new Error("async root missing");
@@ -277,9 +277,9 @@ describe("DOM behavior / structural stability", () => {
 	// 14 Interpolations inside async then/catch
 	test("interpolation inside async then/catch (case 14)", async () => {
 		document.body.innerHTML = `<div id=\"c14\">
-		 <div data-await=\"\${ ok ? Promise.resolve({n:2}) : Promise.reject({m:3}) }\" id=\"await14\">Loading</div>
-		 <div data-then=\"res\" id=\"then14\">Double: \${res.n * 2}</div>
-		 <div data-catch=\"err\" id=\"catch14\">Triple: \${err.m * 3}</div>
+		 <div :await=\"ok ? Promise.resolve({n:2}) : Promise.reject({m:3})\" id=\"await14\">Loading</div>
+		 <div :then=\"res\" id=\"then14\">Double: \${res.n * 2}</div>
+		 <div :catch=\"err\" id=\"catch14\">Triple: \${err.m * 3}</div>
 		</div>`;
 		const root = document.getElementById("c14");
 		if (!root) throw new Error("c14 root missing");
@@ -298,9 +298,9 @@ describe("DOM behavior / structural stability", () => {
 	// 15 Await/then/catch can contain conditionals & each
 	test("then/catch blocks can host conditionals and each (case 15)", async () => {
 		document.body.innerHTML = `<div id=\"c15\">
-		 <section data-await=\"\${ ok ? Promise.resolve(arr) : Promise.reject(arr) }\" id=\"await15\">Loading</section>
-		 <section data-then=\"vals\" id=\"then15\"><ul><li :each=\"vals as v, i\"><span data-if=\"\${i===0}\">First: \${v}</span><span data-else>Idx \${i}: \${v}</span></li></ul></section>
-		 <section data-catch=\"errs\" id=\"catch15\"><p data-if=\"\${errs.length===0}\">None</p><p data-else>Err Count: \${errs.length}</p></section>
+		 <section :await=\"ok ? Promise.resolve(arr) : Promise.reject(arr)\" id=\"await15\">Loading</section>
+		 <section :then=\"vals\" id=\"then15\"><ul><li :each=\"vals as v, i\"><span :if=\"i===0\">First: \${v}</span><span :else>Idx \${i}: \${v}</span></li></ul></section>
+		 <section :catch=\"errs\" id=\"catch15\"><p :if=\"errs.length===0\">None</p><p :else>Err Count: \${errs.length}</p></section>
 		</div>`;
 		const root = document.getElementById("c15");
 		if (!root) throw new Error("c15 root missing");
@@ -320,11 +320,11 @@ describe("DOM behavior / structural stability", () => {
 	// 16 Conditionals / each can contain await/then/catch
 	test("conditionals and each can host await/then/catch (case 16)", async () => {
 		document.body.innerHTML = `<div id=\"c16\">
-		 <div data-if=\"\${flag}\">
-		   <div data-await=\"\${ Promise.resolve(3) }\" id=\"innerAwait\">Loading</div>
-		   <div data-then=\"v\" id=\"innerThen\">Val=\${v}</div>
+		 <div :if=\"flag\">
+		   <div :await=\"Promise.resolve(3)\" id=\"innerAwait\">Loading</div>
+		   <div :then=\"v\" id=\"innerThen\">Val=\${v}</div>
 		 </div>
-		 <div :each=\"arr as v, i\"><span data-await=\"\${ Promise.resolve(v) }\" class=\"aw\">L</span><span data-then=\"x\" class=\"th\">X=\${x}</span></div>
+		 <div :each=\"arr as v, i\"><span :await=\"Promise.resolve(v)\" class=\"aw\">L</span><span :then=\"x\" class=\"th\">X=\${x}</span></div>
 		</div>`;
 		const root = document.getElementById("c16");
 		if (!root) throw new Error("c16 root missing");
@@ -342,9 +342,9 @@ describe("DOM behavior / structural stability", () => {
 	// 17 Sibling order rules
 	test("then/catch must follow await (case 17)", async () => {
 		document.body.innerHTML = `<div id=\"c17\">
-		 <div data-then=\"v\" id=\"prematureThen\">Early \${v}</div>
-		 <div data-await=\"\${ Promise.resolve('ok') }\" id=\"await17\">Load</div>
-		 <div data-catch=\"e\" id=\"catch17\">Err: \${e}</div>
+		 <div :then=\"v\" id=\"prematureThen\">Early \${v}</div>
+		 <div :await=\"Promise.resolve('ok')\" id=\"await17\">Load</div>
+		 <div :catch=\"e\" id=\"catch17\">Err: \${e}</div>
 		</div>`;
 		const root = document.getElementById("c17");
 		if (!root) throw new Error("c17 root missing");
