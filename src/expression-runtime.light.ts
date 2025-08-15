@@ -8,7 +8,7 @@ function lightCompile(src: string): (ctx?: Record<string, unknown>) => unknown {
 		// biome-ignore lint/suspicious/noExplicitAny: dynamic Function creation
 		const fn: any = new Function(
 			"ctx",
-			"with(ctx.__state||{}){with(ctx||{}){return (" + src + ")} }"
+			"with(ctx.__state||{}){with(ctx||{}){return (" + src + ")} }",
 		);
 		return (c?: Record<string, unknown>) => fn(c || {});
 	} catch {
@@ -17,5 +17,5 @@ function lightCompile(src: string): (ctx?: Record<string, unknown>) => unknown {
 }
 
 const evaluateExpression = (expr: string) =>
-	({ fn: lightCompile(expr) } as ReturnType<typeof fullEval>);
+	({ fn: lightCompile(expr) }) as ReturnType<typeof fullEval>;
 export default evaluateExpression;

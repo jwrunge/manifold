@@ -23,7 +23,7 @@ export default defineConfig({
 				alias: {
 					"./expression-runtime.ts": "./expression-runtime.light.ts",
 				},
-		  }
+			}
 		: undefined,
 	build: {
 		minify: "esbuild",
@@ -31,9 +31,7 @@ export default defineConfig({
 			entry: "src/main.ts",
 			name: "Manifold",
 			fileName: (format) =>
-				isLight
-					? `manifold.light.${format}.js`
-					: `manifold.${format}.js`,
+				isLight ? `manifold.light.${format}.js` : `manifold.${format}.js`,
 			formats,
 		},
 		// Keep default emptyOutDir behaviour unless user explicitly disables it
@@ -69,8 +67,7 @@ export default defineConfig({
 							"data-elseif",
 							"data-else",
 							"data-each",
-							"[data-if]",
-							"[data-each]",
+							"data-mf-skip-text",
 							"data-mf-register",
 							// Short internal names
 							"data-st",
@@ -91,27 +88,23 @@ export default defineConfig({
 							"value",
 							"checked",
 							"selectedIndex",
+							"event",
 							// Misc
 							"m.s",
 							"Promise",
 							"object",
 							"string",
 						];
-						const counts: Record<string, number> =
-							Object.create(null);
-						const esc = (s: string) =>
-							s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+						const counts: Record<string, number> = Object.create(null);
+						const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 						for (const s of pool) {
 							const re = new RegExp(`"${esc(s)}"`, "g");
 							counts[s] = (c.match(re) || []).length;
 						}
-						const entries = Object.entries(counts).filter(
-							([, n]) => n >= 3
-						);
+						const entries = Object.entries(counts).filter(([, n]) => n >= 3);
 						if (entries.length) {
 							let idx = 0;
-							const map: Record<string, string> =
-								Object.create(null);
+							const map: Record<string, string> = Object.create(null);
 							const decls: string[] = [];
 							for (const [s] of entries) {
 								const v = `__s${idx++}`;
@@ -126,16 +119,13 @@ export default defineConfig({
 							// Insert declarations. For UMD, prepend at the very start so wrapper can access vars.
 							const decl = `var ${decls.join(",")};`;
 							const format =
-								(options as unknown as { format?: string })
-									?.format || "es";
+								(options as unknown as { format?: string })?.format || "es";
 							if (format === "umd") {
 								// Prepend at absolute start to cover UMD wrapper usage
 								c = decl + c;
 							} else {
 								// ES: keep imports first if present
-								const importPrologue = c.match(
-									/^(?:import\s[^;]*;\s*)+/
-								);
+								const importPrologue = c.match(/^(?:import\s[^;]*;\s*)+/);
 								if (importPrologue) {
 									const at = importPrologue[0].length;
 									c = c.slice(0, at) + decl + c.slice(at);

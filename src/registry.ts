@@ -31,7 +31,7 @@ const extractAliases = (raw: string): ParsedExprMeta => {
 const buildCtx = (
 	aliases: Record<string, string[]>,
 	stateRef: Record<string, unknown> | undefined,
-	extra?: Record<string, unknown>
+	extra?: Record<string, unknown>,
 ) => {
 	const ctx: Record<string, unknown> = extra ? { ...extra } : {};
 	// Resolve alias paths against either injected extra context (loop/async vars) or state
@@ -89,7 +89,7 @@ export class RegEl {
 	}
 	static register(
 		el: HTMLElement | SVGElement | MathMLElement,
-		state: Record<string, unknown>
+		state: Record<string, unknown>,
 	) {
 		const existing = RegEl.#registry.get(el);
 		return existing || new RegEl(el, state);
@@ -103,7 +103,7 @@ export class RegEl {
 			? inst.#state
 			: (el as unknown as Record<string, unknown>)[
 					STATE_SYM as unknown as string
-			  ];
+				];
 	}
 	#el: HTMLElement | SVGElement | MathMLElement;
 	#state?: Record<string, unknown>;
@@ -121,7 +121,7 @@ export class RegEl {
 
 	constructor(
 		el: HTMLElement | SVGElement | MathMLElement,
-		state: Record<string, unknown>
+		state: Record<string, unknown>,
 	) {
 		this.#el = el;
 		this.#state = state;
@@ -210,9 +210,7 @@ export class RegEl {
 	_hideIfOrphanThenCatch(preserveExisting = false) {
 		if (hasThenOrCatch(this.#el) && !this._hasPrevAwait()) {
 			const el = this.#el as HTMLElement;
-			el.style.display = preserveExisting
-				? el.style.display || "none"
-				: "none";
+			el.style.display = preserveExisting ? el.style.display || "none" : "none";
 		}
 	}
 	dispose() {
@@ -231,18 +229,18 @@ export class RegEl {
 	_processAttributes() {
 		for (const attr of Array.from(this.#el.attributes)) {
 			const { name, value } = attr;
-			if (!name.startsWith(":")) continue;
-			const bindName = name.slice(1);
+			if (!(name.startsWith(":") || name.startsWith("sync:"))) continue;
+			const isSync = name.startsWith("sync:");
+			const bindName = isSync ? name.slice(5) : name.slice(1);
+			if (isSync) {
+				// Two-way property binding (value/checked/selectedIndex)
+				this._bindProp(bindName, value, true);
+				continue;
+			}
 			if (
-				![
-					"if",
-					"elseif",
-					"else",
-					"await",
-					"then",
-					"catch",
-					"each",
-				].includes(bindName)
+				!["if", "elseif", "else", "await", "then", "catch", "each"].includes(
+					bindName,
+				)
 			) {
 				// Generic colon binding: property or event
 				if (bindName.startsWith("on")) {
@@ -266,11 +264,7 @@ export class RegEl {
 			if (bindName === "each" && !this.#el.hasAttribute("data-each")) {
 				this.#el.setAttribute("data-each", `\${${value.trim()}}`);
 			}
-			if (
-				bindName === "if" ||
-				bindName === "elseif" ||
-				bindName === "else"
-			) {
+			if (bindName === "if" || bindName === "elseif" || bindName === "else") {
 				this._parseShow(mapped, value.trim());
 			} else if (
 				bindName === "await" ||
@@ -281,8 +275,7 @@ export class RegEl {
 			} else if (bindName === "each") {
 				this._parseEach(value.trim());
 				for (const child of Array.from(this.#el.children)) {
-					if (this.#state)
-						RegEl.register(child as HTMLElement, this.#state);
+					if (this.#state) RegEl.register(child as HTMLElement, this.#state);
 				}
 			}
 		}
@@ -309,7 +302,7 @@ export class RegEl {
 		this.#eachAliases = aliases;
 		let expr = clean;
 		const m = clean.match(
-			/^(.*?)\s+as\s+([a-zA-Z_$][\w$]*)(?:\s*,\s*([a-zA-Z_$][\w$]*))?$/
+			/^(.*?)\s+as\s+([a-zA-Z_$][\w$]*)(?:\s*,\s*([a-zA-Z_$][\w$]*))?$/,
 		);
 		if (m) {
 			expr = m[1].trim();
@@ -319,47 +312,32 @@ export class RegEl {
 		this.#eachExpr = evaluateExpression(expr);
 	}
 
-	_bindProp(name: string, raw: string) {
+	_bindProp(name: string, raw: string, forceSync = false) {
 		if (name === "selectedindex") name = "selectedIndex";
-		const [bindingPart, syncPartRaw] = raw.split(">>");
-		const { clean, aliases } = extractAliases(bindingPart);
+		const { clean, aliases } = extractAliases(raw);
 		const bindingExpr = evaluateExpression(clean);
-		const syncPart = syncPartRaw?.trim();
-		let syncExpr: ReturnType<typeof evaluateExpression> | undefined;
-		let syncParam: string | undefined;
 		let assignPath: string[] | undefined;
-		if (syncPart !== undefined) {
-			if (syncPart === "") {
-				const chain = clean.match(
-					/^[a-zA-Z_$][\w$]*(?:\.[a-zA-Z_$][\w$]*)*$/
-				);
-				if (chain) assignPath = clean.split(".");
-			} else {
-				const arrow = syncPart.match(
-					/^\(\s*([a-zA-Z_$][\w$]*)\s*\)\s*=>/
-				);
-				if (arrow) syncParam = arrow[1];
-				const { clean: syncClean, aliases: syncAliases } =
-					extractAliases(syncPart);
-				syncExpr = evaluateExpression(syncClean);
-				Object.assign(aliases, syncAliases);
-			}
+		if (forceSync) {
+			const chain = clean.match(/^[a-zA-Z_$][\w$]*(?:\.[a-zA-Z_$][\w$]*)*$/);
+			if (chain) assignPath = clean.split(".");
 		}
 		let last: unknown;
 		this._addEffect(() => {
 			const v = bindingExpr.fn(
-				buildCtx(aliases, this.#state, this._getInjected())
+				buildCtx(aliases, this.#state, this._getInjected()),
 			);
 			if (v !== last) {
 				last = v;
 				this._setProp(name, v);
 			}
 		});
-		if (["value", "checked", "selectedIndex"].includes(name)) {
+		if (forceSync && ["value", "checked", "selectedIndex"].includes(name)) {
 			const evt = name === "value" ? "input" : "change";
 			(this.#el as HTMLElement).addEventListener(evt, () => {
-				const elObj: Record<string, unknown> = this
-					.#el as unknown as Record<string, unknown>;
+				const elObj: Record<string, unknown> = this.#el as unknown as Record<
+					string,
+					unknown
+				>;
 				let newVal = elObj[name];
 				if (
 					name === "value" &&
@@ -380,13 +358,6 @@ export class RegEl {
 						(cur as Record<string, unknown>)[
 							assignPath[assignPath.length - 1]
 						] = newVal;
-				} else if (syncExpr) {
-					const ctx = buildCtx(
-						aliases,
-						this.#state,
-						syncParam ? { [syncParam]: newVal } : undefined
-					);
-					syncExpr.fn(ctx);
 				}
 			});
 		}
@@ -397,7 +368,7 @@ export class RegEl {
 		let arrowParam: string | undefined;
 		// Optional arrow-block syntax: (e)=> { ... } or e=>{...}
 		const arrow = src.match(
-			/^(?:\(\s*([a-zA-Z_$][\w$]*)?\s*\)|([a-zA-Z_$][\w$]*))\s*=>\s*\{([\s\S]*)\}$/
+			/^(?:\(\s*([a-zA-Z_$][\w$]*)?\s*\)|([a-zA-Z_$][\w$]*))\s*=>\s*\{([\s\S]*)\}$/,
 		);
 		if (arrow) {
 			arrowParam = arrow[1] || arrow[2] || undefined;
@@ -439,7 +410,7 @@ export class RegEl {
 			const { clean, aliases } = extractAliases(s);
 			const isAssign =
 				/^[a-zA-Z_$][\w$]*(?:\s*(?:\.[a-zA-Z_$][\w$]*|\[[^\]]+\]))*\s*=[^=]/.test(
-					clean
+					clean,
 				);
 			const toParse = isAssign ? `(()=> ${clean})` : clean;
 			return { parsed: evaluateExpression(toParse), aliases };
@@ -509,8 +480,7 @@ export class RegEl {
 					prev = prev.previousElementSibling;
 				}
 				const cur = this._evalShow();
-				this.#el.style.display =
-					prevShows.some(Boolean) || !cur ? "none" : "";
+				this.#el.style.display = prevShows.some(Boolean) || !cur ? "none" : "";
 			});
 			return;
 		}
@@ -524,10 +494,7 @@ export class RegEl {
 		const out: boolean[] = [];
 		let prev = this.#el.previousElementSibling;
 		while (prev) {
-			if (
-				prev.hasAttribute("data-if") ||
-				prev.hasAttribute("data-elseif")
-			) {
+			if (prev.hasAttribute("data-if") || prev.hasAttribute("data-elseif")) {
 				const reg = RegEl.#registry.get(prev);
 				if (reg && (reg as RegEl).#showExpr)
 					out.unshift(!!(reg as RegEl)._evalShow());
@@ -540,12 +507,8 @@ export class RegEl {
 	_evalShow() {
 		return this.#showExpr
 			? this.#showExpr.fn(
-					buildCtx(
-						this.#showAliases,
-						this.#state,
-						this._getInjected()
-					)
-			  )
+					buildCtx(this.#showAliases, this.#state, this._getInjected()),
+				)
 			: false;
 	}
 
@@ -558,20 +521,15 @@ export class RegEl {
 			const expr = this.#awaitExpr;
 			if (!expr) return;
 			const p = expr.fn(
-				buildCtx(this.#awaitAliases, this.#state, this._getInjected())
+				buildCtx(this.#awaitAliases, this.#state, this._getInjected()),
 			);
-			if (!p || typeof (p as { then?: unknown }).then !== "function")
-				return;
+			if (!p || typeof (p as { then?: unknown }).then !== "function") return;
 			this.#awaitPending = true;
 			this._hideThenCatchSiblings(parent, true);
 			this.#el.style.display = "";
 			Promise.resolve(p)
-				.then((res) =>
-					this._handlePromiseResult(res, true, baseDisplay)
-				)
-				.catch((err) =>
-					this._handlePromiseResult(err, false, baseDisplay)
-				);
+				.then((res) => this._handlePromiseResult(res, true, baseDisplay))
+				.catch((err) => this._handlePromiseResult(err, false, baseDisplay));
 		});
 	}
 	_handlePromiseResult(val: unknown, ok: boolean, base: string) {
@@ -627,7 +585,7 @@ export class RegEl {
 		el: HTMLElement,
 		varName: string,
 		value: unknown,
-		base: string
+		base: string,
 	) {
 		// Dispose and re-register so constructor-driven traversal runs with injected context
 		const existing = RegEl.#registry.get(el);
@@ -642,10 +600,8 @@ export class RegEl {
 			const inst = RegEl.#registry.get(tpl);
 			(inst as RegEl | undefined)?.dispose();
 			if (this.#state) RegEl.register(tpl as HTMLElement, this.#state);
-			const attr =
-				tpl.getAttribute("data-each") || tpl.getAttribute(":each");
-			if (attr?.includes(varName))
-				RegEl.setInjected(tpl, { [varName]: value });
+			const attr = tpl.getAttribute("data-each") || tpl.getAttribute(":each");
+			if (attr?.includes(varName)) RegEl.setInjected(tpl, { [varName]: value });
 		}
 	}
 	_setupEach() {
@@ -653,8 +609,7 @@ export class RegEl {
 		const template = this.#el;
 		const parent = template.parentElement;
 		if (!parent) return;
-		const templateHTML =
-			template.getAttribute("data-mt") ?? template.innerHTML;
+		const templateHTML = template.getAttribute("data-mt") ?? template.innerHTML;
 		template.setAttribute("data-mt", templateHTML);
 		template.style.display = "none";
 		template.setAttribute("data-st", "");
@@ -669,7 +624,7 @@ export class RegEl {
 		const initialCtx = buildCtx(
 			this.#eachAliases,
 			this.#state,
-			this._getInjected()
+			this._getInjected(),
 		);
 		const initialArr = this.#eachExpr.fn(initialCtx);
 		// Helpers to reduce duplication in :each
@@ -688,27 +643,21 @@ export class RegEl {
 					typeof value === "object" &&
 					this.#eachKeyAlias in (value as Record<string, unknown>)
 				)
-					key = (value as Record<string, unknown>)[
-						this.#eachKeyAlias
-					];
+					key = (value as Record<string, unknown>)[this.#eachKeyAlias];
 				out.push({ key, value, index: i });
 			}
 			return out;
 		};
 		const makeClone = (
 			last: Node,
-			item: { key: unknown; value: unknown }
+			item: { key: unknown; value: unknown },
 		): EachItem => {
 			const el = document.createElement(template.tagName);
 			for (const attr of Array.from(template.attributes)) {
 				if (
-					[
-						":each",
-						"data-st",
-						"data-mt",
-						"style",
-						"data-each",
-					].includes(attr.name)
+					[":each", "data-st", "data-mt", "style", "data-each"].includes(
+						attr.name,
+					)
 				)
 					continue;
 				el.setAttribute(attr.name, attr.value);
@@ -732,7 +681,7 @@ export class RegEl {
 		};
 		const pruneConditionals = (
 			root: HTMLElement,
-			ctx: Record<string, unknown>
+			ctx: Record<string, unknown>,
 		) => {
 			const chains = root.querySelectorAll("[data-if]");
 			for (const ifNode of Array.from(chains)) {
@@ -751,8 +700,7 @@ export class RegEl {
 				let sib = ifNode.nextElementSibling;
 				while (
 					sib &&
-					(sib.hasAttribute("data-elseif") ||
-						sib.hasAttribute("data-else"))
+					(sib.hasAttribute("data-elseif") || sib.hasAttribute("data-else"))
 				) {
 					chain.push(sib as HTMLElement);
 					sib = sib.nextElementSibling;
@@ -763,15 +711,11 @@ export class RegEl {
 						node.hasAttribute("data-if") ||
 						node.hasAttribute("data-elseif")
 					) {
-						const inst = RegEl.#registry.get(node) as
-							| RegEl
-							| undefined;
+						const inst = RegEl.#registry.get(node) as RegEl | undefined;
 						const exp = inst ? inst.#showExpr : undefined;
 						const aliases = inst ? inst.#showAliases : {};
 						if (exp) {
-							const val = exp.fn(
-								buildCtx(aliases, this.#state, ctx)
-							);
+							const val = exp.fn(buildCtx(aliases, this.#state, ctx));
 							if (val && !chosen) {
 								chosen = node;
 								break;
@@ -799,7 +743,7 @@ export class RegEl {
 			const expr = this.#eachExpr;
 			if (!expr) return;
 			const arr = expr.fn(
-				buildCtx(this.#eachAliases, this.#state, this._getInjected())
+				buildCtx(this.#eachAliases, this.#state, this._getInjected()),
 			);
 			try {
 				(arr as unknown as { valueOf?: () => unknown })?.valueOf?.();
@@ -815,7 +759,7 @@ export class RegEl {
 			}
 			const newItems = mapItems(arr);
 			const oldMap = new Map<unknown, EachItem>(
-				this.#eachClones.map((c) => [c.key, c])
+				this.#eachClones.map((c) => [c.key, c]),
 			);
 			const next: EachItem[] = [];
 			let last: Node = template;
@@ -848,13 +792,9 @@ export class RegEl {
 
 	_traverseText(
 		root: Element | DocumentFragment,
-		injectedCtx?: Record<string, unknown>
+		injectedCtx?: Record<string, unknown>,
 	) {
-		const walker = document.createTreeWalker(
-			root,
-			NodeFilter.SHOW_TEXT,
-			null
-		);
+		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
 		const rootEl = root instanceof Element ? root : undefined;
 		const fallbackInjected =
 			injectedCtx || RegEl.#injected.get(rootEl as Element);
@@ -930,7 +870,7 @@ export class RegEl {
 				}
 				const ctx = buildCtx(p.aliases || {}, this.#state, injected);
 				const v = p.expr.fn(ctx);
-				out += v == null ? "" : String(v);
+				out += v == null ? "" : "" + (v as unknown as string);
 			}
 			node.textContent = out;
 		});
@@ -938,7 +878,11 @@ export class RegEl {
 	_setProp(name: string, v: unknown) {
 		const el = this.#el as unknown as Record<string, unknown>;
 		if (name in el) (el as Record<string, unknown>)[name] = v as never;
-		else this.#el.setAttribute(name, v == null ? "" : String(v));
+		else
+			this.#el.setAttribute(
+				name,
+				v == null ? "" : "" + (v as unknown as string),
+			);
 	}
 }
 export default RegEl;

@@ -28,7 +28,7 @@ describe("registry basics", () => {
 			],
 			flag: true,
 			promiseVal: 5,
-		})
+		}),
 	);
 
 	test("conditional chain :if / :elseif / :else", async () => {
@@ -40,25 +40,25 @@ describe("registry basics", () => {
       </div>`;
 		const root = document.body.firstElementChild as HTMLElement;
 		Array.from(root.querySelectorAll("*")).forEach((el) =>
-			RegEl.register(el as HTMLElement, state)
+			RegEl.register(el as HTMLElement, state),
 		);
 		await flush();
+		expect((document.getElementById("ifEl") as HTMLElement).style.display).toBe(
+			"none",
+		);
 		expect(
-			(document.getElementById("ifEl") as HTMLElement).style.display
-		).toBe("none");
-		expect(
-			(document.getElementById("elseifEl") as HTMLElement).style.display
+			(document.getElementById("elseifEl") as HTMLElement).style.display,
 		).toBe("");
 		expect(
-			(document.getElementById("elseEl") as HTMLElement).style.display
+			(document.getElementById("elseEl") as HTMLElement).style.display,
 		).toBe("none");
 		state.count = 3;
 		await flush();
+		expect((document.getElementById("ifEl") as HTMLElement).style.display).toBe(
+			"",
+		);
 		expect(
-			(document.getElementById("ifEl") as HTMLElement).style.display
-		).toBe("");
-		expect(
-			(document.getElementById("elseifEl") as HTMLElement).style.display
+			(document.getElementById("elseifEl") as HTMLElement).style.display,
 		).toBe("none");
 	});
 
@@ -70,8 +70,7 @@ describe("registry basics", () => {
 		if (!template) throw new Error("template missing");
 		RegEl.register(template as HTMLElement, state);
 		await flush();
-		const countLis = () =>
-			ul.querySelectorAll("li:not([data-each])").length;
+		const countLis = () => ul.querySelectorAll("li:not([data-each])").length;
 		expect(countLis()).toBe(2);
 		state.list.push({ id: 3, v: "c" });
 		state.list = [...state.list];
@@ -84,8 +83,9 @@ describe("registry basics", () => {
 	});
 
 	test(":each colon syntax with value, index aliases (primitive array)", async () => {
-		const local = StateBuilder.create({ nums: [10, 20, 30] }).build()
-			.state as { nums: number[] };
+		const local = StateBuilder.create({ nums: [10, 20, 30] }).build().state as {
+			nums: number[];
+		};
 		document.body.innerHTML = `<ul><li :each="nums as n, i">Item \${i}: \${n}</li></ul>`;
 		const ul = document.querySelector("ul");
 		if (!ul) throw new Error("ul missing");
@@ -93,12 +93,12 @@ describe("registry basics", () => {
 		if (!li) throw new Error("li missing");
 		RegEl.register(
 			li as HTMLElement,
-			local as unknown as Record<string, unknown>
+			local as unknown as Record<string, unknown>,
 		);
 		await flush();
-		const texts = Array.from(
-			ul.querySelectorAll("li:not([data-each])")
-		).map((el) => el.textContent?.trim());
+		const texts = Array.from(ul.querySelectorAll("li:not([data-each])")).map(
+			(el) => el.textContent?.trim(),
+		);
 		expect(texts).toEqual(["Item 0: 10", "Item 1: 20", "Item 2: 30"]);
 	});
 
@@ -113,17 +113,17 @@ describe("registry basics", () => {
 		if (!li) throw new Error("li missing");
 		RegEl.register(
 			li as HTMLElement,
-			local as unknown as Record<string, unknown>
+			local as unknown as Record<string, unknown>,
 		);
 		await flush();
-		const texts = Array.from(
-			ul.querySelectorAll("li:not([data-each])")
-		).map((el) => el.textContent?.trim());
+		const texts = Array.from(ul.querySelectorAll("li:not([data-each])")).map(
+			(el) => el.textContent?.trim(),
+		);
 		expect(texts).toEqual(["Val 5", "Val 6"]);
 	});
 
-	test("two-way value sync shorthand >>", async () => {
-		document.body.innerHTML = `<input :value="count >>" id="inp" />`;
+	test("two-way value sync via sync: prefix", async () => {
+		document.body.innerHTML = `<input sync:value="count" id="inp" />`;
 		const inp = document.getElementById("inp") as HTMLInputElement;
 		RegEl.register(inp, state);
 		await flush();
@@ -147,8 +147,7 @@ describe("registry basics", () => {
 	test("multi-statement event handler executes sequentially", async () => {
 		// Add increment function to state
 		(state as Record<string, unknown>).increment = () => {
-			(state as Record<string, unknown>).count =
-				(state.count as number) + 5;
+			(state as Record<string, unknown>).count = (state.count as number) + 5;
 		};
 		document.body.innerHTML = `<button :onclick="console.log('before', count); increment(); console.log('after', count)" id="btn2">++</button>`;
 		const btn2 = document.getElementById("btn2") as HTMLButtonElement;
@@ -195,31 +194,31 @@ describe("extended registry features", () => {
 		const root = document.body.firstElementChild;
 		if (!root) throw new Error("root missing");
 		Array.from(root.children).forEach((el) =>
-			RegEl.register(el as HTMLElement, local)
+			RegEl.register(el as HTMLElement, local),
 		);
 		// Initial: loading visible, then/catch hidden
 		expect(
-			(document.getElementById("await") as HTMLElement).style.display
+			(document.getElementById("await") as HTMLElement).style.display,
 		).toBe("");
+		expect((document.getElementById("then") as HTMLElement).style.display).toBe(
+			"none",
+		);
 		expect(
-			(document.getElementById("then") as HTMLElement).style.display
-		).toBe("none");
-		expect(
-			(document.getElementById("catch") as HTMLElement).style.display
+			(document.getElementById("catch") as HTMLElement).style.display,
 		).toBe("none");
 		for (let i = 0; i < 4; i++) await flush();
 		// After resolution: loading hidden, then visible with interpolated value, catch hidden
 		expect(
-			(document.getElementById("await") as HTMLElement).style.display
+			(document.getElementById("await") as HTMLElement).style.display,
 		).toBe("none");
+		expect((document.getElementById("then") as HTMLElement).style.display).toBe(
+			"",
+		);
+		expect((document.getElementById("then") as HTMLElement).textContent).toBe(
+			"Val: 42",
+		);
 		expect(
-			(document.getElementById("then") as HTMLElement).style.display
-		).toBe("");
-		expect(
-			(document.getElementById("then") as HTMLElement).textContent
-		).toBe("Val: 42");
-		expect(
-			(document.getElementById("catch") as HTMLElement).style.display
+			(document.getElementById("catch") as HTMLElement).style.display,
 		).toBe("none");
 		// trigger failure path
 		local.ok = false;
@@ -230,11 +229,11 @@ describe("extended registry features", () => {
 		for (let i = 0; i < 2; i++) await flush();
 		// Because we reused same nodes, check that catch becomes visible
 		expect(
-			(document.getElementById("catch") as HTMLElement).style.display
+			(document.getElementById("catch") as HTMLElement).style.display,
 		).toBe("");
-		expect(
-			(document.getElementById("catch") as HTMLElement).textContent
-		).toBe("Err: fail");
+		expect((document.getElementById("catch") as HTMLElement).textContent).toBe(
+			"Err: fail",
+		);
 	});
 
 	test("auto-registration binds all [data-mf-register] using single state", async () => {
@@ -252,29 +251,29 @@ describe("extended registry features", () => {
 		// build() auto-registers all [data-mf-register] regions
 		StateBuilder.create().build();
 		await flush();
-		expect(
-			(document.getElementById("aVal") as HTMLElement).textContent
-		).toBe("1");
-		expect(
-			(document.getElementById("bVal") as HTMLElement).textContent
-		).toBe("2");
+		expect((document.getElementById("aVal") as HTMLElement).textContent).toBe(
+			"1",
+		);
+		expect((document.getElementById("bVal") as HTMLElement).textContent).toBe(
+			"2",
+		);
 		// Update and ensure both update
 		b.a = 3;
 		b.b = 4;
 		await flush();
-		expect(
-			(document.getElementById("aVal") as HTMLElement).textContent
-		).toBe("3");
-		expect(
-			(document.getElementById("bVal") as HTMLElement).textContent
-		).toBe("4");
+		expect((document.getElementById("aVal") as HTMLElement).textContent).toBe(
+			"3",
+		);
+		expect((document.getElementById("bVal") as HTMLElement).textContent).toBe(
+			"4",
+		);
 	});
 
 	test("checked sync", async () => {
 		const s = StateBuilder.create({ on: false }).build().state as {
 			on: boolean;
 		};
-		document.body.innerHTML = `<input type="checkbox" :checked="on >>" id="c" />`;
+		document.body.innerHTML = `<input type="checkbox" sync:checked="on" id="c" />`;
 		const el = document.getElementById("c") as HTMLInputElement;
 		RegEl.register(el, s);
 		await flush();
@@ -294,7 +293,7 @@ describe("extended registry features", () => {
 		s.update = (v: string) => {
 			s.txt = v;
 		};
-		document.body.innerHTML = `<input :value="txt >> (v)=> update(v)" id="txtInp" />`;
+		document.body.innerHTML = `<input :value="txt" :oninput="update(event.target.value)" id="txtInp" />`;
 		const el = document.getElementById("txtInp") as HTMLInputElement;
 		RegEl.register(el, s);
 		for (let i = 0; i < 2; i++) await flush();
@@ -309,7 +308,7 @@ describe("extended registry features", () => {
 		const s = StateBuilder.create({ idx: 1 }).build().state as {
 			idx: number;
 		};
-		document.body.innerHTML = `<select :selectedIndex="idx >>" id="sel"><option>A</option><option>B</option><option>C</option></select>`;
+		document.body.innerHTML = `<select sync:selectedIndex="idx" id="sel"><option>A</option><option>B</option><option>C</option></select>`;
 		const el = document.getElementById("sel") as HTMLSelectElement;
 		RegEl.register(el, s);
 		for (let i = 0; i < 2; i++) await flush();
@@ -330,12 +329,12 @@ describe("extended registry features", () => {
 		if (!li) throw new Error("li missing");
 		RegEl.register(
 			li as HTMLElement,
-			local as unknown as Record<string, unknown>
+			local as unknown as Record<string, unknown>,
 		);
 		await flush();
 		const texts = () =>
 			Array.from(ul.querySelectorAll("li:not([data-each])")).map((el) =>
-				el.textContent?.trim()
+				el.textContent?.trim(),
 			);
 		expect(texts()).toEqual(["(0) a", "(1) b", "(2) c"]);
 		local.arr[3] = "d"; // direct index set beyond current length
@@ -353,7 +352,7 @@ describe("extended registry features", () => {
 		if (!li) throw new Error("li missing");
 		RegEl.register(
 			li as HTMLElement,
-			local as unknown as Record<string, unknown>
+			local as unknown as Record<string, unknown>,
 		);
 		await flush();
 		const textAt = (i: number) =>

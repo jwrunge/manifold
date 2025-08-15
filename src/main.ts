@@ -13,7 +13,7 @@ let __globalState: Record<string, unknown> | undefined;
 
 class StateBuilder<
 	TState extends StateConstraint,
-	TFuncs extends FuncsConstraint
+	TFuncs extends FuncsConstraint,
 > {
 	#scopedState: TState;
 	#scopedFuncs: TFuncs;
@@ -24,7 +24,7 @@ class StateBuilder<
 	constructor(
 		initialState?: TState,
 		initialFuncs?: TFuncs,
-		derivations?: Map<string, (store: StateConstraint) => unknown>
+		derivations?: Map<string, (store: StateConstraint) => unknown>,
 	) {
 		this.#scopedState = (initialState || {}) as TState;
 		this.#scopedFuncs = (initialFuncs || {}) as TFuncs;
@@ -33,7 +33,7 @@ class StateBuilder<
 
 	static create<S extends StateConstraint, F extends FuncsConstraint>(
 		initial?: S,
-		funcs?: F
+		funcs?: F,
 	): StateBuilder<S, F> {
 		// Enforce single-state except in test environment to keep unit tests isolated
 		const penv = (
@@ -57,11 +57,11 @@ class StateBuilder<
 	add<K extends string, V>(
 		key: K,
 		value: V,
-		sync?: () => void
+		sync?: () => void,
 	): StateBuilder<TState & Record<K, V>, TFuncs> {
 		if (this.#built)
 			throw new Error(
-				"StateBuilder: add() cannot be called after build(); create a new builder"
+				"StateBuilder: add() cannot be called after build(); create a new builder",
 			);
 		const newState = { ...this.#scopedState, [key]: value } as TState &
 			Record<K, V>;
@@ -69,18 +69,18 @@ class StateBuilder<
 		const next = new StateBuilder(
 			newState,
 			this.#scopedFuncs as TFuncs,
-			this.#derivations
+			this.#derivations,
 		) as StateBuilder<TState & Record<K, V>, TFuncs>;
 		return next;
 	}
 
 	derive<K extends string, T>(
 		key: K,
-		fn: (store: TState) => T
+		fn: (store: TState) => T,
 	): StateBuilder<TState & Record<K, T>, TFuncs> {
 		if (this.#built)
 			throw new Error(
-				"StateBuilder: derive() cannot be called after build(); create a new builder"
+				"StateBuilder: derive() cannot be called after build(); create a new builder",
 			);
 		const newState = {
 			...this.#scopedState,
@@ -91,7 +91,7 @@ class StateBuilder<
 		const next = new StateBuilder(
 			newState,
 			this.#scopedFuncs,
-			newDerivations
+			newDerivations,
 		) as StateBuilder<TState & Record<K, T>, TFuncs>;
 		return next;
 	}
@@ -118,12 +118,10 @@ class StateBuilder<
 				e.run();
 			}
 			for (const [key, fn] of Object.entries(this.#scopedFuncs)) {
-				(state as Record<string, unknown>)[key] = ((
-					...args: unknown[]
-				) =>
+				(state as Record<string, unknown>)[key] = ((...args: unknown[]) =>
 					(fn as (...a: unknown[]) => unknown).apply(
 						state,
-						args
+						args,
 					)) as unknown as TState[Extract<keyof TState, string>];
 			}
 			this.#builtState = state;
@@ -140,8 +138,7 @@ class StateBuilder<
 			if (env === "test") {
 				// In tests, keep the first non-empty state as global unless none exists yet
 				const isEmpty =
-					!state ||
-					Object.keys(state as Record<string, unknown>).length === 0;
+					!state || Object.keys(state as Record<string, unknown>).length === 0;
 				if (!__globalState || !isEmpty) {
 					__globalState = state as unknown as Record<string, unknown>;
 				}
@@ -160,8 +157,8 @@ class StateBuilder<
 			nodes.forEach((el) =>
 				RegEl.register(
 					el as HTMLElement | SVGElement | MathMLElement,
-					stateToUse
-				)
+					stateToUse,
+				),
 			);
 		}
 		return { state } as { state: TState };

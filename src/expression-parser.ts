@@ -72,7 +72,7 @@ const splitCSV = (src: string): string[] => {
 const splitOuterRightmost = (
 	expr: string,
 	ops: string[],
-	guardUnaryPM = false
+	guardUnaryPM = false,
 ): [string, string, string] | null => {
 	let p = 0,
 		b = 0,
@@ -131,7 +131,7 @@ const splitByPrecedence = (expr: string): [string, string, string] | null => {
 };
 
 const buildChain = (
-	expr: string
+	expr: string,
 ): { base: string; segs: ChainSeg[] } | null => {
 	if (!/^[a-zA-Z_$]/.test(expr)) return null;
 	let i = 0,
@@ -188,7 +188,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 	const emptyArrow = expr.match(/^\(\)\s*=>\s*(.+)$/);
 	if (emptyArrow) return parse(emptyArrow[1], true);
 	const singleParamArrow = expr.match(
-		/^\(\s*([a-zA-Z_$][\w$]*)\s*\)\s*=>\s*(.+)$/
+		/^\(\s*([a-zA-Z_$][\w$]*)\s*\)\s*=>\s*(.+)$/,
 	);
 	if (singleParamArrow) {
 		const body = parse(singleParamArrow[2], false);
@@ -237,8 +237,10 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 						const val = rhs.fn(ctx);
 						const injected =
 							ctx && (ctx as Record<string, unknown>).__state
-								? ((ctx as Record<string, unknown>)
-										.__state as Record<string, unknown>)
+								? ((ctx as Record<string, unknown>).__state as Record<
+										string,
+										unknown
+									>)
 								: undefined;
 						if (injected) {
 							let obj: unknown = injected;
@@ -248,27 +250,19 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 									s.t === "prop"
 										? s.k
 										: s.t === "idx"
-										? s.e.fn(ctx)
-										: undefined
+											? s.e.fn(ctx)
+											: undefined,
 								),
 							];
 							for (let i = 0; i < keys.length - 1; i++) {
-								if (obj == null || typeof obj !== "object")
-									return val;
-								obj = (obj as Record<string, unknown>)[
-									keys[i] as never
-								];
+								if (obj == null || typeof obj !== "object") return val;
+								obj = (obj as Record<string, unknown>)[keys[i] as never];
 								if (obj == null) return val;
 							}
 							const lastKey = keys[keys.length - 1];
-							if (
-								obj &&
-								typeof obj === "object" &&
-								lastKey !== undefined
-							)
-								(obj as Record<string, unknown>)[
-									lastKey as never
-								] = val as never;
+							if (obj && typeof obj === "object" && lastKey !== undefined)
+								(obj as Record<string, unknown>)[lastKey as never] =
+									val as never;
 						}
 						return val;
 					},
@@ -346,18 +340,12 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 			case "||":
 				return {
 					fn: (c) => l.fn(c) || r.fn(c),
-					stateRefs: new Set<string>([
-						...l.stateRefs,
-						...r.stateRefs,
-					]),
+					stateRefs: new Set<string>([...l.stateRefs, ...r.stateRefs]),
 				};
 			case "&&":
 				return {
 					fn: (c) => l.fn(c) && r.fn(c),
-					stateRefs: new Set<string>([
-						...l.stateRefs,
-						...r.stateRefs,
-					]),
+					stateRefs: new Set<string>([...l.stateRefs, ...r.stateRefs]),
 				};
 			case "??":
 				return {
@@ -365,10 +353,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 						const v = l.fn(c);
 						return v == null ? r.fn(c) : v;
 					},
-					stateRefs: new Set<string>([
-						...l.stateRefs,
-						...r.stateRefs,
-					]),
+					stateRefs: new Set<string>([...l.stateRefs, ...r.stateRefs]),
 				};
 			case "+":
 			case "-":
@@ -379,11 +364,8 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 						const A = l.fn(c) as unknown;
 						const B = r.fn(c) as unknown;
 						if (OP === "+")
-							return typeof A === "string" ||
-								typeof B === "string"
-								? "" +
-										(A as string | number) +
-										(B as string | number)
+							return typeof A === "string" || typeof B === "string"
+								? "" + (A as string | number) + (B as string | number)
 								: (A as number) + (B as number);
 						if (OP === "-") return (A as number) - (B as number);
 						if (OP === "*") return (A as number) * (B as number);
@@ -391,10 +373,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 							? undefined
 							: (A as number) / (B as number);
 					},
-					stateRefs: new Set<string>([
-						...l.stateRefs,
-						...r.stateRefs,
-					]),
+					stateRefs: new Set<string>([...l.stateRefs, ...r.stateRefs]),
 				};
 			default:
 				return {
@@ -416,10 +395,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 								return (A as number) < (B as number);
 						}
 					},
-					stateRefs: new Set<string>([
-						...l.stateRefs,
-						...r.stateRefs,
-					]),
+					stateRefs: new Set<string>([...l.stateRefs, ...r.stateRefs]),
 				};
 		}
 	}
@@ -475,10 +451,8 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 						if (typeof fn === "function") {
 							const argVals = seg.args.map((a) => a.fn(ctx));
 							cur = (fn as (...x: unknown[]) => unknown).apply(
-								lastObjForCall !== undefined
-									? lastObjForCall
-									: undefined,
-								argVals
+								lastObjForCall !== undefined ? lastObjForCall : undefined,
+								argVals,
 							);
 							lastObjForCall = cur;
 						} else return undefined;
@@ -506,7 +480,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 				return out;
 			},
 			stateRefs: new Set(
-				parsedItems.flatMap((it) => Array.from(it.parsed.stateRefs))
+				parsedItems.flatMap((it) => Array.from(it.parsed.stateRefs)),
 			),
 		};
 	}
@@ -550,10 +524,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 						const keyVal =
 							typeof s.k === "string" && !s.computed
 								? s.k
-								: ((s.k as ParsedExpression).fn(c) as
-										| string
-										| number
-										| symbol);
+								: ((s.k as ParsedExpression).fn(c) as string | number | symbol);
 						out[keyVal as string] = s.v.fn(c);
 					}
 				}
@@ -566,7 +537,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 					if (s.computed && s.k && typeof s.k !== "string")
 						o.push(...(s.k as ParsedExpression).stateRefs);
 					return o;
-				})
+				}),
 			),
 		};
 	}
