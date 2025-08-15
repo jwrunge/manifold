@@ -39,13 +39,36 @@ export default defineConfig({
 		emptyOutDir: env.MF_EMPTY_OUT_DIR === "false" ? false : undefined,
 		rollupOptions: { output: { compact: isLight } },
 	},
+	plugins: [
+		{
+			name: "ultra-minify",
+			generateBundle(_options, bundle) {
+				for (const fileName in bundle) {
+					const chunk = bundle[fileName];
+					if (chunk.type === "chunk") {
+						// More conservative whitespace removal
+						chunk.code = chunk.code
+							.replace(/\n\s*/g, " ") // Replace newlines with single space
+							.replace(/\s{2,}/g, " ") // Replace multiple spaces with single space
+							.replace(/;\s+/g, ";") // Remove spaces after semicolons
+							.replace(/,\s+/g, ",") // Remove spaces after commas
+							.replace(/\{\s+/g, "{") // Remove spaces after opening braces
+							.replace(/\s+\}/g, "}") // Remove spaces before closing braces
+							.replace(/\(\s+/g, "(") // Remove spaces after opening parentheses
+							.replace(/\s+\)/g, ")") // Remove spaces before closing parentheses
+							.trim(); // Remove leading/trailing whitespace
+					}
+				}
+			},
+		},
+	],
 	esbuild: {
 		minifyIdentifiers: isLight ? true : !debugBuild,
 		minifySyntax: isLight ? true : !debugBuild,
 		minifyWhitespace: isLight ? true : !debugBuild,
 		legalComments: "none",
-		pure: [],
-		drop: [],
+		pure: ["console.log", "console.info", "console.debug"],
+		drop: ["console", "debugger"],
 		target: "es2022",
 	},
 });
