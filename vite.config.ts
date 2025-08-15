@@ -123,20 +123,14 @@ export default defineConfig({
 								const re = new RegExp(`"${esc(s)}"`, "g");
 								c = c.replace(re, v);
 							}
-							// Insert declarations after 'use strict' for UMD, or after import prologue for ES
+							// Insert declarations. For UMD, prepend at the very start so wrapper can access vars.
 							const decl = `var ${decls.join(",")};`;
 							const format =
 								(options as unknown as { format?: string })
 									?.format || "es";
 							if (format === "umd") {
-								const m = c.match(/(["'])use strict\1;?/);
-								if (m) {
-									const at = c.indexOf(m[0]) + m[0].length;
-									c = c.slice(0, at) + decl + c.slice(at);
-								} else {
-									// Fallback: append at start (rare)
-									c = decl + c;
-								}
+								// Prepend at absolute start to cover UMD wrapper usage
+								c = decl + c;
 							} else {
 								// ES: keep imports first if present
 								const importPrologue = c.match(

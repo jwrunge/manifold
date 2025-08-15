@@ -178,10 +178,7 @@ export class RegEl {
 				this._traverseText(this.#el);
 			}
 		}
-		// Reinforce orphan then hide after setups (in case attribute manipulation occurred)
-		this._hideIfOrphanThenCatch(true);
-		// Final safeguard to ensure orphan then/catch hidden even if earlier logic missed
-		this._hideIfOrphanThenCatch();
+		// (Trim) Avoid duplicate orphan-hide calls; the initial hide covers it
 	}
 
 	// Public debugging / reprocessing helper
@@ -596,13 +593,10 @@ export class RegEl {
 			cursor = cursor.nextElementSibling;
 		}
 		if (chosen) {
+			// Trim: rely only on public colon attributes for var name
 			const varName = ok
-				? chosen.getAttribute("data-then") ||
-				  chosen.getAttribute(":then") ||
-				  "value"
-				: chosen.getAttribute("data-catch") ||
-				  chosen.getAttribute(":catch") ||
-				  "err";
+				? chosen.getAttribute(":then") || "value"
+				: chosen.getAttribute(":catch") || "err";
 			RegEl.setInjected(chosen, { [varName]: val });
 			this._injectThenCatch(chosen as HTMLElement, varName, val, base);
 		}
@@ -635,90 +629,19 @@ export class RegEl {
 		value: unknown,
 		base: string
 	) {
-		// Dispose existing instance so we can rebuild text interpolations fresh
+		// Dispose and re-register so constructor-driven traversal runs with injected context
 		const existing = RegEl.#registry.get(el);
 		(existing as RegEl | undefined)?.dispose();
-		// Restore original template text for any previously processed text nodes (avoid stale NaN values)
-		const walker = document.createTreeWalker(
-			el,
-			NodeFilter.SHOW_TEXT,
-			null
-		);
-		while (walker.nextNode()) {
-			const t = walker.currentNode as unknown as {
-				_rawOrig?: string;
-			} & Text;
-			if (t._rawOrig) t.textContent = t._rawOrig;
-		}
-		// Ensure skip marker removed so constructor processes text on new registration
 		el.removeAttribute("data-st");
 		if (this.#state) RegEl.register(el, this.#state);
-		// Custom selective text traversal: process text NOT inside data-each templates to preserve raw each template markup
-		const walkerAll = document.createTreeWalker(
-			el,
-			NodeFilter.SHOW_TEXT,
-			null
-		);
-		while (walkerAll.nextNode()) {
-			const tn = walkerAll.currentNode as Text;
-			let p: Element | null = tn.parentElement;
-			let insideEach = false;
-			while (p && p !== el) {
-				if (p.hasAttribute("data-each")) {
-					insideEach = true;
-					break;
-				}
-				p = p.parentElement;
-			}
-			if (insideEach) continue;
-			// Inline basic processing (single pass) for template text nodes
-			const raw = tn.textContent || "";
-			if (!raw.includes("${")) continue;
-			const parts: {
-				static: string;
-				expr?: ReturnType<typeof evaluateExpression>;
-				aliases?: Record<string, string[]>;
-			}[] = [];
-			let lastIndex = 0;
-			const regex = /\$\{([^}]+)\}/g;
-			let m: RegExpExecArray | null = regex.exec(raw);
-			while (m) {
-				const before = raw.slice(lastIndex, m.index);
-				if (before) parts.push({ static: before });
-				const inner = m[1].trim();
-				const { clean, aliases } = extractAliases(inner);
-				parts.push({
-					static: "",
-					expr: evaluateExpression(clean),
-					aliases,
-				});
-				lastIndex = m.index + m[0].length;
-				m = regex.exec(raw);
-			}
-			const tail = raw.slice(lastIndex);
-			if (tail) parts.push({ static: tail });
-			let out = "";
-			for (const p2 of parts) {
-				if (!p2.expr) {
-					out += p2.static;
-					continue;
-				}
-				const ctx = buildCtx(p2.aliases || {}, this.#state, {
-					[varName]: value,
-				});
-				const v = p2.expr.fn(ctx);
-				out += v == null ? "" : String(v);
-			}
-			tn.textContent = out;
-		}
+		// Ensure visibility state is restored
 		el.style.display = base;
-		// Re-register descendant each templates so their expressions re-evaluate with newly injected async context (case 15)
+		// Re-register descendant each templates so their expressions re-evaluate with newly injected async context
 		const eachTemplates = el.querySelectorAll("[data-each]");
 		for (const tpl of Array.from(eachTemplates)) {
 			const inst = RegEl.#registry.get(tpl);
 			(inst as RegEl | undefined)?.dispose();
 			if (this.#state) RegEl.register(tpl as HTMLElement, this.#state);
-			// Force immediate traversal with injected context if template expression references injected var name
 			const attr =
 				tpl.getAttribute("data-each") || tpl.getAttribute(":each");
 			if (attr?.includes(varName))
@@ -803,6 +726,7 @@ export class RegEl {
 			RegEl.setInjected(el, immediateCtx);
 			if (this.#state) RegEl.register(el, this.#state);
 			this._traverseText(el, immediateCtx);
+			// Prune non-selected branches of local conditional chains inside this clone
 			pruneConditionals(el, immediateCtx);
 			return { el, key: item.key };
 		};
@@ -810,11 +734,9 @@ export class RegEl {
 			root: HTMLElement,
 			ctx: Record<string, unknown>
 		) => {
-			// For each chain starting with data-if remove non-selected branches (loop-specific optimization for test case 12)
 			const chains = root.querySelectorAll("[data-if]");
 			for (const ifNode of Array.from(chains)) {
 				if (!(ifNode instanceof HTMLElement)) continue;
-				// Only consider nodes whose ancestor root is current clone root
 				let p: Element | null = ifNode.parentElement;
 				let inside = false;
 				while (p) {
@@ -825,7 +747,6 @@ export class RegEl {
 					p = p.parentElement;
 				}
 				if (!inside) continue;
-				// Build chain
 				const chain: HTMLElement[] = [ifNode];
 				let sib = ifNode.nextElementSibling;
 				while (
@@ -836,7 +757,6 @@ export class RegEl {
 					chain.push(sib as HTMLElement);
 					sib = sib.nextElementSibling;
 				}
-				// Evaluate
 				let chosen: HTMLElement | null = null;
 				for (const node of chain) {
 					if (
@@ -863,9 +783,7 @@ export class RegEl {
 					}
 				}
 				if (!chosen) chosen = chain.at(-1) || null;
-				for (const node of chain) {
-					if (node !== chosen) node.remove();
-				}
+				for (const node of chain) if (node !== chosen) node.remove();
 			}
 		};
 		if (Array.isArray(initialArr) && this.#eachClones.length === 0) {
