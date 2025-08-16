@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { afterAll, describe, expect, test } from "vitest";
 import type { Effect } from "../src/Effect.ts";
 import $ from "../src/main.ts";
 
@@ -10,18 +10,39 @@ interface PerformanceMetrics {
 	effectRuns: number;
 	operationsPerSecond?: number;
 	averageEffectTime?: number;
+	// New detailed stats
+	ops?: number;
+	medianEffectTime?: number;
+	p95EffectTime?: number;
+	p99EffectTime?: number;
+	minEffectTime?: number;
+	maxEffectTime?: number;
+	memoryStart?: number;
+	memoryEnd?: number;
+	// Added system-level metrics
+	cpuUserMs?: number;
+	cpuSysMs?: number;
+	msPerOp?: number;
+	gcForced?: boolean;
 }
+
+// Collect results across tests to emit a single MD summary
+const __PERF_RESULTS: PerformanceMetrics[] = [];
 
 class PerformanceProfiler {
 	private startTime: number = 0;
 	private startMemory: number = 0;
 	private effectRunCount: number = 0;
 	private effectTimes: number[] = [];
+	private startCpu: { user: number; system: number } | null = null;
+	private gcUsed = false;
 
 	start(name: string) {
 		this.effectRunCount = 0;
 		this.effectTimes = [];
+		this.maybeForceGC();
 		this.startMemory = this.getMemoryUsage();
+		this.startCpu = this.getCPUUsage();
 		this.startTime = performance.now();
 		console.log(`\n🚀 Starting performance test: ${name}`);
 	}
@@ -37,10 +58,34 @@ class PerformanceProfiler {
 	}
 
 	finish(name: string, operationCount?: number): PerformanceMetrics {
+		// Attempt to minimize noise before sampling end memory/CPU
+		this.maybeForceGC();
 		const endTime = performance.now();
 		const endMemory = this.getMemoryUsage();
+		const endCpu = this.getCPUUsage();
 		const duration = endTime - this.startTime;
 		const memoryUsed = endMemory - this.startMemory;
+
+		const times = this.effectTimes.slice().sort((a, b) => a - b);
+		const pick = (p: number) =>
+			times.length
+				? times[
+						Math.min(
+							Math.max(
+								0,
+								Math.floor((p / 100) * (times.length - 1))
+							),
+							times.length - 1
+						)
+				  ]
+				: 0;
+
+		const cpuUserMs = endCpu.user - (this.startCpu?.user ?? 0) || 0;
+		const cpuSysMs = endCpu.system - (this.startCpu?.system ?? 0) || 0;
+		const msPerOp =
+			operationCount && operationCount > 0
+				? duration / operationCount
+				: undefined;
 
 		const metrics: PerformanceMetrics = {
 			name,
@@ -53,12 +98,36 @@ class PerformanceProfiler {
 			averageEffectTime:
 				this.effectTimes.length > 0
 					? this.effectTimes.reduce((a, b) => a + b, 0) /
-						this.effectTimes.length
+					  this.effectTimes.length
 					: 0,
+			// New fields
+			ops: operationCount,
+			medianEffectTime: pick(50),
+			p95EffectTime: pick(95),
+			p99EffectTime: pick(99),
+			minEffectTime: times[0] ?? 0,
+			maxEffectTime: times[times.length - 1] ?? 0,
+			memoryStart: this.startMemory,
+			memoryEnd: endMemory,
+			cpuUserMs,
+			cpuSysMs,
+			msPerOp,
+			gcForced: this.gcUsed,
 		};
 
 		this.logMetrics(metrics);
+		__PERF_RESULTS.push(metrics);
 		return metrics;
+	}
+
+	private maybeForceGC() {
+		try {
+			const g = (globalThis as unknown as { gc?: () => void }).gc;
+			if (typeof g === "function") {
+				g();
+				this.gcUsed = true;
+			}
+		} catch {}
 	}
 
 	private getMemoryUsage(): number {
@@ -76,21 +145,160 @@ class PerformanceProfiler {
 		return 0;
 	}
 
+	private getCPUUsage(): { user: number; system: number } {
+		try {
+			// @ts-ignore - process might not be available in all environments
+			if (
+				typeof process !== "undefined" &&
+				typeof process.cpuUsage === "function"
+			) {
+				// @ts-ignore
+				const u = process.cpuUsage();
+				return { user: u.user / 1000, system: u.system / 1000 }; // convert µs -> ms
+			}
+		} catch {}
+		return { user: 0, system: 0 };
+	}
+
 	private logMetrics(metrics: PerformanceMetrics) {
 		console.log(`\n📊 Performance Metrics for "${metrics.name}":`);
 		console.log(`   ⏱️  Duration: ${metrics.duration.toFixed(2)}ms`);
-		console.log(`   💾 Memory: ${metrics.memoryUsed.toFixed(2)}MB`);
-		console.log(`   🔄 Effect runs: ${metrics.effectRuns}`);
-		if (metrics.operationsPerSecond) {
-			console.log(`   📈 Ops/sec: ${metrics.operationsPerSecond.toFixed(0)}`);
-		}
-		if (metrics.averageEffectTime) {
+		console.log(
+			`   💾 Memory: ${metrics.memoryUsed.toFixed(2)}MB (start ${(
+				metrics.memoryStart ?? 0
+			).toFixed(2)} ➜ end ${(metrics.memoryEnd ?? 0).toFixed(2)} MB)`
+		);
+		if (metrics.gcForced) console.log(`   ♻️  GC forced: yes`);
+		if (metrics.cpuUserMs != null || metrics.cpuSysMs != null) {
 			console.log(
-				`   ⚡ Avg effect time: ${metrics.averageEffectTime.toFixed(4)}ms`,
+				`   🧮 CPU user/sys: ${(metrics.cpuUserMs ?? 0).toFixed(
+					1
+				)} / ${(metrics.cpuSysMs ?? 0).toFixed(1)} ms`
+			);
+		}
+		console.log(`   🔄 Effect runs: ${metrics.effectRuns}`);
+		if (metrics.ops != null) {
+			console.log(
+				`   ▶️  Ops: ${metrics.ops}${
+					metrics.msPerOp != null
+						? ` (${metrics.msPerOp.toFixed(4)} ms/op)`
+						: ""
+				}`
+			);
+		}
+		if (metrics.operationsPerSecond) {
+			console.log(
+				`   📈 Ops/sec: ${metrics.operationsPerSecond.toFixed(0)}`
+			);
+		}
+		if (metrics.averageEffectTime != null) {
+			console.log(
+				`   ⚡ Avg/Med/P95/P99 (ms): ${metrics.averageEffectTime.toFixed(
+					4
+				)} / ${(metrics.medianEffectTime ?? 0).toFixed(4)} / ${(
+					metrics.p95EffectTime ?? 0
+				).toFixed(4)} / ${(metrics.p99EffectTime ?? 0).toFixed(4)}`
+			);
+			console.log(
+				`   ↕️  Min/Max effect (ms): ${(
+					metrics.minEffectTime ?? 0
+				).toFixed(4)} / ${(metrics.maxEffectTime ?? 0).toFixed(4)}`
 			);
 		}
 	}
 }
+
+// Emit a Markdown summary after the suite completes
+async function writeMarkdownSummary(results: PerformanceMetrics[]) {
+	try {
+		// Dynamic imports with computed specifiers to avoid TS resolution while working at runtime
+		const fsSpec = "f" + "s"; // "fs"
+		const pathSpec = "p" + "ath"; // "path"
+		let fsMod: unknown;
+		let pathMod: unknown;
+		try {
+			fsMod = await import(fsSpec as string);
+			pathMod = await import(pathSpec as string);
+		} catch {
+			const altFs = "node" + ":fs"; // "node:fs"
+			const altPath = "node" + ":path"; // "node:path"
+			fsMod = await import(altFs as string);
+			pathMod = await import(altPath as string);
+		}
+		const { mkdirSync, writeFileSync, existsSync, readFileSync } =
+			fsMod as {
+				mkdirSync: (p: string, opts: { recursive: boolean }) => void;
+				writeFileSync: (p: string, data: string) => void;
+				existsSync: (p: string) => boolean;
+				readFileSync: (p: string, enc: string) => string;
+			};
+		const { join } = pathMod as { join: (...parts: string[]) => string };
+		// @ts-ignore
+		const node = typeof process !== "undefined" ? process : undefined;
+		const cwd = node?.cwd ? node.cwd() : ".";
+		const dir = join(cwd, "reports");
+		mkdirSync(dir, { recursive: true });
+		const file = join(dir, "performance-summary.md");
+
+		const header = `# Manifold Performance Summary\n\n`;
+		const envInfo =
+			`- Date: ${new Date().toISOString()}\n` +
+			(node?.version ? `- Node: ${node.version}\n` : "") +
+			(node?.platform
+				? `- Platform: ${node.platform} ${node.arch}\n`
+				: "") +
+			`\n`;
+
+		let body = `| Test | Duration (ms) | Ops | ms/op | Ops/sec | Effect runs | Avg (ms) | Med (ms) | P95 (ms) | P99 (ms) | Min/Max (ms) | CPU u/s (ms) | Mem start/end/Δ (MB) | GC? |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|:--:|\n`;
+		for (const r of results) {
+			body += `| ${r.name} | ${r.duration.toFixed(2)} | ${
+				r.ops ?? ""
+			} | ${r.msPerOp != null ? r.msPerOp.toFixed(4) : ""} | ${
+				r.operationsPerSecond ? r.operationsPerSecond.toFixed(0) : ""
+			} | ${r.effectRuns} | ${r.averageEffectTime?.toFixed(4) ?? ""} | ${
+				r.medianEffectTime?.toFixed(4) ?? ""
+			} | ${r.p95EffectTime?.toFixed(4) ?? ""} | ${
+				r.p99EffectTime?.toFixed(4) ?? ""
+			} | ${
+				r.minEffectTime != null && r.maxEffectTime != null
+					? `${r.minEffectTime.toFixed(4)}/${r.maxEffectTime.toFixed(
+							4
+					  )}`
+					: ""
+			} | ${
+				r.cpuUserMs != null || r.cpuSysMs != null
+					? `${(r.cpuUserMs ?? 0).toFixed(1)}/${(
+							r.cpuSysMs ?? 0
+					  ).toFixed(1)}`
+					: ""
+			} | ${(r.memoryStart ?? 0).toFixed(2)}/${(r.memoryEnd ?? 0).toFixed(
+				2
+			)}/${r.memoryUsed.toFixed(2)} | ${r.gcForced ? "yes" : ""} |\n`;
+		}
+
+		const content = header + envInfo + body + "\n";
+		if (!existsSync(file)) {
+			writeFileSync(file, content);
+		} else {
+			// Keep only the most recent 49 existing reports, then append the new one to cap at 50
+			const data = readFileSync(file, "utf8");
+			const re =
+				/^# Manifold Performance Summary[\s\S]*?(?=^# Manifold Performance Summary|$)/gm;
+			const blocks = data.match(re) || [];
+			const kept = blocks.slice(-49); // keep last 49 old blocks
+			const newData =
+				(kept.length ? kept.join("\n\n") + "\n\n" : "") + content;
+			writeFileSync(file, newData);
+		}
+		console.log(`\n📝 Wrote performance summary to ${file}`);
+	} catch (err) {
+		console.warn("Failed to write performance summary:", err);
+	}
+}
+
+afterAll(async () => {
+	if (__PERF_RESULTS.length) await writeMarkdownSummary(__PERF_RESULTS);
+});
 
 describe("Performance Profiling", () => {
 	describe("Normal Usage Performance", () => {
@@ -111,7 +319,7 @@ describe("Performance Profiling", () => {
 					store.name;
 					store.data.value;
 					effectRuns++;
-				}),
+				})
 			);
 
 			// Perform 1000 state updates
@@ -129,7 +337,10 @@ describe("Performance Profiling", () => {
 			// Wait for effects to settle
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
-			const metrics = profiler.finish("Basic State Operations", operations);
+			const metrics = profiler.finish(
+				"Basic State Operations",
+				operations
+			);
 
 			// Performance assertions
 			expect(metrics.duration).toBeLessThan(1000); // Should complete in under 1 second
@@ -137,7 +348,7 @@ describe("Performance Profiling", () => {
 			expect(effectRuns).toBeGreaterThan(0);
 			// With batching, effect runs will be much lower than operations
 			console.log(
-				`   📊 Effect efficiency: ${effectRuns} runs for ${operations} operations`,
+				`   📊 Effect efficiency: ${effectRuns} runs for ${operations} operations`
 			);
 		});
 
@@ -159,7 +370,7 @@ describe("Performance Profiling", () => {
 					store.computed;
 					store.doubled;
 					derivedAccessCount++;
-				}),
+				})
 			);
 
 			// Update base state 500 times
@@ -173,7 +384,10 @@ describe("Performance Profiling", () => {
 
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
-			const metrics = profiler.finish("Derived State Performance", operations);
+			const metrics = profiler.finish(
+				"Derived State Performance",
+				operations
+			);
 
 			// Verify derived state is correct
 			expect(store.doubled).toBe(operations * 2);
@@ -205,7 +419,7 @@ describe("Performance Profiling", () => {
 					if (value > 0) {
 						store.level1 = value * 2;
 					}
-				}),
+				})
 			);
 
 			// Level 1 effect
@@ -216,7 +430,7 @@ describe("Performance Profiling", () => {
 					if (value > 0) {
 						store.level2 = value + 10;
 					}
-				}),
+				})
 			);
 
 			// Level 2 effect
@@ -227,7 +441,7 @@ describe("Performance Profiling", () => {
 					if (value > 0) {
 						store.level3 = value * 3;
 					}
-				}),
+				})
 			);
 
 			// Trigger cascade 200 times
@@ -240,7 +454,7 @@ describe("Performance Profiling", () => {
 
 			const metrics = profiler.finish(
 				"Hierarchical Effects Performance",
-				operations,
+				operations
 			);
 
 			// Verify final state
@@ -253,7 +467,7 @@ describe("Performance Profiling", () => {
 			expect(metrics.duration).toBeLessThan(300);
 			expect(totalEffectRuns).toBeGreaterThan(0); // Effects should run, but batching may reduce count
 			console.log(
-				`   📊 Hierarchical effects: ${totalEffectRuns} runs for ${operations} operations`,
+				`   📊 Hierarchical effects: ${totalEffectRuns} runs for ${operations} operations`
 			);
 		});
 	});
@@ -281,7 +495,7 @@ describe("Performance Profiling", () => {
 						(store as Record<string, number>)[`prop${index}`];
 						effectCounts[index]++;
 						effectRunCount++;
-					}),
+					})
 				);
 			}
 
@@ -296,7 +510,7 @@ describe("Performance Profiling", () => {
 
 			const metrics = profiler.finish(
 				"Mass State Updates Stress Test",
-				operations,
+				operations
 			);
 
 			// Performance assertions
@@ -304,7 +518,7 @@ describe("Performance Profiling", () => {
 			expect(effectRunCount).toBeGreaterThan(0); // Effects should run, batching affects count
 			expect(effectCounts.every((count) => count > 0)).toBe(true);
 			console.log(
-				`   📊 Mass updates: ${effectRunCount} effect runs for ${operations} operations`,
+				`   📊 Mass updates: ${effectRunCount} effect runs for ${operations} operations`
 			);
 		});
 
@@ -320,10 +534,13 @@ describe("Performance Profiling", () => {
 							level4: {
 								level5: {
 									value: 0,
-									data: Array.from({ length: 100 }, (_, i) => ({
-										id: i,
-										value: i * 2,
-									})),
+									data: Array.from(
+										{ length: 100 },
+										(_, i) => ({
+											id: i,
+											value: i * 2,
+										})
+									),
 								},
 							},
 						},
@@ -343,14 +560,14 @@ describe("Performance Profiling", () => {
 				profiler.trackEffect(() => {
 					store.deep.level1.level2.level3.level4.level5.value;
 					deepAccessCount++;
-				}),
+				})
 			);
 
 			$.effect(
 				profiler.trackEffect(() => {
 					store.deep.level1.level2.level3.level4.level5.data.length;
 					arrayAccessCount++;
-				}),
+				})
 			);
 
 			// Update deep nested value many times
@@ -371,12 +588,12 @@ describe("Performance Profiling", () => {
 
 			const metrics = profiler.finish(
 				"Deep Object Nesting Stress Test",
-				operations,
+				operations
 			);
 
 			// Verify final state
 			expect(store.deep.level1.level2.level3.level4.level5.value).toBe(
-				operations - 1,
+				operations - 1
 			);
 			expect(deepAccessCount).toBeGreaterThan(0);
 			expect(arrayAccessCount).toBeGreaterThan(0);
@@ -393,7 +610,7 @@ describe("Performance Profiling", () => {
 			const storeCount = 10;
 			const stores = Array.from(
 				{ length: 20 },
-				() => $.create().add("value", 0).build().state,
+				() => $.create().add("value", 0).build().state
 			);
 
 			let totalEffectRuns = 0;
@@ -415,7 +632,7 @@ describe("Performance Profiling", () => {
 						if (value > 0 && value < 5) {
 							stores[nextIndex].value = value + 1;
 						}
-					}),
+					})
 				);
 			}
 
@@ -438,14 +655,14 @@ describe("Performance Profiling", () => {
 
 			const metrics = profiler.finish(
 				"Circular Dependency Stress Test",
-				operations,
+				operations
 			);
 
 			// Performance assertions - should not hang or crash
 			expect(metrics.duration).toBeLessThan(3000);
 			expect(totalEffectRuns).toBeLessThan(500); // Should be controlled by maxRuns safety valve
 			console.log(
-				`   📊 Circular dependency control: ${totalEffectRuns} runs (max allowed: ${maxRuns})`,
+				`   📊 Circular dependency control: ${totalEffectRuns} runs (max allowed: ${maxRuns})`
 			);
 		});
 
@@ -466,7 +683,7 @@ describe("Performance Profiling", () => {
 					const value = store.rapidValue;
 					effectRuns++;
 					lastSeenValue = value;
-				}),
+				})
 			);
 
 			// Rapid fire state updates (should be batched)
@@ -487,7 +704,7 @@ describe("Performance Profiling", () => {
 
 			const metrics = profiler.finish(
 				"Rapid State Changes Stress Test",
-				operations,
+				operations
 			);
 
 			// Verify final state
@@ -500,8 +717,9 @@ describe("Performance Profiling", () => {
 			expect(effectRuns).toBeLessThan(operations / 2);
 			console.log(
 				`   📊 Batching efficiency: ${(
-					(1 - effectRuns / operations) * 100
-				).toFixed(1)}%`,
+					(1 - effectRuns / operations) *
+					100
+				).toFixed(1)}%`
 			);
 		});
 	});
@@ -523,7 +741,7 @@ describe("Performance Profiling", () => {
 					profiler.trackEffect(() => {
 						store.value;
 						activeEffectRuns++;
-					}),
+					})
 				);
 				effects.push(effect);
 			}
@@ -544,16 +762,22 @@ describe("Performance Profiling", () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 			const afterCleanupRuns = activeEffectRuns;
 
-			const metrics = profiler.finish("Effect Cleanup Performance");
+			const metrics = profiler.finish(
+				"Effect Cleanup Performance",
+				effectCount
+			);
 
 			// Verify cleanup worked
 			expect(afterCleanupRuns).toBeLessThan(baselineRuns);
-			expect(afterCleanupRuns).toBeCloseTo(effectCount / 2, effectCount * 0.1);
+			expect(afterCleanupRuns).toBeCloseTo(
+				effectCount / 2,
+				effectCount * 0.1
+			);
 
 			// Performance assertions
 			expect(metrics.duration).toBeLessThan(500);
 			console.log(
-				`   🧹 Cleanup efficiency: ${baselineRuns} -> ${afterCleanupRuns} effect runs`,
+				`   🧹 Cleanup efficiency: ${baselineRuns} -> ${afterCleanupRuns} effect runs`
 			);
 		});
 	});
@@ -574,9 +798,9 @@ describe("Performance Profiling", () => {
 					$.effect(
 						hierarchicalProfiler.trackEffect(() => {
 							// Child effect
-						}),
+						})
 					);
-				}),
+				})
 			);
 
 			for (let i = 0; i < operations; i++) {
@@ -586,7 +810,7 @@ describe("Performance Profiling", () => {
 
 			const hierarchicalMetrics = hierarchicalProfiler.finish(
 				"Hierarchical Mode",
-				operations,
+				operations
 			);
 
 			// Test performance mode
@@ -601,9 +825,9 @@ describe("Performance Profiling", () => {
 					$.effect(
 						performanceProfiler.trackEffect(() => {
 							// Child effect
-						}),
+						})
 					);
-				}),
+				})
 			);
 
 			for (let i = 0; i < operations; i++) {
@@ -613,21 +837,21 @@ describe("Performance Profiling", () => {
 
 			const performanceMetrics = performanceProfiler.finish(
 				"Performance Mode",
-				operations,
+				operations
 			);
 
 			// Compare results
 			console.log(`\n🏁 Performance Comparison:`);
 			console.log(
-				`   Hierarchical: ${hierarchicalMetrics.duration.toFixed(2)}ms`,
+				`   Hierarchical: ${hierarchicalMetrics.duration.toFixed(2)}ms`
 			);
 			console.log(
-				`   Performance:  ${performanceMetrics.duration.toFixed(2)}ms`,
+				`   Performance:  ${performanceMetrics.duration.toFixed(2)}ms`
 			);
 			console.log(
 				`   Difference:   ${(
 					hierarchicalMetrics.duration - performanceMetrics.duration
-				).toFixed(2)}ms`,
+				).toFixed(2)}ms`
 			);
 
 			// Both should complete reasonably fast

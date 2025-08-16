@@ -111,7 +111,6 @@ export default defineConfig({
 							"data-elseif",
 							"data-else",
 							"data-each",
-							"data-st",
 							"data-mf-skip-text",
 						];
 						const curatedEntries = curated.map(

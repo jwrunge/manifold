@@ -276,10 +276,7 @@ export class RegEl {
 				this._parseAsync(mapped, value.trim());
 			} else if (FEAT_EACH && bindName === "each") {
 				this._parseEach(value.trim());
-				for (const child of Array.from(this._el.children)) {
-					if (this._state)
-						RegEl.register(child as HTMLElement, this._state);
-				}
+				// Removed: redundant child registration; clones will be registered when created
 			}
 		}
 	}
@@ -611,17 +608,6 @@ export class RegEl {
 		if (this._state) RegEl.register(el, this._state);
 		// Restore visibility
 		el.style.display = base;
-		// Re-register descendant each templates so their expressions re-evaluate with newly injected async context
-		const eachTemplates = el.querySelectorAll("[data-each]");
-		for (const tpl of Array.from(eachTemplates)) {
-			const inst = RegEl._registry.get(tpl);
-			(inst as RegEl | undefined)?.dispose();
-			if (this._state) RegEl.register(tpl as HTMLElement, this._state);
-			const attr =
-				tpl.getAttribute("data-each") || tpl.getAttribute(":each");
-			if (attr?.includes(varName))
-				RegEl.setInjected(tpl, { [varName]: value });
-		}
 	}
 	_setupEach() {
 		if (!FEAT_EACH || !this._eachExpr) return;
