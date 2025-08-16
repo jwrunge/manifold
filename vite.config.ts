@@ -17,8 +17,6 @@ if (env.MF_FORMAT) {
 const FEAT_COND = env.MF_FEAT_COND !== "false";
 const FEAT_ASYNC = env.MF_FEAT_ASYNC !== "false";
 const FEAT_EACH = env.MF_FEAT_EACH !== "false";
-// Light build toggle: when true, alias the expression runtime to the light evaluator
-const IS_LIGHT = env.MF_LIGHT === "1" || env.MF_LIGHT === "true";
 
 export default defineConfig({
 	define: {
@@ -26,17 +24,6 @@ export default defineConfig({
 		__MF_FEAT_ASYNC__: JSON.stringify(FEAT_ASYNC),
 		__MF_FEAT_EACH__: JSON.stringify(FEAT_EACH),
 	},
-	// Conditionally alias the expression runtime to the light variant
-	resolve: IS_LIGHT
-		? {
-				alias: [
-					{
-						find: /expression-runtime\.ts$/, // any importer path ending with this
-						replacement: "./src/expression-runtime.light.ts",
-					},
-				],
-		  }
-		: undefined,
 	build: {
 		minify: "esbuild",
 		lib: {

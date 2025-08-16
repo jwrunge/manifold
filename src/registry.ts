@@ -530,21 +530,6 @@ export class RegEl {
 		this._addEffect(() => {
 			const expr = this._awaitExpr;
 			if (!expr) return;
-			// Also depend on top-level state keys to re-run when state changes,
-			// since awaited functions may read reactive deps asynchronously.
-			const s = this._state as Record<string, unknown> | undefined;
-			if (s) {
-				for (const k of Object.keys(s)) {
-					// Only track primitives/functions to avoid re-running on array/object structural changes
-					const desc = Object.getOwnPropertyDescriptor(s, k);
-					if (!desc) continue;
-					const v = desc.value as unknown;
-					if (v == null || typeof v !== "object") {
-						// Access through proxy to register dependency
-						(s as Record<string, unknown>)[k];
-					}
-				}
-			}
 			const p = expr.fn(
 				buildCtx(this._awaitAliases, this._state, this._getInjected())
 			);

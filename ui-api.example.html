@@ -26,18 +26,20 @@
 				asyncToggle: true,
 			},
 			{
+				// Use `this` (bound to the state proxy) to avoid TDZ on outer `state`
 				increment(value) {
-					state.count += value ?? 1;
+					this.count += value ?? 1;
 				},
 				setCount2(v) {
-					state.count2 = +v;
+					this.count2 = +v;
 				},
 				loadUser() {
-					// Example async function returning a promise used by :await
+					// Read reactive deps synchronously so :await tracks them and re-runs on change
+					const { asyncToggle, userId } = this;
 					return new Promise((resolve, reject) => {
 						setTimeout(() => {
-							if (state.asyncToggle)
-								resolve({ id: state.userId, name: "Ada" });
+							if (asyncToggle)
+								resolve({ id: userId, name: "Ada" });
 							else reject(new Error("User load failed"));
 						}, 2000);
 					});
@@ -46,9 +48,9 @@
 		)
 			.derive("sum", (s) => s.count + s.count2)
 			.derive("doubleCount", (s) => s.count * 2)
-			.add("syncBackCount2", (value) => {
-				state.count2 = +value;
-				console.log("Synced back count2 to:", value, state.count2);
+			.add("syncBackCount2", function (value) {
+				this.count2 = +value;
+				console.log("Synced back count2 to:", value, this.count2);
 			})
 			.build();
 		// Expose for console poking in the demo
