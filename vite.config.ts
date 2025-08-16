@@ -13,7 +13,30 @@ if (env.MF_FORMAT) {
 	if (parts.length) formats = parts;
 }
 
+// Feature flags (defaults true). Set MF_FEAT_COND/ASYNC/EACH="false" to drop feature code paths.
+const FEAT_COND = env.MF_FEAT_COND !== "false";
+const FEAT_ASYNC = env.MF_FEAT_ASYNC !== "false";
+const FEAT_EACH = env.MF_FEAT_EACH !== "false";
+// Light build toggle: when true, alias the expression runtime to the light evaluator
+const IS_LIGHT = env.MF_LIGHT === "1" || env.MF_LIGHT === "true";
+
 export default defineConfig({
+	define: {
+		__MF_FEAT_COND__: JSON.stringify(FEAT_COND),
+		__MF_FEAT_ASYNC__: JSON.stringify(FEAT_ASYNC),
+		__MF_FEAT_EACH__: JSON.stringify(FEAT_EACH),
+	},
+	// Conditionally alias the expression runtime to the light variant
+	resolve: IS_LIGHT
+		? {
+				alias: [
+					{
+						find: /expression-runtime\.ts$/, // any importer path ending with this
+						replacement: "./src/expression-runtime.light.ts",
+					},
+				],
+		  }
+		: undefined,
 	build: {
 		minify: "esbuild",
 		lib: {
@@ -82,9 +105,9 @@ export default defineConfig({
 									.replace(/\s+\)/g, ")") // space before )
 									.replace(/,\s+/g, ",") // space after ,
 									.replace(/:\s+/g, ":") // space after : (objects)
-									.replace(/\/\/[^\n\r]*/g, "") // strip single-line comments
+									.replace(/\/\/[^[[\n\r]*/g, "") // strip single-line comments
 									// around simple operators (avoid < and > to keep JSX-safe spacing)
-									.replace(/\s*([=+\-*/!?:,&|])\s*/g, "$1");
+									.replace(/\s*([=+\-*!?:,&|])\s*/g, "$1");
 							for (const m of c.matchAll(literalRe)) {
 								const s = m.index ?? 0,
 									e = s + m[0].length;
@@ -102,6 +125,7 @@ export default defineConfig({
 							"data-else",
 							"data-each",
 							"data-st",
+							"data-mf-skip-text",
 						];
 						const curatedEntries = curated.map(
 							(s) => [s, 1] as const
@@ -225,6 +249,13 @@ export default defineConfig({
 									replace: "__qsa(",
 								},
 								{
+									name: "__ctw",
+									decl: "__ctw=document.createTreeWalker.bind(document)",
+									pattern:
+										/\bdocument\.createTreeWalker\s*\(/g,
+									replace: "__ctw(",
+								},
+								{
 									name: "__gt",
 									decl: "__gt=globalThis",
 									pattern: /\bglobalThis\b/g,
@@ -236,6 +267,12 @@ export default defineConfig({
 									decl: "__doc=document",
 									pattern: /\bdocument\b/g,
 									replace: "__doc",
+								},
+								{
+									name: "__st",
+									decl: "__st=setTimeout",
+									pattern: /\bsetTimeout\s*\(/g,
+									replace: "__st(",
 								},
 							];
 
@@ -363,6 +400,7 @@ export default defineConfig({
 								"tagName",
 								"nextSibling",
 								"previousSibling",
+								"textContent",
 							];
 							const usedProps: string[] = [];
 							let pIdx = 0;
@@ -383,7 +421,7 @@ export default defineConfig({
 										})();
 									// Only alias plain '.prop' (do not alter optional-chaining '?.prop')
 									const reDot = new RegExp(
-										`(?<!\\?)\\.\\s*${prop}\\b`,
+										`(?<!\\?)\\.\s*${prop}\\b`,
 										"g"
 									); // '.prop' not preceded by '?'
 									let changed = false;
@@ -407,7 +445,7 @@ export default defineConfig({
 										return vv;
 									})();
 								const reDot = new RegExp(
-									`(?<!\\?)\\.\\s*${prop}\\b`,
+									`(?<!\\?)\\.\s*${prop}\\b`,
 									"g"
 								);
 								let changed = false;
@@ -467,7 +505,7 @@ export default defineConfig({
 								// Strip single-line and block comments in non-string segments only
 								const seg = c
 									.slice(last, s)
-									.replace(/\/\/[^\n\r]*/g, "")
+									.replace(/\/\/[^[[\n\r]*/g, "")
 									.replace(/\/\*[\s\S]*?\*\//g, "");
 								partsNoComments.push(seg, m[0]);
 								last = e;
@@ -475,7 +513,7 @@ export default defineConfig({
 							partsNoComments.push(
 								c
 									.slice(last)
-									.replace(/\/\/[^\n\r]*/g, "")
+									.replace(/\/\/[^[[\n\r]*/g, "")
 									.replace(/\/\*[\s\S]*?\*\//g, "")
 							);
 							c = partsNoComments.join("");
@@ -516,7 +554,9 @@ export default defineConfig({
 		},
 	],
 	esbuild: {
-		mangleProps: /^_/, // Mangle properties starting with underscore
+		// Mangle single-underscore props but preserve double-underscore props used for internal context passing
+		mangleProps: /^_/,
+		reserveProps: /^__/,
 		minifyIdentifiers: true,
 		minifySyntax: true,
 		minifyWhitespace: true,

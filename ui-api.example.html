@@ -88,7 +88,11 @@
 	<!-- Explicit sync via event + function -->
 	<label>
 		Count 2:
-		<input type="number" :oninput="setCount2(event.target.value)" />
+		<input
+			type="number"
+			:value="count2"
+			:oninput="setCount2(event.target.value)"
+		/>
 	</label>
 
 	<!-- Async demo: :await / :then / :catch chain -->
@@ -106,7 +110,7 @@
 	<ul>
 		<li :each="items as item, idx">Item ${idx}: ${item}</li>
 	</ul>
-	<button :onclick="items = [...items, items.length + 1]">Add Item</button>
+	<button :onclick="items = items.concat(items.length + 1)">Add Item</button>
 	<button :onclick="items = items.slice(0, -1)">Remove Item</button>
 	<button :onclick="items.push(items.length + 1)">Add Item (alt)</button>
 	<button :onclick="items.pop()">Remove Item</button>
