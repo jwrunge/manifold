@@ -141,11 +141,11 @@ export class RegEl {
 		if (hasThenOrCatch(this._el)) {
 			// Only skip if no injected context already present (i.e., initial registration before await resolves)
 			if (!RegEl._injected.has(this._el)) {
-				if (!this._el.hasAttribute("data-st"))
-					this._el.setAttribute("data-st", "");
+				if (!this._el.hasAttribute("data-mf-skip-text"))
+					this._el.setAttribute("data-mf-skip-text", "");
 			} else {
 				// Ensure attribute removed so text will be processed on this run (post-injection)
-				this._el.removeAttribute("data-st");
+				this._el.removeAttribute("data-mf-skip-text");
 			}
 		}
 		if (!this._el.hasAttribute(":each") && this._state) {
@@ -602,8 +602,8 @@ export class RegEl {
 		for (const sib of Array.from(parent?.children || [])) {
 			if (hasThenOrCatch(sib)) {
 				(sib as HTMLElement).style.display = "none";
-				if (setSkip && !sib.hasAttribute("data-st"))
-					sib.setAttribute("data-st", "");
+				if (setSkip && !sib.hasAttribute("data-mf-skip-text"))
+					sib.setAttribute("data-mf-skip-text", "");
 			}
 		}
 	}
@@ -616,7 +616,7 @@ export class RegEl {
 		// Dispose and re-register so constructor-driven traversal runs with injected context
 		const existing = RegEl._registry.get(el);
 		(existing as RegEl | undefined)?.dispose();
-		el.removeAttribute("data-st");
+		el.removeAttribute("data-mf-skip-text");
 		if (this._state) RegEl.register(el, this._state);
 		// Ensure visibility state is restored
 		el.style.display = base;

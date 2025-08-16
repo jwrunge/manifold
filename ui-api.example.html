@@ -15,47 +15,48 @@
 <script type="module">
 	import StateBuilder from "./dist/manifold.es.js";
 
-	// Single app state (no names). Auto-registers all [data-mf-register] regions.
-	const { state } = StateBuilder.create(
-		{
-			count: 10,
-			count2: 4,
-			items: [1, 2, 3],
-			userId: 1,
-			asyncToggle: true,
-		},
-		{
-			increment(value) {
-				state.count += value ?? 1;
+	// Build once after DOM is ready so auto-registration can bind regions.
+	const init = () => {
+		const { state } = StateBuilder.create(
+			{
+				count: 10,
+				count2: 4,
+				items: [1, 2, 3],
+				userId: 1,
+				asyncToggle: true,
 			},
-			setCount2(v) {
-				state.count2 = +v;
-			},
-			loadUser() {
-				// Example async function returning a promise used by :await
-				return new Promise((resolve, reject) => {
-					setTimeout(() => {
-						if (state.asyncToggle)
-							resolve({ id: state.userId, name: "Ada" });
-						else reject(new Error("User load failed"));
-					}, 2000);
-				});
-			},
-		}
-	)
-		.derive("sum", (s) => s.count + s.count2)
-		.derive("doubleCount", (s) => s.count * 2)
-		.add("syncBackCount2", (value) => {
-			state.count2 = +value;
-			console.log("Synced back count2 to:", value, state.count2);
-		})
-		.build();
-
-	const buildAll = () => {
-		StateBuilder.create().build();
+			{
+				increment(value) {
+					state.count += value ?? 1;
+				},
+				setCount2(v) {
+					state.count2 = +v;
+				},
+				loadUser() {
+					// Example async function returning a promise used by :await
+					return new Promise((resolve, reject) => {
+						setTimeout(() => {
+							if (state.asyncToggle)
+								resolve({ id: state.userId, name: "Ada" });
+							else reject(new Error("User load failed"));
+						}, 2000);
+					});
+				},
+			}
+		)
+			.derive("sum", (s) => s.count + s.count2)
+			.derive("doubleCount", (s) => s.count * 2)
+			.add("syncBackCount2", (value) => {
+				state.count2 = +value;
+				console.log("Synced back count2 to:", value, state.count2);
+			})
+			.build();
+		// Expose for console poking in the demo
+		window.demoState = state;
 	};
-	if (document.readyState !== "loading") buildAll();
-	else window.addEventListener("DOMContentLoaded", buildAll);
+	if (document.readyState === "loading")
+		window.addEventListener("DOMContentLoaded", init);
+	else init();
 </script>
 
 <div data-mf-register>
@@ -82,13 +83,13 @@
 		+5 (trace)
 	</button>
 
-	<!-- Two-way binding shorthand -->
-	<label>Count 1: <input type="number" :value="count >>" /></label>
-	<!-- Explicit sync via function -->
-	<label
-		>Count 2:
-		<input type="number" :value="count2 >> (value)=> syncBackCount2(value)"
-	/></label>
+	<!-- Two-way binding shorthand (supported API) -->
+	<label>Count 1: <input type="number" sync:value="count" /></label>
+	<!-- Explicit sync via event + function -->
+	<label>
+		Count 2:
+		<input type="number" :oninput="setCount2(event.target.value)" />
+	</label>
 
 	<!-- Async demo: :await / :then / :catch chain -->
 	<div>
