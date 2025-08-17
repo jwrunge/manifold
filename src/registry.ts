@@ -17,12 +17,25 @@ const FEAT_EACH =
 // Minimal View Transitions helper and last-show tracker
 const _vt = (fn: () => void) => {
 	try {
-		const d: any = document as unknown as { startViewTransition?: (cb: () => void) => void };
-		const s = d && d.startViewTransition;
-		s ? s.call(d, fn) : fn();
+		const s = (document as unknown as { [k: string]: unknown })
+			.startViewTransition as unknown;
+		(typeof s === "function" ? s : undefined)?.call(document, fn) || fn();
 	} catch {
 		fn();
 	}
+};
+// Batch DOM mutations into a single view-transition without deferring execution
+const _vtQueue: Array<() => void> = [];
+let _vtOpen = false;
+const _vtBatch = (fn: () => void) => {
+	_vtQueue.push(fn);
+	if (_vtOpen) return;
+	_vtOpen = true;
+	_vt(() => {
+		for (let i = 0; i < _vtQueue.length; i++) _vtQueue[i]();
+		_vtQueue.length = 0;
+		_vtOpen = false;
+	});
 };
 const _lastShow = new WeakMap<Element, boolean>();
 const _setDisplay = (el: HTMLElement, display: string) => {
@@ -32,9 +45,8 @@ const _setDisplay = (el: HTMLElement, display: string) => {
 		el.style.display = display;
 		_lastShow.set(el, show);
 	};
-	if (prev === undefined) run();
-	else if (prev !== show) _vt(run);
-	else run();
+	if (prev === undefined || prev === show) run();
+	else _vtBatch(run);
 };
 
 // Alias extraction
@@ -195,8 +207,7 @@ export class RegEl {
 		if (FEAT_ASYNC && hasThenOrCatch(this._el)) {
 			// Only skip if no injected context already present (i.e., initial registration before await resolves)
 			if (!RegEl._injected.has(this._el)) {
-				if (!this._el.hasAttribute("data-st"))
-					this._el.setAttribute("data-st", "");
+				this._el.setAttribute("data-st", "");
 			} else {
 				// Ensure attribute removed so text will be processed on this run (post-injection)
 				this._el.removeAttribute("data-st");
@@ -265,7 +276,7 @@ export class RegEl {
 	_hideIfOrphanThenCatch() {
 		if (hasThenOrCatch(this._el) && !this._hasPrevAwait()) {
 			const el = this._el as HTMLElement;
-			el.style.display = "none";
+			_setDisplay(el, "none");
 		}
 	}
 	dispose() {
@@ -444,7 +455,7 @@ export class RegEl {
 		);
 		if (arrow) {
 			arrowParam = arrow[1] || arrow[2] || undefined;
-			src = arrow[3].replace(/\}\s*$/m, "").trim();
+			src = arrow[3].trim();
 		}
 		const seq = parseStatements(src);
 		(this._el as HTMLElement).addEventListener(evt, (event: Event) => {
@@ -536,18 +547,15 @@ export class RegEl {
 	_setupAwait() {
 		if (!FEAT_ASYNC || !this._awaitExpr) return;
 		const baseDisplay = this._el.style.display;
-		const parent = this._el.parentElement;
-		this._hideThenCatchSiblings(parent, true);
+		this._hideThenCatchSiblings(true);
 		this._addEffect(() => {
-			const expr = this._awaitExpr;
-			if (!expr) return;
-			const p = expr.fn(
+			const p = this._awaitExpr?.fn(
 				buildCtx(this._awaitAliases, this._state, this._getInjected())
 			);
 			if (!p || typeof (p as { then?: unknown }).then !== "function")
 				return;
 			this._awaitPending = true;
-			this._hideThenCatchSiblings(parent, true);
+			this._hideThenCatchSiblings(true);
 			_setDisplay(this._el as HTMLElement, "");
 			Promise.resolve(p)
 				.then((res) =>
@@ -562,7 +570,7 @@ export class RegEl {
 		if (!this._awaitPending) return;
 		this._awaitPending = false;
 		_setDisplay(this._el as HTMLElement, "none");
-		this._hideThenCatchSiblings(this._el.parentElement, false);
+		this._hideThenCatchSiblings(false);
 		let chosen: Element | null = null; // Only consider siblings AFTER the await element
 		let cursor = this._el.nextElementSibling;
 		while (cursor) {
@@ -589,7 +597,7 @@ export class RegEl {
 				let prev = this._el.previousElementSibling;
 				while (prev) {
 					if (hasThen(prev) && !hasAwait(prev))
-						(prev as HTMLElement).style.display = "";
+						_setDisplay(prev as HTMLElement, "");
 					prev = prev.previousElementSibling;
 				}
 			}, 0);
@@ -597,11 +605,13 @@ export class RegEl {
 	}
 
 	// Helper: hide all then/catch siblings around an await element
-	_hideThenCatchSiblings(parent: Element | null, setSkip: boolean) {
-		let sib = parent ? parent.firstElementChild : null;
+	_hideThenCatchSiblings(setSkip: boolean) {
+		let sib = this._el.parentElement
+			? this._el.parentElement.firstElementChild
+			: null;
 		while (sib) {
 			if (hasThenOrCatch(sib)) {
-				(sib as HTMLElement).style.display = "none";
+				_setDisplay(sib as HTMLElement, "none");
 				if (setSkip && !sib.hasAttribute("data-st"))
 					sib.setAttribute("data-st", "");
 			}
@@ -643,7 +653,7 @@ export class RegEl {
 			cachedTpl.innerHTML = template.innerHTML;
 			eachTemplateCache.set(template, cachedTpl);
 		}
-		template.style.display = "none";
+		_setDisplay(template as HTMLElement, "none");
 		// drop data-st marker to save bytes
 		template.innerHTML = "";
 		// Helpers to reduce duplication in :each
@@ -675,8 +685,8 @@ export class RegEl {
 				eachTemplateCache.get(template) as HTMLTemplateElement
 			).content.cloneNode(true) as DocumentFragment;
 			el.appendChild(frag);
-			el.style.display = "";
-			_vt(() => parent.insertBefore(el, last.nextSibling));
+			_setDisplay(el, "");
+			_vtBatch(() => parent.insertBefore(el, last.nextSibling));
 			const immediateCtx: Record<string, unknown> = {
 				[this._eachItemAlias]: item.value,
 				[this._eachKeyAlias]: item.key,
@@ -737,7 +747,7 @@ export class RegEl {
 				for (const c of this._eachClones) {
 					const inst = RegEl._registry.get(c.el);
 					(inst as RegEl | undefined)?.dispose();
-					_vt(() => c.el.remove());
+					_vtBatch(() => c.el.remove());
 				}
 				this._eachClones = [];
 				return;
@@ -773,7 +783,7 @@ export class RegEl {
 				if (!newItems.some((n) => n.key === c.key)) {
 					const inst = RegEl._registry.get(c.el);
 					(inst as RegEl | undefined)?.dispose();
-					_vt(() => c.el.remove());
+					_vtBatch(() => c.el.remove());
 				}
 			this._eachClones = next;
 		});
@@ -786,7 +796,7 @@ export class RegEl {
 		const walker = document.createTreeWalker(
 			root,
 			NodeFilter.SHOW_TEXT,
-			null
+			undefined
 		);
 		const rootEl = root instanceof Element ? root : undefined;
 		const fallbackInjected =

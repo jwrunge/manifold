@@ -111,7 +111,6 @@ export default defineConfig({
 							"data-elseif",
 							"data-else",
 							"data-each",
-							"data-mf-skip-text",
 							// Added: async/then/catch attribute names and data-await
 							":await",
 							":then",

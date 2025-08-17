@@ -12,6 +12,84 @@
 		} catch {}
 	}, 5000);
 </script>
+
+<!-- View Transitions demo styles (only apply in supporting browsers) -->
+<style>
+	@supports (view-transition-name: none) {
+		:root {
+			view-transition-name: none;
+		}
+		/* Assign names to elements we want to animate */
+		.vt-fade {
+			view-transition-name: vt-fade;
+		}
+		.vt-item {
+			view-transition-name: vt-item;
+		}
+
+		/* Timing + easing */
+		::view-transition-old(vt-fade),
+		::view-transition-new(vt-fade),
+		::view-transition-old(vt-item),
+		::view-transition-new(vt-item) {
+			animation-duration: 220ms;
+			animation-timing-function: ease;
+		}
+
+		/* Fade for conditionals/async */
+		::view-transition-old(vt-fade) {
+			animation-name: vt-fade-out;
+		}
+		::view-transition-new(vt-fade) {
+			animation-name: vt-fade-in;
+		}
+
+		/* Slide+fade for list insert/remove */
+		::view-transition-old(vt-item) {
+			animation-name: vt-slide-out;
+		}
+		::view-transition-new(vt-item) {
+			animation-name: vt-slide-in;
+		}
+
+		@keyframes vt-fade-in {
+			from {
+				opacity: 0;
+			}
+			to {
+				opacity: 1;
+			}
+		}
+		@keyframes vt-fade-out {
+			from {
+				opacity: 1;
+			}
+			to {
+				opacity: 0;
+			}
+		}
+		@keyframes vt-slide-in {
+			from {
+				opacity: 0;
+				transform: translateY(6px);
+			}
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+		@keyframes vt-slide-out {
+			from {
+				opacity: 1;
+				transform: translateY(0);
+			}
+			to {
+				opacity: 0;
+				transform: translateY(-6px);
+			}
+		}
+	}
+</style>
 <script type="module">
 	import StateBuilder from "./dist/manifold.es.js";
 
@@ -71,10 +149,10 @@
 		${count2 * 2}
 	</p>
 
-	<p :if="count >= 15">Count is 15 or more!</p>
-	<p :elseif="count >= 10">Count is between 10 and 14!</p>
-	<p :elseif="count === 9">Count is 9!</p>
-	<p :else>Count is less than 10!</p>
+	<p class="vt-fade" :if="count >= 15">Count is 15 or more!</p>
+	<p class="vt-fade" :elseif="count >= 10">Count is between 10 and 14!</p>
+	<p class="vt-fade" :elseif="count === 9">Count is 9!</p>
+	<p class="vt-fade" :else>Count is less than 10!</p>
 
 	<button :onclick="count = count + 1">Increment Count</button>
 	<button :onclick="count2 = count2 + 2">Increment Count2</button>
@@ -103,14 +181,16 @@
 			Toggle Async Success (currently: ${asyncToggle ? 'success' :
 			'fail'})
 		</button>
-		<p :await="loadUser()">Loading user...</p>
-		<p :then="user">Loaded: ID=${user.id} Name=${user.name}</p>
-		<p :catch="err">Error: ${err.message}</p>
+		<p class="vt-fade" :await="loadUser()">Loading user...</p>
+		<p class="vt-fade" :then="user">
+			Loaded: ID=${user.id} Name=${user.name}
+		</p>
+		<p class="vt-fade" :catch="err">Error: ${err.message}</p>
 	</div>
 
 	<!-- Each loop with alias exposure -->
 	<ul>
-		<li :each="items as item, idx">Item ${idx}: ${item}</li>
+		<li class="vt-item" :each="items as item, idx">Item ${idx}: ${item}</li>
 	</ul>
 	<button :onclick="items = items.concat(items.length + 1)">Add Item</button>
 	<button :onclick="items = items.slice(0, -1)">Remove Item</button>
