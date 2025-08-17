@@ -14,6 +14,29 @@ const FEAT_ASYNC =
 const FEAT_EACH =
 	typeof __MF_FEAT_EACH__ === "boolean" ? __MF_FEAT_EACH__ : true;
 
+// Minimal View Transitions helper and last-show tracker
+const _vt = (fn: () => void) => {
+	try {
+		const d: any = document as unknown as { startViewTransition?: (cb: () => void) => void };
+		const s = d && d.startViewTransition;
+		s ? s.call(d, fn) : fn();
+	} catch {
+		fn();
+	}
+};
+const _lastShow = new WeakMap<Element, boolean>();
+const _setDisplay = (el: HTMLElement, display: string) => {
+	const show = display !== "none";
+	const prev = _lastShow.get(el);
+	const run = () => {
+		el.style.display = display;
+		_lastShow.set(el, show);
+	};
+	if (prev === undefined) run();
+	else if (prev !== show) _vt(run);
+	else run();
+};
+
 // Alias extraction
 interface ParsedExprMeta {
 	clean: string;
@@ -449,7 +472,7 @@ export class RegEl {
 		if (isElse) {
 			this._addEffect(() => {
 				const { anyShown } = this._scanPrevChain();
-				this._el.style.display = anyShown ? "none" : "";
+				_setDisplay(this._el as HTMLElement, anyShown ? "none" : "");
 			});
 			return;
 		}
@@ -457,15 +480,17 @@ export class RegEl {
 			this._addEffect(() => {
 				const { foundIf, blocked, anyShown } = this._scanPrevChain();
 				const curOk = this._evalShow();
-				this._el.style.display =
-					!foundIf || blocked || anyShown || !curOk ? "none" : "";
+				_setDisplay(
+					this._el as HTMLElement,
+					!foundIf || blocked || anyShown || !curOk ? "none" : ""
+				);
 			});
 			return;
 		}
 		if (this._showExpr)
 			this._addEffect(() => {
 				const v = this._evalShow();
-				this._el.style.display = v ? "" : "none";
+				_setDisplay(this._el as HTMLElement, v ? "" : "none");
 			});
 	}
 	_evalShow() {
@@ -523,7 +548,7 @@ export class RegEl {
 				return;
 			this._awaitPending = true;
 			this._hideThenCatchSiblings(parent, true);
-			this._el.style.display = "";
+			_setDisplay(this._el as HTMLElement, "");
 			Promise.resolve(p)
 				.then((res) =>
 					this._handlePromiseResult(res, true, baseDisplay)
@@ -536,7 +561,7 @@ export class RegEl {
 	_handlePromiseResult(val: unknown, ok: boolean, base: string) {
 		if (!this._awaitPending) return;
 		this._awaitPending = false;
-		this._el.style.display = "none";
+		_setDisplay(this._el as HTMLElement, "none");
 		this._hideThenCatchSiblings(this._el.parentElement, false);
 		let chosen: Element | null = null; // Only consider siblings AFTER the await element
 		let cursor = this._el.nextElementSibling;
@@ -597,7 +622,7 @@ export class RegEl {
 		el.removeAttribute("data-st");
 		if (this._state) RegEl.register(el, this._state);
 		// Restore visibility
-		el.style.display = base;
+		_setDisplay(el, base);
 		// Ensure descendant :each templates re-evaluate with injected context (needed when they were initially registered before injection)
 		const eachNodes = el.querySelectorAll("[data-each]");
 		for (const n of eachNodes) {
@@ -651,7 +676,7 @@ export class RegEl {
 			).content.cloneNode(true) as DocumentFragment;
 			el.appendChild(frag);
 			el.style.display = "";
-			parent.insertBefore(el, last.nextSibling);
+			_vt(() => parent.insertBefore(el, last.nextSibling));
 			const immediateCtx: Record<string, unknown> = {
 				[this._eachItemAlias]: item.value,
 				[this._eachKeyAlias]: item.key,
@@ -712,7 +737,7 @@ export class RegEl {
 				for (const c of this._eachClones) {
 					const inst = RegEl._registry.get(c.el);
 					(inst as RegEl | undefined)?.dispose();
-					c.el.remove();
+					_vt(() => c.el.remove());
 				}
 				this._eachClones = [];
 				return;
@@ -748,7 +773,7 @@ export class RegEl {
 				if (!newItems.some((n) => n.key === c.key)) {
 					const inst = RegEl._registry.get(c.el);
 					(inst as RegEl | undefined)?.dispose();
-					c.el.remove();
+					_vt(() => c.el.remove());
 				}
 			this._eachClones = next;
 		});
