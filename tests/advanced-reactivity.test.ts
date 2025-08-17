@@ -4,8 +4,8 @@ import $ from "../src/main.ts";
 describe("Advanced Reactivity Features", () => {
 	describe("Circular Dependency Detection", () => {
 		test("should prevent infinite loops through batching", async () => {
-			const { state: storeA } = $.create().add("value", 0).build();
-			const { state: storeB } = $.create().add("value", 0).build();
+			const storeA = $.create().add("value", 0).build();
+			const storeB = $.create().add("value", 0).build();
 
 			let aEffectRuns = 0;
 			let bEffectRuns = 0;
@@ -47,9 +47,8 @@ describe("Advanced Reactivity Features", () => {
 		});
 
 		test("should handle complex circular chains", async () => {
-			const stores = Array.from(
-				{ length: 5 },
-				() => $.create().add("value", 0).build().state,
+			const stores = Array.from({ length: 5 }, () =>
+				$.create().add("value", 0).build()
 			);
 			const effectCounts = Array.from({ length: 5 }, () => 0);
 			const maxRuns = 20;
@@ -88,7 +87,7 @@ describe("Advanced Reactivity Features", () => {
 		test("should detect true circular dependencies in effect creation", () => {
 			// This tests the circular dependency detection during effect creation
 			// The current implementation prevents this through the hasCircularDependency check
-			const { state: store } = $.create().add("trigger", 0).build();
+			const store = $.create().add("trigger", 0).build();
 
 			// Normal nested effects should work fine
 			expect(() => {
@@ -110,7 +109,7 @@ describe("Advanced Reactivity Features", () => {
 
 	describe("Hierarchical Effect Execution", () => {
 		test("should execute effects in hierarchical order with state mutations", async () => {
-			const { state: store } = $.create()
+			const store = $.create()
 				.add("level0", 0)
 				.add("level1", 0)
 				.add("level2", 0)
@@ -175,7 +174,7 @@ describe("Advanced Reactivity Features", () => {
 		});
 
 		test("should handle multiple effects at the same level", async () => {
-			const { state: store } = $.create()
+			const store = $.create()
 				.add("trigger", 0)
 				.add("counter", 0)
 				.build();
@@ -213,7 +212,7 @@ describe("Advanced Reactivity Features", () => {
 		});
 
 		test("should properly batch effects across hierarchy levels", async () => {
-			const { state: store } = $.create()
+			const store = $.create()
 				.add("input", 0)
 				.add("intermediate", 0)
 				.add("output", 0)
@@ -279,7 +278,7 @@ describe("Advanced Reactivity Features", () => {
 
 			// Setup effects for hierarchical mode
 			$.effect(() => {
-				hierarchicalApp.state.trigger;
+				hierarchicalApp.trigger;
 				hierarchicalOrder.push("parent");
 				$.effect(() => {
 					hierarchicalOrder.push("child");
@@ -288,7 +287,7 @@ describe("Advanced Reactivity Features", () => {
 
 			// Setup effects for performance mode
 			$.effect(() => {
-				performanceApp.state.trigger;
+				performanceApp.trigger;
 				performanceOrder.push("parent");
 				$.effect(() => {
 					performanceOrder.push("child");
@@ -300,8 +299,8 @@ describe("Advanced Reactivity Features", () => {
 			performanceOrder.length = 0;
 
 			// Trigger both
-			hierarchicalApp.state.trigger = 1;
-			performanceApp.state.trigger = 1;
+			hierarchicalApp.trigger = 1;
+			performanceApp.trigger = 1;
 
 			await new Promise((resolve) => setTimeout(resolve, 15));
 
@@ -315,7 +314,7 @@ describe("Advanced Reactivity Features", () => {
 				hierarchicalOrder.includes("child")
 			) {
 				expect(hierarchicalOrder.indexOf("parent")).toBeLessThan(
-					hierarchicalOrder.indexOf("child"),
+					hierarchicalOrder.indexOf("child")
 				);
 			}
 		});
@@ -323,7 +322,7 @@ describe("Advanced Reactivity Features", () => {
 
 	describe("Memory Management and Effect Lifecycle", () => {
 		test("should properly clean up stopped effects", async () => {
-			const { state: store } = $.create().add("value", 0).build();
+			const store = $.create().add("value", 0).build();
 
 			let effect1Runs = 0;
 			let effect2Runs = 0;
@@ -361,7 +360,7 @@ describe("Advanced Reactivity Features", () => {
 		});
 
 		test("should handle nested effect cleanup", async () => {
-			const { state: store } = $.create().add("enabled", true).build();
+			const store = $.create().add("enabled", true).build();
 
 			let parentRuns = 0;
 			let childRuns = 0;

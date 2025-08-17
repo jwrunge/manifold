@@ -5,7 +5,7 @@ import StateBuilder from "../dist/manifold.es.js";
 // Basic sanity tests for ES module bundle
 
 test("ES build: create store, effect, update, derived", async () => {
-	const { state } = StateBuilder.create()
+	const state = StateBuilder.create()
 		.add("count", 0)
 		.derive("double", (s) => s.count * 2)
 		.build();

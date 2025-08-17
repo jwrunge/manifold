@@ -4,8 +4,9 @@ import StateBuilder from "../src/main";
 
 let rootState: Record<string, unknown> = {};
 const initState = (data: Record<string, unknown>) => {
-	rootState = StateBuilder.create(data as Record<string, unknown>).build()
-		.state as Record<string, unknown>;
+	rootState = StateBuilder.create(
+		data as Record<string, unknown>
+	).build() as Record<string, unknown>;
 };
 
 describe("Expression Parser", () => {

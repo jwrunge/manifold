@@ -84,9 +84,7 @@ test("Date equality", () => {
 });
 
 test("equality prevents unnecessary updates", async () => {
-	const { state: store } = $.create()
-		.add("value", { count: 0, _name: "test" })
-		.build(true);
+	const store = $.create().add("value", { count: 0, _name: "test" }).build();
 	let updateCount = 0;
 
 	$.effect(() => {
@@ -123,7 +121,7 @@ test("equality prevents unnecessary updates", async () => {
 
 test("Complex object equality with reactive updates", () => {
 	let updateCount = 0;
-	const { state: store } = $.create()
+	const store = $.create()
 		.add("value", {
 			users: new Map([
 				[
@@ -136,7 +134,7 @@ test("Complex object equality with reactive updates", () => {
 			]),
 			settings: { theme: "dark", notifications: true },
 		})
-		.build(true);
+		.build();
 
 	$.effect(() => {
 		store.value; // Access the value to create dependency
@@ -146,7 +144,10 @@ test("Complex object equality with reactive updates", () => {
 	// Setting to equivalent object should not trigger update
 	const equivalentObject = {
 		users: new Map([
-			["user1", { name: "Alice", metadata: { scores: new Set([100, 200]) } }],
+			[
+				"user1",
+				{ name: "Alice", metadata: { scores: new Set([100, 200]) } },
+			],
 		]),
 		settings: { theme: "dark", notifications: true },
 	};
@@ -159,7 +160,10 @@ test("Complex object equality with reactive updates", () => {
 	// and granular reactivity. Individual property changes are tracked separately.
 	const differentObject = {
 		users: new Map([
-			["user1", { name: "Bob", metadata: { scores: new Set([100, 200]) } }],
+			[
+				"user1",
+				{ name: "Bob", metadata: { scores: new Set([100, 200]) } },
+			],
 		]),
 		settings: { theme: "dark", notifications: true },
 	};

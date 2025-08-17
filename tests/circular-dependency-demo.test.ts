@@ -3,11 +3,7 @@ import $ from "../src/main.ts";
 
 describe("True Circular Dependency Detection", () => {
 	test("should demonstrate circular dependency prevention in action", async () => {
-		const { state: store } = $.create()
-			.add("a", 0)
-			.add("b", 0)
-			.add("c", 0)
-			.build();
+		const store = $.create().add("a", 0).add("b", 0).add("c", 0).build();
 
 		const executionLog: Array<{
 			effect: string;
@@ -84,8 +80,8 @@ describe("True Circular Dependency Detection", () => {
 			"Execution log:",
 			executionLog.map(
 				(entry) =>
-					`${entry.effect}: a=${entry.values.a}, b=${entry.values.b}, c=${entry.values.c}`,
-			),
+					`${entry.effect}: a=${entry.values.a}, b=${entry.values.b}, c=${entry.values.c}`
+			)
 		);
 
 		// The batching system should prevent infinite loops
@@ -103,7 +99,7 @@ describe("True Circular Dependency Detection", () => {
 	});
 
 	test("should maintain proper execution order even with circular potential", async () => {
-		const { state: store } = $.create()
+		const store = $.create()
 			.add("source", 0)
 			.add("derived1", 0)
 			.add("derived2", 0)
@@ -171,7 +167,7 @@ describe("True Circular Dependency Detection", () => {
 
 	test("should demonstrate that the system can handle realistic dependency scenarios", async () => {
 		// Create a realistic state management scenario
-		const { state: store } = $.create()
+		const store = $.create()
 			.add("user", { name: "John", age: 25 })
 			.add("preferences", { theme: "dark", notifications: true })
 			.add("ui", { currentPage: "home", loading: false })
@@ -227,13 +223,13 @@ describe("True Circular Dependency Detection", () => {
 
 		// Verify effects executed
 		expect(effectLog.some((log) => log.includes("Jane, 30"))).toBe(true);
-		expect(effectLog.some((log) => log.includes("Theme-change: light"))).toBe(
-			true,
-		);
+		expect(
+			effectLog.some((log) => log.includes("Theme-change: light"))
+		).toBe(true);
 		expect(
 			effectLog.some((log) =>
-				log.includes("Voting-eligibility: true for Jane"),
-			),
+				log.includes("Voting-eligibility: true for Jane")
+			)
 		).toBe(true);
 
 		// No infinite loops should have occurred

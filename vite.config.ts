@@ -112,6 +112,14 @@ export default defineConfig({
 							"data-else",
 							"data-each",
 							"data-mf-skip-text",
+							// Added: async/then/catch attribute names and data-await
+							":await",
+							":then",
+							":catch",
+							"data-await",
+							// Defaults for await var names
+							"value",
+							"err",
 						];
 						const curatedEntries = curated.map(
 							(s) => [s, 1] as const
@@ -210,6 +218,12 @@ export default defineConfig({
 									replace: "__isa(",
 								},
 								{
+									name: "__af",
+									decl: "__af=Array.from",
+									pattern: /\bArray\.from\s*\(/g,
+									replace: "__af(",
+								},
+								{
 									name: "__wm",
 									decl: "__wm=WeakMap",
 									pattern: /\bnew\s+WeakMap\s*\(/g,
@@ -247,7 +261,6 @@ export default defineConfig({
 									pattern: /\bglobalThis\b/g,
 									replace: "__gt",
 								},
-								// After method-specific replacements, alias bare document safely
 								{
 									name: "__doc",
 									decl: "__doc=document",
@@ -259,6 +272,18 @@ export default defineConfig({
 									decl: "__st=setTimeout",
 									pattern: /\bsetTimeout\s*\(/g,
 									replace: "__st(",
+								},
+								{
+									name: "__oh",
+									decl: "__oh=Object.hasOwn",
+									pattern: /\bObject\.hasOwn\s*\(/g,
+									replace: "__oh(",
+								},
+								{
+									name: "__pr",
+									decl: "__pr=Promise.resolve.bind(Promise)",
+									pattern: /\bPromise\.resolve\s*\(/g,
+									replace: "__pr(",
 								},
 							];
 

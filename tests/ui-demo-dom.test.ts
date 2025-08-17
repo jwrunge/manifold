@@ -45,7 +45,7 @@ const builders = await loadBuilders();
 
 for (const { name, StateBuilder } of builders) {
 	test(`${name}: UI demo basics (counts, derived, bindings)`, async () => {
-		const { state } = StateBuilder.create<DemoState, DemoFuncs>(
+		const state = StateBuilder.create<DemoState, DemoFuncs>(
 			{
 				count: 10,
 				count2: 4,
@@ -225,7 +225,7 @@ for (const { name, StateBuilder } of builders) {
 		type AFns = {
 			loadUser(this: AState): Promise<{ id: number; name: string }>;
 		};
-		const { state } = StateBuilder.create<AState, AFns>(
+		const state = StateBuilder.create<AState, AFns>(
 			{ count: 1, userId: 1, asyncToggle: true },
 			{
 				loadUser() {

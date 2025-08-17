@@ -1,4 +1,4 @@
-export type EffectDependency = () => void;
+export type EffectFn = () => void;
 
 interface DepRef {
 	bucket: DepBucket;
@@ -14,7 +14,6 @@ export interface DepBucket {
 export class Effect {
 	static current: Effect | null = null;
 	static #pool: Effect[] = [];
-	static #POOL_MAX = 1024;
 
 	static acquire(fn: () => void, ephemeral?: boolean) {
 		if (ephemeral) {
@@ -65,7 +64,7 @@ export class Effect {
 		this.#active = false;
 		this.#clean();
 		if (this.ephemeral) {
-			if (Effect.#pool.length < Effect.#POOL_MAX) {
+			if (Effect.#pool.length < 1024) {
 				this.fn = () => {};
 				this.#deps.length = 0;
 				Effect.#pool.push(this);

@@ -72,7 +72,7 @@ const track = (
 	target: object,
 	key: PropertyKey,
 	effect: Effect,
-	_path: string,
+	_path: string
 ) => {
 	let keyMap = depMap.get(target);
 	if (!keyMap) {
@@ -96,7 +96,7 @@ const addParentRef = (
 	child: object,
 	parent: object,
 	key: PropertyKey,
-	path: string,
+	path: string
 ) => {
 	let arr = parentRefs.get(child);
 	if (!arr) {
@@ -130,17 +130,16 @@ const proxy = (obj: any, prefix = ""): StateConstraint => {
 		() =>
 			new Proxy(obj, {
 				get(state, key, receiver) {
-					if (typeof key === "symbol") return Reflect.get(state, key, receiver);
+					if (typeof key === "symbol")
+						return Reflect.get(state, key, receiver);
 					const curEffect = Effect.current;
 					const target = Reflect.get(state as object, key);
 					const isObj = target && typeof target === "object";
 					let path: string | undefined;
 					const needPath = !!curEffect || isObj;
-					if (needPath)
-						path = prefix
-							? `${prefix}.` + (key as unknown as string)
-							: "" + (key as unknown as string);
-					if (curEffect && path) track(state as object, key, curEffect, path);
+					if (needPath) path = prefix ? `${prefix}.${key}` : key;
+					if (curEffect && path)
+						track(state as object, key, curEffect, path);
 					if (Array.isArray(state) && typeof target === "function") {
 						if (
 							[
@@ -153,7 +152,10 @@ const proxy = (obj: any, prefix = ""): StateConstraint => {
 								"reverse",
 							].includes(key)
 						) {
-							return function (this: unknown[], ...args: unknown[]) {
+							return function (
+								this: unknown[],
+								...args: unknown[]
+							) {
 								const arr = state as unknown[]; // biome-ignore lint/suspicious/noExplicitAny: function bind
 								const result = (target as any).apply(arr, args);
 								let meta = arrayMeta.get(state as object);
@@ -169,11 +171,13 @@ const proxy = (obj: any, prefix = ""): StateConstraint => {
 						}
 					}
 					if (isObj) {
-						if (!path)
-							path = prefix
-								? `${prefix}.` + (key as unknown as string)
-								: "" + (key as unknown as string);
-						addParentRef(target as object, state as object, key, path);
+						if (!path) path = prefix ? `${prefix}.${key}` : key;
+						addParentRef(
+							target as object,
+							state as object,
+							key,
+							path
+						);
 						return proxy(target, path);
 					}
 					return target;
@@ -211,7 +215,7 @@ const proxy = (obj: any, prefix = ""): StateConstraint => {
 					}
 					return true;
 				},
-			}),
+			})
 	);
 };
 export default proxy;

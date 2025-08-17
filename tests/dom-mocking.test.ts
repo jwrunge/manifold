@@ -30,7 +30,7 @@ describe("DOM behavior / structural stability", () => {
 			ok: true,
 			value: 5,
 			flag: true,
-		}).build().state as TestState;
+		}).build() as TestState;
 	});
 
 	// 1 + 2 + 3

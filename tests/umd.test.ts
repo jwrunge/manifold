@@ -9,7 +9,7 @@ const { default: StateBuilder } = UMD as unknown as {
 };
 
 test("UMD build: create store, effect, update, derived", async () => {
-	const { state } = StateBuilder.create()
+	const state = StateBuilder.create()
 		.add("count", 1)
 		.derive("triple", (s) => s.count * 3)
 		.build();

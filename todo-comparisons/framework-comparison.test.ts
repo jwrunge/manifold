@@ -5,12 +5,15 @@ describe("Framework Comparison Benchmarks", () => {
 	describe("React-style Component Updates", () => {
 		test("should handle React-like frequent re-renders efficiently", async () => {
 			// Simulate React component with multiple props that trigger re-renders
-			const { state: store } = $.create()
+			const store = $.create()
 				.add("count", 0)
 				.add("user", { name: "John", age: 25 })
-				.add("todos", [] as Array<{ id: number; text: string; done: boolean }>)
+				.add(
+					"todos",
+					[] as Array<{ id: number; text: string; done: boolean }>
+				)
 				.add("ui", { loading: false, error: null })
-				.build(true); // local instance
+				.build(); // local instance
 
 			let renderCount = 0;
 			const renderTimes: number[] = [];
@@ -80,9 +83,10 @@ describe("Framework Comparison Benchmarks", () => {
 			console.log(`  Ops/sec: ${((1000 / totalTime) * 1000).toFixed(0)}`);
 			console.log(`  Avg render time: ${avgRenderTime.toFixed(4)}ms`);
 			console.log(
-				`  Batching efficiency: ${((1 - renderCount / 1000) * 100).toFixed(
-					1,
-				)}%`,
+				`  Batching efficiency: ${(
+					(1 - renderCount / 1000) *
+					100
+				).toFixed(1)}%`
 			);
 
 			// Should be much more efficient than React (fewer renders due to batching)
@@ -94,22 +98,25 @@ describe("Framework Comparison Benchmarks", () => {
 
 	describe("Vue-style Reactive Properties", () => {
 		test("should handle Vue-like computed properties efficiently", async () => {
-			const { state: store } = $.create()
+			const store = $.create()
 				.add(
 					"items",
-					[] as Array<{ id: number; price: number; quantity: number }>,
+					[] as Array<{ id: number; price: number; quantity: number }>
 				)
 				.add("taxRate", 0.1)
 				.add("discountCode", "")
 				.derive("subtotal", (s) =>
-					s.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+					s.items.reduce(
+						(sum, item) => sum + item.price * item.quantity,
+						0
+					)
 				)
 				.derive("discount", (s) =>
-					s.discountCode === "SAVE10" ? s.subtotal * 0.1 : 0,
+					s.discountCode === "SAVE10" ? s.subtotal * 0.1 : 0
 				)
 				.derive("tax", (s) => (s.subtotal - s.discount) * s.taxRate)
 				.derive("total", (s) => s.subtotal - s.discount + s.tax)
-				.build(true); // local instance
+				.build(); // local instance
 
 			let computationCount = 0;
 			const computationTimes: number[] = [];
@@ -159,13 +166,16 @@ describe("Framework Comparison Benchmarks", () => {
 
 			const totalTime = performance.now() - startTime;
 			const avgComputationTime =
-				computationTimes.reduce((a, b) => a + b, 0) / computationTimes.length;
+				computationTimes.reduce((a, b) => a + b, 0) /
+				computationTimes.length;
 
 			console.log(`Vue-style comparison:`);
 			console.log(`  Total time: ${totalTime.toFixed(2)}ms`);
 			console.log(`  Computation count: ${computationCount}`);
 			console.log(`  Ops/sec: ${((500 / totalTime) * 1000).toFixed(0)}`);
-			console.log(`  Avg computation time: ${avgComputationTime.toFixed(4)}ms`);
+			console.log(
+				`  Avg computation time: ${avgComputationTime.toFixed(4)}ms`
+			);
 			console.log(`  Final total: $${store.total.toFixed(2)}`);
 
 			// Should handle computed properties efficiently
@@ -178,7 +188,7 @@ describe("Framework Comparison Benchmarks", () => {
 
 	describe("Svelte-style Reactive Statements", () => {
 		test("should handle Svelte-like reactive statements efficiently", async () => {
-			const { state: store } = $.create()
+			const store = $.create()
 				.add("name", "")
 				.add("email", "")
 				.add("age", 0)
@@ -186,7 +196,7 @@ describe("Framework Comparison Benchmarks", () => {
 					theme: "light",
 					notifications: true,
 				})
-				.build(true); // local instance
+				.build(); // local instance
 
 			let reactiveStatementRuns = 0;
 			const validationResults: Array<{
@@ -254,18 +264,21 @@ describe("Framework Comparison Benchmarks", () => {
 			console.log(`  Total time: ${totalTime.toFixed(2)}ms`);
 			console.log(`  Reactive statement runs: ${reactiveStatementRuns}`);
 			console.log(`  Operations: ${operations}`);
-			console.log(`  Ops/sec: ${((operations / totalTime) * 1000).toFixed(0)}`);
+			console.log(
+				`  Ops/sec: ${((operations / totalTime) * 1000).toFixed(0)}`
+			);
 			console.log(
 				`  Batching efficiency: ${(
-					(1 - reactiveStatementRuns / operations) * 100
-				).toFixed(1)}%`,
+					(1 - reactiveStatementRuns / operations) *
+					100
+				).toFixed(1)}%`
 			);
 			console.log(
 				`  Final validation: ${
 					validationResults[validationResults.length - 1]?.isValid
 						? "Valid"
 						: "Invalid"
-				}`,
+				}`
 			);
 
 			// Should batch reactive statements efficiently (Svelte compiles to individual statements)
@@ -279,27 +292,37 @@ describe("Framework Comparison Benchmarks", () => {
 		test("should demonstrate overall performance advantages", async () => {
 			console.log(`\n🏆 Manifold Performance Comparison Summary:`);
 			console.log(`\n📊 Key Advantages over other frameworks:`);
-			console.log(`  • 95-99% batching efficiency (vs 70-90% in React/Vue)`);
-			console.log(`  • <1ms average effect time (vs 2-5ms component renders)`);
+			console.log(
+				`  • 95-99% batching efficiency (vs 70-90% in React/Vue)`
+			);
+			console.log(
+				`  • <1ms average effect time (vs 2-5ms component renders)`
+			);
 			console.log(`  • 10,000+ ops/sec sustained throughput`);
-			console.log(`  • <1MB memory footprint (vs 3-10MB in other frameworks)`);
-			console.log(`  • Zero reconciliation overhead (direct state updates)`);
+			console.log(
+				`  • <1MB memory footprint (vs 3-10MB in other frameworks)`
+			);
+			console.log(
+				`  • Zero reconciliation overhead (direct state updates)`
+			);
 			console.log(`  • Automatic circular dependency prevention`);
 			console.log(`  • Deterministic effect execution order`);
 
 			console.log(`\n🎯 Framework-specific advantages:`);
 			console.log(
-				`  vs React: 3x faster, 10x less memory, no virtual DOM overhead`,
-			);
-			console.log(`  vs Vue: 2x faster batching, finer reactivity granularity`);
-			console.log(
-				`  vs Svelte: Runtime flexibility, better circular detection`,
+				`  vs React: 3x faster, 10x less memory, no virtual DOM overhead`
 			);
 			console.log(
-				`  vs MobX: Automatic batching, better TypeScript integration`,
+				`  vs Vue: 2x faster batching, finer reactivity granularity`
 			);
 			console.log(
-				`  vs SolidJS: Better hierarchy support, comprehensive safety`,
+				`  vs Svelte: Runtime flexibility, better circular detection`
+			);
+			console.log(
+				`  vs MobX: Automatic batching, better TypeScript integration`
+			);
+			console.log(
+				`  vs SolidJS: Better hierarchy support, comprehensive safety`
 			);
 
 			expect(true).toBe(true); // This test is primarily for documentation
@@ -332,15 +355,20 @@ describe("Framework Comparison Benchmarks", () => {
 			};
 
 			// Test Safe Mode (Hierarchical Effects Enabled)
-			console.log(`\n🛡️ Testing Safe Mode (Hierarchical Effects Enabled):`);
+			console.log(
+				`\n🛡️ Testing Safe Mode (Hierarchical Effects Enabled):`
+			);
 			const safeStart = performance.now();
 			const safeStartMemory = getMemoryUsage();
 
-			const { state: safeStore } = $.create()
+			const safeStore = $.create()
 				.add("count", 0)
 				.add("user", { name: "Initial", age: 0 })
-				.add("todos", [] as Array<{ id: number; text: string; done: boolean }>)
-				.build(true); // hierarchical always on
+				.add(
+					"todos",
+					[] as Array<{ id: number; text: string; done: boolean }>
+				)
+				.build(); // hierarchical always on
 
 			let safeEffectRuns = 0;
 			$.effect(() => {
@@ -362,20 +390,24 @@ describe("Framework Comparison Benchmarks", () => {
 			const safeEnd = performance.now();
 			const safeEndMemory = getMemoryUsage();
 			const safeDuration = safeEnd - safeStart;
-			const safeMemoryUsed = (safeEndMemory - safeStartMemory) / 1024 / 1024;
+			const safeMemoryUsed =
+				(safeEndMemory - safeStartMemory) / 1024 / 1024;
 
 			// Test Performance Mode (Hierarchical Effects Disabled)
 			console.log(
-				`\n⚡ Testing Performance Mode (Hierarchical Effects Disabled):`,
+				`\n⚡ Testing Performance Mode (Hierarchical Effects Disabled):`
 			);
 			const perfStart = performance.now();
 			const perfStartMemory = getMemoryUsage();
 
-			const { state: perfStore } = $.create()
+			const perfStore = $.create()
 				.add("count", 0)
 				.add("user", { name: "Initial", age: 0 })
-				.add("todos", [] as Array<{ id: number; text: string; done: boolean }>)
-				.build(true); // same behavior
+				.add(
+					"todos",
+					[] as Array<{ id: number; text: string; done: boolean }>
+				)
+				.build(); // same behavior
 
 			let perfEffectRuns = 0;
 			$.effect(() => {
@@ -397,7 +429,8 @@ describe("Framework Comparison Benchmarks", () => {
 			const perfEnd = performance.now();
 			const perfEndMemory = getMemoryUsage();
 			const perfDuration = perfEnd - perfStart;
-			const perfMemoryUsed = (perfEndMemory - perfStartMemory) / 1024 / 1024;
+			const perfMemoryUsed =
+				(perfEndMemory - perfStartMemory) / 1024 / 1024;
 
 			// Results comparison
 			console.log(`\n📊 Safe Mode vs Performance Mode Results:`);
@@ -406,12 +439,15 @@ describe("Framework Comparison Benchmarks", () => {
 			console.log(`    Memory: ${safeMemoryUsed.toFixed(2)}MB`);
 			console.log(`    Effect runs: ${safeEffectRuns}`);
 			console.log(
-				`    Ops/sec: ${((operations / safeDuration) * 1000).toFixed(0)}`,
+				`    Ops/sec: ${((operations / safeDuration) * 1000).toFixed(
+					0
+				)}`
 			);
 			console.log(
 				`    Batching efficiency: ${(
-					(1 - safeEffectRuns / operations) * 100
-				).toFixed(1)}%`,
+					(1 - safeEffectRuns / operations) *
+					100
+				).toFixed(1)}%`
 			);
 
 			console.log(`  Performance Mode:`);
@@ -419,30 +455,36 @@ describe("Framework Comparison Benchmarks", () => {
 			console.log(`    Memory: ${perfMemoryUsed.toFixed(2)}MB`);
 			console.log(`    Effect runs: ${perfEffectRuns}`);
 			console.log(
-				`    Ops/sec: ${((operations / perfDuration) * 1000).toFixed(0)}`,
+				`    Ops/sec: ${((operations / perfDuration) * 1000).toFixed(
+					0
+				)}`
 			);
 			console.log(
 				`    Batching efficiency: ${(
-					(1 - perfEffectRuns / operations) * 100
-				).toFixed(1)}%`,
+					(1 - perfEffectRuns / operations) *
+					100
+				).toFixed(1)}%`
 			);
 
 			console.log(`  Performance Difference:`);
 			console.log(
-				`    Time difference: ${(safeDuration - perfDuration).toFixed(2)}ms`,
+				`    Time difference: ${(safeDuration - perfDuration).toFixed(
+					2
+				)}ms`
 			);
 			console.log(
-				`    Memory difference: ${(safeMemoryUsed - perfMemoryUsed).toFixed(
-					2,
-				)}MB`,
+				`    Memory difference: ${(
+					safeMemoryUsed - perfMemoryUsed
+				).toFixed(2)}MB`
 			);
 			console.log(
-				`    Speed ratio: ${(perfDuration / safeDuration).toFixed(2)}x`,
+				`    Speed ratio: ${(perfDuration / safeDuration).toFixed(2)}x`
 			);
 			console.log(
 				`    Safety overhead: ${(
-					((safeDuration - perfDuration) / perfDuration) * 100
-				).toFixed(1)}%`,
+					((safeDuration - perfDuration) / perfDuration) *
+					100
+				).toFixed(1)}%`
 			);
 
 			// Verify both modes work correctly

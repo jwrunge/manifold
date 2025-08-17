@@ -1,4 +1,4 @@
-import { Effect, type EffectDependency } from "./Effect.ts";
+import { Effect, type EffectFn } from "./Effect.ts";
 import isEqual from "./equality.ts";
 import proxy from "./proxy.ts";
 import RegEl from "./registry.ts";
@@ -48,7 +48,7 @@ class StateBuilder<
 		return new StateBuilder<S, F>(initial, funcs);
 	}
 
-	static effect(fn: EffectDependency) {
+	static effect(fn: EffectFn) {
 		const e = Effect.acquire(fn, false);
 		e.run();
 		return e;
@@ -165,7 +165,8 @@ class StateBuilder<
 				)
 			);
 		}
-		return { state } as { state: TState };
+		// Return the state directly
+		return state as TState;
 	}
 }
 

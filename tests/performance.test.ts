@@ -306,7 +306,7 @@ describe("Performance Profiling", () => {
 			const profiler = new PerformanceProfiler();
 			profiler.start("Basic State Operations");
 
-			const { state: store } = $.create()
+			const store = $.create()
 				.add("counter", 0)
 				.add("name", "test")
 				.add("data", { value: 1 })
@@ -356,7 +356,7 @@ describe("Performance Profiling", () => {
 			const profiler = new PerformanceProfiler();
 			profiler.start("Derived State Performance");
 
-			const { state: store } = $.create()
+			const store = $.create()
 				.add("base", 1)
 				.add("multiplier", 2)
 				.derive("doubled", (s) => s.base * 2)
@@ -402,7 +402,7 @@ describe("Performance Profiling", () => {
 			const profiler = new PerformanceProfiler();
 			profiler.start("Hierarchical Effects Performance");
 
-			const { state: store } = $.create()
+			const store = $.create()
 				.add("level0", 0)
 				.add("level1", 0)
 				.add("level2", 0)
@@ -482,7 +482,7 @@ describe("Performance Profiling", () => {
 			for (let i = 0; i < 50; i++) {
 				builder = builder.add(`prop${i}`, i);
 			}
-			const { state: store } = builder.build();
+			const store = builder.build();
 
 			let effectRunCount = 0;
 			const effectCounts = new Array(50).fill(0);
@@ -548,7 +548,7 @@ describe("Performance Profiling", () => {
 				},
 			};
 
-			const { state: store } = $.create()
+			const store = $.create()
 				.add("deep", deepObject)
 				.add("counter", 0)
 				.build();
@@ -608,9 +608,8 @@ describe("Performance Profiling", () => {
 
 			// Create multiple stores that could create circular dependencies
 			const storeCount = 10;
-			const stores = Array.from(
-				{ length: 20 },
-				() => $.create().add("value", 0).build().state
+			const stores = Array.from({ length: 20 }, () =>
+				$.create().add("value", 0).build()
 			);
 
 			let totalEffectRuns = 0;
@@ -670,7 +669,7 @@ describe("Performance Profiling", () => {
 			const profiler = new PerformanceProfiler();
 			profiler.start("Rapid State Changes Stress Test");
 
-			const { state: store } = $.create()
+			const store = $.create()
 				.add("rapidValue", 0)
 				.add("batchCounter", 0)
 				.build();
@@ -729,7 +728,7 @@ describe("Performance Profiling", () => {
 			const profiler = new PerformanceProfiler();
 			profiler.start("Effect Cleanup Performance");
 
-			const { state: store } = $.create().add("value", 0).build();
+			const store = $.create().add("value", 0).build();
 
 			// Create many effects
 			const effectCount = 1000;
@@ -794,7 +793,7 @@ describe("Performance Profiling", () => {
 
 			$.effect(
 				hierarchicalProfiler.trackEffect(() => {
-					hierarchicalApp.state.trigger;
+					hierarchicalApp.trigger;
 					$.effect(
 						hierarchicalProfiler.trackEffect(() => {
 							// Child effect
@@ -804,7 +803,7 @@ describe("Performance Profiling", () => {
 			);
 
 			for (let i = 0; i < operations; i++) {
-				hierarchicalApp.state.trigger = i;
+				hierarchicalApp.trigger = i;
 			}
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -821,7 +820,7 @@ describe("Performance Profiling", () => {
 
 			$.effect(
 				performanceProfiler.trackEffect(() => {
-					performanceApp.state.trigger;
+					performanceApp.trigger;
 					$.effect(
 						performanceProfiler.trackEffect(() => {
 							// Child effect
@@ -831,7 +830,7 @@ describe("Performance Profiling", () => {
 			);
 
 			for (let i = 0; i < operations; i++) {
-				performanceApp.state.trigger = i;
+				performanceApp.trigger = i;
 			}
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
