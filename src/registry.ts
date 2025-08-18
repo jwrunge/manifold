@@ -1,19 +1,6 @@
 import { Effect } from "./Effect.ts";
 import evaluateExpression from "./expression-parser.ts";
 
-// Feature flags (compile-time constants provided by bundler)
-// These are declared here so TypeScript knows about them; Vite will inline boolean values.
-declare const __MF_FEAT_COND__: boolean;
-declare const __MF_FEAT_ASYNC__: boolean;
-declare const __MF_FEAT_EACH__: boolean;
-// Safe runtime defaults for tests/dev (typeof check avoids ReferenceError when not defined)
-const FEAT_COND =
-	typeof __MF_FEAT_COND__ === "boolean" ? __MF_FEAT_COND__ : true;
-const FEAT_ASYNC =
-	typeof __MF_FEAT_ASYNC__ === "boolean" ? __MF_FEAT_ASYNC__ : true;
-const FEAT_EACH =
-	typeof __MF_FEAT_EACH__ === "boolean" ? __MF_FEAT_EACH__ : true;
-
 // Minimal View Transitions helper and last-show tracker
 const _vt = (fn: () => void) => {
 	try {
@@ -198,13 +185,13 @@ export class RegEl {
 		this._state = state;
 		RegEl._registry.set(el, this);
 		this._processAttributes();
-		if (FEAT_COND) this._setupConditionals();
-		if (FEAT_ASYNC) this._setupAwait();
-		if (FEAT_EACH) this._setupEach();
+		this._setupConditionals();
+		this._setupAwait();
+		this._setupEach();
 		// Orphan then/catch must hide before any text traversal for test determinism
-		if (FEAT_ASYNC) this._hideIfOrphanThenCatch();
+		this._hideIfOrphanThenCatch();
 		// Defer text interpolation for any then/catch until promise resolution to avoid early NaN (cases 14/15)
-		if (FEAT_ASYNC && hasThenOrCatch(this._el)) {
+		if (hasThenOrCatch(this._el)) {
 			// Only skip if no injected context already present (i.e., initial registration before await resolves)
 			if (!RegEl._injected.has(this._el)) {
 				this._el.setAttribute("data-st", "");
@@ -243,7 +230,7 @@ export class RegEl {
 		// If this is a then/catch with injected context already available, traverse with that context immediately.
 		const existingInjected = RegEl._injected.get(this._el);
 		if (!this._el.hasAttribute("data-st")) {
-			if (existingInjected && FEAT_ASYNC && hasThenOrCatch(this._el)) {
+			if (existingInjected && hasThenOrCatch(this._el)) {
 				this._traverseText(this._el, existingInjected);
 			} else {
 				this._traverseText(this._el);
@@ -312,45 +299,34 @@ export class RegEl {
 			// Directive-first handling to avoid work for common directives
 			switch (bindName) {
 				case "if":
-					if (FEAT_COND) {
-						setDataIfMissing("data-if", `\${${value.trim()}}`);
-						this._parseShow("data-if", value.trim());
-					}
+					setDataIfMissing("data-if", `\${${value.trim()}}`);
+					this._parseShow("data-if", value.trim());
 					continue;
 				case "elseif":
-					if (FEAT_COND) {
-						setDataIfMissing("data-elseif", `\${${value.trim()}}`);
-						this._parseShow("data-elseif", value.trim());
-					}
+					setDataIfMissing("data-elseif", `\${${value.trim()}}`);
+					this._parseShow("data-elseif", value.trim());
 					continue;
 				case "else":
-					if (FEAT_COND) {
-						setDataIfMissing("data-else", "");
-						this._parseShow("data-else", "");
-					}
+					setDataIfMissing("data-else", "");
+					this._parseShow("data-else", "");
 					continue;
 				case "await":
-					if (FEAT_ASYNC) {
-						setDataIfMissing("data-await", `\${${value.trim()}}`);
-						this._parseAsync("data-await", value.trim());
-					}
+					setDataIfMissing("data-await", `\${${value.trim()}}`);
+					this._parseAsync("data-await", value.trim());
 					continue;
 				case "then":
 				case "catch":
 					// We don't parse then/catch; only mark data-* for runtime
-					if (FEAT_ASYNC)
-						setDataIfMissing(
-							`data-${bindName}`,
-							bindName === "then" || bindName === "catch"
-								? value.trim()
-								: ""
-						);
+					setDataIfMissing(
+						`data-${bindName}`,
+						bindName === "then" || bindName === "catch"
+							? value.trim()
+							: ""
+					);
 					continue;
 				case "each":
-					if (FEAT_EACH) {
-						setDataIfMissing("data-each", `\${${value.trim()}}`);
-						this._parseEach(value.trim());
-					}
+					setDataIfMissing("data-each", `\${${value.trim()}}`);
+					this._parseEach(value.trim());
 					continue;
 				default:
 					break;
@@ -475,7 +451,6 @@ export class RegEl {
 	}
 
 	_setupConditionals() {
-		if (!FEAT_COND) return;
 		const isIf = this._el.hasAttribute("data-if");
 		const isElseIf = this._el.hasAttribute("data-elseif");
 		const isElse = this._el.hasAttribute("data-else");
@@ -545,7 +520,7 @@ export class RegEl {
 	}
 
 	_setupAwait() {
-		if (!FEAT_ASYNC || !this._awaitExpr) return;
+		if (!this._awaitExpr) return;
 		const baseDisplay = this._el.style.display;
 		this._hideThenCatchSiblings(true);
 		this._addEffect(() => {
@@ -642,7 +617,7 @@ export class RegEl {
 		}
 	}
 	_setupEach() {
-		if (!FEAT_EACH || !this._eachExpr) return;
+		if (!this._eachExpr) return;
 		const template = this._el;
 		const parent = template.parentElement;
 		if (!parent) return;
