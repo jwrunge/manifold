@@ -225,13 +225,10 @@ async function writeMarkdownSummary(results: PerformanceMetrics[]) {
 			fsMod = await import(altFs as string);
 			pathMod = await import(altPath as string);
 		}
-		const { mkdirSync, writeFileSync, existsSync, readFileSync } =
-			fsMod as {
-				mkdirSync: (p: string, opts: { recursive: boolean }) => void;
-				writeFileSync: (p: string, data: string) => void;
-				existsSync: (p: string) => boolean;
-				readFileSync: (p: string, enc: string) => string;
-			};
+		const { mkdirSync, writeFileSync } = fsMod as {
+			mkdirSync: (p: string, opts: { recursive: boolean }) => void;
+			writeFileSync: (p: string, data: string) => void;
+		};
 		const { join } = pathMod as { join: (...parts: string[]) => string };
 		// @ts-ignore
 		const node = typeof process !== "undefined" ? process : undefined;
@@ -277,19 +274,8 @@ async function writeMarkdownSummary(results: PerformanceMetrics[]) {
 		}
 
 		const content = header + envInfo + body + "\n";
-		if (!existsSync(file)) {
-			writeFileSync(file, content);
-		} else {
-			// Keep only the most recent 49 existing reports, then append the new one to cap at 50
-			const data = readFileSync(file, "utf8");
-			const re =
-				/^# Manifold Performance Summary[\s\S]*?(?=^# Manifold Performance Summary|$)/gm;
-			const blocks = data.match(re) || [];
-			const kept = blocks.slice(-49); // keep last 49 old blocks
-			const newData =
-				(kept.length ? kept.join("\n\n") + "\n\n" : "") + content;
-			writeFileSync(file, newData);
-		}
+		// Overwrite the report on each run to avoid accumulating duplicate headers
+		writeFileSync(file, content);
 		console.log(`\n📝 Wrote performance summary to ${file}`);
 	} catch (err) {
 		console.warn("Failed to write performance summary:", err);

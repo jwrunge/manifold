@@ -92,7 +92,7 @@ export default defineConfig({
 									.replace(/\s+\)/g, ")") // space before )
 									.replace(/,\s+/g, ",") // space after ,
 									.replace(/:\s+/g, ":") // space after : (objects)
-									.replace(/\/\/[^[[\n\r]*/g, "") // strip single-line comments
+									.replace(/\/\/[^\n\r]*/g, "") // strip single-line comments
 									// around simple operators (avoid < and > to keep JSX-safe spacing)
 									.replace(/\s*([=+\-*!?:,&|])\s*/g, "$1");
 							for (const m of c.matchAll(literalRe)) {
@@ -515,7 +515,7 @@ export default defineConfig({
 								// Strip single-line and block comments in non-string segments only
 								const seg = c
 									.slice(last, s)
-									.replace(/\/\/[^[[\n\r]*/g, "")
+									.replace(/\/\/[^\n\r]*/g, "")
 									.replace(/\/\*[\s\S]*?\*\//g, "");
 								partsNoComments.push(seg, m[0]);
 								last = e;
@@ -523,23 +523,22 @@ export default defineConfig({
 							partsNoComments.push(
 								c
 									.slice(last)
-									.replace(/\/\/[^[[\n\r]*/g, "")
+									.replace(/\/\/[^\n\r]*/g, "")
 									.replace(/\/\*[\s\S]*?\*\//g, "")
 							);
 							c = partsNoComments.join("");
 						}
 
 						// Final newline handling:
-						// - For UMD: squash newlines to spaces to keep wrapper single-line
-						// - For ES: preserve newlines to avoid import-analysis parse issues and trailing '//' eating the file
-						const fmt =
-							(options as unknown as { format?: string })
-								?.format || "es";
-						if (fmt === "umd") {
-							c = c.replace(/\r?\n+/g, " ");
-						} else {
-							// Keep as-is; optionally collapse 3+ blank lines to a single newline
-							c = c.replace(/\n{3,}/g, "\n\n");
+						// - UMD: squash newlines to spaces.
+						// - ES: preserve line boundaries to keep '//' comments harmless for import analyzers; just collapse runs.
+						{
+							const fmt = (options as unknown as { format?: string })?.format || "es";
+							if (fmt === "umd") {
+								c = c.replace(/\r?\n+/g, " ");
+							} else {
+								c = c.replace(/\r?\n{2,}/g, "\n");
+							}
 						}
 
 						// JSX-safe: ensure a space before '<' when it is directly followed by a string literal to avoid JSX parsing in import analysis
@@ -556,7 +555,24 @@ export default defineConfig({
 								'typeof $1!=="undefined"'
 							);
 
-						// Ensure the file ends with a newline to terminate any trailing line comment safely
+						// Final literal-aware whitespace squeeze (collapse runs of spaces/tabs outside strings)
+						{
+							let last = 0;
+							const out: string[] = [];
+							for (const m of c.matchAll(literalRe)) {
+								const s = m.index ?? 0,
+									e = s + m[0].length;
+								out.push(
+									c.slice(last, s).replace(/[\t ]{2,}/g, " ")
+								);
+								out.push(m[0]);
+								last = e;
+							}
+							out.push(c.slice(last).replace(/[\t ]{2,}/g, " "));
+							c = out.join("");
+						}
+
+						// Ensure the file ends with a newline
 						chunk.code = c.trimEnd() + "\n";
 					}
 				}

@@ -1,99 +1,19 @@
 # Manifold Performance Summary
 
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-# Manifold Performance Summary
-
-- Date: 2025-08-18T03:29:30.028Z
-- Node: v24.5.0
-- Platform: linux x64
+- Date: 2025-08-18T15:28:34.443Z
+- Node: v23.10.0
+- Platform: darwin arm64
 
 | Test | Duration (ms) | Ops | ms/op | Ops/sec | Effect runs | Avg (ms) | Med (ms) | P95 (ms) | P99 (ms) | Min/Max (ms) | CPU u/s (ms) | Mem start/end/Δ (MB) | GC? |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|:--:|
-| Basic State Operations | 103.57 | 1000 | 0.1036 | 9655 | 2 | 0.0623 | 0.0229 | 0.0229 | 0.0229 | 0.0229/0.1018 | 5.0/0.0 | 37.40/37.85/0.45 |  |
-| Derived State Performance | 50.69 | 500 | 0.1014 | 9864 | 2 | 0.0113 | 0.0016 | 0.0016 | 0.0016 | 0.0016/0.0211 | 1.3/0.0 | 38.04/38.12/0.08 |  |
-| Hierarchical Effects Performance | 100.55 | 200 | 0.5028 | 1989 | 6 | 0.0082 | 0.0046 | 0.0088 | 0.0088 | 0.0022/0.0255 | 0.5/0.0 | 38.21/38.25/0.04 |  |
-| Mass State Updates Stress Test | 201.29 | 2000 | 0.1006 | 9936 | 100 | 0.0010 | 0.0007 | 0.0013 | 0.0034 | 0.0006/0.0250 | 1.7/0.0 | 38.39/38.72/0.33 |  |
-| Deep Object Nesting Stress Test | 152.82 | 1000 | 0.1528 | 6544 | 4 | 0.0195 | 0.0060 | 0.0297 | 0.0297 | 0.0031/0.0392 | 2.7/0.0 | 38.83/40.92/2.09 |  |
-| Circular Dependency Stress Test | 306.28 | 20 | 15.3142 | 65 | 84 | 0.0018 | 0.0011 | 0.0036 | 0.0086 | 0.0004/0.0231 | 2.9/0.0 | 41.02/41.38/0.36 |  |
-| Rapid State Changes Stress Test | 155.89 | 5000 | 0.0312 | 32073 | 51 | 0.0018 | 0.0011 | 0.0027 | 0.0039 | 0.0004/0.0215 | 2.6/0.0 | 41.48/41.68/0.20 |  |
-| Effect Cleanup Performance | 102.79 | 1000 | 0.1028 | 9728 | 2500 | 0.0003 | 0.0002 | 0.0004 | 0.0010 | 0.0001/0.0378 | 4.8/0.0 | 41.80/43.93/2.13 |  |
-| Hierarchical Mode | 100.58 | 1000 | 0.1006 | 9942 | 4 | 0.0177 | 0.0036 | 0.0174 | 0.0174 | 0.0003/0.0496 | 0.7/0.0 | 44.43/44.48/0.05 |  |
-| Performance Mode | 100.42 | 1000 | 0.1004 | 9958 | 4 | 0.0112 | 0.0033 | 0.0040 | 0.0040 | 0.0002/0.0373 | 0.0/0.4 | 44.50/44.54/0.04 |  |
+| Basic State Operations | 106.86 | 1000 | 0.1069 | 9358 | 2 | 0.0551 | 0.0115 | 0.0115 | 0.0115 | 0.0115/0.0987 | 6.9/0.7 | 37.84/38.36/0.52 |  |
+| Derived State Performance | 50.85 | 500 | 0.1017 | 9833 | 2 | 0.0055 | 0.0011 | 0.0011 | 0.0011 | 0.0011/0.0100 | 0.7/0.0 | 38.53/38.59/0.06 |  |
+| Hierarchical Effects Performance | 100.50 | 200 | 0.5025 | 1990 | 6 | 0.0064 | 0.0037 | 0.0077 | 0.0077 | 0.0020/0.0152 | 0.7/0.1 | 38.69/38.75/0.06 |  |
+| Mass State Updates Stress Test | 202.66 | 2000 | 0.1013 | 9869 | 100 | 0.0010 | 0.0006 | 0.0017 | 0.0046 | 0.0004/0.0267 | 2.0/0.1 | 38.88/39.20/0.33 |  |
+| Deep Object Nesting Stress Test | 154.01 | 1000 | 0.1540 | 6493 | 4 | 0.0229 | 0.0062 | 0.0299 | 0.0299 | 0.0029/0.0526 | 3.3/0.3 | 39.31/41.40/2.09 |  |
+| Circular Dependency Stress Test | 322.80 | 20 | 16.1402 | 62 | 81 | 0.0023 | 0.0010 | 0.0064 | 0.0135 | 0.0004/0.0222 | 4.1/0.4 | 41.51/41.87/0.36 |  |
+| Rapid State Changes Stress Test | 159.24 | 5000 | 0.0318 | 31399 | 51 | 0.0020 | 0.0010 | 0.0042 | 0.0153 | 0.0005/0.0214 | 2.7/0.3 | 41.96/42.18/0.21 |  |
+| Effect Cleanup Performance | 103.06 | 1000 | 0.1031 | 9703 | 2500 | 0.0002 | 0.0002 | 0.0003 | 0.0010 | 0.0001/0.0187 | 8.1/0.4 | 42.29/44.43/2.14 |  |
+| Hierarchical Mode | 101.58 | 1000 | 0.1016 | 9845 | 4 | 0.0152 | 0.0036 | 0.0106 | 0.0106 | 0.0002/0.0465 | 0.5/0.0 | 44.86/44.91/0.05 |  |
+| Performance Mode | 101.43 | 1000 | 0.1014 | 9859 | 4 | 0.0145 | 0.0027 | 0.0040 | 0.0040 | 0.0002/0.0511 | 0.4/0.0 | 44.94/44.99/0.04 |  |
 
