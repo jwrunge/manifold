@@ -447,16 +447,18 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 				const injected = (ctx as Record<string, unknown>).__state as
 					| Record<string, unknown>
 					| undefined;
-				if (ctx && Object.hasOwn(ctx, chain.base))
+				if (ctx && chain.base in ctx)
 					root = (ctx as Record<string, unknown>)[chain.base];
-				else if (injected && Object.hasOwn(injected, chain.base))
-					root = injected[chain.base];
 				else if (
 					typeof globalThis !== "undefined" &&
 					chain.base === "Promise" &&
 					chain.base in (globalThis as Record<string, unknown>)
 				)
 					root = (globalThis as Record<string, unknown>)[chain.base];
+				else if (injected)
+					root = (injected as Record<string, unknown>)[
+						chain.base as never
+					];
 				else root = undefined;
 				let cur = root,
 					lastObjForCall: unknown;

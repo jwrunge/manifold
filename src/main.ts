@@ -10,6 +10,44 @@ export type FuncsConstraint = Record<string, (...args: never[]) => unknown>;
 let __builderCreated = false;
 // Track first built state globally for auto-registration convenience
 let __globalState: Record<string, unknown> | undefined;
+// Pending component roots to register once a state exists
+const __pendingComponentRoots: Array<Element | ShadowRoot> = [];
+
+// Helper: determine if an element needs registration (has :* or sync:*)
+const __needsRegister = (el: Element): boolean => {
+	const attrs = el.attributes;
+	for (let i = 0; i < attrs.length; i++) {
+		const n = attrs[i].name;
+		if (n[0] === ":" || n.startsWith("sync:")) return true;
+	}
+	return false;
+};
+// Helper: register all elements under a root that need it; also register the
+// root container(s) so text interpolation without directives still works.
+const __registerSubtree = (
+	root: Element | ShadowRoot,
+	state: Record<string, unknown>
+) => {
+	if ((root as ShadowRoot).host !== undefined) {
+		// ShadowRoot: register top-level element children so text is processed
+		const sr = root as ShadowRoot;
+		for (let i = 0; i < sr.children.length; i++) {
+			RegEl.register(sr.children[i] as HTMLElement, state);
+		}
+	} else {
+		// Element root: register it directly
+		RegEl.register(root as HTMLElement, state);
+	}
+	const w = document.createTreeWalker(
+		root,
+		NodeFilter.SHOW_ELEMENT,
+		undefined
+	);
+	while (w.nextNode()) {
+		const cur = w.currentNode as Element;
+		if (__needsRegister(cur)) RegEl.register(cur as HTMLElement, state);
+	}
+};
 
 class StateBuilder<
 	TState extends StateConstraint,
@@ -52,6 +90,55 @@ class StateBuilder<
 		const e = Effect.acquire(fn, false);
 		e.run();
 		return e;
+	}
+
+	// Minimal custom element factory
+	static defineComponent(
+		name: string,
+		ops?: { shadow?: "open" | "closed" | false; selector?: string }
+	): void {
+		if (customElements.get(name)) return;
+		class MFComponent extends HTMLElement {
+			private _tpl: HTMLTemplateElement | null = null;
+			private _shadow: ShadowRoot | null = null;
+			constructor() {
+				super();
+			}
+			connectedCallback() {
+				// Resolve template lazily so parser-added children exist
+				if (!this._tpl) {
+					const fromSel = ops?.selector
+						? (document.querySelector(
+								ops.selector
+						  ) as HTMLTemplateElement | null)
+						: null;
+					const childTpl = this.querySelector(
+						"template"
+					) as HTMLTemplateElement | null;
+					if (fromSel) this._tpl = fromSel;
+					else if (childTpl) this._tpl = childTpl;
+					else {
+						const t = document.createElement("template");
+						t.innerHTML = this.innerHTML;
+						this.innerHTML = "";
+						this._tpl = t;
+					}
+				}
+				if (ops?.shadow)
+					this._shadow = this.attachShadow({ mode: ops.shadow });
+				const root =
+					(this._shadow as ShadowRoot | null) ||
+					(this as unknown as Element);
+				if (this._tpl)
+					root.appendChild(this._tpl.content.cloneNode(true));
+				// Mark host for auto-registration; build() will pick this up even if no state yet
+				this.setAttribute("data-mf-register", "");
+				const st = __globalState;
+				if (st) __registerSubtree(root, st);
+				else __pendingComponentRoots.push(root);
+			}
+		}
+		customElements.define(name, MFComponent);
 	}
 
 	add<K extends string, V>(
@@ -158,12 +245,23 @@ class StateBuilder<
 		if (typeof document !== "undefined") {
 			// Restore correct selector so tests and runtime auto-registration work
 			const nodes = document.querySelectorAll("[data-mf-register]");
-			nodes.forEach((el) =>
+			nodes.forEach((el) => {
+				// If element was registered earlier with a different state (e.g., previous test),
+				// dispose and re-register to bind to the latest state.
+				// biome-ignore lint/suspicious/noExplicitAny: runtime check against internal registry
+				const inst: any = (RegEl as any)._registry?.get?.(el);
+				if (inst && inst._state !== stateToUse) inst.dispose?.();
 				RegEl.register(
 					el as HTMLElement | SVGElement | MathMLElement,
 					stateToUse
-				)
-			);
+				);
+			});
+			// Register any component roots that connected before a state existed
+			if (__pendingComponentRoots.length) {
+				for (const root of __pendingComponentRoots)
+					__registerSubtree(root, stateToUse);
+				__pendingComponentRoots.length = 0;
+			}
 		}
 		// Return the state directly
 		return state as TState;
