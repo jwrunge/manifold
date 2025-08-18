@@ -1,6 +1,3 @@
-// Ultra-minify Vite plugin extracted from vite.config.ts
-// Keep logic identical to the original inline plugin to avoid regressions.
-
 export default function ultraMinifyPlugin() {
 	return {
 		name: "ultra-minify",

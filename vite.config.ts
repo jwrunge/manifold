@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import terser from "@rollup/plugin-terser";
 import ultraMinifyPlugin from "./scripts/ultra-minify.ts";
 
 // Access env safely via globalThis to avoid Node typings in pure ESM TS
@@ -35,19 +36,31 @@ export default defineConfig({
 		},
 		// Keep default emptyOutDir behaviour unless user explicitly disables it
 		emptyOutDir: env.MF_EMPTY_OUT_DIR === "false" ? false : undefined,
-		rollupOptions: { output: { compact: true } },
+		rollupOptions: {
+			output: { compact: true },
+			plugins: [
+				terser({
+					compress: {
+						typeofs: false,
+						passes: 2,
+						drop_console: true,
+						drop_debugger: true,
+						pure_getters: true,
+						global_defs: { "NodeFilter.SHOW_TEXT": 4 },
+					},
+					mangle: {
+						toplevel: true,
+						properties: {
+							regex: /^_/,
+							reserved: ["__"],
+						},
+					},
+					format: { comments: false, ecma: 2020 },
+				}),
+			],
+		},
 	},
 	plugins: [ultraMinifyPlugin()],
-	esbuild: {
-		// Mangle single-underscore props but preserve double-underscore props used for internal context passing
-		mangleProps: /^_/,
-		reserveProps: /^__/,
-		minifyIdentifiers: true,
-		minifySyntax: true,
-		minifyWhitespace: true,
-		legalComments: "none",
-		pure: ["console.log", "console.info", "console.debug"],
-		drop: ["console", "debugger"],
-		target: "es2020",
-	},
+	// esbuild remains for TS transforms; additional compression by Terser plugin
+	esbuild: { target: "es2020" },
 });
