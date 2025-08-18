@@ -533,7 +533,9 @@ export default defineConfig({
 						// - UMD: squash newlines to spaces.
 						// - ES: preserve line boundaries to keep '//' comments harmless for import analyzers; just collapse runs.
 						{
-							const fmt = (options as unknown as { format?: string })?.format || "es";
+							const fmt =
+								(options as unknown as { format?: string })
+									?.format || "es";
 							if (fmt === "umd") {
 								c = c.replace(/\r?\n+/g, " ");
 							} else {
