@@ -92,6 +92,7 @@
 </style>
 <script type="module">
 	import StateBuilder from "./dist/manifold.es.js";
+	import "./examples/example-component.js";
 
 	// Build once after DOM is ready so auto-registration can bind regions.
 	const init = () => {
@@ -102,6 +103,7 @@
 				items: [1, 2, 3],
 				userId: 1,
 				asyncToggle: true,
+				globalGreeting: "Hello",
 			},
 			{
 				// Use `this` (bound to the state proxy) to avoid TDZ on outer `state`
@@ -119,7 +121,7 @@
 							if (asyncToggle)
 								resolve({ id: userId, name: "Ada" });
 							else reject(new Error("User load failed"));
-						}, 2000);
+						}, 800);
 					});
 				},
 			}
@@ -205,4 +207,31 @@
 			button to force extra logging around the increment function call.
 		</p>
 	</section>
+</div>
+
+<!-- Demo: Custom element + template using defineComponent with attribute->prop mapping -->
+<template id="tpl-user-card">
+	<div
+		data-mf-register
+		style="border: 1px solid #ccc; padding: 8px; margin-top: 12px"
+	>
+		<strong>${globalGreeting}, ${name ?? 'User'}!</strong>
+		<div>ID: ${userId ?? '(unset)'} | Active: ${active ? 'yes' : 'no'}</div>
+		<div>Role (shared): ${role ?? '(none)'}</div>
+		<button :onclick="active = !active">Toggle Active</button>
+		<button :onclick="name = (name ?? 'Ada') + '!'">Excite Name</button>
+	</div>
+</template>
+
+<div>
+	<h3>Custom Element Demo</h3>
+	<!-- Both set the same role, but different names/ids -->
+	<x-user-card user-id="42" active name="Ada" role="member"></x-user-card>
+	<x-user-card user-id="7" name="Bob" role="member"></x-user-card>
+	<p>
+		Try setting attributes in the devtools console:
+		<code>
+			document.querySelector('x-user-card').setAttribute('role','admin')
+		</code>
+	</p>
 </div>
