@@ -16,19 +16,13 @@
 		"pretest": "npm run -s build"
 	},
 	"devDependencies": {
-		"@babel/core": "^7.25.0",
-		"@babel/plugin-transform-class-properties": "^7.25.0",
-		"@babel/plugin-transform-private-methods": "^7.25.0",
-		"@babel/plugin-transform-private-property-in-object": "^7.25.0",
-		"@babel/plugin-transform-typescript": "^7.28.0",
 		"@biomejs/biome": "^2.1.4",
-		"@rollup/plugin-babel": "^6.0.4",
-		"@rollup/plugin-terser": "^0.4.4",
 		"@types/node": "^22.17.2",
 		"esbuild": "^0.25.9",
 		"jsdom": "^26.1.0",
 		"typescript": "~5.8.3",
 		"vite": "^7.1.2",
-		"vitest": "^3.2.4"
+		"vitest": "^3.2.4",
+		"magic-string": "^0.30.11"
 	}
 }

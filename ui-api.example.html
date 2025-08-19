@@ -92,8 +92,6 @@
 </style>
 <script type="module">
 	import StateBuilder from "./dist/manifold.es.js";
-	// Import example component registration (defines <x-user-card>)
-	import "./examples/example-component.js";
 
 	// Build once after DOM is ready so auto-registration can bind regions.
 	const init = () => {
@@ -104,7 +102,6 @@
 				items: [1, 2, 3],
 				userId: 1,
 				asyncToggle: true,
-				user: "Ada",
 			},
 			{
 				// Use `this` (bound to the state proxy) to avoid TDZ on outer `state`
@@ -209,14 +206,3 @@
 		</p>
 	</section>
 </div>
-
-<!-- Example custom element template and usage -->
-<template id="tpl-user-card">
-	<div data-mf-register>
-		<p class="vt-fade">Hello, ${user}!</p>
-		<button :onclick="user = 'Grace'">Change to Grace</button>
-	</div>
-</template>
-
-<!-- Using the custom element defined via examples/example-component.js -->
-<x-user-card></x-user-card>

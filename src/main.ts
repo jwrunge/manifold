@@ -99,14 +99,12 @@ class StateBuilder<
 	): void {
 		if (customElements.get(name)) return;
 		class MFComponent extends HTMLElement {
-			private _tpl: HTMLTemplateElement | null = null;
-			private _shadow: ShadowRoot | null = null;
-			constructor() {
-				super();
-			}
+			#tpl: HTMLTemplateElement | null = null;
+			#shadow: ShadowRoot | null = null;
+
 			connectedCallback() {
 				// Resolve template lazily so parser-added children exist
-				if (!this._tpl) {
+				if (!this.#tpl) {
 					const fromSel = ops?.selector
 						? (document.querySelector(
 								ops.selector
@@ -115,22 +113,22 @@ class StateBuilder<
 					const childTpl = this.querySelector(
 						"template"
 					) as HTMLTemplateElement | null;
-					if (fromSel) this._tpl = fromSel;
-					else if (childTpl) this._tpl = childTpl;
+					if (fromSel) this.#tpl = fromSel;
+					else if (childTpl) this.#tpl = childTpl;
 					else {
 						const t = document.createElement("template");
 						t.innerHTML = this.innerHTML;
 						this.innerHTML = "";
-						this._tpl = t;
+						this.#tpl = t;
 					}
 				}
 				if (ops?.shadow)
-					this._shadow = this.attachShadow({ mode: ops.shadow });
+					this.#shadow = this.attachShadow({ mode: ops.shadow });
 				const root =
-					(this._shadow as ShadowRoot | null) ||
+					(this.#shadow as ShadowRoot | null) ||
 					(this as unknown as Element);
-				if (this._tpl)
-					root.appendChild(this._tpl.content.cloneNode(true));
+				if (this.#tpl)
+					root.appendChild(this.#tpl.content.cloneNode(true));
 				// Mark host for auto-registration; build() will pick this up even if no state yet
 				this.setAttribute("data-mf-register", "");
 				const st = __globalState;
