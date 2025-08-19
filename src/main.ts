@@ -10,8 +10,11 @@ export type FuncsConstraint = Record<string, (...args: never[]) => unknown>;
 let __builderCreated = false;
 // Track first built state globally for auto-registration convenience
 let __globalState: Record<string, unknown> | undefined;
-// Pending component roots to register once a state exists
-const __pendingComponentRoots: Array<Element | ShadowRoot> = [];
+// Pending component roots to register once a state exists (keeps local overlay state)
+const __pendingComponentRoots = new Map<
+	Element | ShadowRoot,
+	{ base: Record<string, unknown>; local: Record<string, unknown> }
+>();
 
 // Helper: determine if an element needs registration (has :* or sync:*)
 const __needsRegister = (el: Element): boolean => {
@@ -92,15 +95,57 @@ class StateBuilder<
 		return e;
 	}
 
-	// Minimal custom element factory
-	static defineComponent(
+	// Minimal custom element factory with typed props and runtime attr->prop mapping
+	static defineComponent<Props extends StateConstraint = StateConstraint>(
 		name: string,
-		ops?: { shadow?: "open" | "closed" | false; selector?: string }
-	): void {
-		if (customElements.get(name)) return;
+		ops?: {
+			shadow?: "open" | "closed" | false;
+			selector?: string;
+			// Map HTML attribute name -> prop name. Defaults to kebab-case -> camelCase
+			attrMap?: Record<string, string>;
+			// Optional coercion from attribute string to prop value
+			toProp?: (attr: string, value: string | null) => unknown;
+			// Optional list of element property names to expose as accessors on the host
+			props?: Array<keyof Props & string>;
+		}
+	): CustomElementConstructor & { new (): HTMLElement & Props } {
+		if (customElements.get(name))
+			return customElements.get(
+				name
+			) as unknown as CustomElementConstructor & {
+				new (): HTMLElement & Props;
+			};
+
+		const toCamel = (s: string) =>
+			s.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+		const coerce = (attr: string, v: string | null): unknown => {
+			if (ops?.toProp) return ops.toProp(attr, v);
+			if (v == null) return null;
+			if (v === "") return true;
+			if (v === "true") return true;
+			if (v === "false") return false;
+			// number-like
+			if (/^[+-]?\d+(?:\.\d+)?$/.test(v)) return Number(v);
+			// simple JSON-like
+			if (
+				(v.startsWith("{") && v.endsWith("}")) ||
+				(v.startsWith("[") && v.endsWith("]"))
+			) {
+				try {
+					return JSON.parse(v);
+				} catch {
+					return v;
+				}
+			}
+			return v;
+		};
+
 		class MFComponent extends HTMLElement {
 			#tpl: HTMLTemplateElement | null = null;
 			#shadow: ShadowRoot | null = null;
+			#base: Record<string, unknown> | null = null;
+			#state: Record<string, unknown> | null = null;
+			#mo: MutationObserver | null = null;
 
 			connectedCallback() {
 				// Resolve template lazily so parser-added children exist
@@ -129,14 +174,101 @@ class StateBuilder<
 					(this as unknown as Element);
 				if (this.#tpl)
 					root.appendChild(this.#tpl.content.cloneNode(true));
-				// Mark host for auto-registration; build() will pick this up even if no state yet
+
+				// Build a local reactive overlay that prototypes the global state
+				const parent =
+					(__globalState as Record<string, unknown>) || null;
+				this.#base = Object.create(parent) as Record<string, unknown>;
+				this.#state = proxy(this.#base) as Record<string, unknown>;
+
+				// Define accessors for declared props to interop with imperative usage
+				if (ops?.props) {
+					for (const key of ops.props) {
+						if (!(key in this)) {
+							Object.defineProperty(this, key, {
+								get: () =>
+									(this.#state as Record<string, unknown>)[
+										key as string
+									],
+								set: (v: unknown) => {
+									if (this.#state)
+										(
+											this.#state as Record<
+												string,
+												unknown
+											>
+										)[key as string] = v as unknown;
+								},
+								configurable: true,
+								enumerable: true,
+							});
+						}
+					}
+				}
+
+				// Initialize props from current attributes
+				const attrs = this.attributes;
+				for (let i = 0; i < attrs.length; i++) {
+					const a = attrs[i];
+					const prop = (ops?.attrMap?.[a.name] ||
+						toCamel(a.name)) as string;
+					(this.#state as Record<string, unknown>)[prop] = coerce(
+						a.name,
+						a.value
+					);
+				}
+
+				// Mark host for auto-registration
 				this.setAttribute("data-mf-register", "");
-				const st = __globalState;
-				if (st) __registerSubtree(root, st);
-				else __pendingComponentRoots.push(root);
+
+				// Keep overlay for later global state availability or rebinding
+				__pendingComponentRoots.set(root, {
+					base: this.#base as Record<string, unknown>,
+					local: this.#state as Record<string, unknown>,
+				});
+
+				// If a state exists now, register immediately with the overlay
+				if (__globalState)
+					__registerSubtree(
+						root,
+						this.#state as Record<string, unknown>
+					);
+
+				// Watch attribute changes at runtime and update props reactively
+				this.#mo = new MutationObserver((ml) => {
+					for (const m of ml) {
+						if (m.type !== "attributes" || !m.attributeName)
+							continue;
+						const n = m.attributeName;
+						const prop = (ops?.attrMap?.[n] ||
+							toCamel(n)) as string;
+						(this.#state as Record<string, unknown>)[prop] = coerce(
+							n,
+							this.getAttribute(n)
+						);
+					}
+				});
+				this.#mo.observe(this, { attributes: true });
+			}
+
+			disconnectedCallback() {
+				this.#mo?.disconnect();
+				this.#mo = null;
+				// Remove from pending map to avoid stale rebinds
+				const root =
+					(this.#shadow as ShadowRoot | null) ||
+					(this as unknown as Element);
+				__pendingComponentRoots.delete(root);
+				// Dispose any existing registration bound to this host
+				// biome-ignore lint/suspicious/noExplicitAny: internal registry access for cleanup
+				const inst: any = (RegEl as any)._registry?.get?.(root);
+				inst?.dispose?.();
 			}
 		}
 		customElements.define(name, MFComponent);
+		return MFComponent as unknown as CustomElementConstructor & {
+			new (): HTMLElement & Props;
+		};
 	}
 
 	add<K extends string, V>(
@@ -254,11 +386,13 @@ class StateBuilder<
 					stateToUse
 				);
 			});
-			// Register any component roots that connected before a state existed
-			if (__pendingComponentRoots.length) {
-				for (const root of __pendingComponentRoots)
-					__registerSubtree(root, stateToUse);
-				__pendingComponentRoots.length = 0;
+			// Register any component roots (with overlays) that connected before or need rebinding
+			if (__pendingComponentRoots.size) {
+				for (const [root, pair] of __pendingComponentRoots) {
+					Object.setPrototypeOf(pair.base, stateToUse);
+					__registerSubtree(root, pair.local);
+				}
+				__pendingComponentRoots.clear();
 			}
 		}
 		// Return the state directly
