@@ -362,28 +362,17 @@ function processEsChunk(
 	return out;
 }
 
-function isChunkLike(
-	x: unknown
-): x is {
-	type: "chunk";
-	code: string;
-	fileName: string;
-	facadeModuleId?: string;
-} {
-	if (!x || typeof x !== "object") return false;
-	const r = x as Record<string, unknown>;
-	return (
-		r.type === "chunk" &&
-		typeof r.code === "string" &&
-		typeof r.fileName === "string"
-	);
+function squeezeLight(code: string): string {
+	return code
+		.replace(/\/\* *@__PURE__ *\*\//g, "")
+		.replace(/\n{3,}/g, "\n\n");
 }
 
 export default function ultraMinifyPlugin() {
-	return {
-		name: "ultra-minify-ast",
-		apply: "build",
-		enforce: "post",
+	const pre = {
+		name: "ultra-minify-ast-pre",
+		apply: "build" as const,
+		enforce: "pre" as const,
 		renderChunk(
 			code: string,
 			chunk: { fileName?: string; format?: string }
@@ -396,23 +385,18 @@ export default function ultraMinifyPlugin() {
 			);
 			return out ? { code: out, map: null } : null;
 		},
-		// Safety net: ensure final emitted files also get processed
-		generateBundle(_, bundle) {
-			for (const fileName of Object.keys(bundle)) {
-				const item = (bundle as Record<string, unknown>)[fileName];
-				if (isChunkLike(item)) {
-					const fmt: string | undefined = item.facadeModuleId
-						? "es"
-						: undefined;
-					const out = processEsChunk.call(
-						this,
-						item.code,
-						item.fileName,
-						fmt
-					);
-					if (out) item.code = out;
-				}
-			}
+	};
+
+	const post = {
+		name: "ultra-minify-squeeze-post",
+		apply: "build" as const,
+		enforce: "post" as const,
+		renderChunk(code: string) {
+			// very conservative squeeze; esbuild already minifies
+			const out = squeezeLight(code);
+			return out !== code ? { code: out, map: null } : null;
 		},
-	} as const;
+	};
+
+	return [pre, post] as const;
 }
