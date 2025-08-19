@@ -84,8 +84,10 @@ const computeCtorSavings = (name: string, count: number, idLen: number) => {
 // Helpers to work with generic ESTree nodes
 // biome-ignore lint/suspicious/noExplicitAny: lightweight ESTree helpers
 const hasNodeType = (n: any): boolean => !!n && typeof n.type === "string";
-const getStart = (n: EstreeNode): number => (typeof n.start === "number" ? n.start : 0);
-const getEnd = (n: EstreeNode): number => (typeof n.end === "number" ? n.end : 0);
+const getStart = (n: EstreeNode): number =>
+	typeof n.start === "number" ? n.start : 0;
+const getEnd = (n: EstreeNode): number =>
+	typeof n.end === "number" ? n.end : 0;
 
 // biome-ignore lint/suspicious/noExplicitAny: lightweight ESTree handling without types
 function isStringEligible(node: any, parent: any): boolean {
@@ -205,7 +207,9 @@ function processEsChunk(
 		ast = (this as { parse?: (src: string) => any }).parse?.(code);
 	} catch {
 		// even if parse fails, still try to strip PURE markers
-		return code.replace(/\/\* *@__PURE__ *\*\//g, "").replace(/\n{3,}/g, "\n\n");
+		return code
+			.replace(/\/\* *@__PURE__ *\*\//g, "")
+			.replace(/\n{3,}/g, "\n\n");
 	}
 
 	// First pass: count
@@ -215,15 +219,23 @@ function processEsChunk(
 
 	// Lightweight walk without external deps
 	// biome-ignore lint/suspicious/noExplicitAny: ESTree program
-	const stack: Array<{ node: any; parent: any }> = [{ node: ast, parent: null }];
+	const stack: Array<{ node: any; parent: any }> = [
+		{ node: ast, parent: null },
+	];
 	while (stack.length) {
 		const top = stack.pop();
 		if (!top) break;
-		const { node, parent } = top as { node: EstreeNode; parent: EstreeNode | null };
+		const { node, parent } = top as {
+			node: EstreeNode;
+			parent: EstreeNode | null;
+		};
 		if (!node || typeof node.type !== "string") continue;
 
 		// Count literals/calls/ctors
-		if (node.type === "Literal" && typeof (node as Record<string, unknown>).value === "string") {
+		if (
+			node.type === "Literal" &&
+			typeof (node as Record<string, unknown>).value === "string"
+		) {
 			if (isStringEligible(node, parent)) {
 				const v = (node as Record<string, unknown>).value as string;
 				strCounts.set(v, (strCounts.get(v) || 0) + 1);
@@ -232,9 +244,20 @@ function processEsChunk(
 			const key = callKeyOf(node as unknown as EstreeNode);
 			if (key) callCounts.set(key, (callCounts.get(key) || 0) + 1);
 		} else if (ENABLE_CTOR_POOL && node.type === "NewExpression") {
-			const cal = (node as Record<string, unknown>).callee as EstreeNode | undefined;
-			if (cal && cal.type === "Identifier" && SAFE_CTORS.has((cal as Record<string, unknown>).name as string))
-				ctorCounts.set(((cal as Record<string, unknown>).name as string), (ctorCounts.get(((cal as Record<string, unknown>).name as string)) || 0) + 1);
+			const cal = (node as Record<string, unknown>).callee as
+				| EstreeNode
+				| undefined;
+			if (
+				cal &&
+				cal.type === "Identifier" &&
+				SAFE_CTORS.has((cal as Record<string, unknown>).name as string)
+			)
+				ctorCounts.set(
+					(cal as Record<string, unknown>).name as string,
+					(ctorCounts.get(
+						(cal as Record<string, unknown>).name as string
+					) || 0) + 1
+				);
 		}
 
 		// enqueue children (generic)
@@ -244,7 +267,8 @@ function processEsChunk(
 			if (Array.isArray(v)) {
 				for (let i = v.length - 1; i >= 0; i--) {
 					const c = v[i];
-					if (hasNodeType(c)) stack.push({ node: c as EstreeNode, parent: node });
+					if (hasNodeType(c))
+						stack.push({ node: c as EstreeNode, parent: node });
 				}
 			} else if (hasNodeType(v)) {
 				stack.push({ node: v as EstreeNode, parent: node });
@@ -257,29 +281,49 @@ function processEsChunk(
 
 	// Second pass: replace uses
 	// biome-ignore lint/suspicious/noExplicitAny: ESTREE
-	const stack2: Array<{ node: any; parent: any }> = [{ node: ast, parent: null }];
+	const stack2: Array<{ node: any; parent: any }> = [
+		{ node: ast, parent: null },
+	];
 	while (stack2.length) {
 		const top2 = stack2.pop();
 		if (!top2) break;
-		const { node, parent } = top2 as { node: EstreeNode; parent: EstreeNode | null };
+		const { node, parent } = top2 as {
+			node: EstreeNode;
+			parent: EstreeNode | null;
+		};
 		if (!node || typeof node.type !== "string") continue;
 
-		if (node.type === "Literal" && typeof (node as Record<string, unknown>).value === "string") {
+		if (
+			node.type === "Literal" &&
+			typeof (node as Record<string, unknown>).value === "string"
+		) {
 			if (isStringEligible(node, parent)) {
-				const id = selected.strings.get((node as Record<string, unknown>).value as string);
+				const id = selected.strings.get(
+					(node as Record<string, unknown>).value as string
+				);
 				if (id) ms.overwrite(getStart(node), getEnd(node), id);
 			}
 		} else if (node.type === "CallExpression") {
 			const key = callKeyOf(node as unknown as EstreeNode);
 			if (key) {
 				const id = selected.calls.get(key);
-				const calleeNode = (node as Record<string, unknown>).callee as EstreeNode | undefined;
-				if (id && calleeNode) ms.overwrite(getStart(calleeNode), getEnd(calleeNode), id);
+				const calleeNode = (node as Record<string, unknown>).callee as
+					| EstreeNode
+					| undefined;
+				if (id && calleeNode)
+					ms.overwrite(getStart(calleeNode), getEnd(calleeNode), id);
 			}
 		} else if (ENABLE_CTOR_POOL && node.type === "NewExpression") {
-			const cal = (node as Record<string, unknown>).callee as EstreeNode | undefined;
-			if (cal?.type === "Identifier" && SAFE_CTORS.has((cal as Record<string, unknown>).name as string)) {
-				const id = selected.ctors.get((cal as Record<string, unknown>).name as string);
+			const cal = (node as Record<string, unknown>).callee as
+				| EstreeNode
+				| undefined;
+			if (
+				cal?.type === "Identifier" &&
+				SAFE_CTORS.has((cal as Record<string, unknown>).name as string)
+			) {
+				const id = selected.ctors.get(
+					(cal as Record<string, unknown>).name as string
+				);
 				if (id) ms.overwrite(getStart(cal), getEnd(cal), id);
 			}
 		}
@@ -290,7 +334,8 @@ function processEsChunk(
 			if (Array.isArray(v)) {
 				for (let i = v.length - 1; i >= 0; i--) {
 					const c = v[i];
-					if (hasNodeType(c)) stack2.push({ node: c as EstreeNode, parent: node });
+					if (hasNodeType(c))
+						stack2.push({ node: c as EstreeNode, parent: node });
 				}
 			} else if (hasNodeType(v)) {
 				stack2.push({ node: v as EstreeNode, parent: node });
@@ -300,10 +345,12 @@ function processEsChunk(
 
 	// Insert declarations after imports
 	let insertPos = 0;
-	const body = ((ast && (ast as Record<string, unknown>).body) as unknown[]) || [];
+	const body =
+		((ast && (ast as Record<string, unknown>).body) as unknown[]) || [];
 	for (let i = 0; i < body.length; i++) {
 		const b = body[i] as EstreeNode;
-		if (b && b.type === "ImportDeclaration") insertPos = (b.end as number) || insertPos;
+		if (b && b.type === "ImportDeclaration")
+			insertPos = (b.end as number) || insertPos;
 		else break;
 	}
 	const decls = buildDecls(selected);
@@ -315,10 +362,21 @@ function processEsChunk(
 	return out;
 }
 
-function isChunkLike(x: unknown): x is { type: "chunk"; code: string; fileName: string; facadeModuleId?: string } {
+function isChunkLike(
+	x: unknown
+): x is {
+	type: "chunk";
+	code: string;
+	fileName: string;
+	facadeModuleId?: string;
+} {
 	if (!x || typeof x !== "object") return false;
 	const r = x as Record<string, unknown>;
-	return r.type === "chunk" && typeof r.code === "string" && typeof r.fileName === "string";
+	return (
+		r.type === "chunk" &&
+		typeof r.code === "string" &&
+		typeof r.fileName === "string"
+	);
 }
 
 export default function ultraMinifyPlugin() {
@@ -326,8 +384,16 @@ export default function ultraMinifyPlugin() {
 		name: "ultra-minify-ast",
 		apply: "build",
 		enforce: "post",
-		renderChunk(code: string, chunk: { fileName?: string; format?: string }) {
-			const out = processEsChunk.call(this, code, chunk?.fileName, chunk?.format);
+		renderChunk(
+			code: string,
+			chunk: { fileName?: string; format?: string }
+		) {
+			const out = processEsChunk.call(
+				this,
+				code,
+				chunk?.fileName,
+				chunk?.format
+			);
 			return out ? { code: out, map: null } : null;
 		},
 		// Safety net: ensure final emitted files also get processed
@@ -335,8 +401,15 @@ export default function ultraMinifyPlugin() {
 			for (const fileName of Object.keys(bundle)) {
 				const item = (bundle as Record<string, unknown>)[fileName];
 				if (isChunkLike(item)) {
-					const fmt: string | undefined = item.facadeModuleId ? "es" : undefined;
-					const out = processEsChunk.call(this, item.code, item.fileName, fmt);
+					const fmt: string | undefined = item.facadeModuleId
+						? "es"
+						: undefined;
+					const out = processEsChunk.call(
+						this,
+						item.code,
+						item.fileName,
+						fmt
+					);
 					if (out) item.code = out;
 				}
 			}
