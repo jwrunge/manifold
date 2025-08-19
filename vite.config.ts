@@ -1,4 +1,4 @@
-import { defineConfig, type LibraryFormats } from "vite";
+import { defineConfig, type ESBuildOptions, type LibraryFormats } from "vite";
 import ultraMinifyPlugin from "./scripts/ultra-minify";
 
 // Access env safely via globalThis to avoid Node typings in pure ESM TS
@@ -7,8 +7,15 @@ const env = (globalThis as any).process?.env || {};
 const formats: LibraryFormats[] = ["es", "umd", "cjs"];
 
 // Esbuild options (keep conservative; no prop mangling to avoid cross-module breaks)
-const esbuildOpts: Record<string, unknown> = {
+const esbuildOpts: ESBuildOptions = {
 	target: "es2022",
+	legalComments: "none",
+	keepNames: false,
+	minifyIdentifiers: true,
+	minifyWhitespace: true,
+	minifySyntax: true,
+	drop: ["console", "debugger"],
+	pure: [],
 };
 
 export default defineConfig({
