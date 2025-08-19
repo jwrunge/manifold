@@ -1,6 +1,7 @@
 import { type DepBucket, Effect } from "./Effect.ts";
 import isEqual from "./equality.ts";
 import type { StateConstraint } from "./main.ts";
+import RegEl from "./registry.ts";
 
 // Cache proxies per original object + path prefix to avoid recreating proxies on every nested access.
 // WeakMap -> (prefix -> proxy)
@@ -16,29 +17,263 @@ interface ParentRef {
 const parentRefs = new WeakMap<object, ParentRef[]>();
 const arrayMeta = new WeakMap<object, { version: number }>();
 
-export const getArrayVersion = (arr: unknown): number | undefined =>
-	Array.isArray(arr) ? arrayMeta.get(arr)?.version : undefined;
-
 const pendingEffects = new Set<Effect>();
 let isFlushScheduled = false;
+
+const startViewTransitionIfNeeded = (fn: () => void) => {
+	if (!(RegEl.transitionEnabled || RegEl.viewTransitionQueued)) {
+		fn();
+		return;
+	}
+	try {
+		const s = (document as unknown as { [k: string]: unknown })
+			.startViewTransition as unknown;
+		if (typeof s === "function") {
+			// Preflight: apply queued transition props right before snapshot
+			// Preflight from registry-marked elements first
+			if (
+				(RegEl as unknown as { _preflight?: Set<HTMLElement> })
+					._preflight?.size
+			) {
+				const set = (
+					RegEl as unknown as { _preflight: Set<HTMLElement> }
+				)._preflight;
+				for (const el of set) {
+					try {
+						const cs = getComputedStyle(el);
+						// Determine preferred class
+						const classes = Array.from(el.classList);
+						const preferred =
+							classes.find(
+								(c) => c === "vt-fade" || c === "vt-item"
+							) || classes.find((c) => c.startsWith("vt-"));
+						const hasClass = (() => {
+							const cur = cs
+								.getPropertyValue("view-transition-class")
+								.trim();
+							return !!cur && cur !== "none";
+						})();
+						if (
+							!hasClass &&
+							preferred &&
+							(RegEl as unknown as { _supportsVTClass?: boolean })
+								._supportsVTClass
+						) {
+							el.style.setProperty(
+								"view-transition-class",
+								preferred
+							);
+							(
+								RegEl as unknown as {
+									_tempClassed: Set<HTMLElement>;
+								}
+							)._tempClassed.add(el);
+						}
+						// Name: prefer dynamic if class supported, else stable preferred
+						const curName = cs
+							.getPropertyValue("view-transition-name")
+							.trim();
+						const hasName = !!curName && curName !== "none";
+						if (!hasName) {
+							const nameToSet = (
+								RegEl as unknown as {
+									_supportsVTClass?: boolean;
+								}
+							)._supportsVTClass
+								? `mf-auto-${Math.random()
+										.toString(36)
+										.slice(2, 8)}`
+								: preferred ||
+								  `mf-auto-${Math.random()
+										.toString(36)
+										.slice(2, 8)}`;
+							el.style.setProperty(
+								"view-transition-name",
+								nameToSet
+							);
+							(
+								RegEl as unknown as {
+									_tempNamed: Set<HTMLElement>;
+								}
+							)._tempNamed.add(el);
+						}
+					} catch {}
+				}
+				set.clear();
+			}
+			// Broad preflight fallback: only when class grouping isn't supported,
+			// set name equal to class so name-based selectors can work.
+			if (
+				!(RegEl as unknown as { _supportsVTClass?: boolean })
+					._supportsVTClass
+			) {
+				try {
+					const candidates = document.querySelectorAll<HTMLElement>(
+						'[style*="view-transition-class"], [view-transition-class], .vt-fade, .vt-item'
+					);
+					for (const el of candidates) {
+						try {
+							const cs = getComputedStyle(el);
+							const vtClass = cs
+								.getPropertyValue("view-transition-class")
+								.trim();
+							if (!vtClass || vtClass === "none") continue;
+							const curName = cs
+								.getPropertyValue("view-transition-name")
+								.trim();
+							if (curName && curName !== "none") continue; // respect existing
+							el.style.setProperty(
+								"view-transition-name",
+								vtClass
+							);
+							(
+								RegEl as unknown as {
+									_tempNamed: Set<HTMLElement>;
+								}
+							)._tempNamed.add(el);
+						} catch {}
+					}
+				} catch {}
+			}
+			// Supported path: ensure candidates with class grouping have a random name before snapshot
+			if (
+				(RegEl as unknown as { _supportsVTClass?: boolean })
+					._supportsVTClass
+			) {
+				try {
+					const candidates = document.querySelectorAll<HTMLElement>(
+						'[style*="view-transition-class"], [view-transition-class]'
+					);
+					for (const el of candidates) {
+						try {
+							const cs = getComputedStyle(el);
+							const vtClass = cs
+								.getPropertyValue("view-transition-class")
+								.trim();
+							if (!vtClass || vtClass === "none") continue;
+							const curName = cs
+								.getPropertyValue("view-transition-name")
+								.trim();
+							if (curName && curName !== "none") continue;
+							const rand = `mf-auto-${Math.random()
+								.toString(36)
+								.slice(2, 8)}`;
+							el.style.setProperty("view-transition-name", rand);
+							(
+								RegEl as unknown as {
+									_tempNamed: Set<HTMLElement>;
+								}
+							)._tempNamed.add(el);
+						} catch {}
+					}
+				} catch {}
+			}
+			const trUnknown = (s as (...args: unknown[]) => unknown).call(
+				document,
+				fn
+			);
+			const finished =
+				trUnknown &&
+				typeof trUnknown === "object" &&
+				"finished" in (trUnknown as Record<string, unknown>)
+					? ((trUnknown as Record<string, unknown>).finished as
+							| Promise<unknown>
+							| undefined)
+					: undefined;
+			Promise.resolve(finished).finally(() => {
+				RegEl.clearViewTransition();
+				// Cleanup temporary names/classes assigned during this batch
+				if (
+					(RegEl as unknown as { _tempNamed?: Set<HTMLElement> })
+						._tempNamed?.size
+				) {
+					for (const el of (
+						RegEl as unknown as { _tempNamed: Set<HTMLElement> }
+					)._tempNamed) {
+						try {
+							el.style.removeProperty("view-transition-name");
+						} catch {}
+					}
+					(
+						RegEl as unknown as { _tempNamed: Set<HTMLElement> }
+					)._tempNamed.clear();
+				}
+				if (
+					(RegEl as unknown as { _tempClassed?: Set<HTMLElement> })
+						._tempClassed?.size
+				) {
+					for (const el of (
+						RegEl as unknown as { _tempClassed: Set<HTMLElement> }
+					)._tempClassed) {
+						try {
+							el.style.removeProperty("view-transition-class");
+						} catch {}
+					}
+					(
+						RegEl as unknown as { _tempClassed: Set<HTMLElement> }
+					)._tempClassed.clear();
+				}
+			});
+			return;
+		}
+	} catch {}
+	// Fallback: just run
+	fn();
+	RegEl.clearViewTransition();
+	if (
+		(RegEl as unknown as { _tempNamed?: Set<HTMLElement> })._tempNamed?.size
+	) {
+		for (const el of (RegEl as unknown as { _tempNamed: Set<HTMLElement> })
+			._tempNamed) {
+			try {
+				el.style.removeProperty("view-transition-name");
+			} catch {}
+		}
+		(
+			RegEl as unknown as { _tempNamed: Set<HTMLElement> }
+		)._tempNamed.clear();
+	}
+	if (
+		(RegEl as unknown as { _tempClassed?: Set<HTMLElement> })._tempClassed
+			?.size
+	) {
+		for (const el of (
+			RegEl as unknown as { _tempClassed: Set<HTMLElement> }
+		)._tempClassed) {
+			try {
+				el.style.removeProperty("view-transition-class");
+			} catch {}
+		}
+		(
+			RegEl as unknown as { _tempClassed: Set<HTMLElement> }
+		)._tempClassed.clear();
+	}
+};
 
 const flushEffects = () => {
 	const effectsToRun = Array.from(pendingEffects);
 	pendingEffects.clear();
 	isFlushScheduled = false;
-	if (effectsToRun.length <= 1) {
-		for (const e of effectsToRun) e.run();
-		return;
-	}
-	let maxLevel = 0;
-	for (const e of effectsToRun) if (e.level > maxLevel) maxLevel = e.level;
-	if (maxLevel === 0) {
-		for (const e of effectsToRun) e.run();
-		return;
-	}
-	const buckets: Effect[][] = Array.from({ length: maxLevel + 1 }, () => []);
-	for (const e of effectsToRun) buckets[e.level].push(e);
-	for (const b of buckets) for (const e of b) e.run();
+	const runAll = () => {
+		if (effectsToRun.length <= 1) {
+			for (const e of effectsToRun) e.run();
+			return;
+		}
+		let maxLevel = 0;
+		for (const e of effectsToRun)
+			if (e.level > maxLevel) maxLevel = e.level;
+		if (maxLevel === 0) {
+			for (const e of effectsToRun) e.run();
+			return;
+		}
+		const buckets: Effect[][] = Array.from(
+			{ length: maxLevel + 1 },
+			() => []
+		);
+		for (const e of effectsToRun) buckets[e.level].push(e);
+		for (const b of buckets) for (const e of b) e.run();
+	};
+	startViewTransitionIfNeeded(runAll);
 };
 
 const scheduleBucket = (bucket: DepBucket) => {

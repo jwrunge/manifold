@@ -19,15 +19,13 @@
 		:root {
 			view-transition-name: none;
 		}
-		/* Assign names to elements we want to animate */
-		/* .vt-fade {
-			view-transition-name: vt-fade;
-		} */
-		/* .vt-item {
-			view-transition-name: vt-item;
-		} */
 
 		/* Timing + easing */
+		::view-transition-old(.vt-fade),
+		::view-transition-new(.vt-fade),
+		::view-transition-old(.vt-item),
+		::view-transition-new(.vt-item),
+		/* Fallback: target by name when view-transition-class isn't supported */
 		::view-transition-old(vt-fade),
 		::view-transition-new(vt-fade),
 		::view-transition-old(vt-item),
@@ -37,24 +35,29 @@
 		}
 
 		/* Fade for conditionals/async */
+		::view-transition-old(.vt-fade),
 		::view-transition-old(vt-fade) {
 			animation-name: vt-fade-out;
 		}
+		::view-transition-new(.vt-fade),
 		::view-transition-new(vt-fade) {
 			animation-name: vt-fade-in;
 		}
 
 		/* Slide+fade for list insert/remove */
-		::view-transition-old(.vt-item) {
+		::view-transition-old(.vt-item),
+		::view-transition-old(vt-item) {
 			animation-name: vt-slide-out;
 		}
-		::view-transition-new(.vt-item) {
+		::view-transition-new(.vt-item),
+		::view-transition-new(vt-item) {
 			animation-name: vt-slide-in;
 		}
 
 		@keyframes vt-fade-in {
 			from {
 				opacity: 0;
+				transform: translateX(3rem);
 			}
 			to {
 				opacity: 1;
@@ -66,6 +69,7 @@
 			}
 			to {
 				opacity: 0;
+				transform: translateX(-3rem);
 			}
 		}
 		@keyframes vt-slide-in {
@@ -136,7 +140,7 @@
 			})
 			.add("transName", function (idx) {
 				// Use a function to generate unique transition names for each item
-				return `view-transition-name: vt-item-${idx}; view-transition-class: vt-item`;
+				return `view-transition-class: vt-item`;
 			})
 			.build();
 		// Expose for console poking in the demo
@@ -157,28 +161,24 @@
 		${count2 * 2}
 	</p>
 
-	<p
-		class="vt-fade"
-		style="view-transition-name: vt-fade-1"
-		:if="count >= 15"
-	>
+	<p class="vt-fade" style="view-transition-class: vt-fade" :if="count >= 15">
 		Count is 15 or more!
 	</p>
 	<p
 		class="vt-fade"
-		style="view-transition-name: vt-fade-2"
+		style="view-transition-class: vt-fade"
 		:elseif="count >= 10"
 	>
 		Count is between 10 and 14!
 	</p>
 	<p
 		class="vt-fade"
-		style="view-transition-name: vt-fade-3"
+		style="view-transition-class: vt-fade"
 		:elseif="count === 9"
 	>
 		Count is 9!
 	</p>
-	<p class="vt-fade" style="view-transition-name: vt-fade-4" :else>
+	<p class="vt-fade" style="view-transition-class: vt-fade" :else>
 		Count is less than 10!
 	</p>
 
@@ -211,22 +211,26 @@
 		</button>
 		<p
 			class="vt-fade"
-			style="view-transition-name: vt-fade-5"
+			style="view-transition-class: vt-fade"
 			:await="loadUser()"
 		>
 			Loading user...
 		</p>
-		<p class="vt-fade" style="view-transition-name: vt-fade-6" :then="user">
+		<p class="vt-fade" style="view-transition-class: vt-fade" :then="user">
 			Loaded: ID=${user.id} Name=${user.name}
 		</p>
-		<p class="vt-fade" style="view-transition-name: vt-fade-7" :catch="err">
+		<p class="vt-fade" style="view-transition-class: vt-fade" :catch="err">
 			Error: ${err.message}
 		</p>
 	</div>
 
 	<!-- Each loop with alias exposure -->
 	<ul>
-		<li class="vt-item" :style="transName(idx)" :each="items as item, idx">
+		<li
+			class="vt-item"
+			style="view-transition-class: vt-item"
+			:each="items as item, idx"
+		>
 			Item ${idx}: ${item}
 		</li>
 	</ul>

@@ -56,6 +56,7 @@ class StateBuilder<
 	TState extends StateConstraint,
 	TFuncs extends FuncsConstraint
 > {
+	static transitionEnabled = true;
 	#scopedState: TState;
 	#scopedFuncs: TFuncs;
 	#derivations: Map<string, (store: StateConstraint) => unknown>;
@@ -70,6 +71,8 @@ class StateBuilder<
 		this.#scopedState = (initialState || {}) as TState;
 		this.#scopedFuncs = (initialFuncs || {}) as TFuncs;
 		this.#derivations = derivations || new Map();
+		// Keep RegEl in sync with global transition flag
+		RegEl.transitionEnabled = StateBuilder.transitionEnabled;
 	}
 
 	static create<S extends StateConstraint, F extends FuncsConstraint>(
@@ -316,6 +319,13 @@ class StateBuilder<
 			newDerivations
 		) as StateBuilder<TState & Record<K, T>, TFuncs>;
 		return next;
+	}
+
+	// Global view-transition toggle (default true). Applies to show/hide changes.
+	transition(enabled: boolean): StateBuilder<TState, TFuncs> {
+		StateBuilder.transitionEnabled = !!enabled;
+		RegEl.transitionEnabled = !!enabled;
+		return this;
 	}
 
 	build() {

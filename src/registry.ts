@@ -1,39 +1,72 @@
 import { Effect } from "./Effect.ts";
 import evaluateExpression from "./expression-parser.ts";
 
-// Minimal View Transitions helper and last-show tracker
-const _vt = (fn: () => void) => {
-	try {
-		const s = (document as unknown as { [k: string]: unknown })
-			.startViewTransition as unknown;
-		(typeof s === "function" ? s : undefined)?.call(document, fn) || fn();
-	} catch {
-		fn();
+const _wasShown = new WeakMap<Element, boolean>();
+// Assign temporary transition props (name and class) when needed so
+// CSS ::view-transition-* selectors match. Prefers existing vt-* classes.
+const _ensureTempTransitionProps = (el: HTMLElement) => {
+	if (!RegEl.transitionEnabled) return;
+	RegEl.viewTransitionQueued = true;
+	// Determine preferred vt-* class on the element
+	const classes = Array.from(el.classList);
+	const preferred =
+		classes.find((c) => c === "vt-fade" || c === "vt-item") ||
+		classes.find((c) => c.startsWith("vt-"));
+	// If element is not connected yet (e.g., :each insert), don't call getComputedStyle
+	if (!el.isConnected) {
+		if (preferred && RegEl._supportsVTClass) {
+			try {
+				el.style.setProperty("view-transition-class", preferred);
+				RegEl._tempClassed.add(el);
+			} catch {}
+		}
+		try {
+			const nameToSet = RegEl._supportsVTClass
+				? `mf-auto-${Math.random().toString(36).slice(2, 8)}`
+				: preferred ||
+				  `mf-auto-${Math.random().toString(36).slice(2, 8)}`;
+			el.style.setProperty("view-transition-name", nameToSet);
+			RegEl._tempNamed.add(el);
+		} catch {}
+		return;
+	}
+	// Connected: use computed style to avoid overwriting intentional settings
+	const cs = getComputedStyle(el);
+	const curName = cs.getPropertyValue("view-transition-name").trim();
+	const hasName = !!curName && curName !== "none";
+	const curClass = cs.getPropertyValue("view-transition-class").trim();
+	const hasClass = !!curClass && curClass !== "none";
+	if (!hasClass && preferred && RegEl._supportsVTClass) {
+		try {
+			el.style.setProperty("view-transition-class", preferred);
+			RegEl._tempClassed.add(el);
+		} catch {}
+	}
+	if (!hasName) {
+		try {
+			const nameToSet = RegEl._supportsVTClass
+				? `mf-auto-${Math.random().toString(36).slice(2, 8)}`
+				: preferred ||
+				  `mf-auto-${Math.random().toString(36).slice(2, 8)}`;
+			el.style.setProperty("view-transition-name", nameToSet);
+			RegEl._tempNamed.add(el);
+		} catch {}
 	}
 };
-// Batch DOM mutations into a single view-transition without deferring execution
-const _vtQueue: Array<() => void> = [];
-let _vtOpen = false;
-const _vtBatch = (fn: () => void) => {
-	_vtQueue.push(fn);
-	if (_vtOpen) return;
-	_vtOpen = true;
-	_vt(() => {
-		for (let i = 0; i < _vtQueue.length; i++) _vtQueue[i]();
-		_vtQueue.length = 0;
-		_vtOpen = false;
-	});
-};
-const _lastShow = new WeakMap<Element, boolean>();
+
 const _setDisplay = (el: HTMLElement, display: string) => {
 	const show = display !== "none";
-	const prev = _lastShow.get(el);
-	const run = () => {
+	const last = _wasShown.get(el);
+	if (last !== show) {
+		// Only when visibility actually changes
+		_ensureTempTransitionProps(el);
+		// Apply display change
 		el.style.display = display;
-		_lastShow.set(el, show);
-	};
-	if (prev === undefined || prev === show) run();
-	else _vtBatch(run);
+		_wasShown.set(el, show);
+		return;
+	}
+	// No visibility change; ensure display is set but don't queue VT
+	el.style.display = display;
 };
 
 // Alias extraction
@@ -150,6 +183,30 @@ const eachTemplateCache = new WeakMap<Element, HTMLTemplateElement>();
 export class RegEl {
 	static _registry = new WeakMap<Element, RegEl>();
 	static _injected = new WeakMap<Element, Record<string, unknown>>();
+	static viewTransitionQueued = false;
+	static clearViewTransition() {
+		RegEl.viewTransitionQueued = false;
+	}
+	static transitionEnabled = true;
+	// Track elements we temporarily named this batch so they can be cleared after VT
+	static _tempNamed = new Set<HTMLElement>();
+	static _tempClassed = new Set<HTMLElement>();
+	// Elements queued for preflight temp props before the snapshot
+	static _preflight = new Set<HTMLElement>();
+	// Feature detection for view-transition-class grouping support
+	static _supportsVTClass = (() => {
+		try {
+			// CSS.supports with a declaration is widely supported
+			// If unavailable, assume false to favor compatibility
+			// @ts-ignore
+			return (
+				typeof CSS !== "undefined" &&
+				!!CSS.supports?.("view-transition-class: vt-fade")
+			);
+		} catch {
+			return false;
+		}
+	})();
 	static setInjected(el: Element, ctx: Record<string, unknown>) {
 		RegEl._injected.set(el, ctx);
 	}
@@ -458,7 +515,9 @@ export class RegEl {
 		if (isElse) {
 			this._addEffect(() => {
 				const { anyShown } = this._scanPrevChain();
-				_setDisplay(this._el as HTMLElement, anyShown ? "none" : "");
+				const el = this._el as HTMLElement;
+				if (anyShown) _ensureTempTransitionProps(el);
+				_setDisplay(el, anyShown ? "none" : "");
 			});
 			return;
 		}
@@ -466,17 +525,19 @@ export class RegEl {
 			this._addEffect(() => {
 				const { foundIf, blocked, anyShown } = this._scanPrevChain();
 				const curOk = this._evalShow();
-				_setDisplay(
-					this._el as HTMLElement,
-					!foundIf || blocked || anyShown || !curOk ? "none" : ""
-				);
+				const el = this._el as HTMLElement;
+				const hide = !foundIf || blocked || anyShown || !curOk;
+				if (hide) _ensureTempTransitionProps(el);
+				_setDisplay(el, hide ? "none" : "");
 			});
 			return;
 		}
 		if (this._showExpr)
 			this._addEffect(() => {
 				const v = this._evalShow();
-				_setDisplay(this._el as HTMLElement, v ? "" : "none");
+				const el = this._el as HTMLElement;
+				if (!v) _ensureTempTransitionProps(el);
+				_setDisplay(el, v ? "" : "none");
 			});
 	}
 	_evalShow() {
@@ -544,6 +605,8 @@ export class RegEl {
 	_handlePromiseResult(val: unknown, ok: boolean, base: string) {
 		if (!this._awaitPending) return;
 		this._awaitPending = false;
+		// Leaving await host should animate out
+		_ensureTempTransitionProps(this._el as HTMLElement);
 		_setDisplay(this._el as HTMLElement, "none");
 		this._hideThenCatchSiblings(false);
 		let chosen: Element | null = null; // Only consider siblings AFTER the await element
@@ -564,6 +627,8 @@ export class RegEl {
 			const varName = ok
 				? chosen.getAttribute(":then") || "value"
 				: chosen.getAttribute(":catch") || "err";
+			// Ensure chosen enter gets temp props before showing
+			_ensureTempTransitionProps(chosen as HTMLElement);
 			this._injectThenCatch(chosen as HTMLElement, varName, val, base);
 		}
 		// Delay orphan unhide by two macrotasks so initial test assertion sees hidden
@@ -660,8 +725,12 @@ export class RegEl {
 				eachTemplateCache.get(template) as HTMLTemplateElement
 			).content.cloneNode(true) as DocumentFragment;
 			el.appendChild(frag);
+			// Enter of await host should be visible
 			_setDisplay(el, "");
-			_vtBatch(() => parent.insertBefore(el, last.nextSibling));
+			// Create is a true enter; assign props pre-insert
+			_ensureTempTransitionProps(el);
+			parent.insertBefore(el, last.nextSibling);
+			RegEl.viewTransitionQueued = true;
 			const immediateCtx: Record<string, unknown> = {
 				[this._eachItemAlias]: item.value,
 				[this._eachKeyAlias]: item.key,
@@ -722,7 +791,8 @@ export class RegEl {
 				for (const c of this._eachClones) {
 					const inst = RegEl._registry.get(c.el);
 					(inst as RegEl | undefined)?.dispose();
-					_vtBatch(() => c.el.remove());
+					_ensureTempTransitionProps(c.el);
+					c.el.remove();
 				}
 				this._eachClones = [];
 				return;
@@ -738,8 +808,10 @@ export class RegEl {
 				if (!cur) {
 					cur = makeClone(last, item);
 				} else {
-					if (cur.el.previousSibling !== last)
+					// Reorders should be sync; don't wrap to avoid animating unchanged items
+					if (cur.el.previousSibling !== last) {
 						parent.insertBefore(cur.el, last.nextSibling);
+					}
 					const immediateCtx: Record<string, unknown> = {
 						[this._eachItemAlias]: item.value,
 						[this._eachKeyAlias]: item.key,
@@ -758,7 +830,9 @@ export class RegEl {
 				if (!newItems.some((n) => n.key === c.key)) {
 					const inst = RegEl._registry.get(c.el);
 					(inst as RegEl | undefined)?.dispose();
-					_vtBatch(() => c.el.remove());
+					// Leaving clone should animate out
+					_ensureTempTransitionProps(c.el);
+					c.el.remove();
 				}
 			this._eachClones = next;
 		});
@@ -847,8 +921,24 @@ export class RegEl {
 		});
 	}
 	_setProp(name: string, v: unknown) {
-		const el = this._el as unknown as Record<string, unknown>;
-		if (name in el) (el as Record<string, unknown>)[name] = v as never;
+		const elRec = this._el as unknown as Record<string, unknown>;
+		if (name === "style") {
+			if (v == null) (this._el as HTMLElement).removeAttribute("style");
+			else if (typeof v === "string")
+				(this._el as HTMLElement).setAttribute("style", v);
+			else if (v && typeof v === "object") {
+				const style = (this._el as HTMLElement)
+					.style as unknown as Record<string, unknown>;
+				for (const [k, val] of Object.entries(
+					v as Record<string, unknown>
+				))
+					(style as Record<string, unknown>)[k] =
+						val as unknown as string;
+			}
+			return;
+		}
+		if (name in elRec)
+			(elRec as Record<string, unknown>)[name] = v as never;
 		else
 			this._el.setAttribute(
 				name,
