@@ -20,12 +20,12 @@
 			view-transition-name: none;
 		}
 		/* Assign names to elements we want to animate */
-		.vt-fade {
+		/* .vt-fade {
 			view-transition-name: vt-fade;
-		}
-		.vt-item {
+		} */
+		/* .vt-item {
 			view-transition-name: vt-item;
-		}
+		} */
 
 		/* Timing + easing */
 		::view-transition-old(vt-fade),
@@ -45,10 +45,10 @@
 		}
 
 		/* Slide+fade for list insert/remove */
-		::view-transition-old(vt-item) {
+		::view-transition-old(.vt-item) {
 			animation-name: vt-slide-out;
 		}
-		::view-transition-new(vt-item) {
+		::view-transition-new(.vt-item) {
 			animation-name: vt-slide-in;
 		}
 
@@ -72,6 +72,7 @@
 			from {
 				opacity: 0;
 				transform: translateY(6px);
+				max-height: 0;
 			}
 			to {
 				opacity: 1;
@@ -86,6 +87,7 @@
 			to {
 				opacity: 0;
 				transform: translateY(-6px);
+				max-height: 0;
 			}
 		}
 	}
@@ -132,6 +134,10 @@
 				this.count2 = +value;
 				console.log("Synced back count2 to:", value, this.count2);
 			})
+			.add("transName", function (idx) {
+				// Use a function to generate unique transition names for each item
+				return `view-transition-name: vt-item-${idx}; view-transition-class: vt-item`;
+			})
 			.build();
 		// Expose for console poking in the demo
 		window.demoState = state;
@@ -151,10 +157,30 @@
 		${count2 * 2}
 	</p>
 
-	<p class="vt-fade" :if="count >= 15">Count is 15 or more!</p>
-	<p class="vt-fade" :elseif="count >= 10">Count is between 10 and 14!</p>
-	<p class="vt-fade" :elseif="count === 9">Count is 9!</p>
-	<p class="vt-fade" :else>Count is less than 10!</p>
+	<p
+		class="vt-fade"
+		style="view-transition-name: vt-fade-1"
+		:if="count >= 15"
+	>
+		Count is 15 or more!
+	</p>
+	<p
+		class="vt-fade"
+		style="view-transition-name: vt-fade-2"
+		:elseif="count >= 10"
+	>
+		Count is between 10 and 14!
+	</p>
+	<p
+		class="vt-fade"
+		style="view-transition-name: vt-fade-3"
+		:elseif="count === 9"
+	>
+		Count is 9!
+	</p>
+	<p class="vt-fade" style="view-transition-name: vt-fade-4" :else>
+		Count is less than 10!
+	</p>
 
 	<button :onclick="count = count + 1">Increment Count</button>
 	<button :onclick="count2 = count2 + 2">Increment Count2</button>
@@ -183,16 +209,26 @@
 			Toggle Async Success (currently: ${asyncToggle ? 'success' :
 			'fail'})
 		</button>
-		<p class="vt-fade" :await="loadUser()">Loading user...</p>
-		<p class="vt-fade" :then="user">
+		<p
+			class="vt-fade"
+			style="view-transition-name: vt-fade-5"
+			:await="loadUser()"
+		>
+			Loading user...
+		</p>
+		<p class="vt-fade" style="view-transition-name: vt-fade-6" :then="user">
 			Loaded: ID=${user.id} Name=${user.name}
 		</p>
-		<p class="vt-fade" :catch="err">Error: ${err.message}</p>
+		<p class="vt-fade" style="view-transition-name: vt-fade-7" :catch="err">
+			Error: ${err.message}
+		</p>
 	</div>
 
 	<!-- Each loop with alias exposure -->
 	<ul>
-		<li class="vt-item" :each="items as item, idx">Item ${idx}: ${item}</li>
+		<li class="vt-item" :style="transName(idx)" :each="items as item, idx">
+			Item ${idx}: ${item}
+		</li>
 	</ul>
 	<button :onclick="items = items.concat(items.length + 1)">Add Item</button>
 	<button :onclick="items = items.slice(0, -1)">Remove Item</button>

@@ -210,6 +210,9 @@ class StateBuilder<
 				const attrs = this.attributes;
 				for (let i = 0; i < attrs.length; i++) {
 					const a = attrs[i];
+					// Skip directive attributes (":" and "sync:") from normal prop mapping
+					if (a.name[0] === ":" || a.name.startsWith("sync:"))
+						continue;
 					const prop = (ops?.attrMap?.[a.name] ||
 						toCamel(a.name)) as string;
 					(this.#state as Record<string, unknown>)[prop] = coerce(
@@ -240,6 +243,8 @@ class StateBuilder<
 						if (m.type !== "attributes" || !m.attributeName)
 							continue;
 						const n = m.attributeName;
+						// Skip directive attributes (":" and "sync:") from normal prop mapping
+						if (n[0] === ":" || n.startsWith("sync:")) continue;
 						const prop = (ops?.attrMap?.[n] ||
 							toCamel(n)) as string;
 						(this.#state as Record<string, unknown>)[prop] = coerce(
@@ -373,9 +378,20 @@ class StateBuilder<
 			(__globalState as Record<string, unknown>) ||
 			(state as unknown as Record<string, unknown>);
 		if (typeof document !== "undefined") {
+			// Build a skip-set for component roots that will be rebound to local overlays
+			const skip = new Set<Element>();
+			for (const [root] of __pendingComponentRoots) {
+				if ((root as ShadowRoot).host !== undefined) {
+					const host = (root as ShadowRoot).host as Element | null;
+					if (host) skip.add(host);
+				} else {
+					skip.add(root as Element);
+				}
+			}
 			// Restore correct selector so tests and runtime auto-registration work
 			const nodes = document.querySelectorAll("[data-mf-register]");
 			nodes.forEach((el) => {
+				if (skip.has(el)) return; // handled below with local overlay
 				// If element was registered earlier with a different state (e.g., previous test),
 				// dispose and re-register to bind to the latest state.
 				// biome-ignore lint/suspicious/noExplicitAny: runtime check against internal registry
@@ -390,6 +406,13 @@ class StateBuilder<
 			if (__pendingComponentRoots.size) {
 				for (const [root, pair] of __pendingComponentRoots) {
 					Object.setPrototypeOf(pair.base, stateToUse);
+					// Ensure any previous registration on the element root is disposed so we can rebind to the local overlay
+					if ((root as ShadowRoot).host === undefined) {
+						// Element root
+						// biome-ignore lint/suspicious/noExplicitAny: runtime check against internal registry
+						const inst: any = (RegEl as any)._registry?.get?.(root);
+						if (inst) inst.dispose?.();
+					}
 					__registerSubtree(root, pair.local);
 				}
 				__pendingComponentRoots.clear();
