@@ -12,6 +12,14 @@ type SelectedPools = {
 	ctors: Map<string, string>;
 };
 
+// Basic ESTree-like node shape used locally
+type EstreeNode = {
+	type: string;
+	start?: number;
+	end?: number;
+	[key: string]: unknown;
+};
+
 // Safe global call targets to alias (avoid locals)
 const SAFE_CALLS = new Set<CallKey>([
 	"document.querySelector",
@@ -22,10 +30,33 @@ const SAFE_CALLS = new Set<CallKey>([
 	"Promise.resolve",
 	"Promise.reject",
 	"Promise.all",
+	"Object.defineProperty",
+	"Object.keys",
+	"Object.assign",
+	// additional safe statics
+	"Array.from",
+	"Array.isArray",
+	"Math.max",
+	"Math.min",
 ]);
 
-// Disable constructor pooling to avoid TDZ issues with ESM const/class hoisting
-const ENABLE_CTOR_POOL = false;
+// Safe built-in constructors to alias (globals only)
+const SAFE_CTORS = new Set<string>([
+	"Map",
+	"Set",
+	"WeakMap",
+	"WeakSet",
+	"RegExp",
+	"Date",
+	"Promise",
+	"Error",
+	"TypeError",
+	"Array",
+	"Object",
+]);
+
+// Enable constructor pooling only for safe globals
+const ENABLE_CTOR_POOL = true;
 
 // Compute estimated savings to decide if pooling helps
 const computeStringSavings = (value: string, count: number, idLen: number) => {
@@ -53,10 +84,8 @@ const computeCtorSavings = (name: string, count: number, idLen: number) => {
 // Helpers to work with generic ESTree nodes
 // biome-ignore lint/suspicious/noExplicitAny: lightweight ESTree helpers
 const hasNodeType = (n: any): boolean => !!n && typeof n.type === "string";
-// biome-ignore lint/suspicious/noExplicitAny: lightweight ESTree helpers
-const getStart = (n: any): number => (n && (n as any).start) as number;
-// biome-ignore lint/suspicious/noExplicitAny: lightweight ESTree helpers
-const getEnd = (n: any): number => (n && (n as any).end) as number;
+const getStart = (n: EstreeNode): number => (typeof n.start === "number" ? n.start : 0);
+const getEnd = (n: EstreeNode): number => (typeof n.end === "number" ? n.end : 0);
 
 // biome-ignore lint/suspicious/noExplicitAny: lightweight ESTree handling without types
 function isStringEligible(node: any, parent: any): boolean {
@@ -109,10 +138,12 @@ function selectPools(
 
 	let sIdx = 0;
 	for (const [val, cnt] of strCounts) {
+		// conservative thresholds: avoid hurting gzip
 		if (cnt < 3) continue;
+		if (val.length < 5) continue;
 		const id = "__S" + sIdx;
 		const savings = computeStringSavings(val, cnt, id.length);
-		if (savings > 0) {
+		if (savings > 4) {
 			strings.set(val, id);
 			sIdx++;
 		}
@@ -123,22 +154,20 @@ function selectPools(
 		if (cnt < 3) continue;
 		const id = "__F" + fIdx;
 		const savings = computeCallSavings(key, cnt, id.length);
-		if (savings > 0) {
+		if (savings > 4) {
 			calls.set(key, id);
 			fIdx++;
 		}
 	}
 
-	if (ENABLE_CTOR_POOL) {
-		let cIdx = 0;
-		for (const [name, cnt] of ctorCounts) {
-			if (cnt < 3) continue;
-			const id = "__C" + cIdx;
-			const savings = computeCtorSavings(name, cnt, id.length);
-			if (savings > 0) {
-				ctors.set(name, id);
-				cIdx++;
-			}
+	let cIdx = 0;
+	for (const [name, cnt] of ctorCounts) {
+		if (cnt < 3) continue;
+		const id = "__C" + cIdx;
+		const savings = computeCtorSavings(name, cnt, id.length);
+		if (savings > 2) {
+			ctors.set(name, id);
+			cIdx++;
 		}
 	}
 
@@ -152,167 +181,165 @@ function buildDecls({ strings, calls, ctors }: SelectedPools): string {
 		const [obj, prop] = key.split(".");
 		parts.push(`${id}=${obj}.${prop}.bind(${obj})`);
 	}
-	if (ENABLE_CTOR_POOL) {
-		for (const [name, id] of ctors) parts.push(`${id}=${name}`);
-	}
+	for (const [name, id] of ctors) parts.push(`${id}=${name}`);
 	if (parts.length === 0) return "";
 	return `var ${parts.join(",")};`;
+}
+
+// Core processor used by both hooks
+function processEsChunk(
+	this: unknown,
+	code: string,
+	fileName?: string,
+	format?: string
+): string | null {
+	const isEs = format === "es" || /\.es\./.test(fileName || "");
+	if (!isEs) return null;
+
+	// Parse the emitted chunk
+	// biome-ignore lint/suspicious/noExplicitAny: ESTree program
+	let ast: any;
+	try {
+		// @ts-ignore - rollup parse
+		// biome-ignore lint/suspicious/noExplicitAny: plugin context parse is not strongly typed here
+		ast = (this as { parse?: (src: string) => any }).parse?.(code);
+	} catch {
+		// even if parse fails, still try to strip PURE markers
+		return code.replace(/\/\* *@__PURE__ *\*\//g, "").replace(/\n{3,}/g, "\n\n");
+	}
+
+	// First pass: count
+	const strCounts: StringCount = new Map();
+	const callCounts: CallCount = new Map();
+	const ctorCounts: Map<string, number> = new Map();
+
+	// Lightweight walk without external deps
+	// biome-ignore lint/suspicious/noExplicitAny: ESTree program
+	const stack: Array<{ node: any; parent: any }> = [{ node: ast, parent: null }];
+	while (stack.length) {
+		const top = stack.pop();
+		if (!top) break;
+		const { node, parent } = top as { node: EstreeNode; parent: EstreeNode | null };
+		if (!node || typeof node.type !== "string") continue;
+
+		// Count literals/calls/ctors
+		if (node.type === "Literal" && typeof (node as Record<string, unknown>).value === "string") {
+			if (isStringEligible(node, parent)) {
+				const v = (node as Record<string, unknown>).value as string;
+				strCounts.set(v, (strCounts.get(v) || 0) + 1);
+			}
+		} else if (node.type === "CallExpression") {
+			const key = callKeyOf(node as unknown as EstreeNode);
+			if (key) callCounts.set(key, (callCounts.get(key) || 0) + 1);
+		} else if (ENABLE_CTOR_POOL && node.type === "NewExpression") {
+			const cal = (node as Record<string, unknown>).callee as EstreeNode | undefined;
+			if (cal && cal.type === "Identifier" && SAFE_CTORS.has((cal as Record<string, unknown>).name as string))
+				ctorCounts.set(((cal as Record<string, unknown>).name as string), (ctorCounts.get(((cal as Record<string, unknown>).name as string)) || 0) + 1);
+		}
+
+		// enqueue children (generic)
+		for (const k in node as Record<string, unknown>) {
+			const v = (node as Record<string, unknown>)[k];
+			if (!v) continue;
+			if (Array.isArray(v)) {
+				for (let i = v.length - 1; i >= 0; i--) {
+					const c = v[i];
+					if (hasNodeType(c)) stack.push({ node: c as EstreeNode, parent: node });
+				}
+			} else if (hasNodeType(v)) {
+				stack.push({ node: v as EstreeNode, parent: node });
+			}
+		}
+	}
+
+	const selected = selectPools(strCounts, callCounts, ctorCounts);
+	const ms = new MagicString(code);
+
+	// Second pass: replace uses
+	// biome-ignore lint/suspicious/noExplicitAny: ESTREE
+	const stack2: Array<{ node: any; parent: any }> = [{ node: ast, parent: null }];
+	while (stack2.length) {
+		const top2 = stack2.pop();
+		if (!top2) break;
+		const { node, parent } = top2 as { node: EstreeNode; parent: EstreeNode | null };
+		if (!node || typeof node.type !== "string") continue;
+
+		if (node.type === "Literal" && typeof (node as Record<string, unknown>).value === "string") {
+			if (isStringEligible(node, parent)) {
+				const id = selected.strings.get((node as Record<string, unknown>).value as string);
+				if (id) ms.overwrite(getStart(node), getEnd(node), id);
+			}
+		} else if (node.type === "CallExpression") {
+			const key = callKeyOf(node as unknown as EstreeNode);
+			if (key) {
+				const id = selected.calls.get(key);
+				const calleeNode = (node as Record<string, unknown>).callee as EstreeNode | undefined;
+				if (id && calleeNode) ms.overwrite(getStart(calleeNode), getEnd(calleeNode), id);
+			}
+		} else if (ENABLE_CTOR_POOL && node.type === "NewExpression") {
+			const cal = (node as Record<string, unknown>).callee as EstreeNode | undefined;
+			if (cal?.type === "Identifier" && SAFE_CTORS.has((cal as Record<string, unknown>).name as string)) {
+				const id = selected.ctors.get((cal as Record<string, unknown>).name as string);
+				if (id) ms.overwrite(getStart(cal), getEnd(cal), id);
+			}
+		}
+
+		for (const k in node as Record<string, unknown>) {
+			const v = (node as Record<string, unknown>)[k];
+			if (!v) continue;
+			if (Array.isArray(v)) {
+				for (let i = v.length - 1; i >= 0; i--) {
+					const c = v[i];
+					if (hasNodeType(c)) stack2.push({ node: c as EstreeNode, parent: node });
+				}
+			} else if (hasNodeType(v)) {
+				stack2.push({ node: v as EstreeNode, parent: node });
+			}
+		}
+	}
+
+	// Insert declarations after imports
+	let insertPos = 0;
+	const body = ((ast && (ast as Record<string, unknown>).body) as unknown[]) || [];
+	for (let i = 0; i < body.length; i++) {
+		const b = body[i] as EstreeNode;
+		if (b && b.type === "ImportDeclaration") insertPos = (b.end as number) || insertPos;
+		else break;
+	}
+	const decls = buildDecls(selected);
+	if (decls) ms.appendLeft(insertPos, decls);
+
+	// Remove /* @__PURE__ */ markers and gently squeeze newlines
+	let out = ms.toString().replace(/\/\* *@__PURE__ *\*\//g, "");
+	out = out.replace(/\n{3,}/g, "\n\n");
+	return out;
+}
+
+function isChunkLike(x: unknown): x is { type: "chunk"; code: string; fileName: string; facadeModuleId?: string } {
+	if (!x || typeof x !== "object") return false;
+	const r = x as Record<string, unknown>;
+	return r.type === "chunk" && typeof r.code === "string" && typeof r.fileName === "string";
 }
 
 export default function ultraMinifyPlugin() {
 	return {
 		name: "ultra-minify-ast",
 		apply: "build",
-		enforce: "post", // run after TS/esbuild transforms
-		renderChunk(
-			code: string,
-			chunk: { fileName?: string; format?: string }
-		) {
-			const isEs =
-				chunk?.format === "es" || /\.es\./.test(chunk?.fileName || "");
-			if (!isEs) return null; // only process ES to avoid IIFE scoping issues
-
-			// Parse the emitted chunk
-			// biome-ignore lint/suspicious/noExplicitAny: ESTree program
-			let ast: any;
-			try {
-				// @ts-ignore - rollup parse
-				ast = this.parse(code);
-			} catch {
-				return null; // skip on parse errors to be safe
-			}
-
-			// First pass: count
-			const strCounts: StringCount = new Map();
-			const callCounts: CallCount = new Map();
-			const ctorCounts: Map<string, number> = new Map();
-
-			// Lightweight walk without external deps
-			// biome-ignore lint/suspicious/noExplicitAny: ESTree program
-			const stack: Array<{ node: any; parent: any }> = [
-				{ node: ast, parent: null },
-			];
-			while (stack.length) {
-				const top = stack.pop();
-				if (!top) break;
-				const { node, parent } = top;
-				if (!node || typeof node.type !== "string") continue;
-
-				// Count literals/calls/ctors
-				if (node.type === "Literal" && typeof node.value === "string") {
-					if (isStringEligible(node, parent)) {
-						strCounts.set(
-							node.value,
-							(strCounts.get(node.value) || 0) + 1
-						);
-					}
-				} else if (node.type === "CallExpression") {
-					const key = callKeyOf(node);
-					if (key)
-						callCounts.set(key, (callCounts.get(key) || 0) + 1);
-				} else if (ENABLE_CTOR_POOL && node.type === "NewExpression") {
-					const cal = node.callee;
-					if (cal && cal.type === "Identifier")
-						ctorCounts.set(
-							cal.name,
-							(ctorCounts.get(cal.name) || 0) + 1
-						);
-				}
-
-				// enqueue children (generic)
-				for (const k in node) {
-					// biome-ignore lint/suspicious/noExplicitAny: ESTree dynamic access
-					const v = (node as any)[k];
-					if (!v) continue;
-					if (Array.isArray(v)) {
-						for (let i = v.length - 1; i >= 0; i--) {
-							const c = v[i];
-							if (hasNodeType(c))
-								stack.push({ node: c, parent: node });
-						}
-					} else if (hasNodeType(v)) {
-						stack.push({ node: v, parent: node });
-					}
+		enforce: "post",
+		renderChunk(code: string, chunk: { fileName?: string; format?: string }) {
+			const out = processEsChunk.call(this, code, chunk?.fileName, chunk?.format);
+			return out ? { code: out, map: null } : null;
+		},
+		// Safety net: ensure final emitted files also get processed
+		generateBundle(_, bundle) {
+			for (const fileName of Object.keys(bundle)) {
+				const item = (bundle as Record<string, unknown>)[fileName];
+				if (isChunkLike(item)) {
+					const fmt: string | undefined = item.facadeModuleId ? "es" : undefined;
+					const out = processEsChunk.call(this, item.code, item.fileName, fmt);
+					if (out) item.code = out;
 				}
 			}
-
-			const selected = selectPools(strCounts, callCounts, ctorCounts);
-			if (
-				selected.strings.size === 0 &&
-				selected.calls.size === 0 &&
-				selected.ctors.size === 0
-			)
-				return null;
-
-			const ms = new MagicString(code);
-
-			// Second pass: replace uses
-			// biome-ignore lint/suspicious/noExplicitAny: ESTree program
-			const stack2: Array<{ node: any; parent: any }> = [
-				{ node: ast, parent: null },
-			];
-			while (stack2.length) {
-				const top2 = stack2.pop();
-				if (!top2) break;
-				const { node, parent } = top2;
-				if (!node || typeof node.type !== "string") continue;
-
-				if (node.type === "Literal" && typeof node.value === "string") {
-					if (isStringEligible(node, parent)) {
-						const id = selected.strings.get(node.value);
-						if (id) ms.overwrite(getStart(node), getEnd(node), id);
-					}
-				} else if (node.type === "CallExpression") {
-					const key = callKeyOf(node);
-					if (key) {
-						const id = selected.calls.get(key);
-						// biome-ignore lint/suspicious/noExplicitAny: ESTree offsets
-						const calleeNode: any = (node as any).callee;
-						if (id && calleeNode)
-							ms.overwrite(
-								getStart(calleeNode),
-								getEnd(calleeNode),
-								id
-							);
-					}
-				} else if (ENABLE_CTOR_POOL && node.type === "NewExpression") {
-					// biome-ignore lint/suspicious/noExplicitAny: ESTree offsets
-					const cal = (node as any).callee;
-					if (cal?.type === "Identifier") {
-						const id = selected.ctors.get(cal.name);
-						if (id) ms.overwrite(getStart(cal), getEnd(cal), id);
-					}
-				}
-
-				for (const k in node) {
-					// biome-ignore lint/suspicious/noExplicitAny: ESTree dynamic access
-					const v = (node as any)[k];
-					if (!v) continue;
-					if (Array.isArray(v)) {
-						for (let i = v.length - 1; i >= 0; i--) {
-							const c = v[i];
-							if (hasNodeType(c))
-								stack2.push({ node: c, parent: node });
-						}
-					} else if (hasNodeType(v)) {
-						stack2.push({ node: v, parent: node });
-					}
-				}
-			}
-
-			// Insert declarations after imports
-			let insertPos = 0;
-			// biome-ignore lint/suspicious/noExplicitAny: ESTree program
-			const body = (ast && (ast as any).body) || [];
-			for (let i = 0; i < body.length; i++) {
-				if (body[i].type === "ImportDeclaration")
-					insertPos = body[i].end;
-				else break;
-			}
-			const decls = buildDecls(selected);
-			if (decls) ms.appendLeft(insertPos, decls);
-
-			return { code: ms.toString(), map: null };
 		},
 	} as const;
 }
