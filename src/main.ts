@@ -74,7 +74,7 @@ class StateBuilder<TState extends StateConstraint> {
 		for (const el of document?.querySelectorAll("[data-mf-register]") ?? [])
 			RegEl.register(
 				el as HTMLElement | SVGElement | MathMLElement,
-				this.#scopedState
+				state
 			);
 
 		return state as TState;
