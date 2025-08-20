@@ -447,21 +447,25 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 				const injected = (ctx as Record<string, unknown>).__state as
 					| Record<string, unknown>
 					| undefined;
-				if (ctx && chain.base in ctx)
+				let baseOwner: unknown = undefined;
+				if (ctx && chain.base in ctx) {
 					root = (ctx as Record<string, unknown>)[chain.base];
-				else if (
+					baseOwner = undefined; // local var/function, no bound this
+				} else if (
 					typeof globalThis !== "undefined" &&
 					chain.base === "Promise" &&
 					chain.base in (globalThis as Record<string, unknown>)
-				)
+				) {
 					root = (globalThis as Record<string, unknown>)[chain.base];
-				else if (injected)
+					baseOwner = undefined;
+				} else if (injected && chain.base in injected) {
 					root = (injected as Record<string, unknown>)[
 						chain.base as never
 					];
-				else root = undefined;
+					baseOwner = injected; // bind base calls to state
+				} else root = undefined;
 				let cur = root,
-					lastObjForCall: unknown;
+					lastObjForCall: unknown = undefined;
 				for (const seg of chain.segs) {
 					if (cur == null) return undefined;
 					if (seg.t === "prop") {
@@ -478,7 +482,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 							cur = (fn as (...x: unknown[]) => unknown).apply(
 								lastObjForCall !== undefined
 									? lastObjForCall
-									: undefined,
+									: baseOwner,
 								argVals
 							);
 							lastObjForCall = cur;
