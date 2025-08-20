@@ -1,69 +1,65 @@
 export type EffectFn = () => void;
 
-interface DepRef {
-	bucket: DepBucket;
+interface SubscriptionRef {
+	sub: Subscriptions;
 	index: number;
 }
 
-export interface DepBucket {
+export interface Subscriptions {
 	effects: (Effect | null)[];
 	map: Map<Effect, number>;
-	holes?: number;
+	holes?: number; // Allow holes in the effects array to optimize memory -- compacted in #clean()
 }
 
 export class Effect {
 	static current: Effect | null = null;
 	static #pool: Effect[] = [];
 
-	static acquire(fn: () => void, ephemeral?: boolean) {
-		if (ephemeral) {
-			const inst = Effect.#pool.pop();
-			if (inst) {
-				inst.fn = fn;
-				inst.#active = true;
-				inst.#deps.length = 0;
-				inst.level = Effect.current ? Effect.current.level + 1 : 0;
-				inst.ephemeral = true;
-				return inst;
-			}
-			return new Effect(fn, true);
+	static acquire(fn: () => void) {
+		const inst = Effect.#pool.pop();
+		if (inst) {
+			inst.fn = fn;
+			inst.#active = true;
+			inst.#deps.length = 0;
+			inst.level = Effect.current ? Effect.current.level + 1 : 0;
+			return inst;
 		}
-		return new Effect(fn, false);
+		return new Effect(fn);
 	}
 
-	#deps: DepRef[] = [];
+	#deps: SubscriptionRef[] = [];
 	#active = true;
 	fn: () => void;
 	level: number;
-	ephemeral: boolean;
 
-	constructor(fn: () => void, ephemeral: boolean) {
+	constructor(fn: () => void) {
 		this.fn = fn;
 		this.level = Effect.current ? Effect.current.level + 1 : 0;
-		this.ephemeral = !!ephemeral;
 	}
 
-	_addDep(bucket: DepBucket, index: number) {
-		this.#deps.push({ bucket, index });
+	_addDep(sub: Subscriptions, index: number) {
+		this.#deps.push({ sub: sub, index });
 	}
 
 	run() {
-		if (!this.#active) return;
-		this.#clean();
-		const prev = Effect.current;
-		Effect.current = this;
-		try {
-			this.fn();
-		} finally {
-			Effect.current = prev;
+		if (this.#active) {
+			this.#clean();
+			const prev = Effect.current;
+			Effect.current = this;
+			try {
+				this.fn();
+			} finally {
+				Effect.current = prev;
+			}
 		}
 	}
 
 	stop() {
-		if (!this.#active) return;
-		this.#active = false;
-		this.#clean();
-		if (this.ephemeral) {
+		if (this.#active) {
+			this.#active = false;
+			this.#clean();
+
+			// Return to pool for reuse
 			if (Effect.#pool.length < 1024) {
 				this.fn = () => {};
 				this.#deps.length = 0;
@@ -73,24 +69,25 @@ export class Effect {
 	}
 
 	#clean() {
-		for (const d of this.#deps) {
-			const bucket = d.bucket;
-			if (bucket.effects[d.index] === this) {
-				bucket.effects[d.index] = null;
-				bucket.map.delete(this);
-				bucket.holes = (bucket.holes || 0) + 1;
-				const len = bucket.effects.length;
-				const holeThresh = Math.max(8, (len * 0.25) | 0);
-				if (len >= 4 && (bucket.holes || 0) > holeThresh) {
+		for (const { sub, index } of this.#deps) {
+			if (sub.effects[index] === this) {
+				sub.effects[index] = null;
+				sub.map.delete(this);
+				sub.holes = (sub.holes ?? 0) + 1;
+				const { length } = sub.effects;
+				if (
+					length >= 4 &&
+					sub.holes > Math.max(8, (length * 0.25) | 0) // Compact if holes > 25% or 8
+				) {
 					const newArr: (Effect | null)[] = [];
-					bucket.holes = 0;
-					bucket.map.clear();
-					for (const eff of bucket.effects)
+					sub.holes = 0;
+					sub.map.clear();
+					for (const eff of sub.effects)
 						if (eff) {
-							bucket.map.set(eff, newArr.length);
+							sub.map.set(eff, newArr.length);
 							newArr.push(eff);
 						}
-					bucket.effects = newArr;
+					sub.effects = newArr;
 				}
 			}
 		}
