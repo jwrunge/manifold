@@ -1,25 +1,31 @@
 import { Effect, type EffectFn } from "./Effect.ts";
 import isEqual from "./equality.ts";
-import proxy from "./proxy.ts";
+import { proxy } from "./proxy.ts";
 import RegEl from "./registry.ts";
 
 export type StateConstraint = Record<string, unknown>;
 
-class StateBuilder<TState extends StateConstraint> {
+export default class StateBuilder<TState extends StateConstraint> {
+	#name?: string;
 	#scopedState: TState;
 	#derivations: Map<string, (store: StateConstraint) => unknown>;
 	#built = false;
 
 	constructor(
+		name?: string,
 		initialState?: TState,
 		derivations?: Map<string, (store: StateConstraint) => unknown>
 	) {
+		this.#name = name;
 		this.#scopedState = (initialState || {}) as TState;
 		this.#derivations = derivations || new Map();
 	}
 
-	static create<S extends StateConstraint>(initial?: S): StateBuilder<S> {
-		return new StateBuilder<S>(initial);
+	static create<S extends StateConstraint>(
+		name?: string,
+		initial?: S
+	): StateBuilder<S> {
+		return new StateBuilder<S>(name, initial);
 	}
 
 	static effect(fn: EffectFn) {
@@ -33,6 +39,7 @@ class StateBuilder<TState extends StateConstraint> {
 		value: V
 	): StateBuilder<TState & Record<K, V>> {
 		return new StateBuilder(
+			this.#name,
 			{ ...this.#scopedState, [key]: value },
 			new Map(this.#derivations)
 		) as StateBuilder<TState & Record<K, V>>;
@@ -43,6 +50,7 @@ class StateBuilder<TState extends StateConstraint> {
 		fn: (store: TState) => T
 	): StateBuilder<TState & Record<K, T>> {
 		return new StateBuilder(
+			this.#name,
 			{ ...this.#scopedState },
 			new Map(this.#derivations).set(
 				key,
@@ -71,7 +79,9 @@ class StateBuilder<TState extends StateConstraint> {
 		this.#built = true;
 
 		// Auto-register on build: bind all [data-mf-register] regions to the global state
-		for (const el of document?.querySelectorAll("[data-mf-register]") ?? [])
+		for (const el of document?.querySelectorAll(
+			`[data-mf-register${this.#name ? `=${this.#name}` : ``}]`
+		) ?? [])
 			RegEl.register(
 				el as HTMLElement | SVGElement | MathMLElement,
 				state
@@ -80,5 +90,3 @@ class StateBuilder<TState extends StateConstraint> {
 		return state as TState;
 	}
 }
-
-export default StateBuilder;

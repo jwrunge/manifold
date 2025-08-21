@@ -104,7 +104,7 @@ const getOrCreateProxy = (obj: any, prefix: string, factory: () => unknown) => {
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: internal proxy factory
-const proxy = (obj: any, prefix = ""): StateConstraint => {
+export const proxy = (obj: any, prefix = ""): StateConstraint => {
 	if (!obj || typeof obj !== "object") return obj;
 	return getOrCreateProxy(
 		obj,
@@ -178,4 +178,48 @@ const proxy = (obj: any, prefix = ""): StateConstraint => {
 	);
 };
 
-export default proxy;
+export const scopeProxy = <T extends object>(base: T): T => {
+	// Local reactive store (own buckets, separate from base)
+	const localTarget: Record<PropertyKey, unknown> = Object.create(null);
+	const local = proxy(localTarget) as Record<PropertyKey, unknown>;
+
+	const hasBase = (k: PropertyKey) => Reflect.has(base as object, k);
+	const hasLocal = (k: PropertyKey) => Object.hasOwn(localTarget, k);
+
+	// Overlay that chooses between local and base
+	return new Proxy(Object.create(null), {
+		get(_t, k) {
+			// biome-ignore lint/suspicious/noExplicitAny: internal proxy factory
+			return hasLocal(k) ? (local as any)[k] : (base as any)[k]; // forwards through proxies ⇒ tracks deps
+		},
+		set(_t, k, v) {
+			// biome-ignore lint/suspicious/noExplicitAny: internal proxy factory
+			if (hasLocal(k)) (local as any)[k] = v; // update local (reactive)
+			else if (hasBase(k))
+				// biome-ignore lint/suspicious/noExplicitAny: internal proxy factory
+				(base as any)[k] = v; // write-through to base (reactive)
+			// biome-ignore lint/suspicious/noExplicitAny: internal proxy factory
+			else (local as any)[k] = v; // create new local key (reactive)
+			return true;
+		},
+		has(_t, k) {
+			return hasLocal(k) || hasBase(k);
+		},
+		ownKeys() {
+			return Array.from(
+				new Set([
+					...Reflect.ownKeys(localTarget),
+					...Reflect.ownKeys(base as object),
+				])
+			);
+		},
+		getOwnPropertyDescriptor(_t, k) {
+			return (
+				Reflect.getOwnPropertyDescriptor(localTarget, k) ??
+				Reflect.getOwnPropertyDescriptor(base as object, k) ??
+				// biome-ignore lint/suspicious/noExplicitAny: internal proxy factory
+				(undefined as any)
+			);
+		},
+	}) as unknown as T;
+};
