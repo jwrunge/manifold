@@ -10,9 +10,10 @@ const logicAttributes = [
 	"await",
 	"then",
 	"catch",
-];
+] as const;
 
-const supportedPrefixes = ["data-mf.", ":"];
+const supportedPrefixes = ["data-mf.", ":"] as const;
+const matchPrefix = new RegExp(`^${supportedPrefixes.join("|")}`);
 
 const throwError = (msg: string, cause?: unknown) => {
 	throw new Error(msg, { cause });
@@ -40,35 +41,21 @@ export default class RegEl {
 		const wasRegistered = new Set<string>();
 
 		for (const { name, value } of el.attributes) {
-			const logicName = name.replace(/^data-mf\./, "").replace(/^:/, "");
+			const logicName = name.replace(matchPrefix, "");
 
 			if (wasRegistered.has(logicName))
 				throwError(`Attribute ${logicName} duplicate`, el); // Prevent double registration
 			let outerBreak = false;
 
+			// Handle predefined logic
 			for (const logicAttr of logicAttributes) {
 				for (const prefix of supportedPrefixes) {
 					if (name === `${prefix}${logicAttr}`) {
-						if (logicName === "style") {
-							// Handle style logic attributes
-							// Don't try to throw on duplicate
-
-							outerBreak = true;
-							break;
-						}
-
-						if (logicName === "class") {
-							// Handle class logic attributes
-							// Don't try to throw on duplicate
-
-							outerBreak = true;
-							break;
-						}
-
 						// Handle logic attributes
+						outerBreak = true; // Don't look for any more attributes with this prefix
+						wasRegistered.add(logicName); // Enable throw on duplicate
 
-						outerBreak = true;
-						wasRegistered.add(logicName);
+						break; // Matched supportedPrefixes; break inner loop
 					}
 				}
 			}
@@ -82,8 +69,20 @@ export default class RegEl {
 						// Handle events
 						wasRegistered.add(logicName);
 					} else {
+						// Handle class and style bindings
+						const [primaryName, focus] = logicName.split(":", 2);
+
+						if (focus) {
+							// Handle style or class attributes with specified focus
+							if (primaryName === "class") {
+							} else if (primaryName === "style") {
+							} else throwError(`Unsupported bind focus: ${}`, el);
+						}
+
 						wasRegistered.add(logicName);
 					}
+
+					break;
 				}
 			}
 		}
