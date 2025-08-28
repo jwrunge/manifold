@@ -5,7 +5,7 @@ import { scopeProxy } from "./proxy";
 
 type Registerable = HTMLElement | SVGElement | Element;
 
-const prefixes = [":", "data-mf."] as const;
+const prefixes = [":", "data-mf-"] as const;
 
 const templLogicAttrs = [
 	"if",
@@ -24,17 +24,53 @@ const throwError = (msg: string, cause?: unknown) => {
 };
 
 export default class RegEl {
-	static #registry: Map<Registerable, RegEl> = new Map();
+	static registry = new WeakMap<Registerable, RegEl>();
+	static globally_observing = false;
 	state: Record<string, unknown>;
+	el: Registerable;
+	#cleanups: Set<() => void> = new Set();
+	#disposed = false;
+
+	static #observer = new MutationObserver((mRecord) => {
+		const disposeNode = (el: Node) => {
+			if (
+				el.nodeType !== Node.ELEMENT_NODE ||
+				(el as Element).isConnected
+			)
+				return;
+
+			// Skip nodes that were moved (still connected elsewhere)
+			const inst = RegEl.registry.get(el as Registerable);
+			inst?.dispose?.();
+
+			// Dispose any registered descendants
+			for (const d of (el as Element).querySelectorAll("*")) {
+				const di = RegEl.registry.get(d as Registerable);
+				di?.dispose?.();
+			}
+		};
+		for (const m of mRecord) {
+			if (m.type !== "childList") continue;
+			for (const n of m.removedNodes) disposeNode(n);
+		}
+	});
 
 	static register(
 		el: Registerable,
 		state: Record<string, unknown>,
 		effect: (fn: EffectFn) => Effect
 	) {
-		if (RegEl.#registry.has(el))
+		if (!RegEl.globally_observing) {
+			RegEl.#observer.observe(document, {
+				childList: true,
+				subtree: true,
+			});
+			RegEl.globally_observing = true;
+		}
+
+		if (RegEl.registry.has(el))
 			throwError("Element already registered", el);
-		RegEl.#registry.set(el, new RegEl(el, state, effect));
+		RegEl.registry.set(el, new RegEl(el, state, effect));
 	}
 
 	constructor(
@@ -42,9 +78,10 @@ export default class RegEl {
 		state: Record<string, unknown>,
 		effect: (fn: EffectFn) => Effect
 	) {
+		this.el = el;
 		this.state = scopeProxy(state);
 
-		// Register children (which register their own children)
+		// Recursively register children
 		for (const child of el.children) {
 			if (!child.getAttribute("data-mf-ignore")) {
 				RegEl.register(child as Registerable, this.state, effect);
@@ -53,7 +90,8 @@ export default class RegEl {
 
 		const wasRegistered = new Set<string>();
 
-		for (const { name, value } of el.attributes) {
+		// Take a snapshot of attributes to avoid skipping due to live NamedNodeMap mutation
+		for (const { name, value } of Array.from(el.attributes)) {
 			let attrName = "";
 			for (const prefix of prefixes) {
 				if (name.startsWith(prefix)) {
@@ -62,7 +100,7 @@ export default class RegEl {
 				}
 			}
 
-			if (!attrName) continue; // not a manifold attribute, skip
+			if (!attrName || attrName === "register") continue; // not a manifold attribute, skip
 
 			let sync = false;
 			if (attrName.startsWith("sync:")) {
@@ -95,9 +133,11 @@ export default class RegEl {
 				if (sync)
 					throwError(`Sync not supported on event handlers`, el);
 
-				el.addEventListener(attrName.slice(2), (e) =>
-					fn({ ...this.state, event: e, element: el })
-				);
+				const type = attrName.slice(2);
+				const handler = (e: Event) =>
+					fn({ ...this.state, event: e, element: el });
+				el.addEventListener(type, handler);
+				this.#cleanups.add(() => el.removeEventListener(type, handler));
 
 				el.removeAttribute(attrName);
 				wasRegistered.add(attrName);
@@ -113,18 +153,16 @@ export default class RegEl {
 						el
 					);
 
-				if (attrPropName === "class") {
+				if (attrPropName === "style" || attrPropName === "class") {
 					effect(() => {
-						if (fn({ ...this.state, element: el }))
-							el.classList.add(String(attrProp));
-						else el.classList.remove(String(attrProp));
-					});
-				} else if (attrPropName === "style") {
-					if (!attrProp) throwError(`Style property missing`, el);
-					effect(() => {
-						(el as HTMLElement).style[
-							attrProp as WritableCSSKeys
-						] = `${fn({ ...this.state, element: el }) ?? ""}`;
+						const res = fn({ ...this.state, element: el });
+						if (attrPropName === "class")
+							if (res) el.classList.add(String(attrProp));
+							else el.classList.remove(String(attrProp));
+						else
+							(el as HTMLElement).style[
+								attrProp as WritableCSSKeys
+							] = `${res}`;
 					});
 				} else {
 					throwError(`Unsupported bind: ${attrName}`, el);
@@ -133,20 +171,34 @@ export default class RegEl {
 				// Handle general attributes
 				effect(() => {
 					const result = fn({ ...this.state, element: el });
-					if (result) {
-						el.setAttribute(attrName, String(result));
+					if (attrName in el) {
+						// biome-ignore lint/suspicious/noExplicitAny: We're checking if the property exists on the element
+						(el as any)[attrName] = result;
 					} else {
-						el.removeAttribute(attrName);
+						el.setAttribute(attrName, `${value}`);
 					}
 				});
 
 				if (sync) {
-					// If the attribute is changed, update the state
+					// If the property or attribute is changed and it is value or checked or any other values that might change, update the state
 				}
 			}
 
 			wasRegistered.add(attrName);
 			el.removeAttribute(name);
 		}
+	}
+
+	dispose() {
+		if (this.#disposed) return;
+		for (const c of this.#cleanups) {
+			try {
+				c();
+			} catch {}
+		}
+		this.#cleanups.clear();
+		this.#disposed = true;
+
+		RegEl.registry.delete(this.el);
 	}
 }

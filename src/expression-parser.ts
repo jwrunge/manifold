@@ -118,7 +118,7 @@ const splitByPrecedence = (expr: string): [string, string, string] | null => {
 		["&&"],
 		["===", "!==", ">=", "<=", ">", "<"], // longest-first already
 		["+", "-"],
-		["*", "/"],
+		["*", "/", "%"],
 	];
 	for (const ops of levels) {
 		const res =
@@ -374,6 +374,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 			case "-":
 			case "*":
 			case "/":
+			case "%":
 				return {
 					fn: (c) => {
 						const A = l.fn(c) as unknown;
@@ -387,9 +388,14 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 								: (A as number) + (B as number);
 						if (OP === "-") return (A as number) - (B as number);
 						if (OP === "*") return (A as number) * (B as number);
+						if (OP === "/")
+							return (B as number) === 0
+								? undefined
+								: (A as number) / (B as number);
+						// OP === "%"
 						return (B as number) === 0
 							? undefined
-							: (A as number) / (B as number);
+							: (A as number) % (B as number);
 					},
 					stateRefs: new Set<string>([
 						...l.stateRefs,

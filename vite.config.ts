@@ -14,7 +14,7 @@ const esbuildOpts: ESBuildOptions = {
 	minifyIdentifiers: true,
 	minifyWhitespace: true,
 	minifySyntax: true,
-	drop: ["console", "debugger"],
+	// drop: ["console", "debugger"],
 	pure: [],
 };
 

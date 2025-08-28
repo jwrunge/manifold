@@ -1,0 +1,32 @@
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Manifold Demo</title>
+
+		<style>
+			.red {
+				color: red;
+			}
+		</style>
+	</head>
+
+	<body>
+		<input
+			:type="count === 3 || count === 5 ? 'text' : 'number'"
+			:value="count"
+			:class:red="count % 5 === 0"
+			:style:background-color="count % 2 === 0 ? 'lightblue' : 'lightgreen'"
+			data-mf-register
+		/>
+
+		<script type="module">
+			import $ from "./dist/manifold.es.js";
+			const myState = $.create().add("count", 0).build();
+
+			setInterval(() => {
+				myState.count += 1;
+			}, 1000);
+		</script>
+	</body>
+</html>

@@ -33,10 +33,11 @@ const flushEffects = () => {
 		} else for (const e of effectsToRun) e.run();
 	};
 
-	const complete = (document as Document | undefined)?.startViewTransition?.(
-		runAll
-	);
-	if (!complete) runAll();
+	// const complete = (document as Document | undefined)?.startViewTransition?.(
+	// 	runAll
+	// );
+	// if (!complete)
+	runAll();
 };
 
 const batchEffects = (bucket: Subscriptions) => {
