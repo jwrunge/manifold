@@ -84,7 +84,8 @@ export default class StateBuilder<TState extends StateConstraint> {
 		) ?? [])
 			RegEl.register(
 				el as HTMLElement | SVGElement | MathMLElement,
-				state
+				state,
+				StateBuilder.effect
 			);
 
 		return state as TState;
