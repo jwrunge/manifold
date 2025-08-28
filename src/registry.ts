@@ -64,6 +64,12 @@ export default class RegEl {
 
 			if (!attrName) continue; // not a manifold attribute, skip
 
+			let sync = false;
+			if (attrName.startsWith("sync:")) {
+				sync = true;
+				attrName = attrName.slice(5);
+			}
+
 			if (wasRegistered.has(attrName))
 				throwError(`Attribute ${attrName} duplicate`, el); // Prevent double registration
 
@@ -86,11 +92,14 @@ export default class RegEl {
 
 			// Event handlers e.g., on:click
 			if (attrName.startsWith("on")) {
-				el.removeAttribute(attrName);
+				if (sync)
+					throwError(`Sync not supported on event handlers`, el);
+
 				el.addEventListener(attrName.slice(2), (e) =>
 					fn({ ...this.state, event: e, element: el })
 				);
 
+				el.removeAttribute(attrName);
 				wasRegistered.add(attrName);
 				continue;
 			}
@@ -98,9 +107,16 @@ export default class RegEl {
 			// Bindings: class:foo, style:color, etc.
 			const [attrPropName, attrProp] = attrName.split(":", 2);
 			if (attrProp) {
+				if (sync)
+					throwError(
+						`Sync not supported on granular bindings: ${attrName}`,
+						el
+					);
+
 				if (attrPropName === "class") {
 					effect(() => {
-						if (fn(this.state)) el.classList.add(String(attrProp));
+						if (fn({ ...this.state, element: el }))
+							el.classList.add(String(attrProp));
 						else el.classList.remove(String(attrProp));
 					});
 				} else if (attrPropName === "style") {
@@ -108,16 +124,29 @@ export default class RegEl {
 					effect(() => {
 						(el as HTMLElement).style[
 							attrProp as WritableCSSKeys
-						] = `${fn(this.state) ?? ""}`;
+						] = `${fn({ ...this.state, element: el }) ?? ""}`;
 					});
 				} else {
 					throwError(`Unsupported bind: ${attrName}`, el);
 				}
+			} else {
+				// Handle general attributes
+				effect(() => {
+					const result = fn({ ...this.state, element: el });
+					if (result) {
+						el.setAttribute(attrName, String(result));
+					} else {
+						el.removeAttribute(attrName);
+					}
+				});
 
-				wasRegistered.add(attrName);
-
-				el.removeAttribute(name);
+				if (sync) {
+					// If the attribute is changed, update the state
+				}
 			}
+
+			wasRegistered.add(attrName);
+			el.removeAttribute(name);
 		}
 	}
 }
