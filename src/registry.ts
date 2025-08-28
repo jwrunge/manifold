@@ -134,12 +134,26 @@ export default class RegEl {
 					throwError(`Sync not supported on event handlers`, el);
 
 				const type = attrName.slice(2);
+
+				// Detect arrow params to alias them to (event, element)
+				const [p1, p2] =
+					value.match(
+						/^\(\s*([a-zA-Z_$][\w$]*)\s*(?:,\s*([a-zA-Z_$][\w$]*))?\s*\)\s*=>/
+					) ?? [];
+
 				const handler = (e: Event) =>
-					fn({ ...this.state, event: e, element: el });
+					fn({
+						...this.state,
+						event: e,
+						element: el,
+						...(p1 ? { [p1]: e } : {}),
+						...(p2 ? { [p2]: el } : {}),
+					});
 				el.addEventListener(type, handler);
 				this.#cleanups.add(() => el.removeEventListener(type, handler));
 
-				el.removeAttribute(attrName);
+				// Remove the original attribute (with prefix), not the sliced name
+				el.removeAttribute(name);
 				wasRegistered.add(attrName);
 				continue;
 			}

@@ -11,18 +11,21 @@
 		</style>
 	</head>
 
-	<body>
+	<body data-mf-register>
 		<input
-			:type="count === 3 || count === 5 ? 'text' : 'number'"
 			:value="count"
+			:type="count === 3 || count === 5 ? 'text' : 'number'"
 			:class:red="count % 5 === 0"
 			:style:background-color="count % 2 === 0 ? 'lightblue' : 'lightgreen'"
-			data-mf-register
+			:onclick="(e)=> popup(e.target.value)"
 		/>
 
 		<script type="module">
 			import $ from "./dist/manifold.es.js";
-			const myState = $.create().add("count", 0).build();
+			const myState = $.create()
+				.add("count", 0)
+				.add("popup", (e) => console.log(e))
+				.build();
 
 			setInterval(() => {
 				myState.count += 1;
