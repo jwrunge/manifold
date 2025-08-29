@@ -29,7 +29,6 @@ export default class RegEl {
 	state: Record<string, unknown>;
 	el: Registerable;
 	#cleanups: Set<() => void> = new Set();
-	#disposed = false;
 
 	static #observer = new MutationObserver((mRecord) => {
 		const disposeNode = (el: Node) => {
@@ -40,18 +39,17 @@ export default class RegEl {
 				return;
 
 			// Skip nodes that were moved (still connected elsewhere)
-			const inst = RegEl.registry.get(el as Registerable);
-			inst?.dispose?.();
+			RegEl.registry.get(el as Registerable)?.dispose?.();
 
 			// Dispose any registered descendants
 			for (const d of (el as Element).querySelectorAll("*")) {
-				const di = RegEl.registry.get(d as Registerable);
-				di?.dispose?.();
+				RegEl.registry.get(d as Registerable)?.dispose?.();
 			}
 		};
+
 		for (const m of mRecord) {
-			if (m.type !== "childList") continue;
-			for (const n of m.removedNodes) disposeNode(n);
+			if (m.type === "childList")
+				for (const n of m.removedNodes) disposeNode(n);
 		}
 	});
 
@@ -111,7 +109,7 @@ export default class RegEl {
 			if (wasRegistered.has(attrName))
 				throwError(`Attribute ${attrName} duplicate`, el); // Prevent double registration
 
-			const { fn } = evaluateExpression(value);
+			const { fn, ref } = evaluateExpression(value);
 
 			if (
 				templLogicAttrSet.has(
@@ -136,19 +134,18 @@ export default class RegEl {
 				const type = attrName.slice(2);
 
 				// Detect arrow params to alias them to (event, element)
-				const [, p1, p2] =
+				const [, p1, p2, p3] =
 					value.match(
 						/^\(\s*([a-zA-Z_$][\w$]*)\s*(?:,\s*([a-zA-Z_$][\w$]*))?\s*\)\s*=>/
 					) ?? [];
 
 				const handler = (e: Event) =>
 					fn({
-						...this.state,
-						event: e,
-						element: el,
 						...(p1 ? { [p1]: e } : {}),
-						...(p2 ? { [p2]: el } : {}),
+						...(p2 ? { [p2]: this.state } : {}),
+						...(p3 ? { [p3]: el } : {}),
 					});
+
 				el.addEventListener(type, handler);
 				this.#cleanups.add(() => el.removeEventListener(type, handler));
 
@@ -160,6 +157,7 @@ export default class RegEl {
 
 			// Bindings: class:foo, style:color, etc.
 			const [attrPropName, attrProp] = attrName.split(":", 2);
+			let ef: Effect;
 			if (attrProp) {
 				if (sync)
 					throwError(
@@ -168,7 +166,7 @@ export default class RegEl {
 					);
 
 				if (attrPropName === "style" || attrPropName === "class") {
-					effect(() => {
+					ef = effect(() => {
 						const res = fn({ ...this.state, element: el });
 						if (attrPropName === "class")
 							if (res) el.classList.add(String(attrProp));
@@ -183,7 +181,7 @@ export default class RegEl {
 				}
 			} else {
 				// Handle general attributes
-				effect(() => {
+				ef = effect(() => {
 					const result = fn({ ...this.state, element: el });
 					if (attrName in el) {
 						// biome-ignore lint/suspicious/noExplicitAny: We're checking if the property exists on the element
@@ -202,21 +200,19 @@ export default class RegEl {
 				}
 			}
 
+			this.#cleanups.add(() => ef.stop());
 			wasRegistered.add(attrName);
 			el.removeAttribute(name);
 		}
 	}
 
 	dispose() {
-		if (this.#disposed) return;
 		for (const c of this.#cleanups) {
 			try {
 				c();
 			} catch {}
 		}
 		this.#cleanups.clear();
-		this.#disposed = true;
-
 		RegEl.registry.delete(this.el);
 	}
 }

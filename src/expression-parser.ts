@@ -2,9 +2,8 @@
 
 export interface ParsedExpression {
 	fn: (ctx?: Record<string, unknown>) => unknown;
-	isAssignment?: boolean;
-	assignTarget?: string;
 	stateRefs: Set<string>;
+	ref?: true;
 }
 
 // LRU cache (simple FIFO trim) for parsed expressions
@@ -181,21 +180,9 @@ const buildChain = (
 	return { base, segs };
 };
 
-const parse = (raw: string, allowAssign = false): ParsedExpression => {
+const parse = (raw: string): ParsedExpression => {
 	const expr = raw.trim();
 	if (!expr) return { fn: () => undefined, stateRefs: new Set() };
-
-	const emptyArrow = expr.match(/^\(\)\s*=>\s*(.+)$/);
-	if (emptyArrow) return parse(emptyArrow[1], true);
-	const singleParamArrow = expr.match(
-		/^\(\s*([a-zA-Z_$][\w$]*)\s*\)\s*=>\s*(.+)$/
-	);
-	if (singleParamArrow) {
-		const body = parse(singleParamArrow[2], false);
-		// Remove the arrow param from root refs (treated as local)
-		body.stateRefs.delete(singleParamArrow[1]);
-		return body;
-	}
 
 	// Strip a single pair of outer parentheses if they wrap the whole expression
 	if (expr[0] === "(" && expr[expr.length - 1] === ")") {
@@ -222,62 +209,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 				break;
 			}
 		}
-		if (wraps) return parse(expr.slice(1, -1), allowAssign);
-	}
-
-	if (allowAssign) {
-		const assign = expr.match(/^(.*?)\s*=\s*([^=].*)$/);
-		if (assign) {
-			const target = assign[1].trim();
-			const chain = buildChain(target);
-			if (chain) {
-				const rhs = parse(assign[2], false);
-				return {
-					fn: (ctx) => {
-						const val = rhs.fn(ctx);
-						const injected =
-							ctx && (ctx as Record<string, unknown>).__state
-								? ((ctx as Record<string, unknown>)
-										.__state as Record<string, unknown>)
-								: undefined;
-						if (injected) {
-							let obj: unknown = injected;
-							const keys: (string | number | unknown)[] = [
-								chain.base,
-								...chain.segs.map((s) =>
-									s.t === "prop"
-										? s.k
-										: s.t === "idx"
-										? s.e.fn(ctx)
-										: undefined
-								),
-							];
-							for (let i = 0; i < keys.length - 1; i++) {
-								if (obj == null || typeof obj !== "object")
-									return val;
-								obj = (obj as Record<string, unknown>)[
-									keys[i] as never
-								];
-								if (obj == null) return val;
-							}
-							const lastKey = keys[keys.length - 1];
-							if (
-								obj &&
-								typeof obj === "object" &&
-								lastKey !== undefined
-							)
-								(obj as Record<string, unknown>)[
-									lastKey as never
-								] = val as never;
-						}
-						return val;
-					},
-					isAssignment: true,
-					assignTarget: target,
-					stateRefs: rhs.stateRefs,
-				};
-			}
-		}
+		if (wraps) return parse(expr.slice(1, -1));
 	}
 
 	// Top-level ternary operator parsing: cond ? then : else
@@ -494,6 +426,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 				return cur;
 			},
 			stateRefs: new Set([chain.base]),
+			...(chain.segs.length === 0 ? { ref: true as const } : {}),
 		};
 
 	// drop array/object literal creation
@@ -505,7 +438,7 @@ const parse = (raw: string, allowAssign = false): ParsedExpression => {
 const evaluateExpression = (expr: string): ParsedExpression => {
 	const cached = CACHE.get(expr);
 	if (cached) return cached;
-	const parsed = parse(expr, false);
+	const parsed = parse(expr);
 	CACHE.set(expr, parsed);
 	if (CACHE.size > CACHE_MAX) {
 		const k = CACHE.keys().next().value as string | undefined;
