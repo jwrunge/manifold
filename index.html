@@ -14,10 +14,14 @@
 	<body data-mf-register>
 		<input
 			:value="count"
-			:type="count === 3 || count === 5 ? 'text' : 'number'"
+			:type="count === 3 || count === 5 ? 'text' :
+		'number'"
 			:class:red="count % 5 === 0"
-			:style:background-color="count % 2 === 0 ? 'lightblue' : 'lightgreen'"
-			:onclick="(e)=> popup(e.target.value)"
+			:style:background-color="count %
+		2 === 0 ? 'lightblue' : 'lightgreen'"
+			:onclick="(e)=>
+		popup(e.target.value)"
+			:something="count * 2"
 		/>
 
 		<script type="module">

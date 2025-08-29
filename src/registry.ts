@@ -136,7 +136,7 @@ export default class RegEl {
 				const type = attrName.slice(2);
 
 				// Detect arrow params to alias them to (event, element)
-				const [p1, p2] =
+				const [, p1, p2] =
 					value.match(
 						/^\(\s*([a-zA-Z_$][\w$]*)\s*(?:,\s*([a-zA-Z_$][\w$]*))?\s*\)\s*=>/
 					) ?? [];
@@ -189,7 +189,11 @@ export default class RegEl {
 						// biome-ignore lint/suspicious/noExplicitAny: We're checking if the property exists on the element
 						(el as any)[attrName] = result;
 					} else {
-						el.setAttribute(attrName, `${value}`);
+						if (result === false || result == null) {
+							el.removeAttribute(attrName);
+						} else {
+							el.setAttribute(attrName, String(result));
+						}
 					}
 				});
 
