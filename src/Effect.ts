@@ -11,6 +11,12 @@ export interface Subscriptions {
 	holes?: number; // Allow holes in the effects array to optimize memory -- compacted in #clean()
 }
 
+export const effect = (fn: EffectFn) => {
+	const e = Effect.acquire(fn);
+	e.run();
+	return e;
+};
+
 export class Effect {
 	static current: Effect | null = null;
 	static #pool: Effect[] = [];

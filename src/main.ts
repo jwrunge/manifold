@@ -1,4 +1,4 @@
-import { Effect, type EffectFn } from "./Effect.ts";
+import { Effect } from "./Effect.ts";
 import isEqual from "./equality.ts";
 import { proxy } from "./proxy.ts";
 import RegEl from "./registry.ts";
@@ -26,12 +26,6 @@ export default class StateBuilder<TState extends StateConstraint> {
 		initial?: S
 	): StateBuilder<S> {
 		return new StateBuilder<S>(name, initial);
-	}
-
-	static effect(fn: EffectFn) {
-		const e = Effect.acquire(fn);
-		e.run();
-		return e;
 	}
 
 	add<K extends string, V>(
@@ -82,11 +76,7 @@ export default class StateBuilder<TState extends StateConstraint> {
 		for (const el of document?.querySelectorAll(
 			`[data-mf-register${this.#name ? `=${this.#name}` : ``}]`
 		) ?? [])
-			RegEl.register(
-				el as HTMLElement | SVGElement | MathMLElement,
-				state,
-				StateBuilder.effect
-			);
+			new RegEl(el as HTMLElement | SVGElement | MathMLElement, state);
 
 		return state as TState;
 	}

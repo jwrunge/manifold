@@ -2,8 +2,6 @@
 
 export interface ParsedExpression {
 	fn: (ctx?: Record<string, unknown>) => unknown;
-	stateRefs: Set<string>;
-	ref?: true;
 }
 
 // LRU cache (simple FIFO trim) for parsed expressions
@@ -182,7 +180,7 @@ const buildChain = (
 
 const parse = (raw: string): ParsedExpression => {
 	const expr = raw.trim();
-	if (!expr) return { fn: () => undefined, stateRefs: new Set() };
+	if (!expr) return { fn: () => undefined };
 
 	// Strip a single pair of outer parentheses if they wrap the whole expression
 	if (expr[0] === "(" && expr[expr.length - 1] === ")") {
@@ -259,11 +257,6 @@ const parse = (raw: string): ParsedExpression => {
 				const els = parse(elseP);
 				return {
 					fn: (ctx) => (cnd.fn(ctx) ? thn.fn(ctx) : els.fn(ctx)),
-					stateRefs: new Set<string>([
-						...cnd.stateRefs,
-						...thn.stateRefs,
-						...els.stateRefs,
-					]),
 				};
 			}
 		}
@@ -278,18 +271,10 @@ const parse = (raw: string): ParsedExpression => {
 			case "||":
 				return {
 					fn: (c) => l.fn(c) || r.fn(c),
-					stateRefs: new Set<string>([
-						...l.stateRefs,
-						...r.stateRefs,
-					]),
 				};
 			case "&&":
 				return {
 					fn: (c) => l.fn(c) && r.fn(c),
-					stateRefs: new Set<string>([
-						...l.stateRefs,
-						...r.stateRefs,
-					]),
 				};
 			case "??":
 				return {
@@ -297,10 +282,6 @@ const parse = (raw: string): ParsedExpression => {
 						const v = l.fn(c);
 						return v == null ? r.fn(c) : v;
 					},
-					stateRefs: new Set<string>([
-						...l.stateRefs,
-						...r.stateRefs,
-					]),
 				};
 			case "+":
 			case "-":
@@ -329,10 +310,6 @@ const parse = (raw: string): ParsedExpression => {
 							? undefined
 							: (A as number) % (B as number);
 					},
-					stateRefs: new Set<string>([
-						...l.stateRefs,
-						...r.stateRefs,
-					]),
 				};
 			default:
 				return {
@@ -354,27 +331,23 @@ const parse = (raw: string): ParsedExpression => {
 								return (A as number) < (B as number);
 						}
 					},
-					stateRefs: new Set<string>([
-						...l.stateRefs,
-						...r.stateRefs,
-					]),
 				};
 		}
 	}
 
 	if (expr[0] === "!" && expr.length > 1) {
 		const v = parse(expr.slice(1));
-		return { fn: (c) => !v.fn(c), stateRefs: v.stateRefs };
+		return { fn: (c) => !v.fn(c) };
 	}
 	if (expr[0] === "-" && expr.length > 1) {
 		const v = parse(expr.slice(1));
-		return { fn: (c) => -(v.fn(c) as number), stateRefs: v.stateRefs };
+		return { fn: (c) => -(v.fn(c) as number) };
 	}
 
-	if (expr in LITS) return { fn: () => LITS[expr], stateRefs: new Set() };
-	if (NUM.test(expr)) return { fn: () => +expr, stateRefs: new Set() };
+	if (expr in LITS) return { fn: () => LITS[expr] };
+	if (NUM.test(expr)) return { fn: () => +expr };
 	const str = expr.match(/^(?:'([^']*)'|"([^"]*)")$/);
-	if (str) return { fn: () => str[1] ?? str[2], stateRefs: new Set() };
+	if (str) return { fn: () => str[1] ?? str[2] };
 
 	const chain = buildChain(expr);
 	if (chain)
@@ -425,14 +398,12 @@ const parse = (raw: string): ParsedExpression => {
 				}
 				return cur;
 			},
-			stateRefs: new Set([chain.base]),
-			...(chain.segs.length === 0 ? { ref: true as const } : {}),
 		};
 
 	// drop array/object literal creation
 
 	// fallback: raw string
-	return { fn: () => expr, stateRefs: new Set() };
+	return { fn: () => expr };
 };
 
 const evaluateExpression = (expr: string): ParsedExpression => {
