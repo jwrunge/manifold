@@ -24,6 +24,8 @@
 			:something="count * 2"
 		/>
 
+		<input type="number" :sync:value="count" />
+
 		<script type="module">
 			import $ from "./dist/manifold.es.js";
 			const myState = $.create()
@@ -31,9 +33,9 @@
 				.add("popup", (e) => console.log(e))
 				.build();
 
-			setInterval(() => {
-				myState.count += 1;
-			}, 1000);
+			// setInterval(() => {
+			// 	myState.count += 1;
+			// }, 1000);
 		</script>
 	</body>
 </html>

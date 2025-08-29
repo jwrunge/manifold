@@ -24,7 +24,8 @@ const templLogicAttrSet = new Set([
 ] as const);
 
 const throwError = (msg: string, cause?: unknown) => {
-	throw new Error(msg, { cause });
+	console.error(msg, cause);
+	throw new Error("Manifold Error");
 };
 
 // Check if a Manifold event attribute (e.g., :oninput or data-mf-oninput) exists on an element
@@ -140,6 +141,12 @@ export default class RegEl {
 
 			// Handle templating
 			if (templLogicAttrSet.has(attrName as templLogicAttr)) {
+				if (sync)
+					throwError(
+						`Sync not supported on templating attributes`,
+						el
+					);
+
 				if (["if", "elseif", "else"].includes(attrName)) {
 				} else if (attrName === "each") {
 				} else if (attrName === "await") {
