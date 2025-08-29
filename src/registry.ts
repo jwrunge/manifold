@@ -109,7 +109,7 @@ export default class RegEl {
 			if (wasRegistered.has(attrName))
 				throwError(`Attribute ${attrName} duplicate`, el); // Prevent double registration
 
-			const { fn, ref } = evaluateExpression(value);
+			const parsed = evaluateExpression(value);
 
 			if (
 				templLogicAttrSet.has(
@@ -133,19 +133,35 @@ export default class RegEl {
 
 				const type = attrName.slice(2);
 
-				// Detect arrow params to alias them to (event, element)
-				const [, p1, p2, p3] =
-					value.match(
-						/^\(\s*([a-zA-Z_$][\w$]*)\s*(?:,\s*([a-zA-Z_$][\w$]*))?\s*\)\s*=>/
-					) ?? [];
-
-				const handler = (e: Event) =>
-					fn({
-						...(p1 ? { [p1]: e } : {}),
-						...(p2 ? { [p2]: this.state } : {}),
-						...(p3 ? { [p3]: el } : {}),
-					});
-
+				// Support arrow-function syntax ONLY for event handlers: (e, state, el) => BODY
+				const arrow = value.match(/^\(\s*([^)]*)?\s*\)\s*=>\s*(.+)$/);
+				let handler: (e: Event) => void;
+				if (arrow) {
+					const params = (arrow[1] ?? "")
+						.split(",")
+						.map((s) => s.trim())
+						.filter(Boolean);
+					const bodyExpr = arrow[2];
+					const bodyParsed = evaluateExpression(bodyExpr);
+					handler = (e: Event) => {
+						const ctx: Record<string, unknown> = {
+							...this.state,
+							event: e,
+							element: el,
+						};
+						if (params[0]) ctx[params[0]] = e;
+						if (params[1]) ctx[params[1]] = this.state;
+						if (params[2]) ctx[params[2]] = el;
+						bodyParsed.fn(ctx);
+					};
+				} else {
+					handler = (e: Event) =>
+						parsed.fn({
+							...this.state,
+							event: e,
+							element: el,
+						});
+				}
 				el.addEventListener(type, handler);
 				this.#cleanups.add(() => el.removeEventListener(type, handler));
 
@@ -167,7 +183,7 @@ export default class RegEl {
 
 				if (attrPropName === "style" || attrPropName === "class") {
 					ef = effect(() => {
-						const res = fn({ ...this.state, element: el });
+						const res = parsed.fn({ ...this.state, element: el });
 						if (attrPropName === "class")
 							if (res) el.classList.add(String(attrProp));
 							else el.classList.remove(String(attrProp));
@@ -182,7 +198,7 @@ export default class RegEl {
 			} else {
 				// Handle general attributes
 				ef = effect(() => {
-					const result = fn({ ...this.state, element: el });
+					const result = parsed.fn({ ...this.state, element: el });
 					if (attrName in el) {
 						// biome-ignore lint/suspicious/noExplicitAny: We're checking if the property exists on the element
 						(el as any)[attrName] = result;
