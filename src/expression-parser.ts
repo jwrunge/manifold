@@ -2,6 +2,12 @@
 
 export interface ParsedExpression {
 	fn: (ctx?: Record<string, unknown>) => unknown;
+	// For simple reference chains (e.g., foo, foo.bar, foo[0].baz), provide a setter to update state
+	// Not provided for expressions with operators or function calls
+	syncRef?: (
+		ctx: Record<string, unknown> | undefined,
+		value: unknown
+	) => void;
 }
 
 // LRU cache (simple FIFO trim) for parsed expressions
@@ -398,6 +404,63 @@ const parse = (raw: string): ParsedExpression => {
 				}
 				return cur;
 			},
+			// Provide syncRef setter only if no function calls present in the chain
+			...(chain.segs.some((s) => s.t === "call")
+				? {}
+				: {
+						syncRef: (
+							c: Record<string, unknown> | undefined,
+							value: unknown
+						) => {
+							const ctx = (c || {}) as Record<string, unknown>;
+							const injected = (ctx as Record<string, unknown>)
+								.__state as Record<string, unknown> | undefined;
+							// Resolve root for assignment (prefer injected state for root writes)
+							let rootHolder: Record<string, unknown> | undefined;
+							if (injected && chain.base in injected)
+								rootHolder = injected;
+							else if (ctx && chain.base in ctx) rootHolder = ctx;
+							else return; // cannot assign
+
+							// If assigning to the root variable directly (no segs)
+							if (chain.segs.length === 0) {
+								(rootHolder as Record<string, unknown>)[
+									chain.base
+								] = value as unknown;
+								return;
+							}
+
+							// Walk to parent container of last segment
+							let obj: unknown = (
+								rootHolder as Record<string, unknown>
+							)[chain.base as never];
+							for (let i = 0; i < chain.segs.length - 1; i++) {
+								const seg = chain.segs[i];
+								if (obj == null) return;
+								if (seg.t === "prop") {
+									obj = (obj as Record<string, unknown>)[
+										seg.k as never
+									];
+								} else if (seg.t === "idx") {
+									const k = seg.e.fn(ctx) as unknown;
+									obj = (obj as Record<string, unknown>)[
+										k as never
+									];
+								}
+							}
+							if (obj == null) return;
+							const last = chain.segs[chain.segs.length - 1];
+							if (last.t === "prop") {
+								(obj as Record<string, unknown>)[
+									last.k as never
+								] = value as unknown;
+							} else if (last.t === "idx") {
+								const lk = last.e.fn(ctx) as unknown;
+								(obj as Record<string, unknown>)[lk as never] =
+									value as unknown;
+							}
+						},
+				  }),
 		};
 
 	// drop array/object literal creation
