@@ -26,6 +26,11 @@
 
 		<input type="number" :sync:value="count" />
 
+		<div :if="count < 10">The count is less than 10! ${count}</div>
+		<div :elseif="count < 20">The count is between 10 and 19! ${count}</div>
+		<div :elseif="count < 30">The count is between 20 and 29! ${count}</div>
+		<div :else>The count is 30 or more! ${count}</div>
+
 		<script type="module">
 			import $ from "./dist/manifold.es.js";
 			const myState = $.create()

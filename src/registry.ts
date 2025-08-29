@@ -23,6 +23,20 @@ const templLogicAttrSet = new Set([
 	"catch",
 ] as const);
 
+const prefixes = [":", "data-mf-"] as const;
+
+// Return the first matching :if / :elseif (or data-mf-if / data-mf-elseif) value for an element
+const prevCondition = (node: Element | null): string | null => {
+	if (!node) return null;
+	for (const p of prefixes) {
+		const ifVal = node.getAttribute(`${p}if`);
+		if (ifVal != null) return ifVal;
+		const elseifVal = node.getAttribute(`${p}elseif`);
+		if (elseifVal != null) return elseifVal;
+	}
+	return null;
+};
+
 const throwError = (msg: string, cause?: unknown) => {
 	console.error(msg, cause);
 	throw new Error("Manifold Error");
@@ -87,6 +101,7 @@ export default class RegEl {
 	static _mutations = new WeakMap<Registerable, Map<string, () => void>>();
 	#mutations = new Map<string, () => void>();
 	#cleanups = new Set<() => void>();
+	shown = false;
 
 	constructor(el: Registerable, state: Record<string, unknown>) {
 		// Register self or throw
@@ -116,7 +131,7 @@ export default class RegEl {
 		// Clone attributes to avoid skipping due to live NamedNodeMap mutation
 		for (const { name, value } of Array.from(el.attributes)) {
 			let attrName = "";
-			for (const prefix of [":", "data-mf-"] as const) {
+			for (const prefix of prefixes) {
 				if (name.startsWith(prefix)) {
 					attrName = name.slice(prefix.length);
 					break;
@@ -148,6 +163,19 @@ export default class RegEl {
 					);
 
 				if (["if", "elseif", "else"].includes(attrName)) {
+					const isElseIfOrElse =
+						attrName === "else" || attrName === "elseif";
+					const previousShowStates: unknown[] = [];
+
+					if (isElseIfOrElse) {
+						let cond = el.previousElementSibling as Element | null;
+						while (cond) {
+							const pc = prevCondition(cond);
+							if (pc != null) previousShowStates.push(pc);
+							cond =
+								cond.previousElementSibling as Element | null;
+						}
+					}
 				} else if (attrName === "each") {
 				} else if (attrName === "await") {
 				} else if (["then", "catch"].includes(attrName)) {
