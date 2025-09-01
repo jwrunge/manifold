@@ -143,43 +143,49 @@ export default class RegEl {
 
 			// Handle templating
 			if (templLogicAttrSet.has(attrName as templLogicAttr)) {
+				const attr = attrName as templLogicAttr;
 				if (sync)
 					throwError(
 						`Sync not supported on templating attributes`,
 						el
 					);
 
-				if (["if", "elseif", "else"].includes(attrName)) {
-					const isElse = attrName === "else";
+				if (templLogicAttrSet.has(attr))
+					if (attr === "each") {
+					} else {
+						const isElse = attr === "else";
 
-					if (isElse || attrName === "elseif") {
-						const prev =
-							el.previousElementSibling as Registerable | null;
+						if (isElse || attr === "elseif") {
+							const prev =
+								el.previousElementSibling as Registerable | null;
 
-						if (!prev)
-							throwError("Malformed elseif/else sequence", el);
-						// biome-ignore lint/style/noNonNullAssertion: Nullish check above
-						const rl = RegEl._registry.get(prev!);
+							if (!prev)
+								throwError(
+									"Malformed elseif/else sequence",
+									el
+								);
+							// biome-ignore lint/style/noNonNullAssertion: Nullish check above
+							const rl = RegEl._registry.get(prev!);
 
-						if (
-							!rl ||
-							!prefixes.some(
-								(p) =>
-									prev?.hasAttribute(`${p}if`) ||
-									prev?.hasAttribute(`${p}elseif`)
+							if (
+								!rl ||
+								!prefixes.some(
+									(p) =>
+										prev?.hasAttribute(`${p}if`) ||
+										prev?.hasAttribute(`${p}elseif`)
+								)
 							)
-						)
-							throwError("Malformed elseif/else sequence", el);
+								throwError(
+									"Malformed elseif/else sequence",
+									el
+								);
 
-						// biome-ignore lint/style/noNonNullAssertion: We have thrown if prev is null
-						this.show_deps.push(rl!);
+							// biome-ignore lint/style/noNonNullAssertion: We have thrown if prev is null
+							this.show_deps.push(rl!);
+						}
+
+						this.state.__show = isElse ? () => true : fn;
 					}
-
-					this.state.__show = isElse ? () => true : fn;
-				} else if (attrName === "each") {
-				} else if (attrName === "await") {
-				} else if (["then", "catch"].includes(attrName)) {
-				}
 
 				// Handle show state
 				this.state.__show ??= () => true;
