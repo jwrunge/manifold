@@ -1,9 +1,9 @@
 import type { WritableCSSKeys } from "./css";
 import { type Effect, effect } from "./Effect";
-import evaluateExpression from "./expression-parser";
+import evaluateExpression, { type ParsedExpression } from "./expression-parser";
 import { scopeProxy } from "./proxy";
 
-type Registerable = HTMLElement | SVGElement | Element;
+type Registerable = HTMLElement | SVGElement | MathMLElement;
 
 const templLogicAttrs = [
 	"if",
@@ -52,10 +52,12 @@ const observer = new MutationObserver((mRecord) => {
 			for (const el of m.removedNodes as Iterable<Registerable>) {
 				if (el.nodeType !== Node.ELEMENT_NODE || el.isConnected)
 					continue;
-				RegEl._registry.get(el)?.dispose?.(el as Registerable);
+				RegEl._registry.get(el)?.dispose?.();
 
-				for (const d of el.querySelectorAll("*")) {
-					RegEl._registry.get(d)?.dispose?.(d);
+				for (const d of el.querySelectorAll(
+					"*"
+				) as Iterable<Registerable>) {
+					RegEl._registry.get(d)?.dispose?.();
 				}
 			}
 
@@ -83,8 +85,10 @@ export default class RegEl {
 	static _mutations = new WeakMap<Registerable, Map<string, () => void>>();
 	#mutations = new Map<string, () => void>();
 	#cleanups = new Set<() => void>();
+	el: Registerable;
 	state: Record<string, unknown>;
 	shown = false;
+	show_deps: RegEl[] = [];
 
 	constructor(el: Registerable, state: Record<string, unknown>) {
 		// Register self or throw
@@ -93,6 +97,7 @@ export default class RegEl {
 		RegEl._registry.set(el, this);
 
 		this.state = scopeProxy(state);
+		this.el = el;
 
 		// Prepare per-element mutation map once
 		RegEl._mutations.set(el, this.#mutations);
@@ -101,7 +106,7 @@ export default class RegEl {
 		for (const child of el.children) {
 			if (
 				!child.getAttribute("data-mf-ignore") &&
-				!RegEl._registry.has(child)
+				!RegEl._registry.has(child as Registerable)
 			) {
 				new RegEl(child as Registerable, state);
 			}
@@ -134,6 +139,7 @@ export default class RegEl {
 			}
 
 			const { fn, syncRef } = evaluateExpression(value);
+			let ef: Effect;
 
 			// Handle templating
 			if (templLogicAttrSet.has(attrName as templLogicAttr)) {
@@ -145,47 +151,66 @@ export default class RegEl {
 
 				if (["if", "elseif", "else"].includes(attrName)) {
 					const isElse = attrName === "else";
-					const isElseIfOrElse = isElse || attrName === "elseif";
 
-					if (isElseIfOrElse) {
-						const previousStates: Record<string, unknown>[] = [];
-						let cond = el.previousElementSibling as Element | null;
-						while (cond) {
-							if (
-								!prefixes.some(
-									(p) =>
-										cond?.hasAttribute(`${p}if`) ||
-										cond?.hasAttribute(`${p}elseif`)
-								)
+					if (isElse || attrName === "elseif") {
+						const prev =
+							el.previousElementSibling as Registerable | null;
+
+						if (!prev)
+							throwError("Malformed elseif/else sequence", el);
+						// biome-ignore lint/style/noNonNullAssertion: Nullish check above
+						const rl = RegEl._registry.get(prev!);
+
+						if (
+							!rl ||
+							!prefixes.some(
+								(p) =>
+									prev?.hasAttribute(`${p}if`) ||
+									prev?.hasAttribute(`${p}elseif`)
 							)
-								throwError(
-									"Malformed elseif/else sequence",
-									el
-								);
+						)
+							throwError("Malformed elseif/else sequence", el);
 
-							const rl = RegEl._registry.get(cond);
-							if (rl) {
-								previousStates.push(rl.state);
-								cond =
-									cond.previousElementSibling as Element | null;
-							}
-						}
-
-						// This is NOT CORRECT -- maybe __show should be an array that we add to, and then run an effect that runs through that array (triggering reactive updates)?
-						this.state.__show = () => {
-							for (const ps of previousStates) {
-								if (ps.__show) return false;
-							}
-							return isElse
-								? true
-								: fn({ ...this.state, element: el });
-						};
+						// biome-ignore lint/style/noNonNullAssertion: We have thrown if prev is null
+						this.show_deps.push(rl!);
 					}
+
+					this.state.__show = isElse ? () => true : fn;
 				} else if (attrName === "each") {
 				} else if (attrName === "await") {
 				} else if (["then", "catch"].includes(attrName)) {
 				}
 
+				// Handle show state
+				this.state.__show ??= () => true;
+				this.state.__awaitShow ??= () => true;
+
+				ef = effect(() => {
+					let show =
+						(this.state.__show as ParsedExpression["fn"])({
+							...state,
+							element: el,
+						}) &&
+						(this.state.__awaitShow as ParsedExpression["fn"])({
+							...state,
+							element: el,
+						});
+
+					for (const rl of this.show_deps) {
+						if (
+							(rl.state.__show as ParsedExpression["fn"])?.({
+								...rl.state,
+								element: rl.el,
+							})
+						)
+							show = false;
+					}
+
+					if (show) el.style.display = "";
+					else el.style.display = "none";
+				});
+
+				this.#cleanups.add(() => ef.stop());
 				attrWasRegistered.add(attrName);
 				continue;
 			}
@@ -238,7 +263,6 @@ export default class RegEl {
 
 			// Bindings: class:foo, style:color, etc.
 			const [attrPropName, attrProp] = attrName.split(":", 2);
-			let ef: Effect;
 			if (attrProp) {
 				if (sync)
 					throwError(
@@ -348,12 +372,12 @@ export default class RegEl {
 		}
 	}
 
-	dispose(el: Registerable) {
+	dispose() {
 		for (const c of this.#cleanups) {
 			try {
 				c();
 			} catch {}
 		}
-		RegEl._registry.delete(el);
+		RegEl._registry.delete(this.el);
 	}
 }
