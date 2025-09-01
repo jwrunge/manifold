@@ -1,19 +1,11 @@
 import type { WritableCSSKeys } from "./css";
 import { type Effect, effect } from "./Effect";
 import evaluateExpression from "./expression-parser";
+import { scopeProxy } from "./proxy";
 
 type Registerable = HTMLElement | SVGElement | Element;
 
-type templLogicAttr =
-	| "if"
-	| "elseif"
-	| "else"
-	| "each"
-	| "await"
-	| "then"
-	| "catch";
-
-const templLogicAttrSet = new Set([
+const templLogicAttrs = [
 	"if",
 	"elseif",
 	"else",
@@ -21,21 +13,11 @@ const templLogicAttrSet = new Set([
 	"await",
 	"then",
 	"catch",
-] as const);
+] as const;
 
+type templLogicAttr = (typeof templLogicAttrs)[number];
+const templLogicAttrSet = new Set(templLogicAttrs);
 const prefixes = [":", "data-mf-"] as const;
-
-// Return the first matching :if / :elseif (or data-mf-if / data-mf-elseif) value for an element
-const prevCondition = (node: Element | null): string | null => {
-	if (!node) return null;
-	for (const p of prefixes) {
-		const ifVal = node.getAttribute(`${p}if`);
-		if (ifVal != null) return ifVal;
-		const elseifVal = node.getAttribute(`${p}elseif`);
-		if (elseifVal != null) return elseifVal;
-	}
-	return null;
-};
 
 const throwError = (msg: string, cause?: unknown) => {
 	console.error(msg, cause);
@@ -101,6 +83,7 @@ export default class RegEl {
 	static _mutations = new WeakMap<Registerable, Map<string, () => void>>();
 	#mutations = new Map<string, () => void>();
 	#cleanups = new Set<() => void>();
+	state: Record<string, unknown>;
 	shown = false;
 
 	constructor(el: Registerable, state: Record<string, unknown>) {
@@ -108,6 +91,8 @@ export default class RegEl {
 		if (RegEl._registry.has(el))
 			throwError("Element already registered", el);
 		RegEl._registry.set(el, this);
+
+		this.state = scopeProxy(state);
 
 		// Prepare per-element mutation map once
 		RegEl._mutations.set(el, this.#mutations);
@@ -126,8 +111,6 @@ export default class RegEl {
 		// Track events actually registered on this element to avoid duplicates regardless of order
 		const registeredEvents = new Set<string>();
 
-		// (helper moved to module scope)
-
 		// Clone attributes to avoid skipping due to live NamedNodeMap mutation
 		for (const { name, value } of Array.from(el.attributes)) {
 			let attrName = "";
@@ -142,8 +125,6 @@ export default class RegEl {
 			if (!attrName || attrName === "register") continue; // not a manifold attribute, skip
 			if (attrWasRegistered.has(attrName))
 				throwError(`Attribute ${attrName} duplicate`, el); // Prevent double registration
-
-			// (mutation map set once per element above)
 
 			// Sync flag
 			let sync = false;
@@ -163,18 +144,42 @@ export default class RegEl {
 					);
 
 				if (["if", "elseif", "else"].includes(attrName)) {
-					const isElseIfOrElse =
-						attrName === "else" || attrName === "elseif";
-					const previousShowStates: unknown[] = [];
+					const isElse = attrName === "else";
+					const isElseIfOrElse = isElse || attrName === "elseif";
 
 					if (isElseIfOrElse) {
+						const previousStates: Record<string, unknown>[] = [];
 						let cond = el.previousElementSibling as Element | null;
 						while (cond) {
-							const pc = prevCondition(cond);
-							if (pc != null) previousShowStates.push(pc);
-							cond =
-								cond.previousElementSibling as Element | null;
+							if (
+								!prefixes.some(
+									(p) =>
+										cond?.hasAttribute(`${p}if`) ||
+										cond?.hasAttribute(`${p}elseif`)
+								)
+							)
+								throwError(
+									"Malformed elseif/else sequence",
+									el
+								);
+
+							const rl = RegEl._registry.get(cond);
+							if (rl) {
+								previousStates.push(rl.state);
+								cond =
+									cond.previousElementSibling as Element | null;
+							}
 						}
+
+						// This is NOT CORRECT -- maybe __show should be an array that we add to, and then run an effect that runs through that array (triggering reactive updates)?
+						this.state.__show = () => {
+							for (const ps of previousStates) {
+								if (ps.__show) return false;
+							}
+							return isElse
+								? true
+								: fn({ ...this.state, element: el });
+						};
 					}
 				} else if (attrName === "each") {
 				} else if (attrName === "await") {
