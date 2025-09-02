@@ -152,6 +152,7 @@ export default class RegEl {
 
 				if (templLogicAttrSet.has(attr))
 					if (attr === "each") {
+						throwError(`Each not yet supported`, el);
 					} else {
 						const isElse = attr === "else";
 
