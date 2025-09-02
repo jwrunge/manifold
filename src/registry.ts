@@ -376,6 +376,47 @@ export default class RegEl {
 			attrWasRegistered.add(attrName);
 			el.removeAttribute(name);
 		}
+
+		// For every text node in the element, set up an effect to update it when relevant state changes
+		for (const node of Array.from(el.childNodes)) {
+			if (node.nodeType === Node.TEXT_NODE) {
+				const text = node.textContent ?? "";
+				if (text.includes("${")) {
+					const parts = text.split(/(\$\{.+?\})/g);
+					if (parts.length > 1) {
+						const textEf = effect(() => {
+							let final = "";
+							for (const part of parts) {
+								if (
+									part.startsWith("${") &&
+									part.endsWith("}")
+								) {
+									const expr = part.slice(2, -1).trim();
+									if (expr) {
+										console.log("PARSING EXPR", expr);
+										try {
+											const { fn: pfn } =
+												evaluateExpression(expr);
+											const res = pfn({
+												...state,
+												element: el,
+											});
+											final += res ?? "";
+										} catch {
+											final += "";
+										}
+									}
+								} else {
+									final += part;
+								}
+							}
+							node.textContent = final;
+						});
+						this.#cleanups.add(() => textEf.stop());
+					}
+				}
+			}
+		}
 	}
 
 	dispose() {
