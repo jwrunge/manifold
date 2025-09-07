@@ -66,18 +66,7 @@ export default function ultraMinifyPlugin() {
 					}
 
 					// Curated string pool (non-user-facing literals)
-					const curated = [
-						"data-if",
-						"data-elseif",
-						"data-else",
-						"data-each",
-						":await",
-						":then",
-						":catch",
-						"data-await",
-						"value",
-						"err",
-					];
+					const curated = ["value", "err"];
 					const curatedEntries = curated.map((s) => [s, 1] as const);
 					// Dynamic pooling for literals appearing >= 3 times (outside imports and object key contexts)
 					const dynamicCounts: Record<string, number> =
