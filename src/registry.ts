@@ -87,8 +87,8 @@ export default class RegEl {
 	#cleanups = new Set<() => void>();
 	el: Registerable;
 	state: Record<string, unknown>;
-	shown = false;
-	show_deps: RegEl[] = [];
+	show: ParsedExpression["fn"] = () => false;
+	awaitShow?: ParsedExpression["fn"];
 
 	constructor(el: Registerable, state: Record<string, unknown>) {
 		// Register self or throw
@@ -150,6 +150,8 @@ export default class RegEl {
 						el
 					);
 
+				const showDeps: RegEl[] = [];
+
 				if (templLogicAttrSet.has(attr))
 					if (attr === "each") {
 						throwError(`Each not yet supported`, el);
@@ -182,30 +184,28 @@ export default class RegEl {
 								);
 
 							// biome-ignore lint/style/noNonNullAssertion: We have thrown if prev is null
-							this.show_deps.push(rl!);
+							showDeps.push(rl!);
 						}
 
-						this.state.__show = isElse ? () => true : fn;
+						this.show = isElse ? () => true : fn;
 					}
 
 				// Handle show state
-				this.state.__show ??= () => true;
-				this.state.__awaitShow ??= () => true;
-
 				ef = effect(() => {
 					let show =
-						(this.state.__show as ParsedExpression["fn"])({
+						(this.show({
 							...state,
 							element: el,
 						}) &&
-						(this.state.__awaitShow as ParsedExpression["fn"])({
-							...state,
-							element: el,
-						});
+							this.awaitShow?.({
+								...state,
+								element: el,
+							})) ??
+						true;
 
-					for (const rl of this.show_deps) {
+					for (const rl of showDeps) {
 						if (
-							(rl.state.__show as ParsedExpression["fn"])?.({
+							rl.show({
 								...rl.state,
 								element: rl.el,
 							})
