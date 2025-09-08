@@ -16,13 +16,12 @@
 		"pretest": "npm run -s build"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.1.4",
-		"@types/node": "^22.17.2",
+		"@biomejs/biome": "^2.2.3",
+		"@types/node": "^24.3.1",
 		"esbuild": "^0.25.9",
 		"jsdom": "^26.1.0",
-		"magic-string": "^0.30.11",
-		"typescript": "~5.8.3",
-		"vite": "^7.1.2",
+		"typescript": "~5.9.2",
+		"vite": "^7.1.4",
 		"vitest": "^3.2.4"
 	}
 }
