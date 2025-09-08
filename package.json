@@ -6,7 +6,7 @@
 	"sideEffects": false,
 	"scripts": {
 		"dev": "vite",
-		"build": "vite build",
+		"build": "vite build && node ./minify.js",
 		"build:debug": "MF_DEBUG_BUILD=1 tsc && MF_DEBUG_BUILD=1 node ./scripts/build.mjs",
 		"test": "vitest --run",
 		"test:watch": "vitest",
@@ -22,6 +22,7 @@
 		"jsdom": "^26.1.0",
 		"typescript": "~5.9.2",
 		"vite": "^7.1.4",
-		"vitest": "^3.2.4"
+		"vitest": "^3.2.4",
+		"terser": "^5.44.0"
 	}
 }
