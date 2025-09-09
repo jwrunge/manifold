@@ -1,20 +1,15 @@
 // Expression parser expects state injected via ctx.__state
-
 export interface ParsedExpression {
-	fn: (ctx?: Record<string, unknown>) => unknown;
+	_fn: (ctx?: Record<string, unknown>) => unknown;
 	// For simple reference chains (e.g., foo, foo.bar, foo[0].baz), provide a setter to update state
 	// Not provided for expressions with operators or function calls
-	syncRef?: (
+	_syncRef?: (
 		ctx: Record<string, unknown> | undefined,
 		value: unknown
 	) => void;
 }
-
-// LRU cache (simple FIFO trim) for parsed expressions
 const CACHE = new Map<string, ParsedExpression>();
 const CACHE_MAX = 500;
-
-// Simple literal / identifier helpers
 const LITS: Record<string, unknown> = {
 	true: true,
 	false: false,
@@ -22,8 +17,6 @@ const LITS: Record<string, unknown> = {
 	undefined: undefined,
 };
 const NUM = /^-?\d+(?:\.[\d]+)?$/;
-
-// Chain segments
 interface ChainSegmentProp {
 	t: "prop";
 	k: string;
@@ -37,7 +30,6 @@ interface ChainSegmentCall {
 	args: ParsedExpression[];
 }
 type ChainSeg = ChainSegmentProp | ChainSegmentIdx | ChainSegmentCall;
-
 const splitCSV = (src: string): string[] => {
 	const out: string[] = [];
 	if (!src.trim()) return out;
@@ -70,8 +62,6 @@ const splitCSV = (src: string): string[] => {
 	out.push(src.slice(last).trim());
 	return out.filter(Boolean);
 };
-
-// Find a top-level binary operator split using precedence and optional unary +/- guard
 const splitOuterRightmost = (
 	expr: string,
 	ops: string[],
@@ -95,7 +85,6 @@ const splitOuterRightmost = (
 		else if (c === "]") b++;
 		else if (c === "[") b--;
 		if (p !== 0 || b !== 0) continue;
-		// ops must be ordered longest-first to avoid partial matches
 		for (const op of ops) {
 			const start = i - op.length + 1;
 			if (start < 0) continue;
@@ -103,23 +92,23 @@ const splitOuterRightmost = (
 			const l = expr.slice(0, start).trim();
 			const r = expr.slice(i + 1).trim();
 			if (!l || !r) continue;
-			if (guardUnaryPM && (op === "+" || op === "-")) {
-				const last = l[l.length - 1] || "";
-				if (/[!+\-*/%&|^(<>=?:]$/.test(last)) continue; // looks like unary, keep scanning
-			}
+			if (
+				guardUnaryPM &&
+				(op === "+" || op === "-") &&
+				/[!+\-*/%&|^(<>=?:]$/.test(l[l.length - 1] || "")
+			)
+				continue;
 			return [l, op, r];
 		}
 	}
 	return null;
 };
-
 const splitByPrecedence = (expr: string): [string, string, string] | null => {
-	// From lowest to higher precedence
 	const levels: string[][] = [
 		["??"],
 		["||"],
 		["&&"],
-		["===", "!==", ">=", "<=", ">", "<"], // longest-first already
+		["===", "!==", ">=", "<=", ">", "<"],
 		["+", "-"],
 		["*", "/", "%"],
 	];
@@ -132,10 +121,9 @@ const splitByPrecedence = (expr: string): [string, string, string] | null => {
 	}
 	return null;
 };
-
 const buildChain = (
 	expr: string
-): { base: string; segs: ChainSeg[] } | null => {
+): { _base: string; _segs: ChainSeg[] } | null => {
 	if (!/^[a-zA-Z_$]/.test(expr)) return null;
 	let i = 0,
 		base = "";
@@ -181,19 +169,16 @@ const buildChain = (
 		}
 		return null;
 	}
-	return { base, segs };
+	return { _base: base, _segs: segs };
 };
-
 const parse = (raw: string): ParsedExpression => {
 	const expr = raw.trim();
-	if (!expr) return { fn: () => undefined };
-
-	// Strip a single pair of outer parentheses if they wrap the whole expression
+	if (!expr) return { _fn: () => undefined };
 	if (expr[0] === "(" && expr[expr.length - 1] === ")") {
 		let p = 0,
 			b = 0,
 			q = "";
-		let wraps = false;
+		let wraps = true;
 		for (let i = 0; i < expr.length; i++) {
 			const c = expr[i];
 			if (q) {
@@ -208,23 +193,21 @@ const parse = (raw: string): ParsedExpression => {
 			else if (c === ")") p--;
 			else if (c === "[") b++;
 			else if (c === "]") b--;
-			if (p === 0 && b === 0) {
-				wraps = i === expr.length - 1;
+			if (p === 0 && b === 0 && i < expr.length - 1) {
+				wraps = false;
 				break;
 			}
 		}
 		if (wraps) return parse(expr.slice(1, -1));
 	}
-
-	// Top-level ternary operator parsing: cond ? then : else
 	{
 		let p = 0,
 			b = 0,
-			cBr = 0;
-		let q = "";
-		let qDepth = 0;
-		let qIdx = -1;
-		let cIdx = -1;
+			cBr = 0,
+			q = "",
+			qDepth = 0,
+			qIdx = -1,
+			cIdx = -1;
 		for (let i = 0; i < expr.length; i++) {
 			const ch = expr[i];
 			if (q) {
@@ -254,20 +237,16 @@ const parse = (raw: string): ParsedExpression => {
 			}
 		}
 		if (qIdx !== -1 && cIdx !== -1) {
-			const cond = expr.slice(0, qIdx).trim();
-			const thenP = expr.slice(qIdx + 1, cIdx).trim();
-			const elseP = expr.slice(cIdx + 1).trim();
-			if (cond && thenP && elseP) {
-				const cnd = parse(cond);
-				const thn = parse(thenP);
-				const els = parse(elseP);
+			const cond = parse(expr.slice(0, qIdx).trim());
+			const thenP = parse(expr.slice(qIdx + 1, cIdx).trim());
+			const elseP = parse(expr.slice(cIdx + 1).trim());
+			if (cond && thenP && elseP)
 				return {
-					fn: (ctx) => (cnd.fn(ctx) ? thn.fn(ctx) : els.fn(ctx)),
+					_fn: (ctx) =>
+						cond._fn(ctx) ? thenP._fn(ctx) : elseP._fn(ctx),
 				};
-			}
 		}
 	}
-
 	const bin = splitByPrecedence(expr);
 	if (bin) {
 		const [L, OP, R] = bin;
@@ -275,18 +254,14 @@ const parse = (raw: string): ParsedExpression => {
 		const r = parse(R);
 		switch (OP) {
 			case "||":
-				return {
-					fn: (c) => l.fn(c) || r.fn(c),
-				};
+				return { _fn: (c) => l._fn(c) || r._fn(c) };
 			case "&&":
-				return {
-					fn: (c) => l.fn(c) && r.fn(c),
-				};
+				return { _fn: (c) => l._fn(c) && r._fn(c) };
 			case "??":
 				return {
-					fn: (c) => {
-						const v = l.fn(c);
-						return v == null ? r.fn(c) : v;
+					_fn: (c) => {
+						const v = l._fn(c);
+						return v == null ? r._fn(c) : v;
 					},
 				};
 			case "+":
@@ -295,9 +270,9 @@ const parse = (raw: string): ParsedExpression => {
 			case "/":
 			case "%":
 				return {
-					fn: (c) => {
-						const A = l.fn(c) as unknown;
-						const B = r.fn(c) as unknown;
+					_fn: (c) => {
+						const A = l._fn(c) as unknown;
+						const B = r._fn(c) as unknown;
 						if (OP === "+")
 							return typeof A === "string" ||
 								typeof B === "string"
@@ -311,7 +286,6 @@ const parse = (raw: string): ParsedExpression => {
 							return (B as number) === 0
 								? undefined
 								: (A as number) / (B as number);
-						// OP === "%"
 						return (B as number) === 0
 							? undefined
 							: (A as number) % (B as number);
@@ -319,9 +293,9 @@ const parse = (raw: string): ParsedExpression => {
 				};
 			default:
 				return {
-					fn: (c) => {
-						const A = l.fn(c) as unknown;
-						const B = r.fn(c) as unknown;
+					_fn: (c) => {
+						const A = l._fn(c) as unknown;
+						const B = r._fn(c) as unknown;
 						switch (OP) {
 							case "===":
 								return A === B;
@@ -340,135 +314,102 @@ const parse = (raw: string): ParsedExpression => {
 				};
 		}
 	}
-
-	if (expr[0] === "!" && expr.length > 1) {
-		const v = parse(expr.slice(1));
-		return { fn: (c) => !v.fn(c) };
-	}
-	if (expr[0] === "-" && expr.length > 1) {
-		const v = parse(expr.slice(1));
-		return { fn: (c) => -(v.fn(c) as number) };
-	}
-
-	if (expr in LITS) return { fn: () => LITS[expr] };
-	if (NUM.test(expr)) return { fn: () => +expr };
+	if (expr[0] === "!" && expr.length > 1)
+		return { _fn: (c) => !parse(expr.slice(1))._fn(c) };
+	if (expr[0] === "-" && expr.length > 1)
+		return { _fn: (c) => -(parse(expr.slice(1))._fn(c) as number) };
+	if (expr in LITS) return { _fn: () => LITS[expr] };
+	if (NUM.test(expr)) return { _fn: () => +expr };
 	const str = expr.match(/^(?:'([^']*)'|"([^"]*)")$/);
-	if (str) return { fn: () => str[1] ?? str[2] };
-
+	if (str) return { _fn: () => str[1] ?? str[2] };
 	const chain = buildChain(expr);
-	if (chain)
-		return {
-			fn: (c = {}) => {
-				const ctx = c as Record<string, unknown>;
-				let root: unknown;
-				const injected = (ctx as Record<string, unknown>).__state as
-					| Record<string, unknown>
-					| undefined;
-				if (ctx && chain.base in ctx)
-					root = (ctx as Record<string, unknown>)[chain.base];
-				else if (
-					typeof globalThis !== "undefined" &&
-					chain.base === "Promise" &&
-					chain.base in (globalThis as Record<string, unknown>)
-				)
-					root = (globalThis as Record<string, unknown>)[chain.base];
-				else if (injected)
-					root = (injected as Record<string, unknown>)[
-						chain.base as never
-					];
-				else root = undefined;
-				let cur = root,
-					lastObjForCall: unknown;
-				for (const seg of chain.segs) {
-					if (cur == null) return undefined;
-					if (seg.t === "prop") {
+	if (chain) {
+		const fn = (c = {}) => {
+			const ctx = c as Record<string, unknown>;
+			let root: unknown;
+			const injected = ctx.__state as Record<string, unknown> | undefined;
+			if (ctx && chain._base in ctx) root = ctx[chain._base];
+			else if (
+				typeof globalThis !== "undefined" &&
+				chain._base === "Promise" &&
+				chain._base in (globalThis as Record<string, unknown>)
+			)
+				root = (globalThis as Record<string, unknown>)[chain._base];
+			else if (injected) root = injected[chain._base as never];
+			else root = undefined;
+			let cur = root,
+				lastObjForCall: unknown;
+			for (const seg of chain._segs) {
+				if (cur == null) return undefined;
+				if (seg.t === "prop") {
+					lastObjForCall = cur;
+					cur = (cur as Record<string, unknown>)[seg.k as never];
+				} else if (seg.t === "idx") {
+					lastObjForCall = cur;
+					const key = seg.e._fn(ctx);
+					cur = (cur as Record<string, unknown>)[key as never];
+				} else if (seg.t === "call") {
+					const fn = cur as unknown;
+					if (typeof fn === "function") {
+						const argVals = seg.args.map((a) => a._fn(ctx));
+						cur = (fn as (...x: unknown[]) => unknown).apply(
+							lastObjForCall !== undefined
+								? lastObjForCall
+								: undefined,
+							argVals
+						);
 						lastObjForCall = cur;
-						cur = (cur as Record<string, unknown>)[seg.k as never];
-					} else if (seg.t === "idx") {
-						lastObjForCall = cur;
-						const key = seg.e.fn(ctx);
-						cur = (cur as Record<string, unknown>)[key as never];
-					} else if (seg.t === "call") {
-						const fn = cur as unknown;
-						if (typeof fn === "function") {
-							const argVals = seg.args.map((a) => a.fn(ctx));
-							cur = (fn as (...x: unknown[]) => unknown).apply(
-								lastObjForCall !== undefined
-									? lastObjForCall
-									: undefined,
-								argVals
-							);
-							lastObjForCall = cur;
-						} else return undefined;
-					}
+					} else return undefined;
 				}
-				return cur;
-			},
-			// Provide syncRef setter only if no function calls present in the chain
-			...(chain.segs.some((s) => s.t === "call")
-				? {}
-				: {
-						syncRef: (
-							c: Record<string, unknown> | undefined,
-							value: unknown
-						) => {
-							const ctx = (c || {}) as Record<string, unknown>;
-							const injected = (ctx as Record<string, unknown>)
-								.__state as Record<string, unknown> | undefined;
-							// Resolve root for assignment (prefer injected state for root writes)
-							let rootHolder: Record<string, unknown> | undefined;
-							if (injected && chain.base in injected)
-								rootHolder = injected;
-							else if (ctx && chain.base in ctx) rootHolder = ctx;
-							else return; // cannot assign
-
-							// If assigning to the root variable directly (no segs)
-							if (chain.segs.length === 0) {
-								(rootHolder as Record<string, unknown>)[
-									chain.base
-								] = value as unknown;
-								return;
-							}
-
-							// Walk to parent container of last segment
-							let obj: unknown = (
-								rootHolder as Record<string, unknown>
-							)[chain.base as never];
-							for (let i = 0; i < chain.segs.length - 1; i++) {
-								const seg = chain.segs[i];
-								if (obj == null) return;
-								if (seg.t === "prop") {
-									obj = (obj as Record<string, unknown>)[
-										seg.k as never
-									];
-								} else if (seg.t === "idx") {
-									const k = seg.e.fn(ctx) as unknown;
-									obj = (obj as Record<string, unknown>)[
-										k as never
-									];
-								}
-							}
-							if (obj == null) return;
-							const last = chain.segs[chain.segs.length - 1];
-							if (last.t === "prop") {
-								(obj as Record<string, unknown>)[
-									last.k as never
-								] = value as unknown;
-							} else if (last.t === "idx") {
-								const lk = last.e.fn(ctx) as unknown;
-								(obj as Record<string, unknown>)[lk as never] =
-									value as unknown;
-							}
-						},
-				  }),
+			}
+			return cur;
 		};
-
-	// drop array/object literal creation
-
-	// fallback: raw string
-	return { fn: () => expr };
+		const syncRef = chain._segs.some((s) => s.t === "call")
+			? undefined
+			: (c: Record<string, unknown> | undefined, value: unknown) => {
+					const ctx = (c || {}) as Record<string, unknown>;
+					const injected = ctx.__state as
+						| Record<string, unknown>
+						| undefined;
+					let rootHolder: Record<string, unknown> | undefined;
+					if (injected && chain._base in injected)
+						rootHolder = injected;
+					else if (ctx && chain._base in ctx) rootHolder = ctx;
+					else return;
+					if (chain._segs.length === 0) {
+						(rootHolder as Record<string, unknown>)[chain._base] =
+							value as unknown;
+						return;
+					}
+					let obj: unknown = (rootHolder as Record<string, unknown>)[
+						chain._base as never
+					];
+					for (let i = 0; i < chain._segs.length - 1; i++) {
+						const seg = chain._segs[i];
+						if (obj == null) return;
+						if (seg.t === "prop")
+							obj = (obj as Record<string, unknown>)[
+								seg.k as never
+							];
+						else if (seg.t === "idx")
+							obj = (obj as Record<string, unknown>)[
+								seg.e._fn(ctx) as never
+							];
+					}
+					if (obj == null) return;
+					const last = chain._segs[chain._segs.length - 1];
+					if (last.t === "prop")
+						(obj as Record<string, unknown>)[last.k as never] =
+							value as unknown;
+					else if (last.t === "idx")
+						(obj as Record<string, unknown>)[
+							last.e._fn(ctx) as never
+						] = value as unknown;
+			  };
+		return { _fn: fn, _syncRef: syncRef };
+	}
+	return { _fn: () => expr };
 };
-
 const evaluateExpression = (expr: string): ParsedExpression => {
 	const cached = CACHE.get(expr);
 	if (cached) return cached;
@@ -480,5 +421,4 @@ const evaluateExpression = (expr: string): ParsedExpression => {
 	}
 	return parsed;
 };
-
 export default evaluateExpression;

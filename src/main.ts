@@ -62,13 +62,13 @@ export default class StateBuilder<TState extends StateConstraint> {
 			let hasRun = false,
 				prevVal: unknown;
 
-			Effect.acquire(() => {
+			Effect._acquire(() => {
 				const nextVal = deriveFn(state);
 				if (hasRun && isEqual(prevVal, nextVal)) return;
 				prevVal = nextVal;
 				hasRun = true;
 				(state as Record<string, unknown>)[key] = nextVal;
-			}).run();
+			})._run();
 		}
 		this.#built = true;
 
