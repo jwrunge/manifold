@@ -42,12 +42,51 @@
 		<div :else>The count is 30 or more! ${count}</div>
 		<div>Count squared is ${count * count}</div>
 
+		<!-- Await / Then / Catch demo with reload toggle -->
+		<div style="margin-top:1rem;">
+			<button :onclick="loadUser()" style="margin-bottom:.5rem;">Reload User (alternates success/error)</button>
+			<div :await="currentUserPromise">Loading user...</div>
+			<div :then>User loaded: ${user.name} (${user.age})</div>
+			<div :catch style="color:red;">Failed to load user: ${errorMsg}</div>
+		</div>
+			</div>
+		</div>
+
 		<script type="module">
 			import $ from "./dist/manifold.js";
 			const myState = $.create()
 				.add("count", 0)
 				.add("popup", (e) => console.log(e))
+				.add("user", { name: "(pending)", age: 0 })
+				.add("errorMsg", "")
+				.add("nextFail", false)
+				.add("currentUserPromise", null)
 				.build();
+
+			myState.loadUser = () => {
+				myState.errorMsg = "";
+				const fail = !!myState.nextFail;
+				myState.nextFail = !fail;
+				const p = new Promise((res, rej) =>
+					setTimeout(() => {
+						if (fail) rej(new Error("Network"));
+						else res({ name: "Ada", age: 37 + Math.floor(Math.random()*10) });
+					}, 800)
+				);
+				myState.currentUserPromise = p;
+				p.then(
+					(u) => (myState.user = u),
+					(err) => (myState.errorMsg = err && err.message ? err.message : String(err))
+				).finally(() => {
+					// Clear promise so re-click shows loading again (trigger await effect)
+					// Slight delay lets then/catch element render before clearing
+					setTimeout(() => (myState.currentUserPromise = null), 0);
+				});
+				return p;
+			};
+
+			// Initial load
+			myState.loadUser();
 
 			// setInterval(() => {
 			// 	myState.count += 1;

@@ -3,6 +3,7 @@ import { type Effect, effect } from "./Effect";
 import evaluateExpression, { type ParsedExpression } from "./expression-parser";
 import { scopeProxy } from "./proxy";
 type Registerable = HTMLElement | SVGElement | MathMLElement;
+
 const templLogicAttrs = [
 	"if",
 	"elseif",
@@ -12,6 +13,7 @@ const templLogicAttrs = [
 	"then",
 	"catch",
 ] as const;
+
 type templLogicAttr = (typeof templLogicAttrs)[number];
 const templLogicAttrSet = new Set(templLogicAttrs);
 const prefixes = [":", "data-mf-"] as const;
@@ -19,6 +21,9 @@ const throwError = (msg: string, cause?: unknown) => {
 	console.error(msg, cause);
 	throw new Error("Manifold Error");
 };
+
+// (helpers removed after condensation attempt; kept minimal to avoid unused warnings)
+
 const observer = new MutationObserver((mRecord) => {
 	for (const m of mRecord) {
 		if (m.type === "childList")
@@ -40,11 +45,13 @@ const observer = new MutationObserver((mRecord) => {
 		}
 	}
 });
+
 observer.observe(document, {
 	childList: true,
 	subtree: true,
 	attributes: true,
 });
+
 export default class RegEl {
 	static _registry = new WeakMap<Registerable, RegEl>();
 	static _mutations = new WeakMap<Registerable, Map<string, () => void>>();
@@ -55,13 +62,18 @@ export default class RegEl {
 	_show: ParsedExpression["_fn"] = () => false;
 	_awaitShow?: ParsedExpression["_fn"];
 	_each?: ParsedExpression["_fn"];
+
 	constructor(el: Registerable, state: Record<string, unknown>) {
 		if (RegEl._registry.has(el))
 			throwError("Element already registered", el);
+
 		RegEl._registry.set(el, this);
+
 		this._state = scopeProxy(state);
 		this._el = el;
+
 		RegEl._mutations.set(el, this.#mutations);
+
 		for (const child of el.children) {
 			if (
 				!child.getAttribute("data-mf-ignore") &&
@@ -70,8 +82,10 @@ export default class RegEl {
 				new RegEl(child as Registerable, state);
 			}
 		}
+
 		const attrWasRegistered = new Set<string>();
 		const registeredEvents = new Set<string>();
+
 		for (const { name, value } of Array.from(el.attributes)) {
 			let attrName = "";
 			for (const prefix of prefixes) {
@@ -83,6 +97,7 @@ export default class RegEl {
 			if (!attrName || attrName === "register") continue;
 			if (attrWasRegistered.has(attrName))
 				throwError(`Attribute ${attrName} duplicate`, el);
+
 			let sync = false;
 			if (attrName.startsWith("sync:")) {
 				sync = true;
@@ -90,14 +105,95 @@ export default class RegEl {
 			}
 			const { _fn, _syncRef } = evaluateExpression(value);
 			let ef: Effect;
+
 			if (templLogicAttrSet.has(attrName as templLogicAttr)) {
 				if (sync)
 					throwError(
 						`Sync not supported on templating attributes`,
 						el
 					);
+
+				// Minimal await / then / catch handling
+				if (attrName === "await") {
+					// Capture associated then & catch siblings (first occurrence each)
+					let thenEl: Registerable | null = null;
+					let catchEl: Registerable | null = null;
+					for (
+						let sib = el.nextElementSibling as Registerable | null;
+						sib;
+						sib = sib.nextElementSibling as Registerable | null
+					) {
+						// Stop if we hit another control start (avoid bleeding)
+						if (
+							prefixes.some((p) =>
+								["if", "elseif", "else", "await", "each"].some(
+									(k) => sib!.hasAttribute(`${p}${k}`)
+								)
+							)
+						)
+							break;
+						if (
+							!thenEl &&
+							prefixes.some((p) => sib!.hasAttribute(`${p}then`))
+						)
+							thenEl = sib;
+						else if (
+							!catchEl &&
+							prefixes.some((p) => sib!.hasAttribute(`${p}catch`))
+						)
+							catchEl = sib;
+						if (thenEl && catchEl) break;
+					}
+					if (thenEl) (thenEl as HTMLElement).style.display = "none";
+					if (catchEl)
+						(catchEl as HTMLElement).style.display = "none";
+					let token = 0;
+					const awEffect = effect(() => {
+						const out = _fn({ ...state, element: el });
+						const myTok = ++token;
+						(el as HTMLElement).style.display = ""; // pending visible
+						if (thenEl)
+							(thenEl as HTMLElement).style.display = "none";
+						if (catchEl)
+							(catchEl as HTMLElement).style.display = "none";
+						if (out && typeof (out as any).then === "function") {
+							(out as Promise<unknown>).then(
+								() => {
+									if (myTok !== token) return;
+									(el as HTMLElement).style.display = "none";
+									if (thenEl)
+										(thenEl as HTMLElement).style.display =
+											"";
+								},
+								() => {
+									if (myTok !== token) return;
+									(el as HTMLElement).style.display = "none";
+									if (catchEl)
+										(catchEl as HTMLElement).style.display =
+											"";
+								}
+							);
+						} else {
+							// Synchronous => resolved
+							(el as HTMLElement).style.display = "none";
+							if (thenEl)
+								(thenEl as HTMLElement).style.display = "";
+						}
+					});
+					this.#cleanups.add(() => awEffect._stop());
+					el.removeAttribute(name);
+					attrWasRegistered.add(attrName);
+					continue;
+				}
+				if (attrName === "then" || attrName === "catch") {
+					(el as HTMLElement).style.display = "none"; // visibility controlled by preceding await
+					el.removeAttribute(name);
+					attrWasRegistered.add(attrName);
+					continue;
+				}
 				const isElse = attrName === "else";
 				const showDeps: RegEl[] = [];
+
 				if (isElse || attrName === "elseif") {
 					const prev =
 						el.previousElementSibling as Registerable | null;
@@ -130,6 +226,7 @@ export default class RegEl {
 				attrWasRegistered.add(attrName);
 				continue;
 			}
+
 			if (attrName.startsWith("on")) {
 				if (sync)
 					throwError(`Sync not supported on event handlers`, el);
@@ -167,13 +264,16 @@ export default class RegEl {
 				attrWasRegistered.add(attrName);
 				continue;
 			}
+
 			const [attrPropName, attrProp] = attrName.split(":", 2);
+
 			if (attrProp) {
 				if (sync)
 					throwError(
 						`Sync not supported on granular bindings: ${attrName}`,
 						el
 					);
+
 				if (attrPropName === "style" || attrPropName === "class") {
 					ef = effect(() => {
 						const res = _fn({ ...state, element: el });
@@ -200,6 +300,7 @@ export default class RegEl {
 						else el.setAttribute(attrName, String(result));
 					}
 				});
+
 				if (sync) {
 					const capture = () => {
 						try {
@@ -238,19 +339,23 @@ export default class RegEl {
 					}
 				}
 			}
+
 			this.#cleanups.add(() => ef._stop());
 			attrWasRegistered.add(attrName);
 			el.removeAttribute(name);
 		}
+
 		for (const node of Array.from(el.childNodes))
 			this._handleTextNode(node);
 	}
+
 	_setupSyncEvents = (
 		attrName: "value" | "checked" | "open",
 		registered: Set<string>,
 		handler: EventListener
 	) => {
 		const { _el: el } = this;
+
 		const [types, conflictAttrs] =
 			attrName === "value"
 				? [
@@ -260,20 +365,25 @@ export default class RegEl {
 				: attrName === "checked"
 				? [["change"], ["onchange", "onchecked"]]
 				: [["toggle"], ["ontoggle"]];
+
 		const errorMsg = `sync:${attrName} conflicts with existing :${conflictAttrs.join(
 			" or :"
 		)}`;
+
 		for (const ca of conflictAttrs)
 			if (el.hasAttribute(`:${ca}`) || el.hasAttribute(`data-mf-${ca}`))
 				throwError(errorMsg, el);
+
 		for (const t of types) {
 			if (registered.has(t)) throwError(errorMsg, el);
 			el.addEventListener(t, handler);
 		}
+
 		return () => {
 			for (const t of types) el.removeEventListener(t, handler);
 		};
 	};
+
 	_handleTextNode(node: Node) {
 		if (node.nodeType !== Node.TEXT_NODE) return;
 		const parts = (node.textContent ?? "").split(/(\$\{.+?\})/g);
@@ -299,6 +409,7 @@ export default class RegEl {
 			this.#cleanups.add(() => textEffect._stop());
 		}
 	}
+
 	_dispose() {
 		for (const c of this.#cleanups) {
 			try {
