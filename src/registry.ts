@@ -61,7 +61,9 @@ export default class RegEl {
 	_el: Registerable;
 	_state: Record<string, unknown>;
 	_show: ParsedExpression["_fn"] = () => false;
-	_awaitShow?: ParsedExpression["_fn"];
+	_awaitRoot?: ParsedExpression["_fn"] | Promise<ParsedExpression["_fn"]>;
+	_awaitShow?: boolean;
+	_awaitState?: "await" | "then" | "catch";
 	_each?: ParsedExpression["_fn"];
 	_cachedContent?: DocumentFragment;
 
@@ -105,7 +107,12 @@ export default class RegEl {
 				sync = true;
 				attrName = attrName.slice(5);
 			}
-			const { _fn, _syncRef } = evaluateExpression(value);
+
+			const [exp, aliasStr] = value
+				.split(/\s*as\s*/)
+				.map((s) => s.trim());
+
+			const { _fn, _syncRef } = evaluateExpression(exp);
 
 			if (
 				this._handleTemplating(
@@ -113,16 +120,19 @@ export default class RegEl {
 					name,
 					attrWasRegistered,
 					sync,
-					_fn
+					_fn,
+					aliasStr
 				)
 			)
 				continue;
+
+			if (aliasStr) throwError(`Aliasing not supported on ${value}`, el);
 
 			if (attrName.startsWith("on")) {
 				if (sync)
 					throwError(`Sync not supported on event handlers`, el);
 				const type = attrName.slice(2);
-				const arrow = value.match(/^\(\s*([^)]*)?\s*\)\s*=>\s*(.+)$/);
+				const arrow = exp.match(/^\(\s*([^)]*)?\s*\)\s*=>\s*(.+)$/);
 				let handler: (e: Event) => void;
 				if (arrow) {
 					const [params, bodyExpr] = [
@@ -309,10 +319,17 @@ export default class RegEl {
 		attrTagName: string,
 		attrWasRegistered: Set<string>,
 		sync: boolean,
-		_fn: (ctx?: Record<string, unknown> | undefined) => unknown
+		_fn: (ctx?: Record<string, unknown> | undefined) => unknown,
+		aliasStr?: string
 	) {
 		if (templLogicAttrSet.has(attrName as templLogicAttr)) {
+			const isConditional = ["if", "elseif", "else"].includes(attrName);
+
+			if (aliasStr && isConditional)
+				throwError(`Aliasing not supported on ${attrName}`, this._el);
+
 			const { _el: el, _state: state } = this;
+
 			if (sync)
 				throwError(`Sync not supported on templating attributes`, el);
 
@@ -323,76 +340,39 @@ export default class RegEl {
 				this._cachedContent = frag;
 			}
 
-			if (attrName === "await") {
-				// Capture associated then & catch siblings (first occurrence each)
-				let thenEl: Registerable | null = null;
-				let catchEl: Registerable | null = null;
-				for (
-					let sib = el.nextElementSibling as Registerable | null;
-					sib;
-					sib = sib.nextElementSibling as Registerable | null
-				) {
-					// Stop if we hit another control start
-					if (
-						prefixes.some((p) =>
-							["if", "elseif", "else", "await", "each"].some(
-								(k) => sib.hasAttribute(`${p}${k}`)
-							)
-						)
-					)
-						break;
-					if (
-						!thenEl &&
-						prefixes.some((p) => sib.hasAttribute(`${p}then`))
-					)
-						thenEl = sib;
-					else if (
-						!catchEl &&
-						prefixes.some((p) => sib.hasAttribute(`${p}catch`))
-					)
-						catchEl = sib;
-					if (thenEl && catchEl) break;
+			if (["await", "then", "catch"].includes(attrName)) {
+				if (attrName === "await") {
+					this._awaitState = attrName as "await" | "then" | "catch";
+					this._awaitShow = true;
+					this._awaitRoot = _fn;
+				} else {
+					this._awaitShow = true;
 				}
-				if (thenEl) (thenEl as HTMLElement).style.display = "none";
-				if (catchEl) (catchEl as HTMLElement).style.display = "none";
-				let token = 0;
-				const awEffect = effect(() => {
-					const out = _fn({ ...state, element: el }) as Promise<
-						(ctx: Record<string, unknown>) => unknown
-					>;
-					const myTok = ++token;
-					(el as HTMLElement).style.display = ""; // pending visible
-					if (thenEl) (thenEl as HTMLElement).style.display = "none";
-					if (catchEl)
-						(catchEl as HTMLElement).style.display = "none";
-					if (out && typeof out.then === "function") {
-						(out as Promise<unknown>).then(
-							() => {
-								if (myTok !== token) return;
-								(el as HTMLElement).style.display = "none";
-								if (thenEl)
-									(thenEl as HTMLElement).style.display = "";
-							},
-							() => {
-								if (myTok !== token) return;
-								(el as HTMLElement).style.display = "none";
-								if (catchEl)
-									(catchEl as HTMLElement).style.display = "";
-							}
-						);
-					} else {
-						// Synchronous => resolved
-						(el as HTMLElement).style.display = "none";
-						if (thenEl) (thenEl as HTMLElement).style.display = "";
+
+				const ef = effect(() => {
+					const out =
+						attrName === "await"
+							? (_fn({ ...state, element: el }) as Promise<
+									(ctx: Record<string, unknown>) => unknown
+							  >)
+							: this._rootAwaitFn();
+
+					if (
+						out &&
+						typeof (out as Promise<ParsedExpression["_fn"]>)
+							.then === "function"
+					) {
+						(out as Promise<ParsedExpression["_fn"]>)
+							.then(() => {
+								this._awaitShow = false;
+							})
+							.catch(() => {
+								this._awaitShow = false;
+							});
 					}
 				});
-				this.#cleanups.add(() => awEffect._stop());
-				el.removeAttribute(attrTagName);
-				attrWasRegistered.add(attrName);
-				return true;
-			}
-			if (attrName === "then" || attrName === "catch") {
-				(el as HTMLElement).style.display = "none"; // visibility controlled by preceding await
+
+				this.#cleanups.add(() => ef._stop());
 				el.removeAttribute(attrTagName);
 				attrWasRegistered.add(attrName);
 				return true;
@@ -417,11 +397,11 @@ export default class RegEl {
 				if (rl) showDeps.push(rl);
 			}
 
-			this._show = isElse ? () => true : _fn;
+			this._show = isElse || !isConditional ? () => true : _fn;
 			const ef = effect(() => {
 				let show =
 					(this._show({ ...state, element: el }) &&
-						this._awaitShow?.({ ...state, element: el })) ??
+						this._awaitShow) ??
 					true;
 				for (const rl of showDeps) {
 					if (rl._show({ ...rl._state, element: rl._el }))
@@ -435,6 +415,25 @@ export default class RegEl {
 		}
 
 		return false;
+	}
+
+	_deriveAliases(aliasStr?: string) {
+		const aliases = aliasStr?.split(/\s*,\s*/).filter(Boolean) ?? [];
+	}
+
+	_rootAwaitFn():
+		| ParsedExpression["_fn"]
+		| Promise<ParsedExpression["_fn"]>
+		| undefined {
+		const prev = this._el.previousElementSibling as Registerable | null;
+		while (prev) {
+			const rl = RegEl._registry.get(prev);
+			if (rl?._awaitShow !== undefined) {
+				if (rl._awaitState === "then" && this._awaitState === "then") {
+					return rl._awaitRoot;
+				} else break;
+			}
+		}
 	}
 
 	_dispose() {
