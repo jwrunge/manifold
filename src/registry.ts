@@ -2,6 +2,7 @@ import type { WritableCSSKeys } from "./css";
 import { type Effect, effect } from "./Effect";
 import evaluateExpression, { type ParsedExpression } from "./expression-parser";
 import { scopeProxy } from "./proxy";
+
 type Registerable = HTMLElement | SVGElement | MathMLElement;
 
 const templLogicAttrs = [
@@ -113,7 +114,6 @@ export default class RegEl {
 						el
 					);
 
-				// Minimal await / then / catch handling
 				if (attrName === "await") {
 					// Capture associated then & catch siblings (first occurrence each)
 					let thenEl: Registerable | null = null;
@@ -123,23 +123,23 @@ export default class RegEl {
 						sib;
 						sib = sib.nextElementSibling as Registerable | null
 					) {
-						// Stop if we hit another control start (avoid bleeding)
+						// Stop if we hit another control start
 						if (
 							prefixes.some((p) =>
 								["if", "elseif", "else", "await", "each"].some(
-									(k) => sib!.hasAttribute(`${p}${k}`)
+									(k) => sib.hasAttribute(`${p}${k}`)
 								)
 							)
 						)
 							break;
 						if (
 							!thenEl &&
-							prefixes.some((p) => sib!.hasAttribute(`${p}then`))
+							prefixes.some((p) => sib.hasAttribute(`${p}then`))
 						)
 							thenEl = sib;
 						else if (
 							!catchEl &&
-							prefixes.some((p) => sib!.hasAttribute(`${p}catch`))
+							prefixes.some((p) => sib.hasAttribute(`${p}catch`))
 						)
 							catchEl = sib;
 						if (thenEl && catchEl) break;
@@ -149,14 +149,16 @@ export default class RegEl {
 						(catchEl as HTMLElement).style.display = "none";
 					let token = 0;
 					const awEffect = effect(() => {
-						const out = _fn({ ...state, element: el });
+						const out = _fn({ ...state, element: el }) as Promise<
+							(ctx: Record<string, unknown>) => unknown
+						>;
 						const myTok = ++token;
 						(el as HTMLElement).style.display = ""; // pending visible
 						if (thenEl)
 							(thenEl as HTMLElement).style.display = "none";
 						if (catchEl)
 							(catchEl as HTMLElement).style.display = "none";
-						if (out && typeof (out as any).then === "function") {
+						if (out && typeof out.then === "function") {
 							(out as Promise<unknown>).then(
 								() => {
 									if (myTok !== token) return;
@@ -207,6 +209,7 @@ export default class RegEl {
 					) {
 						throwError("Malformed elseif/else sequence", el);
 					}
+					// biome-ignore lint/style/noNonNullAssertion: Null check above
 					const rl = RegEl._registry.get(prev!);
 					if (rl) showDeps.push(rl);
 				}
@@ -293,6 +296,7 @@ export default class RegEl {
 				ef = effect(() => {
 					const result = _fn({ ...state, element: el });
 					if (attrName in el) {
+						// biome-ignore lint/suspicious/noExplicitAny: Unknown element properties
 						(el as any)[attrName] = result;
 					} else {
 						if (result === false || result == null)
@@ -306,7 +310,8 @@ export default class RegEl {
 						try {
 							const val =
 								attrName in el
-									? (el as any)[attrName]
+									? // biome-ignore lint/suspicious/noExplicitAny: Unknown element properties
+									  (el as any)[attrName]
 									: el.getAttribute(attrName);
 							if (_syncRef)
 								_syncRef(

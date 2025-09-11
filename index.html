@@ -69,6 +69,9 @@
 				myState.nextFail = !fail;
 				const p = new Promise((res, rej) =>
 					setTimeout(() => {
+					if(fail) console.log("REJECTING PROMISE");
+					else console.log("RESOLVING PROMISE");
+
 						if (fail) rej(new Error("Network"));
 						else res({ name: "Ada", age: 37 + Math.floor(Math.random()*10) });
 					}, 800)
@@ -77,11 +80,7 @@
 				p.then(
 					(u) => (myState.user = u),
 					(err) => (myState.errorMsg = err && err.message ? err.message : String(err))
-				).finally(() => {
-					// Clear promise so re-click shows loading again (trigger await effect)
-					// Slight delay lets then/catch element render before clearing
-					setTimeout(() => (myState.currentUserPromise = null), 0);
-				});
+				);
 				return p;
 			};
 

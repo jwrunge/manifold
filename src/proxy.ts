@@ -95,8 +95,13 @@ const arrMethods = [
 	"sort",
 	"reverse",
 ];
-export const proxy = (obj: object, prefix = ""): StateConstraint => {
+export const proxy = (
+	obj: object,
+	prefix = ""
+): StateConstraint | Promise<unknown> => {
 	if (!obj || typeof obj !== "object") return obj;
+	// Do not proxy Promises!
+	if (obj instanceof Promise) return obj;
 	return getOrCreateProxy(
 		obj,
 		prefix,
