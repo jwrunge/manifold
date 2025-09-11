@@ -107,128 +107,16 @@ export default class RegEl {
 			const { _fn, _syncRef } = evaluateExpression(value);
 			let ef: Effect;
 
-			if (templLogicAttrSet.has(attrName as templLogicAttr)) {
-				if (sync)
-					throwError(
-						`Sync not supported on templating attributes`,
-						el
-					);
-
-				if (attrName === "await") {
-					// Capture associated then & catch siblings (first occurrence each)
-					let thenEl: Registerable | null = null;
-					let catchEl: Registerable | null = null;
-					for (
-						let sib = el.nextElementSibling as Registerable | null;
-						sib;
-						sib = sib.nextElementSibling as Registerable | null
-					) {
-						// Stop if we hit another control start
-						if (
-							prefixes.some((p) =>
-								["if", "elseif", "else", "await", "each"].some(
-									(k) => sib.hasAttribute(`${p}${k}`)
-								)
-							)
-						)
-							break;
-						if (
-							!thenEl &&
-							prefixes.some((p) => sib.hasAttribute(`${p}then`))
-						)
-							thenEl = sib;
-						else if (
-							!catchEl &&
-							prefixes.some((p) => sib.hasAttribute(`${p}catch`))
-						)
-							catchEl = sib;
-						if (thenEl && catchEl) break;
-					}
-					if (thenEl) (thenEl as HTMLElement).style.display = "none";
-					if (catchEl)
-						(catchEl as HTMLElement).style.display = "none";
-					let token = 0;
-					const awEffect = effect(() => {
-						const out = _fn({ ...state, element: el }) as Promise<
-							(ctx: Record<string, unknown>) => unknown
-						>;
-						const myTok = ++token;
-						(el as HTMLElement).style.display = ""; // pending visible
-						if (thenEl)
-							(thenEl as HTMLElement).style.display = "none";
-						if (catchEl)
-							(catchEl as HTMLElement).style.display = "none";
-						if (out && typeof out.then === "function") {
-							(out as Promise<unknown>).then(
-								() => {
-									if (myTok !== token) return;
-									(el as HTMLElement).style.display = "none";
-									if (thenEl)
-										(thenEl as HTMLElement).style.display =
-											"";
-								},
-								() => {
-									if (myTok !== token) return;
-									(el as HTMLElement).style.display = "none";
-									if (catchEl)
-										(catchEl as HTMLElement).style.display =
-											"";
-								}
-							);
-						} else {
-							// Synchronous => resolved
-							(el as HTMLElement).style.display = "none";
-							if (thenEl)
-								(thenEl as HTMLElement).style.display = "";
-						}
-					});
-					this.#cleanups.add(() => awEffect._stop());
-					el.removeAttribute(name);
-					attrWasRegistered.add(attrName);
-					continue;
-				}
-				if (attrName === "then" || attrName === "catch") {
-					(el as HTMLElement).style.display = "none"; // visibility controlled by preceding await
-					el.removeAttribute(name);
-					attrWasRegistered.add(attrName);
-					continue;
-				}
-				const isElse = attrName === "else";
-				const showDeps: RegEl[] = [];
-
-				if (isElse || attrName === "elseif") {
-					const prev =
-						el.previousElementSibling as Registerable | null;
-					if (
-						!prev ||
-						!prefixes.some(
-							(p) =>
-								prev?.hasAttribute(`${p}if`) ||
-								prev?.hasAttribute(`${p}elseif`)
-						)
-					) {
-						throwError("Malformed elseif/else sequence", el);
-					}
-					// biome-ignore lint/style/noNonNullAssertion: Null check above
-					const rl = RegEl._registry.get(prev!);
-					if (rl) showDeps.push(rl);
-				}
-				this._show = isElse ? () => true : _fn;
-				ef = effect(() => {
-					let show =
-						(this._show({ ...state, element: el }) &&
-							this._awaitShow?.({ ...state, element: el })) ??
-						true;
-					for (const rl of showDeps) {
-						if (rl._show({ ...rl._state, element: rl._el }))
-							show = false;
-					}
-					el.style.display = show ? "" : "none";
-				});
-				this.#cleanups.add(() => ef._stop());
-				attrWasRegistered.add(attrName);
+			if (
+				this._handleTemplating(
+					attrName as templLogicAttr,
+					name,
+					attrWasRegistered,
+					sync,
+					_fn
+				)
+			)
 				continue;
-			}
 
 			if (attrName.startsWith("on")) {
 				if (sync)
@@ -413,6 +301,131 @@ export default class RegEl {
 			});
 			this.#cleanups.add(() => textEffect._stop());
 		}
+	}
+
+	_handleTemplating(
+		attrName: templLogicAttr,
+		attrTagName: string,
+		attrWasRegistered: Set<string>,
+		sync: boolean,
+		_fn: (ctx?: Record<string, unknown> | undefined) => unknown
+	) {
+		if (templLogicAttrSet.has(attrName as templLogicAttr)) {
+			const { _el: el, _state: state } = this;
+			if (sync)
+				throwError(`Sync not supported on templating attributes`, el);
+
+			if (attrName === "await") {
+				// Capture associated then & catch siblings (first occurrence each)
+				let thenEl: Registerable | null = null;
+				let catchEl: Registerable | null = null;
+				for (
+					let sib = el.nextElementSibling as Registerable | null;
+					sib;
+					sib = sib.nextElementSibling as Registerable | null
+				) {
+					// Stop if we hit another control start
+					if (
+						prefixes.some((p) =>
+							["if", "elseif", "else", "await", "each"].some(
+								(k) => sib.hasAttribute(`${p}${k}`)
+							)
+						)
+					)
+						break;
+					if (
+						!thenEl &&
+						prefixes.some((p) => sib.hasAttribute(`${p}then`))
+					)
+						thenEl = sib;
+					else if (
+						!catchEl &&
+						prefixes.some((p) => sib.hasAttribute(`${p}catch`))
+					)
+						catchEl = sib;
+					if (thenEl && catchEl) break;
+				}
+				if (thenEl) (thenEl as HTMLElement).style.display = "none";
+				if (catchEl) (catchEl as HTMLElement).style.display = "none";
+				let token = 0;
+				const awEffect = effect(() => {
+					const out = _fn({ ...state, element: el }) as Promise<
+						(ctx: Record<string, unknown>) => unknown
+					>;
+					const myTok = ++token;
+					(el as HTMLElement).style.display = ""; // pending visible
+					if (thenEl) (thenEl as HTMLElement).style.display = "none";
+					if (catchEl)
+						(catchEl as HTMLElement).style.display = "none";
+					if (out && typeof out.then === "function") {
+						(out as Promise<unknown>).then(
+							() => {
+								if (myTok !== token) return;
+								(el as HTMLElement).style.display = "none";
+								if (thenEl)
+									(thenEl as HTMLElement).style.display = "";
+							},
+							() => {
+								if (myTok !== token) return;
+								(el as HTMLElement).style.display = "none";
+								if (catchEl)
+									(catchEl as HTMLElement).style.display = "";
+							}
+						);
+					} else {
+						// Synchronous => resolved
+						(el as HTMLElement).style.display = "none";
+						if (thenEl) (thenEl as HTMLElement).style.display = "";
+					}
+				});
+				this.#cleanups.add(() => awEffect._stop());
+				el.removeAttribute(attrTagName);
+				attrWasRegistered.add(attrName);
+				return true;
+			}
+			if (attrName === "then" || attrName === "catch") {
+				(el as HTMLElement).style.display = "none"; // visibility controlled by preceding await
+				el.removeAttribute(attrTagName);
+				attrWasRegistered.add(attrName);
+				return true;
+			}
+			const isElse = attrName === "else";
+			const showDeps: RegEl[] = [];
+
+			if (isElse || attrName === "elseif") {
+				const prev = el.previousElementSibling as Registerable | null;
+				if (
+					!prev ||
+					!prefixes.some(
+						(p) =>
+							prev?.hasAttribute(`${p}if`) ||
+							prev?.hasAttribute(`${p}elseif`)
+					)
+				) {
+					throwError("Malformed elseif/else sequence", el);
+				}
+				// biome-ignore lint/style/noNonNullAssertion: Null check above
+				const rl = RegEl._registry.get(prev!);
+				if (rl) showDeps.push(rl);
+			}
+			this._show = isElse ? () => true : _fn;
+			const ef = effect(() => {
+				let show =
+					(this._show({ ...state, element: el }) &&
+						this._awaitShow?.({ ...state, element: el })) ??
+					true;
+				for (const rl of showDeps) {
+					if (rl._show({ ...rl._state, element: rl._el }))
+						show = false;
+				}
+				el.style.display = show ? "" : "none";
+			});
+			this.#cleanups.add(() => ef._stop());
+			attrWasRegistered.add(attrName);
+			return ef;
+		}
+
+		return false;
 	}
 
 	_dispose() {
