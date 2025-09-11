@@ -89,8 +89,6 @@
 			const myState = $.create()
 				.add("count", 0)
 				.add("popup", (e) => console.log(e))
-				.add("user", { name: "(pending)", age: 0 })
-				.add("errorMsg", "")
 				.add("nextFail", false)
 				.add("currentUserPromise", null)
 				.add("someArray", [
@@ -102,9 +100,9 @@
 				.build();
 
 			myState.loadUser = () => {
-				myState.errorMsg = "";
 				const fail = !!myState.nextFail;
 				myState.nextFail = !fail;
+
 				const p = new Promise((res, rej) =>
 					setTimeout(() => {
 						if (fail) console.log("REJECTING PROMISE");
@@ -119,12 +117,13 @@
 					}, 800)
 				);
 				myState.currentUserPromise = p;
-				p.then(
-					(u) => (myState.user = u),
-					(err) =>
-						(myState.errorMsg =
-							err && err.message ? err.message : String(err))
-				);
+
+				// p.then(
+				// 	(u) => (myState.user = u),
+				// 	(err) =>
+				// 		(myState.errorMsg =
+				// 			err && err.message ? err.message : String(err))
+				// );
 				return p;
 			};
 
