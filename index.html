@@ -43,13 +43,45 @@
 		<div>Count squared is ${count * count}</div>
 
 		<!-- Await / Then / Catch demo with reload toggle -->
-		<div style="margin-top:1rem;">
-			<button :onclick="loadUser()" style="margin-bottom:.5rem;">Reload User (alternates success/error)</button>
+		<div style="margin-top: 1rem">
+			<button :onclick="loadUser()" style="margin-bottom: 0.5rem">
+				Reload User (alternates success/error)
+			</button>
 			<div :await="currentUserPromise">Loading user...</div>
-			<div :then>User loaded: ${user.name} (${user.age})</div>
-			<div :catch style="color:red;">Failed to load user: ${errorMsg}</div>
-		</div>
+			<div :then="user">User loaded: ${user.name} (${user.age})</div>
+			<div :catch="errorMsg" style="color: red">
+				Failed to load user: ${errorMsg}
 			</div>
+		</div>
+
+		<!-- Each demo -->
+		<div style="margin-top: 1rem">
+			<div>Family Members:</div>
+			<ul>
+				<li :each="someArray as {name, age}">
+					${name} (${age} years old)
+				</li>
+			</ul>
+		</div>
+
+		<!-- Keyed each demo -->
+		<div style="margin-top: 1rem">
+			<div>Family Members:</div>
+			<ul>
+				<li :each="someArray as value, key">
+					${key}: ${value.name} (${value.age} years old)
+				</li>
+			</ul>
+		</div>
+
+		<!-- Aliased each demo -->
+		<div style="margin-top: 1rem">
+			<div>Family Members:</div>
+			<ul>
+				<li :each="someArray as {name, age}, key">
+					${key}: ${name} (${age} years old)
+				</li>
+			</ul>
 		</div>
 
 		<script type="module">
@@ -61,6 +93,12 @@
 				.add("errorMsg", "")
 				.add("nextFail", false)
 				.add("currentUserPromise", null)
+				.add("someArray", [
+					{ name: "Jake", age: 37 },
+					{ name: "Mary", age: 37 },
+					{ name: "Isaac", age: 6 },
+					{ name: "Elinor", age: 4 },
+				])
 				.build();
 
 			myState.loadUser = () => {
@@ -69,17 +107,23 @@
 				myState.nextFail = !fail;
 				const p = new Promise((res, rej) =>
 					setTimeout(() => {
-					if(fail) console.log("REJECTING PROMISE");
-					else console.log("RESOLVING PROMISE");
+						if (fail) console.log("REJECTING PROMISE");
+						else console.log("RESOLVING PROMISE");
 
 						if (fail) rej(new Error("Network"));
-						else res({ name: "Ada", age: 37 + Math.floor(Math.random()*10) });
+						else
+							res({
+								name: "Ada",
+								age: 37 + Math.floor(Math.random() * 10),
+							});
 					}, 800)
 				);
 				myState.currentUserPromise = p;
 				p.then(
 					(u) => (myState.user = u),
-					(err) => (myState.errorMsg = err && err.message ? err.message : String(err))
+					(err) =>
+						(myState.errorMsg =
+							err && err.message ? err.message : String(err))
 				);
 				return p;
 			};

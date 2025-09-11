@@ -63,6 +63,7 @@ export default class RegEl {
 	_show: ParsedExpression["_fn"] = () => false;
 	_awaitShow?: ParsedExpression["_fn"];
 	_each?: ParsedExpression["_fn"];
+	_cachedContent?: DocumentFragment;
 
 	constructor(el: Registerable, state: Record<string, unknown>) {
 		if (RegEl._registry.has(el))
@@ -105,7 +106,6 @@ export default class RegEl {
 				attrName = attrName.slice(5);
 			}
 			const { _fn, _syncRef } = evaluateExpression(value);
-			let ef: Effect;
 
 			if (
 				this._handleTemplating(
@@ -157,6 +157,7 @@ export default class RegEl {
 			}
 
 			const [attrPropName, attrProp] = attrName.split(":", 2);
+			let ef: Effect;
 
 			if (attrProp) {
 				if (sync)
@@ -315,6 +316,13 @@ export default class RegEl {
 			if (sync)
 				throwError(`Sync not supported on templating attributes`, el);
 
+			if (attrName === "each") {
+				// Store a detached clone of the element (template) without altering the live DOM
+				const frag = document.createDocumentFragment();
+				frag.appendChild(el.cloneNode(true));
+				this._cachedContent = frag;
+			}
+
 			if (attrName === "await") {
 				// Capture associated then & catch siblings (first occurrence each)
 				let thenEl: Registerable | null = null;
@@ -408,6 +416,7 @@ export default class RegEl {
 				const rl = RegEl._registry.get(prev!);
 				if (rl) showDeps.push(rl);
 			}
+
 			this._show = isElse ? () => true : _fn;
 			const ef = effect(() => {
 				let show =
