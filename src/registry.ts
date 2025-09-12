@@ -23,6 +23,46 @@ const throwError = (msg: string, cause?: unknown) => {
 	throw new Error("Manifold Error");
 };
 
+// Await alias parsing: supports identifier or destructured object pattern after optional 'as' part already split by caller.
+// Examples:
+// :then="user" => { base: 'user' }
+// :then="user as {name,age}" => { base:'user', object:['name','age'] }
+// :catch="err" => { base:'err' }
+// :then="data as { a, b:bee }" => { base:'data', object:[{prop:'a',as:'a'},{prop:'b',as:'bee'}] }
+interface AwaitAliasObjectProp {
+	prop: string;
+	as: string;
+}
+interface AwaitAlias {
+	base: string; // variable holding resolved value / error passed from user (expRaw)
+	object?: AwaitAliasObjectProp[]; // If destructuring pattern present
+}
+const IDENT = /^[A-Za-z_$][\w$]*$/;
+const parseAwaitAlias = (
+	expRaw: string,
+	aliasStr?: string
+): AwaitAlias | undefined => {
+	const base = expRaw.trim();
+	if (!base || !IDENT.test(base)) return undefined;
+	if (!aliasStr) return { base };
+	const pat = aliasStr.trim();
+	if (!(pat.startsWith("{") && pat.endsWith("}"))) return { base }; // only object pattern supported in scaffold
+	const inner = pat.slice(1, -1).trim();
+	if (!inner) return { base, object: [] };
+	const props: AwaitAliasObjectProp[] = [];
+	for (const raw of inner.split(",")) {
+		const seg = raw.trim();
+		if (!seg) continue;
+		const [left, right] = seg.split(":").map((s) => s.trim());
+		if (!IDENT.test(left)) return { base }; // fallback silently
+		if (right) {
+			if (!IDENT.test(right)) return { base };
+			props.push({ prop: left, as: right });
+		} else props.push({ prop: left, as: left });
+	}
+	return { base, object: props };
+};
+
 // (helpers removed after condensation attempt; kept minimal to avoid unused warnings)
 
 const observer = new MutationObserver((mRecord) => {
@@ -61,11 +101,10 @@ export default class RegEl {
 	_el: Registerable;
 	_state: Record<string, unknown>;
 	_show: ParsedExpression["_fn"] = () => false;
-	_awaitRoot?: ParsedExpression["_fn"] | Promise<ParsedExpression["_fn"]>;
-	_awaitShow?: boolean;
-	_awaitState?: "await" | "then" | "catch";
 	_each?: ParsedExpression["_fn"];
 	_cachedContent?: DocumentFragment;
+	_thenAlias?: AwaitAlias;
+	_catchAlias?: AwaitAlias;
 
 	constructor(el: Registerable, state: Record<string, unknown>) {
 		if (RegEl._registry.has(el))
@@ -115,12 +154,14 @@ export default class RegEl {
 			const { _fn, _syncRef } = evaluateExpression(exp);
 
 			if (
+				templLogicAttrSet.has(attrName as templLogicAttr) &&
 				this._handleTemplating(
 					attrName as templLogicAttr,
 					name,
 					attrWasRegistered,
 					sync,
 					_fn,
+					exp,
 					aliasStr
 				)
 			)
@@ -320,120 +361,192 @@ export default class RegEl {
 		attrWasRegistered: Set<string>,
 		sync: boolean,
 		_fn: (ctx?: Record<string, unknown> | undefined) => unknown,
+		expRaw: string,
 		aliasStr?: string
 	) {
-		if (templLogicAttrSet.has(attrName as templLogicAttr)) {
-			const isConditional = ["if", "elseif", "else"].includes(attrName);
+		const isConditional = ["if", "elseif", "else"].includes(attrName);
 
-			if (aliasStr && isConditional)
-				throwError(`Aliasing not supported on ${attrName}`, this._el);
+		if (aliasStr && isConditional)
+			throwError(`Aliasing not supported on ${attrName}`, this._el);
 
-			const { _el: el, _state: state } = this;
+		const { _el: el, _state: state } = this;
 
-			if (sync)
-				throwError(`Sync not supported on templating attributes`, el);
+		if (sync) throwError(`Sync not supported on templating attributes`, el);
 
-			if (attrName === "each") {
-				// Store a detached clone of the element (template) without altering the live DOM
-				const frag = document.createDocumentFragment();
-				frag.appendChild(el.cloneNode(true));
-				this._cachedContent = frag;
-			}
+		if (attrName === "each") {
+			// Store a detached clone of the element (template) without altering the live DOM
+			const frag = document.createDocumentFragment();
+			frag.appendChild(el.cloneNode(true));
+			this._cachedContent = frag;
+		}
 
-			if (["await", "then", "catch"].includes(attrName)) {
-				if (attrName === "await") {
-					this._awaitState = attrName as "await" | "then" | "catch";
-					this._awaitShow = true;
-					this._awaitRoot = _fn;
-				} else {
-					this._awaitShow = true;
+		if (["await", "then", "catch"].includes(attrName)) {
+			if (attrName === "await") {
+				// Scan siblings for first :then and :catch
+				let sib = el.nextElementSibling;
+				let thenEl: HTMLElement | null = null;
+				let catchEl: HTMLElement | null = null;
+				while (sib) {
+					const hasThen =
+						sib.hasAttribute(":then") ||
+						sib.hasAttribute("data-mf-then");
+					const hasCatch =
+						sib.hasAttribute(":catch") ||
+						sib.hasAttribute("data-mf-catch");
+					if (hasThen && !thenEl) thenEl = sib as HTMLElement;
+					else if (hasCatch && !catchEl) catchEl = sib as HTMLElement;
+					else if (!hasThen && !hasCatch) break;
+					sib = sib.nextElementSibling;
 				}
-
-				const ef = effect(() => {
-					const out =
-						attrName === "await"
-							? (_fn({ ...state, element: el }) as Promise<
-									(ctx: Record<string, unknown>) => unknown
-							  >)
-							: this._rootAwaitFn();
-
+				el.style.display = "";
+				if (thenEl) thenEl.style.display = "none";
+				if (catchEl) catchEl.style.display = "none";
+				let lastPromise: Promise<unknown> | undefined;
+				const awEf = effect(() => {
+					const maybe = _fn({ ...state, element: el });
 					if (
-						out &&
-						typeof (out as Promise<ParsedExpression["_fn"]>)
-							.then === "function"
+						!maybe ||
+						typeof (maybe as unknown as { then?: unknown }).then !==
+							"function"
 					) {
-						(out as Promise<ParsedExpression["_fn"]>)
-							.then(() => {
-								this._awaitShow = false;
-							})
-							.catch(() => {
-								this._awaitShow = false;
-							});
+						el.style.display = "none";
+						if (thenEl) thenEl.style.display = "";
+						if (catchEl) catchEl.style.display = "none";
+						return;
 					}
+					const p = maybe as Promise<unknown>;
+					if (p === lastPromise) return;
+					lastPromise = p;
+					// reset to loading
+					el.style.display = "";
+					if (thenEl) thenEl.style.display = "none";
+					if (catchEl) catchEl.style.display = "none";
+					p.then(
+						(val) => {
+							el.style.display = "none";
+							if (thenEl) {
+								const thenReg = RegEl._registry.get(
+									thenEl as Registerable
+								);
+								if (thenReg) {
+									const a = thenReg._thenAlias;
+									if (a) {
+										(
+											thenReg._state as Record<
+												string,
+												unknown
+											>
+										)[a.base] = val as unknown;
+										if (a.object) {
+											for (const {
+												prop,
+												as,
+											} of a.object) {
+												// biome-ignore lint/suspicious/noExplicitAny: dynamic indexing
+												(thenReg._state as any)[as] = (
+													val as any
+												)?.[prop];
+											}
+										}
+									}
+									thenEl.style.display = "";
+								}
+							}
+							if (catchEl) catchEl.style.display = "none";
+						},
+						(err) => {
+							el.style.display = "none";
+							if (thenEl) thenEl.style.display = "none";
+							if (catchEl) {
+								const catchReg = RegEl._registry.get(
+									catchEl as Registerable
+								);
+								if (catchReg) {
+									const a = catchReg._catchAlias;
+									if (a) {
+										(
+											catchReg._state as Record<
+												string,
+												unknown
+											>
+										)[a.base] = err as unknown;
+										if (a.object) {
+											for (const {
+												prop,
+												as,
+											} of a.object) {
+												// biome-ignore lint/suspicious/noExplicitAny: dynamic indexing
+												(catchReg._state as any)[as] = (
+													err as any
+												)?.[prop];
+											}
+										}
+									}
+									catchEl.style.display = "";
+								}
+							}
+						}
+					);
 				});
-
-				this.#cleanups.add(() => ef._stop());
-				el.removeAttribute(attrTagName);
-				attrWasRegistered.add(attrName);
-				return true;
-			}
-			const isElse = attrName === "else";
-			const showDeps: RegEl[] = [];
-
-			if (isElse || attrName === "elseif") {
-				const prev = el.previousElementSibling as Registerable | null;
-				if (
-					!prev ||
-					!prefixes.some(
-						(p) =>
-							prev?.hasAttribute(`${p}if`) ||
-							prev?.hasAttribute(`${p}elseif`)
-					)
-				) {
-					throwError("Malformed elseif/else sequence", el);
+				this.#cleanups.add(() => awEf._stop());
+			} else {
+				// Passive :then/:catch placeholder; hidden until :await manages it
+				// Parse alias: form "valueName" or "valueName as {a,b}" already split; expRaw is first segment
+				if (attrName === "then")
+					this._thenAlias = parseAwaitAlias(expRaw, aliasStr);
+				else this._catchAlias = parseAwaitAlias(expRaw, aliasStr);
+				// Initialize alias variables so that first effect run tracks them even before promise resolves/rejects.
+				const a =
+					attrName === "then" ? this._thenAlias : this._catchAlias;
+				if (a) {
+					// Always create a local placeholder so reads go through reactive proxy (tracking dependencies).
+					(this._state as Record<string, unknown>)[a.base] =
+						undefined;
+					if (a.object) {
+						for (const { as } of a.object) {
+							(this._state as Record<string, unknown>)[as] =
+								undefined;
+						}
+					}
 				}
-				// biome-ignore lint/style/noNonNullAssertion: Null check above
-				const rl = RegEl._registry.get(prev!);
-				if (rl) showDeps.push(rl);
+				el.style.display = "none";
 			}
-
-			this._show = isElse || !isConditional ? () => true : _fn;
-			const ef = effect(() => {
-				let show =
-					(this._show({ ...state, element: el }) &&
-						this._awaitShow) ??
-					true;
-				for (const rl of showDeps) {
-					if (rl._show({ ...rl._state, element: rl._el }))
-						show = false;
-				}
-				el.style.display = show ? "" : "none";
-			});
-			this.#cleanups.add(() => ef._stop());
+			el.removeAttribute(attrTagName);
 			attrWasRegistered.add(attrName);
-			return ef;
+			return true;
 		}
 
-		return false;
-	}
+		const isElse = attrName === "else";
+		const showDeps: RegEl[] = [];
 
-	_deriveAliases(aliasStr?: string) {
-		const aliases = aliasStr?.split(/\s*,\s*/).filter(Boolean) ?? [];
-	}
-
-	_rootAwaitFn():
-		| ParsedExpression["_fn"]
-		| Promise<ParsedExpression["_fn"]>
-		| undefined {
-		const prev = this._el.previousElementSibling as Registerable | null;
-		while (prev) {
-			const rl = RegEl._registry.get(prev);
-			if (rl?._awaitShow !== undefined) {
-				if (rl._awaitState === "then" && this._awaitState === "then") {
-					return rl._awaitRoot;
-				} else break;
+		if (isElse || attrName === "elseif") {
+			const prev = el.previousElementSibling as Registerable | null;
+			if (
+				!prev ||
+				!prefixes.some(
+					(p) =>
+						prev?.hasAttribute(`${p}if`) ||
+						prev?.hasAttribute(`${p}elseif`)
+				)
+			) {
+				throwError("Malformed elseif/else sequence", el);
 			}
+			// biome-ignore lint/style/noNonNullAssertion: Null check above
+			const rl = RegEl._registry.get(prev!);
+			if (rl) showDeps.push(rl);
 		}
+
+		this._show = isElse || !isConditional ? () => true : _fn;
+		const ef = effect(() => {
+			let show = this._show({ ...state, element: el }) ?? true;
+			for (const rl of showDeps) {
+				if (rl._show({ ...rl._state, element: rl._el })) show = false;
+			}
+			el.style.display = show ? "" : "none";
+		});
+		this.#cleanups.add(() => ef._stop());
+		attrWasRegistered.add(attrName);
+		return ef;
 	}
 
 	_dispose() {
