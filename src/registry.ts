@@ -439,14 +439,9 @@ export default class RegEl {
 				let matched = false;
 
 				for (const { el, fn, attrName } of siblings) {
+					let res = false;
+
 					if (isConditional) {
-						if (
-							attrName !== "if" &&
-							attrName !== "elseif" &&
-							attrName !== "else"
-						)
-							continue;
-						let res = false;
 						if (!matched) {
 							if (attrName === "else") res = true; // fallback
 							else {
@@ -454,11 +449,15 @@ export default class RegEl {
 									...this._state,
 									element: el,
 								});
-								if (res) matched = true;
+								matched = !!res;
 							}
 						}
 						el.mfshow = res;
 					} else {
+						if (!matched) {
+						}
+
+						el.mfawait = res;
 					}
 
 					(el as HTMLElement).style.display =
