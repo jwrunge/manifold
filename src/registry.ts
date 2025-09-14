@@ -399,7 +399,6 @@ export default class RegEl {
 	) {
 		const isConditional = attrName === "if";
 		const isAsync = attrName === "await";
-		const isElse = attrName === "else";
 
 		if (isConditional || isAsync) {
 			const siblings: Sibling[] = [
@@ -419,44 +418,58 @@ export default class RegEl {
 					sib,
 					attrName
 				);
-				if (unprefixed) {
-					siblings.push({
-						el: sib as Registerable,
-						attrName: unprefixed as templLogicAttr,
-						fn: isElse
-							? null
-							: evaluateExpression(sib.getAttribute(prefixed)!)
-									._fn,
-					});
-				} else break;
+				if (!unprefixed || !prefixed) break;
 
-				sib.removeAttribute(prefixed!);
+				const fn =
+					unprefixed === "else"
+						? null
+						: evaluateExpression(sib.getAttribute(prefixed) || "")
+								._fn;
+				siblings.push({
+					el: sib as Registerable,
+					attrName: unprefixed as templLogicAttr,
+					fn,
+				});
+				sib.removeAttribute(prefixed);
 				sib = sib.nextElementSibling;
 			}
 
+			// Effect on root and dependents
 			const ef = effect(() => {
-				let show: unknown = isConditional
-					? this._el.mfshow
-					: this._el.mfawait;
-
-				for (const { el, fn, attrName } of siblings) {
-					const res =
-						!show && attrName === "else"
-							? true
-							: isElse
-							? true
-							: fn?.({
+				if (isConditional) {
+					let matched = false;
+					for (const { el, fn, attrName } of siblings) {
+						if (
+							attrName !== "if" &&
+							attrName !== "elseif" &&
+							attrName !== "else"
+						)
+							continue;
+						let res = false;
+						if (!matched) {
+							if (attrName === "else") res = true; // fallback
+							else {
+								res = !!fn?.({
 									...this._state,
 									element: el,
-							  });
-
-					if (isConditional) show = el.mfshow = !!res;
-					else show = el.mfawait = !!res;
-
-					(el as HTMLElement).style.display =
-						(el.mfshow ?? true) && (el.mfawait ?? true)
-							? ""
-							: "none";
+								});
+								if (res) matched = true;
+							}
+						}
+						el.mfshow = res;
+						(el as HTMLElement).style.display =
+							(el.mfshow ?? true) && (el.mfawait ?? true)
+								? ""
+								: "none";
+					}
+				} else {
+					// Async chain left unchanged here (minimal conditional fix only)
+					for (const { el } of siblings) {
+						(el as HTMLElement).style.display =
+							(el.mfshow ?? true) && (el.mfawait ?? true)
+								? ""
+								: "none";
+					}
 				}
 			});
 
