@@ -436,9 +436,10 @@ export default class RegEl {
 
 			// Effect on root and dependents
 			const ef = effect(() => {
-				if (isConditional) {
-					let matched = false;
-					for (const { el, fn, attrName } of siblings) {
+				let matched = false;
+
+				for (const { el, fn, attrName } of siblings) {
+					if (isConditional) {
 						if (
 							attrName !== "if" &&
 							attrName !== "elseif" &&
@@ -457,19 +458,13 @@ export default class RegEl {
 							}
 						}
 						el.mfshow = res;
-						(el as HTMLElement).style.display =
-							(el.mfshow ?? true) && (el.mfawait ?? true)
-								? ""
-								: "none";
+					} else {
 					}
-				} else {
-					// Async chain left unchanged here (minimal conditional fix only)
-					for (const { el } of siblings) {
-						(el as HTMLElement).style.display =
-							(el.mfshow ?? true) && (el.mfawait ?? true)
-								? ""
-								: "none";
-					}
+
+					(el as HTMLElement).style.display =
+						(el.mfshow ?? true) && (el.mfawait ?? true)
+							? ""
+							: "none";
 				}
 			});
 
