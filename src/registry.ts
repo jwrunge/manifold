@@ -196,7 +196,12 @@ export default class RegEl {
 						`Sync not supported on templating logic: ${attrName}`,
 						el
 					);
-				this._handleTemplating(attrName as templLogicAttr, name, _fn);
+				this._handleTemplating(
+					attrName as templLogicAttr,
+					name,
+					_fn,
+					aliasStr
+				);
 				attrWasRegistered.add(attrName);
 				continue;
 			} else if (
@@ -395,7 +400,8 @@ export default class RegEl {
 	_handleTemplating(
 		attrName: templLogicAttr,
 		attrTagName: string,
-		_fn: (ctx?: Record<string, unknown> | undefined) => unknown
+		_fn: (ctx?: Record<string, unknown> | undefined) => unknown,
+		aliasStr?: string
 	) {
 		const isConditional = attrName === "if";
 		const isAsync = attrName === "await";
@@ -435,35 +441,86 @@ export default class RegEl {
 			}
 
 			// Effect on root and dependents
+			let lastPromise: Promise<unknown> | null = null;
 			const ef = effect(() => {
-				let matched = false;
-
-				for (const { el, fn, attrName } of siblings) {
-					let res = false;
-
-					if (isConditional) {
+				if (isConditional) {
+					let matched = false;
+					for (const { el, fn, attrName } of siblings) {
+						el.mfshow = false;
 						if (!matched) {
-							if (attrName === "else") res = true; // fallback
-							else {
-								res = !!fn?.({
-									...this._state,
-									element: el,
-								});
-								matched = !!res;
-							}
+							el.mfshow =
+								attrName === "else"
+									? true
+									: !!fn?.({
+											...this._state,
+											element: el,
+									  });
+							matched = !!el.mfshow;
 						}
-						el.mfshow = res;
-					} else {
-						if (!matched) {
-						}
+						(el as HTMLElement).style.display =
+							(el.mfshow ?? true) && (el.mfawait ?? true)
+								? ""
+								: "none";
+					}
+				} else {
+					// Async :await / :then / :catch handling
+					const root = siblings[0];
+					const thenLink = siblings.find(
+						(s) => s.attrName === "then"
+					);
+					const catchLink = siblings.find(
+						(s) => s.attrName === "catch"
+					);
 
-						el.mfawait = res;
+					// Evaluate expression to obtain maybe-promise
+					const result = root.fn?.({
+						...this._state,
+						element: root.el,
+					});
+					const isThenable =
+						result &&
+						(typeof (result as any).then === "function" ||
+							typeof (result as any).catch === "function");
+
+					// Reset gating
+					root.el.mfawait = true; // show loader
+					if (thenLink) thenLink.el.mfawait = false;
+					if (catchLink) catchLink.el.mfawait = false;
+
+					const updateDisplay = () => {
+						for (const { el } of siblings) {
+							(el as HTMLElement).style.display =
+								(el.mfshow ?? true) && (el.mfawait ?? true)
+									? ""
+									: "none";
+						}
+					};
+					updateDisplay();
+
+					if (!isThenable) {
+						// Treat non-promise as immediate success
+						root.el.mfawait = false;
+						if (thenLink) thenLink.el.mfawait = true;
+						updateDisplay();
+						return;
 					}
 
-					(el as HTMLElement).style.display =
-						(el.mfshow ?? true) && (el.mfawait ?? true)
-							? ""
-							: "none";
+					const p = result as Promise<unknown>;
+					if (p === lastPromise) return; // avoid duplicating handlers
+					lastPromise = p;
+
+					p.then(
+						(_val) => {
+							root.el.mfawait = false;
+							if (thenLink) thenLink.el.mfawait = true;
+							updateDisplay();
+						},
+						(_err) => {
+							root.el.mfawait = false;
+							if (catchLink) catchLink.el.mfawait = true;
+							updateDisplay();
+						}
+					);
 				}
 			});
 

@@ -1,6 +1,6 @@
 // Expression parser expects state injected via ctx.__state
 export interface ParsedExpression {
-	_fn: (ctx?: Record<string, unknown>) => unknown;
+	_fn: (ctx?: Record<string, unknown>) => unknown | Promise<unknown>;
 	// For simple reference chains (e.g., foo, foo.bar, foo[0].baz), provide a setter to update state
 	// Not provided for expressions with operators or function calls
 	_syncRef?: (
