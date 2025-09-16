@@ -80,7 +80,10 @@ export default class StateBuilder<TState extends StateConstraint> {
 					: ``
 			}]`
 		) ?? [])
-			new RegEl(el as HTMLElement | SVGElement | MathMLElement, state);
+			RegEl._register(
+				el as HTMLElement | SVGElement | MathMLElement,
+				state
+			);
 
 		return state as TState;
 	}

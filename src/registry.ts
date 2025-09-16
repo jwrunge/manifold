@@ -104,7 +104,12 @@ export default class RegEl {
 	_show: unknown = false;
 	_showAsync: unknown = false;
 	_each?: ParsedExpression["_fn"];
-	_cachedContent?: DocumentFragment;
+	_cachedContent?: Node;
+
+	static _register(el: Registerable, state: Record<string, unknown>) {
+		const rl = RegEl._registry.get(el);
+		return rl ?? new RegEl(el, state);
+	}
 
 	constructor(el: Registerable, state: Record<string, unknown>) {
 		if (RegEl._registry.has(el))
@@ -362,7 +367,9 @@ export default class RegEl {
 		const isConditional = attrName === "if";
 		const isAsync = attrName === "await";
 
-		if (isConditional || isAsync) {
+		if (attrName === "each") {
+			this._cachedContent = this._el.cloneNode(true);
+		} else if (isConditional || isAsync) {
 			const siblings: Sibling[] = [
 				{
 					el: this._el,
