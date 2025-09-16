@@ -167,7 +167,10 @@ export const scopeProxy = <T extends object>(base: T): T => {
 	const hasLocal = (k: PropertyKey) => Object.hasOwn(localTarget, k);
 	return new Proxy(Object.create(null), {
 		get(_t, k) {
-			return hasLocal(k) ? local[k] : (base as typeof local)[k];
+			// Read local first to register dependency on overlay keys even if undefined
+			const lv = local[k as never];
+			if (hasLocal(k)) return lv as unknown;
+			return (base as typeof local)[k];
 		},
 		set(_t, k, v) {
 			if (hasLocal(k)) local[k] = v;

@@ -74,7 +74,11 @@ export default class StateBuilder<TState extends StateConstraint> {
 
 		// Auto-register on build: bind all [data-mf-register] regions to the global state
 		for (const el of document?.querySelectorAll(
-			`[data-mf-register${this.#name ? `=${this.#name}` : ``}]`
+			`[data-mf-register${
+				this.#name !== undefined && this.#name !== null
+					? `="${String(this.#name)}"`
+					: ``
+			}]`
 		) ?? [])
 			new RegEl(el as HTMLElement | SVGElement | MathMLElement, state);
 
