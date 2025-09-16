@@ -1,3 +1,4 @@
+import applyAliasPattern from "./alias-destructure";
 import type { WritableCSSKeys } from "./css";
 import { type Effect, effect } from "./Effect";
 import evaluateExpression, { type ParsedExpression } from "./expression-parser";
@@ -14,6 +15,7 @@ type Sibling = {
 	el: Registerable;
 	fn: ParsedExpression["_fn"] | null;
 	attrName: templLogicAttr;
+	alias?: string;
 };
 
 type templLogicAttr =
@@ -29,48 +31,6 @@ const throwError = (msg: string, cause?: unknown) => {
 	console.error(msg, cause);
 	throw new Error("Manifold Error");
 };
-
-// Await alias parsing: supports identifier or destructured object pattern after optional 'as' part already split by caller.
-// Examples:
-// :then="user" => { base: 'user' }
-// :then="user as {name,age}" => { base:'user', object:['name','age'] }
-// :catch="err" => { base:'err' }
-// :then="data as { a, b:bee }" => { base:'data', object:[{prop:'a',as:'a'},{prop:'b',as:'bee'}] }
-interface AwaitAliasObjectProp {
-	prop: string;
-	as: string;
-}
-interface AwaitAlias {
-	base: string; // variable holding resolved value / error passed from user (expRaw)
-	object?: AwaitAliasObjectProp[]; // If destructuring pattern present
-}
-const IDENT = /^[A-Za-z_$][\w$]*$/;
-const parseAwaitAlias = (
-	expRaw: string,
-	aliasStr?: string
-): AwaitAlias | undefined => {
-	const base = expRaw.trim();
-	if (!base || !IDENT.test(base)) return undefined;
-	if (!aliasStr) return { base };
-	const pat = aliasStr.trim();
-	if (!(pat.startsWith("{") && pat.endsWith("}"))) return { base }; // only object pattern supported in scaffold
-	const inner = pat.slice(1, -1).trim();
-	if (!inner) return { base, object: [] };
-	const props: AwaitAliasObjectProp[] = [];
-	for (const raw of inner.split(",")) {
-		const seg = raw.trim();
-		if (!seg) continue;
-		const [left, right] = seg.split(":").map((s) => s.trim());
-		if (!IDENT.test(left)) return { base }; // fallback silently
-		if (right) {
-			if (!IDENT.test(right)) return { base };
-			props.push({ prop: left, as: right });
-		} else props.push({ prop: left, as: left });
-	}
-	return { base, object: props };
-};
-
-// (helpers removed after condensation attempt; kept minimal to avoid unused warnings)
 
 const observer = new MutationObserver((mRecord) => {
 	for (const m of mRecord) {
@@ -145,8 +105,6 @@ export default class RegEl {
 	_showAsync: unknown = false;
 	_each?: ParsedExpression["_fn"];
 	_cachedContent?: DocumentFragment;
-	_thenAlias?: AwaitAlias;
-	_catchAlias?: AwaitAlias;
 
 	constructor(el: Registerable, state: Record<string, unknown>) {
 		if (RegEl._registry.has(el))
@@ -164,7 +122,11 @@ export default class RegEl {
 				!child.getAttribute("data-mf-ignore") &&
 				!RegEl._registry.has(child as Registerable)
 			) {
-				new RegEl(child as Registerable, state);
+				// Cascade overlay so child scopes can see parent aliases
+				new RegEl(
+					child as Registerable,
+					this._state as unknown as Record<string, unknown>
+				);
 			}
 		}
 
@@ -196,12 +158,7 @@ export default class RegEl {
 						`Sync not supported on templating logic: ${attrName}`,
 						el
 					);
-				this._handleTemplating(
-					attrName as templLogicAttr,
-					name,
-					_fn,
-					aliasStr
-				);
+				this._handleTemplating(attrName as templLogicAttr, name, _fn);
 				attrWasRegistered.add(attrName);
 				continue;
 			} else if (
@@ -231,7 +188,7 @@ export default class RegEl {
 					const bodyParsed = evaluateExpression(bodyExpr);
 					handler = (e: Event) => {
 						const ctx: Record<string, unknown> = {
-							...state,
+							__state: this._state,
 							event: e,
 							element: el,
 						};
@@ -242,7 +199,7 @@ export default class RegEl {
 					};
 				} else {
 					handler = (e: Event) =>
-						_fn({ ...state, event: e, element: el });
+						_fn({ __state: this._state, event: e, element: el });
 				}
 				el.addEventListener(type, handler);
 				registeredEvents.add(type);
@@ -264,7 +221,7 @@ export default class RegEl {
 
 				if (attrPropName === "style" || attrPropName === "class") {
 					ef = effect(() => {
-						const res = _fn({ ...state, element: el });
+						const res = _fn({ __state: this._state, element: el });
 						if (attrPropName === "class") {
 							if (res) el.classList.add(String(attrProp));
 							else el.classList.remove(String(attrProp));
@@ -279,7 +236,7 @@ export default class RegEl {
 				}
 			} else {
 				ef = effect(() => {
-					const result = _fn({ ...state, element: el });
+					const result = _fn({ __state: this._state, element: el });
 					if (attrName in el) {
 						// biome-ignore lint/suspicious/noExplicitAny: Unknown element properties
 						(el as any)[attrName] = result;
@@ -388,7 +345,7 @@ export default class RegEl {
 				node.textContent = tokens
 					.map((t) =>
 						t.dynamic
-							? t.fn({ ...this._state, element: this._el })
+							? t.fn({ __state: this._state, element: this._el })
 							: t.text
 					)
 					.join("");
@@ -400,8 +357,7 @@ export default class RegEl {
 	_handleTemplating(
 		attrName: templLogicAttr,
 		attrTagName: string,
-		_fn: (ctx?: Record<string, unknown> | undefined) => unknown,
-		aliasStr?: string
+		_fn: (ctx?: Record<string, unknown> | undefined) => unknown
 	) {
 		const isConditional = attrName === "if";
 		const isAsync = attrName === "await";
@@ -426,15 +382,31 @@ export default class RegEl {
 				);
 				if (!unprefixed || !prefixed) break;
 
-				const fn =
-					unprefixed === "else"
-						? null
-						: evaluateExpression(sib.getAttribute(prefixed) || "")
-								._fn;
+				let fn: ParsedExpression["_fn"] | null = null;
+				let alias: string | undefined;
+				if (unprefixed !== "else") {
+					const raw = sib.getAttribute(prefixed) || "";
+					const [left, right] = raw
+						.split(/\s*as\s*/)
+						.map((s) => s.trim());
+					// For :then/:catch, treat entire value as alias if no 'as' part provided
+					if (
+						attrName === "await" &&
+						(unprefixed === "then" || unprefixed === "catch")
+					) {
+						alias = right || left || undefined;
+						// No need to evaluate a function here; not used for then/catch
+						fn = null;
+					} else {
+						fn = evaluateExpression(left)._fn;
+						alias = right || undefined;
+					}
+				}
 				siblings.push({
 					el: sib as Registerable,
 					attrName: unprefixed as templLogicAttr,
 					fn,
+					alias,
 				});
 				sib.removeAttribute(prefixed);
 				sib = sib.nextElementSibling;
@@ -452,7 +424,7 @@ export default class RegEl {
 								attrName === "else"
 									? true
 									: !!fn?.({
-											...this._state,
+											__state: this._state,
 											element: el,
 									  });
 							matched = !!el.mfshow;
@@ -474,7 +446,7 @@ export default class RegEl {
 
 					// Evaluate expression to obtain maybe-promise
 					const result = root.fn?.({
-						...this._state,
+						__state: this._state,
 						element: root.el,
 					});
 					const isThenable =
@@ -501,6 +473,16 @@ export default class RegEl {
 						// Treat non-promise as immediate success
 						root.el.mfawait = false;
 						if (thenLink) thenLink.el.mfawait = true;
+						// Apply alias pattern for immediate value to then-link's scope
+						if (thenLink && thenLink.alias) {
+							const thenInst = RegEl._registry.get(thenLink.el);
+							if (thenInst)
+								applyAliasPattern(
+									thenLink.alias,
+									result,
+									thenInst._state
+								);
+						}
 						updateDisplay();
 						return;
 					}
@@ -513,11 +495,34 @@ export default class RegEl {
 						(_val) => {
 							root.el.mfawait = false;
 							if (thenLink) thenLink.el.mfawait = true;
+							// Destructure aliases for :then value using the sibling's expression string
+							if (thenLink && thenLink.alias) {
+								const thenInst = RegEl._registry.get(
+									thenLink.el
+								);
+								if (thenInst)
+									applyAliasPattern(
+										thenLink.alias,
+										_val,
+										thenInst._state
+									);
+							}
 							updateDisplay();
 						},
 						(_err) => {
 							root.el.mfawait = false;
 							if (catchLink) catchLink.el.mfawait = true;
+							if (catchLink && catchLink.alias) {
+								const catchInst = RegEl._registry.get(
+									catchLink.el
+								);
+								if (catchInst)
+									applyAliasPattern(
+										catchLink.alias,
+										_err,
+										catchInst._state
+									);
+							}
 							updateDisplay();
 						}
 					);
