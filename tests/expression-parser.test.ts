@@ -17,7 +17,7 @@ describe("Expression Parser", () => {
 	const run = (expr: string, ctx: Record<string, unknown> = {}) => {
 		const parsed = evaluateExpression(expr);
 		// Always provide injected state for resolution
-		return parsed.fn({ ...ctx, __state: rootState });
+		return parsed.fn({ ...ctx, state: rootState });
 	};
 
 	const refs = (expr: string) =>
@@ -55,10 +55,10 @@ describe("Expression Parser", () => {
 			expect(run("user.x", { user: {} })).toBeUndefined();
 			expect(run("missing.prop", {})).toBeUndefined();
 		});
-		test("state via injected context (__state)", () => {
+		test("state via injected context (state)", () => {
 			initState({ count: 5 });
 			const parsed = evaluateExpression("count");
-			expect(parsed.fn({ __state: rootState })).toBe(5);
+			expect(parsed.fn({ state: rootState })).toBe(5);
 		});
 		test("dynamic index access", () => {
 			initState({
@@ -127,18 +127,18 @@ describe("Expression Parser", () => {
 		beforeEach(() => initState({ count: 1, user: { age: 30 } }));
 		test("simple root (must be wrapped in ()=> to allow assignment)", () => {
 			const parsed = evaluateExpression("()=> count = count + 1");
-			expect(parsed.fn({ __state: rootState })).toBe(2);
+			expect(parsed.fn({ state: rootState })).toBe(2);
 			expect(rootState.count).toBe(2);
 		});
 		test("nested object property", () => {
 			const parsed = evaluateExpression("()=> user.age = 31");
-			expect(parsed.fn({ __state: rootState })).toBe(31);
+			expect(parsed.fn({ state: rootState })).toBe(31);
 			const user = rootState.user as Record<string, unknown> | undefined;
 			expect(user?.age).toBe(31);
 		});
 		test("broken path early exit", () => {
 			const parsed = evaluateExpression("()=> user.missing.prop = 5");
-			const result = parsed.fn({ __state: rootState });
+			const result = parsed.fn({ state: rootState });
 			// traversal stops early; no throw; returns RHS
 			expect(result).toBe(5);
 			const user = rootState.user as Record<string, unknown> | undefined;
@@ -175,7 +175,7 @@ describe("Expression Parser", () => {
 		test("captures state var via injected context", () => {
 			initState({ count: 2 });
 			const parsed = evaluateExpression("()=> count + 3");
-			expect(parsed.fn({ __state: rootState })).toBe(5);
+			expect(parsed.fn({ state: rootState })).toBe(5);
 		});
 	});
 

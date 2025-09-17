@@ -1,4 +1,4 @@
-// Expression parser expects state injected via ctx.__state
+// Expression parser expects state injected via ctx.state
 export interface ParsedExpression {
 	_fn: (ctx?: Record<string, unknown>) => unknown | Promise<unknown>;
 	// For simple reference chains (e.g., foo, foo.bar, foo[0].baz), provide a setter to update state
@@ -200,6 +200,30 @@ const parse = (raw: string): ParsedExpression => {
 		}
 		if (wraps) return parse(expr.slice(1, -1));
 	}
+	// Array literal: [a, b, c]
+	if (expr[0] === "[" && expr[expr.length - 1] === "]") {
+		let depth = 0,
+			q = "",
+			last = 1;
+		const items: string[] = [];
+		for (let i = 0; i < expr.length; i++) {
+			const ch = expr[i];
+			if (q) {
+				if (ch === q && expr[i - 1] !== "\\") q = "";
+				continue;
+			}
+			if (ch === '"' || ch === "'") q = ch;
+			else if (ch === "[") depth++;
+			else if (ch === "]") depth--;
+			else if (ch === "," && depth === 1) {
+				items.push(expr.slice(last, i).trim());
+				last = i + 1;
+			}
+		}
+		items.push(expr.slice(last, expr.length - 1).trim());
+		const parts = items.filter(Boolean).map((s) => parse(s));
+		return { _fn: (c) => parts.map((p) => p._fn(c)) };
+	}
 	{
 		let p = 0,
 			b = 0,
@@ -327,7 +351,7 @@ const parse = (raw: string): ParsedExpression => {
 		const fn = (c = {}) => {
 			const ctx = c as Record<string, unknown>;
 			let root: unknown;
-			const injected = ctx.__state as Record<string, unknown> | undefined;
+			const injected = ctx.state as Record<string, unknown> | undefined;
 			if (ctx && chain._base in ctx) root = ctx[chain._base];
 			else if (
 				typeof globalThis !== "undefined" &&
@@ -368,7 +392,7 @@ const parse = (raw: string): ParsedExpression => {
 			? undefined
 			: (c: Record<string, unknown> | undefined, value: unknown) => {
 					const ctx = (c || {}) as Record<string, unknown>;
-					const injected = ctx.__state as
+					const injected = ctx.state as
 						| Record<string, unknown>
 						| undefined;
 					let rootHolder: Record<string, unknown> | undefined;

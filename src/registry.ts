@@ -7,6 +7,7 @@ import { scopeProxy } from "./proxy";
 type Registerable = (HTMLElement | SVGElement | MathMLElement) & {
 	mfshow?: unknown;
 	mfawait?: unknown;
+	mfeach?: number;
 };
 
 const templLogicAttrs = ["if", "each", "await"] as const;
@@ -27,8 +28,8 @@ type templLogicAttr =
 const templLogicAttrSet = new Set(templLogicAttrs);
 const dependentLogicAttrSet = new Set(["elseif", "else", "then", "catch"]);
 const prefixes = [":", "data-mf-"] as const;
-const throwError = (msg: string, cause?: unknown) => {
-	console.error(msg, cause);
+const throwError = (msg: string, cause: unknown, unsupported = false) => {
+	console.error(`${unsupported ? "Unsupported: " : ""}${msg}`, cause);
 	throw new Error("Manifold Error");
 };
 
@@ -101,26 +102,23 @@ export default class RegEl {
 	#cleanups = new Set<() => void>();
 	_el: Registerable;
 	_state: Record<string, unknown>;
-	_show: unknown = false;
-	_showAsync: unknown = false;
-	_each?: ParsedExpression["_fn"];
-	_cachedContent?: Node;
+	_cachedContent?: Registerable;
+	_eachEndPtr?: Registerable;
+	_eachStart?: Comment;
+	_eachEnd?: Comment;
+	_eachInstances?: Registerable[];
 
-	static _register(el: Registerable, state: Record<string, unknown>) {
-		const rl = RegEl._registry.get(el);
-		return rl ?? new RegEl(el, state);
+	static _registerOrGet(el: Registerable, state: Record<string, unknown>) {
+		return RegEl._registry.get(el) ?? new RegEl(el, state);
 	}
 
 	constructor(el: Registerable, state: Record<string, unknown>) {
-		if (RegEl._registry.has(el))
-			throwError("Element already registered", el);
-
-		RegEl._registry.set(el, this);
-
 		this._state = scopeProxy(state);
 		this._el = el;
-
+		RegEl._registry.set(el, this);
 		RegEl._mutations.set(el, this.#mutations);
+		const attrWasRegistered = new Set<string>();
+		const registeredEvents = new Set<string>();
 
 		for (const child of el.children) {
 			if (
@@ -135,15 +133,11 @@ export default class RegEl {
 			}
 		}
 
-		const attrWasRegistered = new Set<string>();
-		const registeredEvents = new Set<string>();
-
 		// Handle text nodes
-		for (const node of Array.from(el.childNodes))
-			this._handleTextNode(node);
+		for (const node of el.childNodes) this._handleTextNode(node);
 
 		// Handle attributes
-		for (const { name, value } of Array.from(el.attributes)) {
+		for (const { name, value } of el.attributes) {
 			const attrInfo = getAttrName(name);
 			if (!attrInfo) continue;
 			const { attrName, sync } = attrInfo;
@@ -151,17 +145,18 @@ export default class RegEl {
 			if (attrWasRegistered.has(attrName))
 				throwError(`Attribute ${attrName} duplicate`, el);
 
-			const [exp, aliasStr] = value
-				.split(/\s*as\s*/)
-				.map((s) => s.trim());
+			// Parse out expression and optional alias
+			const [exp] = value.split(/\s*as\s*/).map((s) => s.trim());
 
 			const { _fn, _syncRef } = evaluateExpression(exp);
 
+			// Handle special attributes
 			if (templLogicAttrSet.has(attrName as "if" | "each" | "await")) {
 				if (sync)
 					throwError(
-						`Sync not supported on templating logic: ${attrName}`,
-						el
+						`Sync on templating logic: ${attrName}`,
+						el,
+						true
 					);
 				this._handleTemplating(attrName as templLogicAttr, name, _fn);
 				attrWasRegistered.add(attrName);
@@ -174,11 +169,9 @@ export default class RegEl {
 				continue;
 			}
 
-			if (aliasStr) throwError(`Aliasing not supported on ${value}`, el);
-
+			// Handle event bindings
 			if (attrName.startsWith("on")) {
-				if (sync)
-					throwError(`Sync not supported on event handlers`, el);
+				if (sync) throwError(`Sync on event handlers`, el, true);
 				const type = attrName.slice(2);
 				const arrow = exp.match(/^\(\s*([^)]*)?\s*\)\s*=>\s*(.+)$/);
 				let handler: (e: Event) => void;
@@ -193,7 +186,7 @@ export default class RegEl {
 					const bodyParsed = evaluateExpression(bodyExpr);
 					handler = (e: Event) => {
 						const ctx: Record<string, unknown> = {
-							__state: this._state,
+							state: this._state,
 							event: e,
 							element: el,
 						};
@@ -204,7 +197,7 @@ export default class RegEl {
 					};
 				} else {
 					handler = (e: Event) =>
-						_fn({ __state: this._state, event: e, element: el });
+						_fn({ state: this._state, event: e, element: el });
 				}
 				el.addEventListener(type, handler);
 				registeredEvents.add(type);
@@ -214,19 +207,21 @@ export default class RegEl {
 				continue;
 			}
 
+			// Handle prop/attribute bindings
 			const [attrPropName, attrProp] = attrName.split(":", 2);
 			let ef: Effect;
 
 			if (attrProp) {
 				if (sync)
 					throwError(
-						`Sync not supported on granular bindings: ${attrName}`,
-						el
+						`Sync on granular bindings: ${attrName}`,
+						el,
+						true
 					);
 
 				if (attrPropName === "style" || attrPropName === "class") {
 					ef = effect(() => {
-						const res = _fn({ __state: this._state, element: el });
+						const res = _fn({ state: this._state, element: el });
 						if (attrPropName === "class") {
 							if (res) el.classList.add(String(attrProp));
 							else el.classList.remove(String(attrProp));
@@ -237,14 +232,17 @@ export default class RegEl {
 						}
 					});
 				} else {
-					throwError(`Unsupported bind: ${attrName}`, el);
+					throwError(`bind ${attrName}`, el, true);
 				}
 			} else {
 				ef = effect(() => {
-					const result = _fn({ __state: this._state, element: el });
+					const result = _fn({ state: this._state, element: el });
 					if (attrName in el) {
-						// biome-ignore lint/suspicious/noExplicitAny: Unknown element properties
-						(el as any)[attrName] = result;
+						// Avoid setting DOM properties to undefined (e.g., input.type)
+						if (result !== undefined) {
+							// biome-ignore lint/suspicious/noExplicitAny: Unknown element properties
+							(el as any)[attrName] = result;
+						}
 					} else {
 						if (result === false || result == null)
 							el.removeAttribute(attrName);
@@ -252,6 +250,7 @@ export default class RegEl {
 					}
 				});
 
+				// Sync back special cases
 				if (sync) {
 					const capture = () => {
 						try {
@@ -262,7 +261,7 @@ export default class RegEl {
 									: el.getAttribute(attrName);
 							if (_syncRef)
 								_syncRef(
-									{ __state: state } as unknown as Record<
+									{ state } as unknown as Record<
 										string,
 										unknown
 									>,
@@ -292,6 +291,7 @@ export default class RegEl {
 				}
 			}
 
+			// Wrap up
 			this.#cleanups.add(() => ef._stop());
 			attrWasRegistered.add(attrName);
 			el.removeAttribute(name);
@@ -350,7 +350,7 @@ export default class RegEl {
 				node.textContent = tokens
 					.map((t) =>
 						t.dynamic
-							? t.fn({ __state: this._state, element: this._el })
+							? t.fn({ state: this._state, element: this._el })
 							: t.text
 					)
 					.join("");
@@ -364,24 +364,112 @@ export default class RegEl {
 		attrTagName: string,
 		_fn: (ctx?: Record<string, unknown> | undefined) => unknown
 	) {
+		const dbg = (globalThis as unknown as { __MF_DEBUG_EACH?: boolean })
+			.__MF_DEBUG_EACH
+			? (...args: unknown[]) => console.debug("[mf:each]", ...args)
+			: (..._args: unknown[]) => {};
 		const isConditional = attrName === "if";
 		const isAsync = attrName === "await";
+		let ef: Effect;
+
+		const siblings: Sibling[] = [
+			{
+				el: this._el,
+				attrName,
+				fn: _fn,
+			},
+		];
+
+		this._el.removeAttribute(attrTagName);
 
 		if (attrName === "each") {
-			this._cachedContent = this._el.cloneNode(true);
+			// Cache template once (attribute already removed from original)
+			this._cachedContent ??= this._el.cloneNode(true) as Registerable;
+
+			// Establish stable start/end anchors and remove the original template element
+			if (!this._eachStart || !this._eachEnd) {
+				const start = document.createComment(":each-start");
+				const end = document.createComment(":each-end");
+				const parent = this._el.parentNode;
+				if (parent) {
+					parent.insertBefore(start, this._el);
+					parent.insertBefore(end, this._el.nextSibling);
+					// Keep the template element in the DOM but hidden to avoid disposal
+					(this._el as HTMLElement).style.display = "none";
+					dbg("anchors created", { hasParent: !!parent });
+				}
+				this._eachStart = start;
+				this._eachEnd = end;
+			}
+
+			this._eachInstances ??= [];
+
+			ef = effect(() => {
+				const list =
+					(_fn({
+						state: this._state,
+						element: this._eachStart ?? this._el,
+					}) as unknown[] | undefined) ?? [];
+				if (!Array.isArray(list)) {
+					dbg("list-eval", {
+						type: Object.prototype.toString.call(list),
+						value: list,
+					});
+					throwError(`Non-array in :each`, this._el);
+				}
+
+				const end = this._eachEnd;
+				const parent = end?.parentNode;
+				if (!end || !parent) return;
+
+				const instances = this._eachInstances!;
+				const cur = instances.length;
+				const next = list.length;
+
+				dbg("evaluate", {
+					cur,
+					next,
+					betweenAnchors: (() => {
+						let count = 0;
+						let n: ChildNode | null = this._eachStart
+							? this._eachStart.nextSibling
+							: null;
+						while (n && n !== this._eachEnd) {
+							if (n.nodeType === Node.ELEMENT_NODE) count++;
+							n = n.nextSibling;
+						}
+						return count;
+					})(),
+				});
+
+				if (next > cur) {
+					const frag = document.createDocumentFragment();
+					for (let i = cur; i < next; i++) {
+						const clone = this._cachedContent!.cloneNode(
+							true
+						) as Registerable;
+						RegEl._registerOrGet(
+							clone,
+							this._state as unknown as Record<string, unknown>
+						);
+						instances.push(clone);
+						frag.appendChild(clone);
+					}
+					parent.insertBefore(frag, end);
+					dbg("grew", { to: instances.length });
+				} else if (next < cur) {
+					for (let i = cur - 1; i >= next; i--) {
+						const node = instances[i];
+						instances.pop();
+						node.remove(); // disposal handled by mutation observer
+					}
+					dbg("shrunk", { to: instances.length });
+				}
+			});
 		} else if (isConditional || isAsync) {
-			const siblings: Sibling[] = [
-				{
-					el: this._el,
-					attrName,
-					fn: _fn,
-				},
-			];
-
-			this._el.removeAttribute(attrTagName);
-
 			// Get dependent siblings
 			let sib = this._el.nextElementSibling;
+
 			while (sib) {
 				const { prefixed, unprefixed } = getDependentAttr(
 					sib,
@@ -391,6 +479,7 @@ export default class RegEl {
 
 				let fn: ParsedExpression["_fn"] | null = null;
 				let alias: string | undefined;
+
 				if (unprefixed !== "else") {
 					const raw = sib.getAttribute(prefixed) || "";
 					const [left, right] = raw
@@ -402,26 +491,27 @@ export default class RegEl {
 						(unprefixed === "then" || unprefixed === "catch")
 					) {
 						alias = right || left || undefined;
-						// No need to evaluate a function here; not used for then/catch
 						fn = null;
 					} else {
 						fn = evaluateExpression(left)._fn;
 						alias = right || undefined;
 					}
 				}
+
 				siblings.push({
 					el: sib as Registerable,
 					attrName: unprefixed as templLogicAttr,
 					fn,
 					alias,
 				});
+
 				sib.removeAttribute(prefixed);
 				sib = sib.nextElementSibling;
 			}
 
 			// Effect on root and dependents
 			let lastPromise: Promise<unknown> | null = null;
-			const ef = effect(() => {
+			ef = effect(() => {
 				if (isConditional) {
 					let matched = false;
 					for (const { el, fn, attrName } of siblings) {
@@ -431,15 +521,12 @@ export default class RegEl {
 								attrName === "else"
 									? true
 									: !!fn?.({
-											__state: this._state,
+											state: this._state,
 											element: el,
 									  });
 							matched = !!el.mfshow;
 						}
-						(el as HTMLElement).style.display =
-							(el.mfshow ?? true) && (el.mfawait ?? true)
-								? ""
-								: "none";
+						this._updateDisplay([{ el }]);
 					}
 				} else {
 					// Async :await / :then / :catch handling
@@ -453,28 +540,21 @@ export default class RegEl {
 
 					// Evaluate expression to obtain maybe-promise
 					const result = root.fn?.({
-						__state: this._state,
+						state: this._state,
 						element: root.el,
 					});
+
 					const isThenable =
 						result &&
 						(typeof (result as any).then === "function" ||
 							typeof (result as any).catch === "function");
 
 					// Reset gating
-					root.el.mfawait = true; // show loader
-					if (thenLink) thenLink.el.mfawait = false;
+					root.el.mfawait = isThenable; // show loader
+					if (thenLink) thenLink.el.mfawait = !isThenable;
 					if (catchLink) catchLink.el.mfawait = false;
 
-					const updateDisplay = () => {
-						for (const { el } of siblings) {
-							(el as HTMLElement).style.display =
-								(el.mfshow ?? true) && (el.mfawait ?? true)
-									? ""
-									: "none";
-						}
-					};
-					updateDisplay();
+					this._updateDisplay(siblings);
 
 					if (!isThenable) {
 						// Treat non-promise as immediate success
@@ -482,7 +562,10 @@ export default class RegEl {
 						if (thenLink) thenLink.el.mfawait = true;
 						// Apply alias pattern for immediate value to then-link's scope
 						if (thenLink && thenLink.alias) {
-							const thenInst = RegEl._registry.get(thenLink.el);
+							const thenInst = RegEl._registerOrGet(
+								thenLink.el,
+								this._state
+							);
 							if (thenInst)
 								applyAliasPattern(
 									thenLink.alias,
@@ -490,23 +573,24 @@ export default class RegEl {
 									thenInst._state
 								);
 						}
-						updateDisplay();
+						this._updateDisplay(siblings);
 						return;
 					}
 
-					const p = result as Promise<unknown>;
-					if (p === lastPromise) return; // avoid duplicating handlers
-					lastPromise = p;
+					if ((result as Promise<unknown>) === lastPromise) return; // avoid duplicating handlers
+					lastPromise = result as Promise<unknown>;
 
-					p.then(
+					(result as Promise<unknown>).then(
 						(_val) => {
 							root.el.mfawait = false;
 							if (thenLink) thenLink.el.mfawait = true;
 							// Destructure aliases for :then value using the sibling's expression string
 							if (thenLink && thenLink.alias) {
-								const thenInst = RegEl._registry.get(
-									thenLink.el
+								const thenInst = RegEl._registerOrGet(
+									thenLink.el,
+									this._state
 								);
+
 								if (thenInst)
 									applyAliasPattern(
 										thenLink.alias,
@@ -514,7 +598,7 @@ export default class RegEl {
 										thenInst._state
 									);
 							}
-							updateDisplay();
+							this._updateDisplay(siblings);
 						},
 						(_err) => {
 							root.el.mfawait = false;
@@ -530,13 +614,20 @@ export default class RegEl {
 										catchInst._state
 									);
 							}
-							updateDisplay();
+							this._updateDisplay(siblings);
 						}
 					);
 				}
 			});
+		}
 
-			this.#cleanups.add(() => ef._stop());
+		this.#cleanups.add(() => ef._stop());
+	}
+
+	_updateDisplay(sibs: Pick<Sibling, "el">[]) {
+		for (const { el } of sibs) {
+			(el as HTMLElement).style.display =
+				(el.mfshow ?? true) && (el.mfawait ?? true) ? "" : "none";
 		}
 	}
 
