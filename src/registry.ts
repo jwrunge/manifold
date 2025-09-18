@@ -369,17 +369,13 @@ export default class RegEl {
 				return { dynamic: false as const, text: part };
 			});
 			const render = () => {
-				const out = tokens
+				node.textContent = tokens
 					.map((t) =>
 						t.dynamic
 							? t.fn({ state: this._state, element: this._el })
 							: t.text
 					)
 					.join("");
-				try {
-					console.log(":text", { el: this._el, out });
-				} catch {}
-				node.textContent = out;
 			};
 			// Do an immediate render so text appears even before any effect flush
 			render();
@@ -453,14 +449,6 @@ export default class RegEl {
 				const next = list.length;
 
 				// Debug output for diagnosing :each behavior
-				try {
-					console.log(":each", {
-						el: this._el,
-						cur,
-						next,
-						alias: eachAlias,
-					});
-				} catch {}
 
 				// Small helper to bind aliases for an item and its index
 				const bindEachAliases = (
