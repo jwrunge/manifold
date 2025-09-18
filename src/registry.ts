@@ -422,8 +422,8 @@ export default class RegEl {
 				const parent = end?.parentNode;
 				if (!end || !parent) return;
 
-				const instances = this._eachInstances!;
-				const cur = instances.length;
+				const instances = this._eachInstances;
+				const cur = instances?.length ?? 0;
 				const next = list.length;
 
 				dbg("evaluate", {
@@ -445,25 +445,25 @@ export default class RegEl {
 				if (next > cur) {
 					const frag = document.createDocumentFragment();
 					for (let i = cur; i < next; i++) {
-						const clone = this._cachedContent!.cloneNode(
+						const clone = this._cachedContent?.cloneNode(
 							true
 						) as Registerable;
 						RegEl._registerOrGet(
 							clone,
 							this._state as unknown as Record<string, unknown>
 						);
-						instances.push(clone);
+						instances?.push(clone);
 						frag.appendChild(clone);
 					}
 					parent.insertBefore(frag, end);
-					dbg("grew", { to: instances.length });
+					dbg("grew", { to: instances?.length });
 				} else if (next < cur) {
 					for (let i = cur - 1; i >= next; i--) {
-						const node = instances[i];
-						instances.pop();
-						node.remove(); // disposal handled by mutation observer
+						const node = instances?.[i];
+						instances?.pop();
+						node?.remove(); // disposal handled by mutation observer
 					}
-					dbg("shrunk", { to: instances.length });
+					dbg("shrunk", { to: instances?.length });
 				}
 			});
 		} else if (isConditional || isAsync) {
@@ -546,7 +546,9 @@ export default class RegEl {
 
 					const isThenable =
 						result &&
+						// biome-ignore lint/suspicious/noExplicitAny: explicit any for thenable check
 						(typeof (result as any).then === "function" ||
+							// biome-ignore lint/suspicious/noExplicitAny: explicit any for thenable check
 							typeof (result as any).catch === "function");
 
 					// Reset gating
@@ -561,7 +563,7 @@ export default class RegEl {
 						root.el.mfawait = false;
 						if (thenLink) thenLink.el.mfawait = true;
 						// Apply alias pattern for immediate value to then-link's scope
-						if (thenLink && thenLink.alias) {
+						if (thenLink?.alias) {
 							const thenInst = RegEl._registerOrGet(
 								thenLink.el,
 								this._state
@@ -585,7 +587,7 @@ export default class RegEl {
 							root.el.mfawait = false;
 							if (thenLink) thenLink.el.mfawait = true;
 							// Destructure aliases for :then value using the sibling's expression string
-							if (thenLink && thenLink.alias) {
+							if (thenLink?.alias) {
 								const thenInst = RegEl._registerOrGet(
 									thenLink.el,
 									this._state
@@ -603,7 +605,7 @@ export default class RegEl {
 						(_err) => {
 							root.el.mfawait = false;
 							if (catchLink) catchLink.el.mfawait = true;
-							if (catchLink && catchLink.alias) {
+							if (catchLink?.alias) {
 								const catchInst = RegEl._registry.get(
 									catchLink.el
 								);
