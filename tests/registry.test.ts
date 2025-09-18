@@ -41,9 +41,9 @@ describe("registry basics", () => {
 		<p :else id="elseEl">else</p>
       </div>`;
 		const root = document.body.firstElementChild as HTMLElement;
-		Array.from(root.querySelectorAll("*")).forEach((el) =>
-				new RegEl(el as HTMLElement, state)
-			);
+		Array.from(root.querySelectorAll("*")).forEach(
+			(el) => new RegEl(el as HTMLElement, state)
+		);
 		await flush();
 		expect(
 			(document.getElementById("ifEl") as HTMLElement).style.display
@@ -72,8 +72,7 @@ describe("registry basics", () => {
 		if (!template) throw new Error("template missing");
 		new RegEl(template as HTMLElement, state);
 		await flush();
-	    const countLis = () =>
-		    ul.querySelectorAll("li:not([style])").length;
+		const countLis = () => ul.querySelectorAll("li:not([style])").length;
 		expect(countLis()).toBe(2);
 		state.list.push({ id: 3, v: "c" });
 		state.list = [...state.list];
@@ -86,7 +85,9 @@ describe("registry basics", () => {
 	});
 
 	test(":each colon syntax with value, index aliases (primitive array)", async () => {
-		const local = StateBuilder.create(undefined, { nums: [10, 20, 30] }).build() as {
+		const local = StateBuilder.create(undefined, {
+			nums: [10, 20, 30],
+		}).build() as {
 			nums: number[];
 		};
 		document.body.innerHTML = `<ul><li :each="nums as n, i">Item \${i}: \${n}</li></ul>`;
@@ -99,14 +100,16 @@ describe("registry basics", () => {
 			local as unknown as Record<string, unknown>
 		);
 		await flush();
-		const texts = Array.from(
-				ul.querySelectorAll("li:not([style])")
-			).map((el) => el.textContent?.trim());
+		const texts = Array.from(ul.querySelectorAll("li:not([style])")).map(
+			(el) => el.textContent?.trim()
+		);
 		expect(texts).toEqual(["Item 0: 10", "Item 1: 20", "Item 2: 30"]);
 	});
 
 	test(":each colon syntax single value alias (primitive array)", async () => {
-		const local = StateBuilder.create(undefined, { nums: [5, 6] }).build() as {
+		const local = StateBuilder.create(undefined, {
+			nums: [5, 6],
+		}).build() as {
 			nums: number[];
 		};
 		document.body.innerHTML = `<ul><li :each="nums as n">Val \${n}</li></ul>`;
@@ -119,9 +122,9 @@ describe("registry basics", () => {
 			local as unknown as Record<string, unknown>
 		);
 		await flush();
-		const texts = Array.from(
-				ul.querySelectorAll("li:not([style])")
-			).map((el) => el.textContent?.trim());
+		const texts = Array.from(ul.querySelectorAll("li:not([style])")).map(
+			(el) => el.textContent?.trim()
+		);
 		expect(texts).toEqual(["Val 5", "Val 6"]);
 	});
 
@@ -139,7 +142,7 @@ describe("registry basics", () => {
 
 	test("event handler executes", async () => {
 		// Provide an increment helper since assignment expressions aren't supported
-		;(state as unknown as { increment: () => void }).increment = () => {
+		(state as unknown as { increment: () => void }).increment = () => {
 			state.count = (Number(state.count) || 0) + 1;
 		};
 		document.body.innerHTML = `<button :onclick="increment()" id="btn">+</button>`;
@@ -202,9 +205,9 @@ describe("extended registry features", () => {
 			</div>`;
 		const root = document.body.firstElementChild;
 		if (!root) throw new Error("root missing");
-		Array.from(root.children).forEach((el) =>
-				new RegEl(el as HTMLElement, local)
-			);
+		Array.from(root.children).forEach(
+			(el) => new RegEl(el as HTMLElement, local)
+		);
 		// Initial: loading visible, then/catch hidden
 		expect(
 			(document.getElementById("await") as HTMLElement).style.display
@@ -322,7 +325,7 @@ describe("extended registry features", () => {
 		};
 		document.body.innerHTML = `<select sync:selectedIndex="idx" id="sel"><option>A</option><option>B</option><option>C</option></select>`;
 		const el = document.getElementById("sel") as HTMLSelectElement;
-	new RegEl(el, s);
+		new RegEl(el, s);
 		for (let i = 0; i < 2; i++) await flush();
 		expect(el.selectedIndex).toBe(1);
 		el.selectedIndex = 2;
@@ -332,7 +335,9 @@ describe("extended registry features", () => {
 	});
 
 	test("direct array index assignment extends :each loop", async () => {
-		const local = StateBuilder.create(undefined, { arr: ["a", "b", "c"] }).build() as {
+		const local = StateBuilder.create(undefined, {
+			arr: ["a", "b", "c"],
+		}).build() as {
 			arr: string[];
 		};
 		document.body.innerHTML = `<ul><li :each="arr as v, i">(\${i}) \${v}</li></ul>`;
@@ -346,7 +351,7 @@ describe("extended registry features", () => {
 		);
 		await flush();
 		const texts = () =>
-				Array.from(ul.querySelectorAll("li:not([style])")).map((el) =>
+			Array.from(ul.querySelectorAll("li:not([style])")).map((el) =>
 				el.textContent?.trim()
 			);
 		expect(texts()).toEqual(["(0) a", "(1) b", "(2) c"]);
@@ -356,7 +361,9 @@ describe("extended registry features", () => {
 	});
 
 	test("direct array index assignment updates existing index in :each loop", async () => {
-		const local = StateBuilder.create(undefined, { arr: ["a", "b", "c"] }).build() as {
+		const local = StateBuilder.create(undefined, {
+			arr: ["a", "b", "c"],
+		}).build() as {
 			arr: string[];
 		};
 		document.body.innerHTML = `<ul><li :each="arr as v, i">(\${i}) \${v}</li></ul>`;
@@ -370,7 +377,7 @@ describe("extended registry features", () => {
 		);
 		await flush();
 		const textAt = (i: number) =>
-				Array.from(ul.querySelectorAll("li:not([style])"))[
+			Array.from(ul.querySelectorAll("li:not([style])"))[
 				i
 			].textContent?.trim();
 		expect(textAt(1)).toBe("(1) b");

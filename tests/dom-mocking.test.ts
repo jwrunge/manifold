@@ -9,8 +9,8 @@ const multiFlush = async (n = 4) => {
 
 // Helper to register all direct child elements under a root
 const registerChildren = (root: Element, state: Record<string, unknown>) => {
-	Array.from(root.children).forEach((el) =>
-		new RegEl(el as HTMLElement, state)
+	Array.from(root.children).forEach(
+		(el) => new RegEl(el as HTMLElement, state)
 	);
 };
 
@@ -169,16 +169,16 @@ describe("DOM behavior / structural stability", () => {
 		new RegEl(template as HTMLElement, state);
 		await flush();
 		expect(
-			Array.from(ul.querySelectorAll("li"))
-				.filter((n) => (n as HTMLElement).style.display !== "none")
-				.length
+			Array.from(ul.querySelectorAll("li")).filter(
+				(n) => (n as HTMLElement).style.display !== "none"
+			).length
 		).toBe(3);
 		state.arr = [];
 		await flush();
 		expect(
-			Array.from(ul.querySelectorAll("li"))
-				.filter((n) => (n as HTMLElement).style.display !== "none")
-				.length
+			Array.from(ul.querySelectorAll("li")).filter(
+				(n) => (n as HTMLElement).style.display !== "none"
+			).length
 		).toBe(0);
 	});
 
@@ -232,7 +232,7 @@ describe("DOM behavior / structural stability", () => {
 		if (!root) throw new Error("c12 root missing");
 		const template = root.querySelector("div");
 		if (!template) throw new Error("template missing");
-	new RegEl(template as HTMLElement, state);
+		new RegEl(template as HTMLElement, state);
 		await flush();
 		const hits = root.querySelectorAll(".hit");
 		const misses = root.querySelectorAll(".miss");

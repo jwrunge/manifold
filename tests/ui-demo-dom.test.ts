@@ -45,36 +45,39 @@ const builders = await loadBuilders();
 
 for (const { name, StateBuilder } of builders) {
 	test(`${name}: UI demo basics (counts, derived, bindings)`, async () => {
-	  const state = StateBuilder.create<DemoState>(
-				undefined,
-				{
-					count: 10,
-					count2: 4,
-					items: [1, 2, 3],
-					userId: 1,
-					asyncToggle: true,
-				}
-			)
+		const state = StateBuilder.create<DemoState>(undefined, {
+			count: 10,
+			count2: 4,
+			items: [1, 2, 3],
+			userId: 1,
+			asyncToggle: true,
+		})
 			.derive("sum", (s) => s.count + s.count2)
 			.derive("doubleCount", (s) => s.count * 2)
 			.build();
 
-			// Attach methods after build to the reactive state
-			(state as DemoState & DemoFuncs).increment = function (this: DemoState, value?: number) {
-				this.count += value ?? 1;
-			};
-			(state as DemoState & DemoFuncs).setCount2 = function (this: DemoState, v: string | number) {
-				this.count2 = typeof v === "number" ? v : Number(v);
-			};
-			(state as DemoState & DemoFuncs).loadUser = function (this: DemoState) {
-				const { asyncToggle, userId } = this; // tracked
-				return new Promise((resolve, reject) => {
-					setTimeout(() => {
-						if (asyncToggle) resolve({ id: userId, name: "Ada" });
-						else reject(new Error("User load failed"));
-					}, 0);
-				});
-			};
+		// Attach methods after build to the reactive state
+		(state as DemoState & DemoFuncs).increment = function (
+			this: DemoState,
+			value?: number
+		) {
+			this.count += value ?? 1;
+		};
+		(state as DemoState & DemoFuncs).setCount2 = function (
+			this: DemoState,
+			v: string | number
+		) {
+			this.count2 = typeof v === "number" ? v : Number(v);
+		};
+		(state as DemoState & DemoFuncs).loadUser = function (this: DemoState) {
+			const { asyncToggle, userId } = this; // tracked
+			return new Promise((resolve, reject) => {
+				setTimeout(() => {
+					if (asyncToggle) resolve({ id: userId, name: "Ada" });
+					else reject(new Error("User load failed"));
+				}, 0);
+			});
+		};
 
 		document.body.innerHTML = tpl(`
 <div data-mf-register>
@@ -112,8 +115,8 @@ for (const { name, StateBuilder } of builders) {
   <button id="btnJake" :onclick="items[3] = 'Jake!'">Change 3</button>
 </div>
 `);
-	// trigger auto-registration with same default name
-	StateBuilder.create().build();
+		// trigger auto-registration with same default name
+		StateBuilder.create().build();
 
 		// initial
 		await flush();
@@ -219,16 +222,17 @@ for (const { name, StateBuilder } of builders) {
 	});
 
 	test(`${name}: :await only re-runs on tracked deps (toggle/userId), not on unrelated changes`, async () => {
-	let calls = 0;
+		let calls = 0;
 		type AState = { count: number; userId: number; asyncToggle: boolean };
 		type AFns = {
 			loadUser(this: AState): Promise<{ id: number; name: string }>;
 		};
-		const state = StateBuilder.create<AState>(
-			undefined,
-			{ count: 1, userId: 1, asyncToggle: true }
-		).build();
-		;(state as AState & AFns).loadUser = function (this: AState) {
+		const state = StateBuilder.create<AState>(undefined, {
+			count: 1,
+			userId: 1,
+			asyncToggle: true,
+		}).build();
+		(state as AState & AFns).loadUser = function (this: AState) {
 			const { asyncToggle, userId } = this;
 			calls++;
 			return new Promise((resolve, reject) => {
@@ -245,7 +249,7 @@ for (const { name, StateBuilder } of builders) {
   <p id="then" :then="u">Loaded: \${u.id}</p>
   <p id="catch" :catch="e">Error: \${e.message}</p>
 </div>`);
-	StateBuilder.create().build();
+		StateBuilder.create().build();
 
 		await flush();
 		await flush();

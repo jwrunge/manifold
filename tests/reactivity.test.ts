@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
-import $ from "./helpers/api.ts";
 import type { Effect } from "./helpers/api.ts";
+import $ from "./helpers/api.ts";
 
 test("new store", async () => {
 	const store = $.create().add("value", 0).build();
