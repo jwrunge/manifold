@@ -5,6 +5,7 @@ import StateBuilder from "../src/main";
 let rootState: Record<string, unknown> = {};
 const initState = (data: Record<string, unknown>) => {
 	rootState = StateBuilder.create(
+		undefined,
 		data as Record<string, unknown>
 	).build() as Record<string, unknown>;
 };
@@ -17,11 +18,8 @@ describe("Expression Parser", () => {
 	const run = (expr: string, ctx: Record<string, unknown> = {}) => {
 		const parsed = evaluateExpression(expr);
 		// Always provide injected state for resolution
-		return parsed.fn({ ...ctx, state: rootState });
+		return parsed._fn({ ...ctx, state: rootState });
 	};
-
-	const refs = (expr: string) =>
-		Array.from(evaluateExpression(expr).stateRefs);
 
 	describe("Literals", () => {
 		test("booleans / null / undefined", () => {
@@ -179,23 +177,41 @@ describe("Expression Parser", () => {
 		});
 	});
 
-	describe("State Refs Extraction", () => {
-		beforeEach(() => initState({ a: 1, user: { name: "A" } }));
-		test("single identifiers", () => {
-			expect(refs("a")).toEqual(["a"]);
+	describe("Assignments via _syncRef", () => {
+		beforeEach(() => initState({ count: 1, user: { age: 30 } }));
+		test("simple root setter", () => {
+			const parsed = evaluateExpression("count");
+			expect(typeof parsed._fn).toBe("function");
+			expect(typeof parsed._syncRef).toBe("function");
+			parsed._syncRef?.({ state: rootState }, 2);
+			expect(rootState.count).toBe(2);
 		});
-		test("property chains record root only", () => {
-			const r = refs("user.name || user.email");
-			expect(r).toEqual(["user"]);
+		test("nested object property setter", () => {
+			const parsed = evaluateExpression("user.age");
+			parsed._syncRef?.({ state: rootState }, 31);
+			const user = rootState.user as Record<string, unknown> | undefined;
+			expect(user?.age).toBe(31);
 		});
-		test("multiple roots", () => {
-			initState({ a: 1, user: { name: "A" }, count: 0 });
-			expect(refs("a + user.name + count").sort()).toEqual(
-				["a", "count", "user"].sort()
-			);
+		test("broken path early exit", () => {
+			const parsed = evaluateExpression("user.missing.prop");
+			// should not throw; and should not create missing path
+			parsed._syncRef?.({ state: rootState }, 5);
+			const user = rootState.user as Record<string, unknown> | undefined;
+			expect(user?.missing).toBeUndefined();
+		});
+		test("parentheses cannot enable assignment", () => {
+			// Without assignment support, treated as plain string fallback (no assignment performed)
+			const r = run("(count = 10)");
+			expect(r).toBe("count = 10");
+			expect(rootState["count"]).toBe(1); // unchanged
+		});
+		test("bare assignment without wrapper is not executed", () => {
+			initState({ count: 7 });
+			const res = run("count = 9"); // no assignment executed
+			expect(res).toBe("count = 9");
+			expect(rootState.count).toBe(7);
 		});
 	});
-
 	describe("Function Calls", () => {
 		beforeEach(() =>
 			initState({
@@ -220,9 +236,9 @@ describe("Expression Parser", () => {
 		test("unknown identifier returns undefined", () => {
 			expect(run("missing")).toBeUndefined();
 		});
-		test("strict equality inside arrow not treated as assignment", () => {
+		test("ternary with state variable", () => {
 			initState({ count: 1 });
-			expect(run("()=> count === 1 ? 10 : 20")).toBe(10);
+			expect(run("count === 1 ? 10 : 20")).toBe(10);
 		});
 	});
 

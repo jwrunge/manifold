@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import $ from "../src/main.ts";
+import $ from "./helpers/api.ts";
 
 describe("Advanced Reactivity Features", () => {
 	describe("Circular Dependency Detection", () => {

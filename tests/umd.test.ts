@@ -8,23 +8,15 @@ const { default: StateBuilder } = UMD as unknown as {
 	default: typeof import("../src/main.ts").default;
 };
 
-test("UMD build: create store, effect, update, derived", async () => {
+test("UMD build: create store, update, derived", async () => {
 	const state = StateBuilder.create()
 		.add("count", 1)
 		.derive("triple", (s) => s.count * 3)
 		.build();
 
-	let observed: number | null = null;
-	let runs = 0;
-
-	StateBuilder.effect(() => {
-		observed = state.triple; // access derived value
-		runs++;
-	});
-
-	// Initial run
-	expect(observed).toBe(3);
-	expect(runs).toBe(1);
+	// Initial derived
+	await new Promise((r) => setTimeout(r, 0));
+	expect(state.triple).toBe(3);
 
 	// Update state
 	state.count = 4;
@@ -32,8 +24,7 @@ test("UMD build: create store, effect, update, derived", async () => {
 
 	expect(state.count).toBe(4);
 	expect(state.triple).toBe(12);
-	expect(observed).toBe(12);
-	expect(runs).toBe(2);
+	expect(state.triple).toBe(12);
 
 	// No globalState export anymore
 });

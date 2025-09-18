@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "vitest";
-import type { Effect } from "../src/Effect.ts";
-import $ from "../src/main.ts";
+import type { Effect } from "./helpers/api";
+import $ from "./helpers/api";
 
 // Performance profiling utilities
 interface PerformanceMetrics {

@@ -10,7 +10,7 @@ const multiFlush = async (n = 4) => {
 // Helper to register all direct child elements under a root
 const registerChildren = (root: Element, state: Record<string, unknown>) => {
 	Array.from(root.children).forEach((el) =>
-		RegEl.register(el as HTMLElement, state)
+		new RegEl(el as HTMLElement, state)
 	);
 };
 
@@ -24,7 +24,7 @@ describe("DOM behavior / structural stability", () => {
 	}
 	let state: TestState;
 	beforeEach(() => {
-		state = StateBuilder.create({
+		state = StateBuilder.create(undefined, {
 			count: 0,
 			arr: ["a", "b", "c"],
 			ok: true,
@@ -166,12 +166,20 @@ describe("DOM behavior / structural stability", () => {
 		if (!ul) throw new Error("c9 root missing");
 		const template = ul.querySelector("li");
 		if (!template) throw new Error("template missing");
-		RegEl.register(template as HTMLElement, state);
+		new RegEl(template as HTMLElement, state);
 		await flush();
-		expect(ul.querySelectorAll("li:not([data-each])").length).toBe(3);
+		expect(
+			Array.from(ul.querySelectorAll("li"))
+				.filter((n) => (n as HTMLElement).style.display !== "none")
+				.length
+		).toBe(3);
 		state.arr = [];
 		await flush();
-		expect(ul.querySelectorAll("li:not([data-each])").length).toBe(0);
+		expect(
+			Array.from(ul.querySelectorAll("li"))
+				.filter((n) => (n as HTMLElement).style.display !== "none")
+				.length
+		).toBe(0);
 	});
 
 	// 10 Array item update preserves sibling identity
@@ -181,10 +189,12 @@ describe("DOM behavior / structural stability", () => {
 		if (!ul) throw new Error("list missing");
 		const template = ul.querySelector("li");
 		if (!template) throw new Error("template missing");
-		RegEl.register(template as HTMLElement, state);
+		new RegEl(template as HTMLElement, state);
 		await flush();
 		const items = () =>
-			Array.from(ul.querySelectorAll("li:not([data-each])"));
+			Array.from(ul.querySelectorAll("li")).filter(
+				(n) => (n as HTMLElement).style.display !== "none"
+			);
 		const nodes = items();
 		expect(nodes.map((n) => n.textContent?.trim())).toEqual([
 			"(0) a",
@@ -207,11 +217,11 @@ describe("DOM behavior / structural stability", () => {
 		if (!root) throw new Error("c11 root missing");
 		const template = root.querySelector("p");
 		if (!template) throw new Error("template missing");
-		RegEl.register(template as HTMLElement, state);
+		new RegEl(template as HTMLElement, state);
 		await flush();
-		const texts = Array.from(
-			root.querySelectorAll("p:not([data-each])")
-		).map((n) => n.textContent?.trim());
+		const texts = Array.from(root.querySelectorAll("p"))
+			.filter((n) => (n as HTMLElement).style.display !== "none")
+			.map((n) => n.textContent?.trim());
 		expect(texts).toEqual(["IDX=0 :: A", "IDX=1 :: B", "IDX=2 :: C"]);
 	});
 
@@ -222,7 +232,7 @@ describe("DOM behavior / structural stability", () => {
 		if (!root) throw new Error("c12 root missing");
 		const template = root.querySelector("div");
 		if (!template) throw new Error("template missing");
-		RegEl.register(template as HTMLElement, state);
+	new RegEl(template as HTMLElement, state);
 		await flush();
 		const hits = root.querySelectorAll(".hit");
 		const misses = root.querySelectorAll(".miss");

@@ -33,14 +33,13 @@ const builders = await loadBuilders();
 
 for (const { name, StateBuilder } of builders) {
 	test(`${name}: DOM updates via auto-registration`, async () => {
-		const state = StateBuilder.create({ count: 1 }).build();
-		document.body.innerHTML = tpl(`
-<div data-mf-register>
-  <p id="c">\${count}</p>
-</div>
-`);
-		// Trigger auto-registration
-		StateBuilder.create().build();
+			document.body.innerHTML = tpl(`
+	<div data-mf-register>
+		<p id="c">\${count}</p>
+	</div>
+	`);
+			const state = StateBuilder.create(undefined, { count: 1 }).build();
+			// Auto-registration occurred when building the state above
 		await flush();
 		expect((document.getElementById("c") as HTMLElement).textContent).toBe(
 			"1"
@@ -54,7 +53,7 @@ for (const { name, StateBuilder } of builders) {
 	});
 
 	test(`${name}: :await with function re-runs when reactive deps are read synchronously`, async () => {
-		const state = StateBuilder.create({ ok: true }).build();
+		const state = StateBuilder.create(undefined, { ok: true }).build();
 		(state as Record<string, unknown>).loadUser = () => {
 			const ok = (state as Record<string, unknown>).ok as boolean; // track synchronously
 			return new Promise((resolve, reject) => {

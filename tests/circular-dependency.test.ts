@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import $ from "../src/main.ts";
+import $ from "./helpers/api.ts";
 
 describe("True Circular Dependency Detection", () => {
 	test("should demonstrate circular dependency prevention in action", async () => {
