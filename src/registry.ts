@@ -364,10 +364,6 @@ export default class RegEl {
 		attrTagName: string,
 		_fn: (ctx?: Record<string, unknown> | undefined) => unknown
 	) {
-		const dbg = (globalThis as unknown as { __MF_DEBUG_EACH?: boolean })
-			.__MF_DEBUG_EACH
-			? (...args: unknown[]) => console.debug("[mf:each]", ...args)
-			: (..._args: unknown[]) => {};
 		const isConditional = attrName === "if";
 		const isAsync = attrName === "await";
 		let ef: Effect;
@@ -396,7 +392,6 @@ export default class RegEl {
 					parent.insertBefore(end, this._el.nextSibling);
 					// Keep the template element in the DOM but hidden to avoid disposal
 					(this._el as HTMLElement).style.display = "none";
-					dbg("anchors created", { hasParent: !!parent });
 				}
 				this._eachStart = start;
 				this._eachEnd = end;
@@ -411,10 +406,6 @@ export default class RegEl {
 						element: this._eachStart ?? this._el,
 					}) as unknown[] | undefined) ?? [];
 				if (!Array.isArray(list)) {
-					dbg("list-eval", {
-						type: Object.prototype.toString.call(list),
-						value: list,
-					});
 					throwError(`Non-array in :each`, this._el);
 				}
 
@@ -425,22 +416,6 @@ export default class RegEl {
 				const instances = this._eachInstances;
 				const cur = instances?.length ?? 0;
 				const next = list.length;
-
-				dbg("evaluate", {
-					cur,
-					next,
-					betweenAnchors: (() => {
-						let count = 0;
-						let n: ChildNode | null = this._eachStart
-							? this._eachStart.nextSibling
-							: null;
-						while (n && n !== this._eachEnd) {
-							if (n.nodeType === Node.ELEMENT_NODE) count++;
-							n = n.nextSibling;
-						}
-						return count;
-					})(),
-				});
 
 				if (next > cur) {
 					const frag = document.createDocumentFragment();
@@ -456,14 +431,12 @@ export default class RegEl {
 						frag.appendChild(clone);
 					}
 					parent.insertBefore(frag, end);
-					dbg("grew", { to: instances?.length });
 				} else if (next < cur) {
 					for (let i = cur - 1; i >= next; i--) {
 						const node = instances?.[i];
 						instances?.pop();
 						node?.remove(); // disposal handled by mutation observer
 					}
-					dbg("shrunk", { to: instances?.length });
 				}
 			});
 		} else if (isConditional || isAsync) {
