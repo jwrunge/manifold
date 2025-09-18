@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import isEqual from "../src/equality.ts";
-import $ from "../src/main.ts";
+import $ from "./helpers/api";
 
 test("primitive equality", () => {
 	expect(isEqual(1, 1)).toBe(true);
