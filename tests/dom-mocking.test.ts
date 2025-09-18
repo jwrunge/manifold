@@ -96,10 +96,10 @@ describe("DOM behavior / structural stability", () => {
 		if (!root) throw new Error("c5 root missing");
 		registerChildren(root, state);
 		await flush();
-	    // Without a leading :if, :elseif should remain hidden by default
-	    expect(
-		    (document.getElementById("bad") as HTMLElement).style.display
-	    ).toBe("none");
+		// Without a leading :if, :elseif should remain hidden by default
+		expect(
+			(document.getElementById("bad") as HTMLElement).style.display
+		).toBe("none");
 		state.count = 0;
 		await flush();
 		expect(
@@ -235,12 +235,12 @@ describe("DOM behavior / structural stability", () => {
 		if (!template) throw new Error("template missing");
 		new RegEl(template as HTMLElement, state);
 		await flush();
-	    const hits = Array.from(root.querySelectorAll(".hit")).filter(
-		    (n) => (n as HTMLElement).style.display !== "none"
-	    );
-	    const misses = Array.from(root.querySelectorAll(".miss")).filter(
-		    (n) => (n as HTMLElement).style.display !== "none"
-	    );
+		const hits = Array.from(root.querySelectorAll(".hit")).filter(
+			(n) => (n as HTMLElement).style.display !== "none"
+		);
+		const misses = Array.from(root.querySelectorAll(".miss")).filter(
+			(n) => (n as HTMLElement).style.display !== "none"
+		);
 		expect(hits.length).toBe(1);
 		expect(misses.length).toBe(2);
 	});
@@ -346,7 +346,7 @@ describe("DOM behavior / structural stability", () => {
 		expect(
 			(document.getElementById("innerThen") as HTMLElement).textContent
 		).toBe("Val=3");
-	    const ths = Array.from(root.querySelectorAll(".th")).filter(
+		const ths = Array.from(root.querySelectorAll(".th")).filter(
 			(n) => (n as HTMLElement).style.display !== "none"
 		);
 		expect(ths.length).toBe(state.arr.length);

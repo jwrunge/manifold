@@ -53,11 +53,11 @@ describe("Expression Parser", () => {
 			expect(run("user.x", { user: {} })).toBeUndefined();
 			expect(run("missing.prop", {})).toBeUndefined();
 		});
-	    test("state via injected context (state)", () => {
-		    initState({ count: 5 });
-		    const parsed = evaluateExpression("count");
-		    expect(parsed._fn({ state: rootState })).toBe(5);
-	    });
+		test("state via injected context (state)", () => {
+			initState({ count: 5 });
+			const parsed = evaluateExpression("count");
+			expect(parsed._fn({ state: rootState })).toBe(5);
+		});
 		test("dynamic index access", () => {
 			initState({
 				list: [10, 20, 30],

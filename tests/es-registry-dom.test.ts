@@ -69,10 +69,10 @@ for (const { name, StateBuilder } of builders) {
   <p :catch="err" id="catch">Err: \${err}</p>
 </div>
 `);
-	// Trigger auto-registration by building any state after DOM is set up
-	StateBuilder.create().build();
-	await flush();
-	await flush();
+		// Trigger auto-registration by building any state after DOM is set up
+		StateBuilder.create().build();
+		await flush();
+		await flush();
 		expect(
 			(document.getElementById("await") as HTMLElement).style.display
 		).toBe("none");
