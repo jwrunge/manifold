@@ -120,6 +120,21 @@ export default class RegEl {
 		const attrWasRegistered = new Set<string>();
 		const registeredEvents = new Set<string>();
 
+		// EARLY HANDLE :each to keep template pristine (avoid text interpolation on template)
+		for (const { name, value } of el.attributes) {
+			const info = getAttrName(name);
+			if (!info) continue;
+			const { attrName } = info;
+			if (attrName === "each") {
+				const [exp, rootAlias] = value
+					.split(/\s*as\s*/)
+					.map((s) => s.trim());
+				const { _fn } = evaluateExpression(exp);
+				this._handleTemplating("each", name, _fn, rootAlias);
+				return;
+			}
+		}
+
 		for (const child of el.children) {
 			if (
 				!child.getAttribute("data-mf-ignore") &&
@@ -133,7 +148,7 @@ export default class RegEl {
 			}
 		}
 
-		// Handle text nodes
+		// Handle text nodes (template elements used by :each are hidden and preserved; clones get their own effects)
 		for (const node of el.childNodes) this._handleTextNode(node);
 
 		// Handle attributes
@@ -145,8 +160,10 @@ export default class RegEl {
 			if (attrWasRegistered.has(attrName))
 				throwError(`Attribute ${attrName} duplicate`, el);
 
-			// Parse out expression and optional alias
-			const [exp] = value.split(/\s*as\s*/).map((s) => s.trim());
+			// Parse out expression and optional alias (for :each)
+			const [exp, rootAlias] = value
+				.split(/\s*as\s*/)
+				.map((s) => s.trim());
 
 			const { _fn, _syncRef } = evaluateExpression(exp);
 
@@ -158,7 +175,12 @@ export default class RegEl {
 						el,
 						true
 					);
-				this._handleTemplating(attrName as templLogicAttr, name, _fn);
+				this._handleTemplating(
+					attrName as templLogicAttr,
+					name,
+					_fn,
+					rootAlias
+				);
 				attrWasRegistered.add(attrName);
 				continue;
 			} else if (
@@ -346,15 +368,22 @@ export default class RegEl {
 				}
 				return { dynamic: false as const, text: part };
 			});
-			const textEffect = effect(() => {
-				node.textContent = tokens
+			const render = () => {
+				const out = tokens
 					.map((t) =>
 						t.dynamic
 							? t.fn({ state: this._state, element: this._el })
 							: t.text
 					)
 					.join("");
-			});
+				try {
+					console.log(":text", { el: this._el, out });
+				} catch {}
+				node.textContent = out;
+			};
+			// Do an immediate render so text appears even before any effect flush
+			render();
+			const textEffect = effect(render);
 			this.#cleanups.add(() => textEffect._stop());
 		}
 	}
@@ -362,7 +391,8 @@ export default class RegEl {
 	_handleTemplating(
 		attrName: templLogicAttr,
 		attrTagName: string,
-		_fn: (ctx?: Record<string, unknown> | undefined) => unknown
+		_fn: (ctx?: Record<string, unknown> | undefined) => unknown,
+		eachAlias?: string
 	) {
 		const isConditional = attrName === "if";
 		const isAsync = attrName === "await";
@@ -379,8 +409,13 @@ export default class RegEl {
 		this._el.removeAttribute(attrTagName);
 
 		if (attrName === "each") {
-			// Cache template once (attribute already removed from original)
-			this._cachedContent ??= this._el.cloneNode(true) as Registerable;
+			// Cache a pristine template clone for repeated use (without the :each attribute)
+			if (!this._cachedContent) {
+				const tmpl = this._el.cloneNode(true) as Registerable;
+				// Remove the templating attribute so clones don't re-trigger :each handling
+				tmpl.removeAttribute(attrTagName);
+				this._cachedContent = tmpl;
+			}
 
 			// Establish stable start/end anchors and remove the original template element
 			if (!this._eachStart || !this._eachEnd) {
@@ -417,18 +452,113 @@ export default class RegEl {
 				const cur = instances?.length ?? 0;
 				const next = list.length;
 
+				// Debug output for diagnosing :each behavior
+				try {
+					console.log(":each", {
+						el: this._el,
+						cur,
+						next,
+						alias: eachAlias,
+					});
+				} catch {}
+
+				// Small helper to bind aliases for an item and its index
+				const bindEachAliases = (
+					inst: RegEl | undefined,
+					val: unknown,
+					idx: number
+				) => {
+					if (!inst || !eachAlias) return;
+					const alias = eachAlias.trim();
+					if (!alias) return;
+					// Find top-level comma to support patterns like "{a,b}, i" or "value, i"
+					const indexOfTopLevelComma = (src: string): number => {
+						let p = 0,
+							b = 0,
+							c = 0,
+							q = "";
+						for (let i = 0; i < src.length; i++) {
+							const ch = src[i];
+							if (q) {
+								if (ch === q && src[i - 1] !== "\\") q = "";
+								continue;
+							}
+							if (ch === '"' || ch === "'") q = ch;
+							else if (ch === "(") p++;
+							else if (ch === ")") p--;
+							else if (ch === "[") b++;
+							else if (ch === "]") b--;
+							else if (ch === "{") c++;
+							else if (ch === "}") c--;
+							if (p || b || c) continue;
+							if (ch === ",") return i;
+						}
+						return -1;
+					};
+
+					const comma = indexOfTopLevelComma(alias);
+					if (comma !== -1) {
+						const left = alias.slice(0, comma).trim();
+						const right = alias.slice(comma + 1).trim();
+						if (left) applyAliasPattern(left, val, inst._state);
+						if (right && /^[A-Za-z_$][\w$]*$/.test(right))
+							(inst._state as Record<string, unknown>)[right] =
+								idx;
+						return;
+					}
+
+					// Support "[item, i]" shorthand that passes [val, idx]
+					if (alias.startsWith("[")) {
+						applyAliasPattern(alias, [val, idx], inst._state);
+						return;
+					}
+
+					// Object/array-only patterns bind value fields
+					if (alias.startsWith("{") || alias.startsWith("[")) {
+						applyAliasPattern(alias, val, inst._state);
+						return;
+					}
+
+					// Simple identifier alias
+					applyAliasPattern(alias, val, inst._state);
+				};
+
+				// Update aliases for existing instances (ensures index/value kept in sync)
+				const minLen = Math.min(cur, next);
+				for (let i = 0; i < minLen; i++) {
+					const node = instances?.[i];
+					if (!node) continue;
+					const childReg = RegEl._registry.get(node);
+					if (!childReg) continue;
+					bindEachAliases(childReg, list[i], i);
+				}
+
 				if (next > cur) {
 					const frag = document.createDocumentFragment();
 					for (let i = cur; i < next; i++) {
 						const clone = this._cachedContent?.cloneNode(
 							true
 						) as Registerable;
-						RegEl._registerOrGet(
-							clone,
+						// Create a per-item overlay state and pre-apply aliases so initial text effects see values
+						const childBase = scopeProxy(
 							this._state as unknown as Record<string, unknown>
+						) as Record<string, unknown>;
+						bindEachAliases(
+							{ _state: childBase } as unknown as RegEl,
+							list[i],
+							i
 						);
+						RegEl._registerOrGet(clone, childBase);
 						instances?.push(clone);
 						frag.appendChild(clone);
+						// Safety: ensure text nodes on the clone are handled if registration did not due to early :each intercept
+						try {
+							const childReg = RegEl._registry.get(clone);
+							if (childReg) {
+								for (const n of clone.childNodes)
+									childReg._handleTextNode(n);
+							}
+						} catch {}
 					}
 					parent.insertBefore(frag, end);
 				} else if (next < cur) {

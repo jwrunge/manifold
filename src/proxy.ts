@@ -170,6 +170,7 @@ export const scopeProxy = <T extends object>(base: T): T => {
 			// Read local first to register dependency on overlay keys even if undefined
 			const lv = local[k as never];
 			if (hasLocal(k)) return lv as unknown;
+			// Read through base so effects subscribe to base changes (base is already proxied upstream)
 			return (base as typeof local)[k];
 		},
 		set(_t, k, v) {
