@@ -22,6 +22,10 @@
 			.mf-hidden {
 				display: none;
 			}
+
+			::view-transition-group(.list-item) {
+				animation-duration: 3s;
+			}
 		</style>
 	</head>
 
@@ -81,7 +85,12 @@
 		<div style="margin-top: 1rem" :if="list.length > 2">
 			<div>Family Members:</div>
 			<ul>
-				<li :each="list as { id, text }, key">${key}: ${id} ${text}</li>
+				<li
+					:each="list as { id, text }, key"
+					:style:view-transition-class="'list-item'"
+				>
+					${key}: ${id} ${text}
+				</li>
 			</ul>
 		</div>
 		<button :onclick="addToList()">Add to List</button>
