@@ -9,9 +9,8 @@ const multiFlush = async (n = 4) => {
 
 // Helper to register all direct child elements under a root
 const registerChildren = (root: Element, state: Record<string, unknown>) => {
-	Array.from(root.children).forEach(
-		(el) => new RegEl(el as HTMLElement, state)
-	);
+	for (const el of Array.from(root.children))
+		new RegEl(el as HTMLElement, state);
 };
 
 // Determine if an element is effectively displayed (none on self or any ancestor)

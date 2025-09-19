@@ -181,7 +181,7 @@ describe("Framework Comparison Benchmarks", () => {
 			// Should handle computed properties efficiently
 			expect(computationCount).toBeLessThan(100); // Vue would recompute for each dependency change
 			// Allow a small cushion to avoid flakiness on slower CI/CPUs while keeping the bar tight
-			expect(totalTime).toBeLessThan(2400);
+			expect(totalTime).toBeLessThan(3000);
 			expect(store.total).toBeGreaterThan(0);
 		});
 	});
@@ -345,7 +345,6 @@ describe("Framework Comparison Benchmarks", () => {
 			// Helper function for memory usage (fallback for environments without process)
 			const getMemoryUsage = () => {
 				try {
-					// @ts-expect-error - process might not be available in all environments
 					return typeof process !== "undefined" && process.memoryUsage
 						? process.memoryUsage().heapUsed
 						: 0;

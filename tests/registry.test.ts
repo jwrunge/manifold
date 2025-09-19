@@ -41,9 +41,8 @@ describe("registry basics", () => {
 		<p :else id="elseEl">else</p>
       </div>`;
 		const root = document.body.firstElementChild as HTMLElement;
-		Array.from(root.querySelectorAll("*")).forEach(
-			(el) => new RegEl(el as HTMLElement, state)
-		);
+		for (const el of Array.from(root.querySelectorAll("*")))
+			new RegEl(el as HTMLElement, state);
 		await flush();
 		expect(
 			(document.getElementById("ifEl") as HTMLElement).style.display
@@ -184,6 +183,134 @@ describe("registry basics", () => {
 });
 
 describe("extended registry features", () => {
+	test("property/attribute/class/style bindings and removal of prefixed attrs", async () => {
+		document.body.innerHTML = `
+			<input id="tgt"
+				:type="count === 3 || count === 5 ? 'text' : 'number'"
+				:style:background-color="count % 2 === 0 ? 'lightblue' : 'lightgreen'"
+				:class:red="count % 5 === 0"
+				:something="count * 2"
+			/>`;
+		const el = document.getElementById("tgt") as HTMLInputElement;
+		const local = StateBuilder.create(undefined, { count: 1 }).build() as {
+			count: number;
+		};
+		new RegEl(el, local as unknown as Record<string, unknown>);
+		await flush();
+
+		// Initial count = 1
+		expect(el.type).toBe("number");
+		expect(el.style.backgroundColor).toBe("lightgreen");
+		expect(el.classList.contains("red")).toBe(false);
+		expect(el.getAttribute("something")).toBe("2");
+		// Prefixed attributes removed after processing
+		expect(el.hasAttribute(":type")).toBe(false);
+		expect(el.hasAttribute(":style:background-color")).toBe(false);
+		expect(el.hasAttribute(":class:red")).toBe(false);
+		expect(el.hasAttribute(":something")).toBe(false);
+
+		// Change to even number -> blue background, number type
+		local.count = 2;
+		await flush();
+		expect(el.type).toBe("number");
+		expect(el.style.backgroundColor).toBe("lightblue");
+		expect(el.getAttribute("something")).toBe("4");
+		expect(el.classList.contains("red")).toBe(false);
+
+		// count = 5 -> red class toggled, green background, type becomes text
+		local.count = 5;
+		await flush();
+		expect(el.type).toBe("text");
+		expect(el.style.backgroundColor).toBe("lightgreen");
+		expect(el.getAttribute("something")).toBe("10");
+		expect(el.classList.contains("red")).toBe(true);
+
+		// count = 3 -> type becomes text
+		local.count = 3;
+		await flush();
+		expect(el.type).toBe("text");
+	});
+
+	test("arrow-style event handler receives event param and updates state", async () => {
+		const s = StateBuilder.create(undefined, { txt: "hi" }).build() as {
+			txt: string;
+			setTxt?: (v: string) => void;
+		};
+		s.setTxt = (v: string) => {
+			s.txt = v;
+		};
+		document.body.innerHTML = `<button id="b" :onclick="(e)=> setTxt(e.target.id)">go</button>`;
+		const btn = document.getElementById("b") as HTMLButtonElement;
+		new RegEl(btn, s);
+		await flush();
+		// Prefixed attribute removed
+		expect(btn.hasAttribute(":onclick")).toBe(false);
+		btn.click();
+		await flush();
+		expect(s.txt).toBe("b");
+	});
+
+	test(":sync:checked two-way binding (checkbox)", async () => {
+		const s = StateBuilder.create(undefined, { on: false }).build() as {
+			on: boolean;
+		};
+		document.body.innerHTML = `<input id="c" type="checkbox" :sync:checked="on"/>`;
+		const el = document.getElementById("c") as HTMLInputElement;
+		new RegEl(el, s as unknown as Record<string, unknown>);
+		await flush();
+		expect(el.checked).toBe(false);
+		// State -> DOM
+		s.on = true;
+		await flush();
+		expect(el.checked).toBe(true);
+		// DOM -> State
+		el.checked = false;
+		el.dispatchEvent(new Event("change", { bubbles: true }));
+		await flush();
+		expect(s.on).toBe(false);
+	});
+
+	test(":sync:open on <details> synchronizes both ways", async () => {
+		const s = StateBuilder.create(undefined, { open: false }).build() as {
+			open: boolean;
+		};
+		document.body.innerHTML = `<details id="d" :sync:open="open"><summary>Title</summary><div>Content</div></details>`;
+		const det = document.getElementById("d") as HTMLDetailsElement;
+		new RegEl(det, s as unknown as Record<string, unknown>);
+		await flush();
+		expect(det.open).toBe(false);
+		// State -> DOM
+		s.open = true;
+		await flush();
+		expect(det.open).toBe(true);
+		// DOM -> State via toggle
+		det.open = false;
+		det.dispatchEvent(new Event("toggle", { bubbles: true }));
+		await flush();
+		expect(s.open).toBe(false);
+	});
+
+	test("attribute-only bindings (aria-*) set and remove", async () => {
+		const s = StateBuilder.create(undefined, {
+			label: "Hello",
+			hide: true,
+		}).build() as {
+			label: string;
+			hide: boolean;
+		};
+		document.body.innerHTML = `<div id="a" :aria-label="label" :aria-hidden="hide ? 'true' : null"></div>`;
+		const div = document.getElementById("a") as HTMLDivElement;
+		new RegEl(div, s as unknown as Record<string, unknown>);
+		await flush();
+		expect(div.getAttribute("aria-label")).toBe("Hello");
+		expect(div.getAttribute("aria-hidden")).toBe("true");
+		// Update values
+		s.label = "World";
+		s.hide = false;
+		await flush();
+		expect(div.getAttribute("aria-label")).toBe("World");
+		expect(div.hasAttribute("aria-hidden")).toBe(false);
+	});
 	test("builder chaining preserves derived updates (single-state)", async () => {
 		const b = StateBuilder.create(undefined, { a: 1 as number })
 			.derive("b", (s) => (s as { a: number }).a + 1)
@@ -205,9 +332,8 @@ describe("extended registry features", () => {
 			</div>`;
 		const root = document.body.firstElementChild;
 		if (!root) throw new Error("root missing");
-		Array.from(root.children).forEach(
-			(el) => new RegEl(el as HTMLElement, local)
-		);
+		for (const el of Array.from(root.children))
+			new RegEl(el as HTMLElement, local);
 		// Initial: loading visible, then/catch hidden
 		expect(
 			(document.getElementById("await") as HTMLElement).style.display

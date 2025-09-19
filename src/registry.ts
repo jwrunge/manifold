@@ -121,7 +121,11 @@ export default class RegEl {
 		const registeredEvents = new Set<string>();
 
 		// EARLY HANDLE :each to keep template pristine (avoid text interpolation on template)
-		for (const { name, value } of el.attributes) {
+		// Use a static snapshot to avoid mutating the live NamedNodeMap during iteration
+		for (const { name, value } of Array.from(el.attributes).map((a) => ({
+			name: a.name,
+			value: a.value,
+		}))) {
 			const info = getAttrName(name);
 			if (!info) continue;
 			const { attrName } = info;
@@ -152,7 +156,11 @@ export default class RegEl {
 		for (const node of el.childNodes) this._handleTextNode(node);
 
 		// Handle attributes
-		for (const { name, value } of el.attributes) {
+		// Snapshot attributes first since we remove them during processing
+		for (const { name, value } of Array.from(el.attributes).map((a) => ({
+			name: a.name,
+			value: a.value,
+		}))) {
 			const attrInfo = getAttrName(name);
 			if (!attrInfo) continue;
 			const { attrName, sync } = attrInfo;
