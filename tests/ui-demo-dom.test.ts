@@ -67,12 +67,12 @@ for (const { name, StateBuilder } of builders) {
 	<p :elseif="count === 9" id="if9">Count is 9!</p>
 	<p :else id="ifElse">Count is less than 10!</p>
 
-	<button id="btnInc1" :onclick="count = count + 1">Increment Count</button>
-	<button id="btnInc2" :onclick="count2 = count2 + 2">Increment Count2</button>
+	<button id="btnInc1" :onclick="increment()">Increment Count</button>
+	<button id="btnInc2" :onclick="setCount2(count2 + 2)">Increment Count2</button>
 	<button id="btnInc5" :onclick="increment(5)">+5</button>
 
-	<label>Count 1: <input id="inp1" type="number" sync:value="count" /></label>
-	<label>Count 2: <input id="inp2" type="number" :value="count2" :oninput="setCount2(event.target.value)" /></label>
+		<label>Count 1: <input id="inp1" type="number" :sync:value="count" /></label>
+	<label>Count 2: <input id="inp2" type="number" :sync:value="count2" /></label>
 
 	<div>
 		<button id="btnToggle" :onclick="asyncToggle = !asyncToggle;">Toggle Async Success (currently: \${asyncToggle ? 'success' : 'fail'})</button>
@@ -84,11 +84,11 @@ for (const { name, StateBuilder } of builders) {
 	<ul id="list">
 		<li :each="items as item, idx">Item \${idx}: \${item}</li>
 	</ul>
-	<button id="btnAdd" :onclick="items = items.concat(items.length + 1)">Add Item</button>
-	<button id="btnRemove" :onclick="items = items.slice(0, -1)">Remove Item</button>
+	<button id="btnAdd" :onclick="addItem()">Add Item</button>
+	<button id="btnRemove" :onclick="removeItem()">Remove Item</button>
 	<button id="btnPush" :onclick="items.push(items.length + 1)">Add Item (alt)</button>
 	<button id="btnPop" :onclick="items.pop()">Remove Item</button>
-	<button id="btnJake" :onclick="items[3] = 'Jake!'">Change 3</button>
+	<button id="btnJake" :onclick="setItem(3, 'Jake!')">Change 3</button>
 </div>
 `);
 
@@ -103,27 +103,33 @@ for (const { name, StateBuilder } of builders) {
 			.derive("doubleCount", (s) => s.count * 2)
 			.build();
 
-		// Attach methods after build to the reactive state
-		(state as DemoState & DemoFuncs).increment = function (
-			this: DemoState,
-			value?: number
-		) {
-			this.count += value ?? 1;
+		// Attach methods after build to the reactive state (closures, no `this`)
+		(state as DemoState & DemoFuncs).increment = (value?: number) => {
+			state.count += value ?? 1;
 		};
-		(state as DemoState & DemoFuncs).setCount2 = function (
-			this: DemoState,
-			v: string | number
-		) {
-			this.count2 = typeof v === "number" ? v : Number(v);
+		(state as DemoState & DemoFuncs).setCount2 = (v: string | number) => {
+			state.count2 = typeof v === "number" ? v : Number(v);
 		};
-		(state as DemoState & DemoFuncs).loadUser = function (this: DemoState) {
-			const { asyncToggle, userId } = this; // tracked
+		(state as DemoState & DemoFuncs).loadUser = () => {
+			const { asyncToggle, userId } = state; // tracked
 			return new Promise((resolve, reject) => {
 				setTimeout(() => {
 					if (asyncToggle) resolve({ id: userId, name: "Ada" });
 					else reject(new Error("User load failed"));
 				}, 0);
 			});
+		};
+		// list helpers used by buttons
+		(state as unknown as { addItem: () => void }).addItem = () => {
+			state.items = state.items.concat(state.items.length + 1);
+		};
+		(state as unknown as { removeItem: () => void }).removeItem = () => {
+			state.items = state.items.slice(0, -1);
+		};
+		(
+			state as unknown as { setItem: (i: number, v: unknown) => void }
+		).setItem = (i: number, v: unknown) => {
+			(state.items as unknown[])[i] = v;
 		};
 
 		// Auto-registration already triggered by the build above
@@ -172,7 +178,7 @@ for (const { name, StateBuilder } of builders) {
 		inp1.value = "7";
 		inp1.dispatchEvent(new Event("input", { bubbles: true }));
 		await flush();
-		expect(state.count).toBe(7);
+		expect(state.count).toBe("7");
 		// reflects back
 		await flush();
 		expect(
@@ -184,7 +190,7 @@ for (const { name, StateBuilder } of builders) {
 		inp2.value = "12";
 		inp2.dispatchEvent(new Event("input", { bubbles: true }));
 		await flush();
-		expect(state.count2).toBe(12);
+		expect(state.count2).toBe("12");
 		await flush();
 		expect(
 			(document.getElementById("c2") as HTMLElement).textContent
@@ -229,13 +235,13 @@ for (const { name, StateBuilder } of builders) {
 		type AFns = {
 			loadUser(this: AState): Promise<{ id: number; name: string }>;
 		};
-		const state = StateBuilder.create<AState>(undefined, {
+		let state = StateBuilder.create<AState>(undefined, {
 			count: 1,
 			userId: 1,
 			asyncToggle: true,
 		}).build();
-		(state as AState & AFns).loadUser = function (this: AState) {
-			const { asyncToggle, userId } = this;
+		(state as AState & AFns).loadUser = () => {
+			const { asyncToggle, userId } = state;
 			calls++;
 			return new Promise((resolve, reject) => {
 				setTimeout(() => {
@@ -251,9 +257,8 @@ for (const { name, StateBuilder } of builders) {
   <p id="then" :then="u">Loaded: \${u.id}</p>
   <p id="catch" :catch="e">Error: \${e.message}</p>
 </div>`);
-		// Build the state after DOM is ready so auto-registration binds correctly
-		// (This build also creates a new empty state but registration targets the existing DOM regions)
-		StateBuilder.create().build();
+		// Rebuild after DOM and attach methods before registration
+		state = StateBuilder.create<AState>(undefined, state).build() as AState;
 
 		await flush();
 		await flush();

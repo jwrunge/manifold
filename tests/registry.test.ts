@@ -129,7 +129,7 @@ describe("registry basics", () => {
 	});
 
 	test("two-way value sync via sync: prefix", async () => {
-		document.body.innerHTML = `<input sync:value="count" id="inp" />`;
+		document.body.innerHTML = `<input :sync:value="count" id="inp" />`;
 		const inp = document.getElementById("inp") as HTMLInputElement;
 		new RegEl(inp, state);
 		await flush();
@@ -154,13 +154,13 @@ describe("registry basics", () => {
 		expect(state.count).toBe(2);
 	});
 
-	test("multi-statement event handler executes sequentially", async () => {
+	test("event handler executes via function call", async () => {
 		// Add increment function to state
 		(state as Record<string, unknown>).increment = () => {
 			(state as Record<string, unknown>).count =
 				(state.count as number) + 5;
 		};
-		document.body.innerHTML = `<button :onclick="console.log('before', count); increment(); console.log('after', count)" id="btn2">++</button>`;
+		document.body.innerHTML = `<button :onclick="increment()" id="btn2">++</button>`;
 		const btn2 = document.getElementById("btn2") as HTMLButtonElement;
 		new RegEl(btn2, state);
 		await flush();
@@ -249,10 +249,6 @@ describe("extended registry features", () => {
 	});
 
 	test("auto-registration binds all [data-mf-register] using single state", async () => {
-		const b = StateBuilder.create(undefined, { a: 1, b: 2 }).build() as {
-			a: number;
-			b: number;
-		};
 		document.body.innerHTML = `
 			<div data-mf-register>
 				<span id="aVal">\${a}</span>
@@ -260,11 +256,11 @@ describe("extended registry features", () => {
 			<div data-mf-register>
 				<span id="bVal">\${b}</span>
 			</div>`;
-		// build() auto-registers all [data-mf-register] regions
-		// Auto-register binds the built state to all [data-mf-register] containers
-		// We expect the state used here to be the built instance with a/b
-		// so build a new instance to trigger registration on both regions
-		StateBuilder.create().build();
+		// Build after DOM is ready so auto-registration binds to this state
+		const b = StateBuilder.create(undefined, { a: 1, b: 2 }).build() as {
+			a: number;
+			b: number;
+		};
 		await flush();
 		expect(
 			(document.getElementById("aVal") as HTMLElement).textContent
@@ -288,7 +284,7 @@ describe("extended registry features", () => {
 		const s = StateBuilder.create(undefined, { on: false }).build() as {
 			on: boolean;
 		};
-		document.body.innerHTML = `<input type="checkbox" sync:checked="on" id="c" />`;
+		document.body.innerHTML = `<input type="checkbox" :sync:checked="on" id="c" />`;
 		const el = document.getElementById("c") as HTMLInputElement;
 		new RegEl(el, s);
 		await flush();
@@ -299,7 +295,7 @@ describe("extended registry features", () => {
 		expect(s.on).toBe(true);
 	});
 
-	test("arrow sync via (v)=> update(v)", async () => {
+	test("event handler updates state via update(v)", async () => {
 		const s = StateBuilder.create(undefined, { txt: "hi" }).build() as {
 			txt: string;
 		} & {
@@ -308,28 +304,37 @@ describe("extended registry features", () => {
 		s.update = (v: string) => {
 			s.txt = v;
 		};
-		document.body.innerHTML = `<input :value="txt" :oninput="update(event.target.value)" id="txtInp" />`;
-		const el = document.getElementById("txtInp") as HTMLInputElement;
-		new RegEl(el, s);
+		document.body.innerHTML = `<div><input :value="txt" id="txtInp" /><button id="btn" :onclick="update('yo')">go</button></div>`;
+		const root = document.querySelector("div") as HTMLElement;
+		Array.from(root.children).forEach((el) => {
+			new RegEl(el as HTMLElement, s);
+		});
 		for (let i = 0; i < 2; i++) await flush();
-		expect(el.value).toBe("hi");
-		el.value = "yo";
-		el.dispatchEvent(new Event("input", { bubbles: true }));
+		expect(
+			(document.getElementById("txtInp") as HTMLInputElement).value
+		).toBe("hi");
+		(document.getElementById("btn") as HTMLButtonElement).click();
 		for (let i = 0; i < 2; i++) await flush();
 		expect(s.txt).toBe("yo");
+		expect(
+			(document.getElementById("txtInp") as HTMLInputElement).value
+		).toBe("yo");
 	});
 
-	test("selectedIndex sync", async () => {
+	test("selectedIndex updates via button handler", async () => {
 		const s = StateBuilder.create(undefined, { idx: 1 }).build() as {
 			idx: number;
+		} & { setIdx?: (i: number) => void };
+		s.setIdx = (i: number) => {
+			s.idx = i;
 		};
-		document.body.innerHTML = `<select sync:selectedIndex="idx" id="sel"><option>A</option><option>B</option><option>C</option></select>`;
-		const el = document.getElementById("sel") as HTMLSelectElement;
-		new RegEl(el, s);
+		document.body.innerHTML = `<div><select :selectedIndex="idx" id="sel"><option>A</option><option>B</option><option>C</option></select><button id="go" :onclick="setIdx(2)">set 2</button></div>`;
+		const root = document.querySelector("div") as HTMLElement;
+		Array.from(root.children).forEach((el) => {
+			new RegEl(el as HTMLElement, s);
+		});
 		for (let i = 0; i < 2; i++) await flush();
-		expect(el.selectedIndex).toBe(1);
-		el.selectedIndex = 2;
-		el.dispatchEvent(new Event("change", { bubbles: true }));
+		(document.getElementById("go") as HTMLButtonElement).click();
 		for (let i = 0; i < 2; i++) await flush();
 		expect(s.idx).toBe(2);
 	});

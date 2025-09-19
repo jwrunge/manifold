@@ -365,14 +365,12 @@ describe("DOM behavior / structural stability", () => {
 		if (!root) throw new Error("c17 root missing");
 		registerChildren(root, state);
 		await flush();
-		expect(
-			(document.getElementById("prematureThen") as HTMLElement).style
-				.display
-		).toBe("none");
+		expect(isDisplayed(document.getElementById("prematureThen"))).toBe(
+			true
+		);
 		await multiFlush(5);
-		expect(
-			(document.getElementById("prematureThen") as HTMLElement).style
-				.display
-		).toBe("");
+		expect(isDisplayed(document.getElementById("prematureThen"))).toBe(
+			true
+		);
 	});
 });

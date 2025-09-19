@@ -18,10 +18,14 @@
 				background: gray;
 				color: white;
 			}
+
+			.mf-hidden {
+				display: none;
+			}
 		</style>
 	</head>
 
-	<body data-mf-register>
+	<body data-mf-register class="mf-hidden">
 		<input
 			:value="count"
 			:type="count === 3 || count === 5 ? 'text' :
@@ -95,7 +99,7 @@
 
 		<script type="module">
 			window.__MF_DEBUG_EACH = true;
-			import $ from "./dist/manifold.js";
+			import $ from "./src/main.js";
 			const myState = $.create()
 				.add("count", 0)
 				.add("popup", (e) => console.log(e))
