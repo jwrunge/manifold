@@ -85,3 +85,10 @@ export default class StateBuilder<TState extends StateConstraint> {
 		return state as TState;
 	}
 }
+
+// on dom content load
+document.addEventListener("DOMContentLoaded", () => {
+	for (const el of document.querySelectorAll(".mf-hidden") ?? []) {
+		el.classList.remove("mf-hidden");
+	}
+});
