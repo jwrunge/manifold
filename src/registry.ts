@@ -2,6 +2,7 @@ import applyAliasPattern from "./alias-destructure";
 import type { WritableCSSKeys } from "./css";
 import { type Effect, effect } from "./Effect";
 import evaluateExpression, { type ParsedExpression } from "./expression-parser";
+import { indexOfTopLevel } from "./parsing-utils";
 import { scopeProxy } from "./proxy";
 
 type Registerable = (HTMLElement | SVGElement | MathMLElement) & {
@@ -11,20 +12,18 @@ type Registerable = (HTMLElement | SVGElement | MathMLElement) & {
 };
 
 const templLogicAttrs = ["if", "each", "await"] as const;
-
-type Sibling = {
-	el: Registerable;
-	fn: ParsedExpression["_fn"] | null;
-	attrName: templLogicAttr;
-	alias?: string;
-};
-
 type templLogicAttr =
 	| (typeof templLogicAttrs)[number]
 	| "elseif"
 	| "else"
 	| "then"
 	| "catch";
+type Sibling = {
+	el: Registerable;
+	fn: ParsedExpression["_fn"] | null;
+	attrName: templLogicAttr;
+	alias?: string;
+};
 const templLogicAttrSet = new Set(templLogicAttrs);
 const dependentLogicAttrSet = new Set(["elseif", "else", "then", "catch"]);
 const prefixes = [":", "data-mf-"] as const;
@@ -444,7 +443,6 @@ export default class RegEl {
 
 				// Debug output for diagnosing :each behavior
 
-				// Small helper to bind aliases for an item and its index
 				const bindEachAliases = (
 					inst: RegEl | undefined,
 					val: unknown,
@@ -453,32 +451,7 @@ export default class RegEl {
 					if (!inst || !eachAlias) return;
 					const alias = eachAlias.trim();
 					if (!alias) return;
-					// Find top-level comma to support patterns like "{a,b}, i" or "value, i"
-					const indexOfTopLevelComma = (src: string): number => {
-						let p = 0,
-							b = 0,
-							c = 0,
-							q = "";
-						for (let i = 0; i < src.length; i++) {
-							const ch = src[i];
-							if (q) {
-								if (ch === q && src[i - 1] !== "\\") q = "";
-								continue;
-							}
-							if (ch === '"' || ch === "'") q = ch;
-							else if (ch === "(") p++;
-							else if (ch === ")") p--;
-							else if (ch === "[") b++;
-							else if (ch === "]") b--;
-							else if (ch === "{") c++;
-							else if (ch === "}") c--;
-							if (p || b || c) continue;
-							if (ch === ",") return i;
-						}
-						return -1;
-					};
-
-					const comma = indexOfTopLevelComma(alias);
+					const comma = indexOfTopLevel(alias, ",");
 					if (comma !== -1) {
 						const left = alias.slice(0, comma).trim();
 						const right = alias.slice(comma + 1).trim();
@@ -488,20 +461,14 @@ export default class RegEl {
 								idx;
 						return;
 					}
-
-					// Support "[item, i]" shorthand that passes [val, idx]
 					if (alias.startsWith("[")) {
 						applyAliasPattern(alias, [val, idx], inst._state);
 						return;
 					}
-
-					// Object/array-only patterns bind value fields
 					if (alias.startsWith("{") || alias.startsWith("[")) {
 						applyAliasPattern(alias, val, inst._state);
 						return;
 					}
-
-					// Simple identifier alias
 					applyAliasPattern(alias, val, inst._state);
 				};
 

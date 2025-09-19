@@ -1,3 +1,5 @@
+import { splitTopLevel } from "./parsing-utils.js";
+
 // Expression parser expects state injected via ctx.state
 export interface ParsedExpression {
 	_fn: (ctx?: Record<string, unknown>) => unknown | Promise<unknown>;
@@ -10,12 +12,6 @@ export interface ParsedExpression {
 }
 const CACHE = new Map<string, ParsedExpression>();
 const CACHE_MAX = 500;
-const LITS: Record<string, unknown> = {
-	true: true,
-	false: false,
-	null: null,
-	undefined: undefined,
-};
 const NUM = /^-?\d+(?:\.[\d]+)?$/;
 interface ChainSegmentProp {
 	t: "prop";
@@ -30,38 +26,6 @@ interface ChainSegmentCall {
 	args: ParsedExpression[];
 }
 type ChainSeg = ChainSegmentProp | ChainSegmentIdx | ChainSegmentCall;
-const splitCSV = (src: string): string[] => {
-	const out: string[] = [];
-	if (!src.trim()) return out;
-	let p = 0,
-		b = 0,
-		cBr = 0,
-		q = "",
-		last = 0;
-	for (let i = 0; i < src.length; i++) {
-		const ch = src[i];
-		if (q) {
-			if (ch === q && src[i - 1] !== "\\") q = "";
-			continue;
-		}
-		if (ch === '"' || ch === "'") {
-			q = ch;
-			continue;
-		}
-		if (ch === "(") p++;
-		else if (ch === ")") p--;
-		else if (ch === "[") b++;
-		else if (ch === "]") b--;
-		else if (ch === "{") cBr++;
-		else if (ch === "}") cBr--;
-		if (ch === "," && p === 0 && b === 0 && cBr === 0) {
-			out.push(src.slice(last, i).trim());
-			last = i + 1;
-		}
-	}
-	out.push(src.slice(last).trim());
-	return out.filter(Boolean);
-};
 const splitOuterRightmost = (
 	expr: string,
 	ops: string[],
@@ -163,7 +127,9 @@ const buildChain = (
 				i++;
 			}
 			const innerArgs = expr.slice(start, i - 1);
-			const argsRaw = splitCSV(innerArgs).map((a: string) => parse(a));
+			const argsRaw = splitTopLevel(innerArgs, ",")
+				.filter(Boolean)
+				.map((a: string) => parse(a));
 			segs.push({ t: "call", args: argsRaw });
 			continue;
 		}
@@ -203,7 +169,9 @@ const parse = (raw: string): ParsedExpression => {
 	// Array literal: [a, b, c]
 	if (expr[0] === "[" && expr[expr.length - 1] === "]") {
 		const inner = expr.slice(1, -1);
-		const parts = splitCSV(inner).map((s) => parse(s));
+		const parts = splitTopLevel(inner, ",")
+			.filter(Boolean)
+			.map((s) => parse(s));
 		return { _fn: (c) => parts.map((p) => p._fn(c)) };
 	}
 	{
@@ -324,7 +292,10 @@ const parse = (raw: string): ParsedExpression => {
 		return { _fn: (c) => !parse(expr.slice(1))._fn(c) };
 	if (expr[0] === "-" && expr.length > 1)
 		return { _fn: (c) => -(parse(expr.slice(1))._fn(c) as number) };
-	if (expr in LITS) return { _fn: () => LITS[expr] };
+	if (expr === "true") return { _fn: () => true };
+	if (expr === "false") return { _fn: () => false };
+	if (expr === "null") return { _fn: () => null };
+	if (expr === "undefined") return { _fn: () => undefined };
 	if (NUM.test(expr)) return { _fn: () => +expr };
 	const str = expr.match(/^(?:'([^']*)'|"([^"]*)")$/);
 	if (str) return { _fn: () => str[1] ?? str[2] };
