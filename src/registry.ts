@@ -29,6 +29,20 @@ const templLogicAttrSet = new Set(templLogicAttrs);
 const dependentLogicAttrSet = new Set(["elseif", "else", "then", "catch"]);
 const prefixes = [":", "data-mf-"] as const;
 
+// Shared registration logic for both new and existing elements
+const _registerElement = (el: Element) => {
+	const attr = el.getAttribute("data-mf-register");
+	if (attr !== null) {
+		const storeName = attr || undefined;
+		const store = globalStores.get(storeName);
+		if (store) {
+			new RegEl(el as HTMLElement | SVGElement | MathMLElement, store);
+			// Remove mf-hidden class after registration
+			el.classList.remove("mf-hidden");
+		}
+	}
+};
+
 // Handle incremental registration of new elements
 const _handleNewElements = (addedNodes: NodeList) => {
 	for (const node of addedNodes) {
@@ -38,19 +52,7 @@ const _handleNewElements = (addedNodes: NodeList) => {
 		// Check if this element or any descendant needs registration
 		const candidates = [el, ...el.querySelectorAll("[data-mf-register]")];
 		for (const candidate of candidates) {
-			const attr = candidate.getAttribute("data-mf-register");
-			if (attr !== null) {
-				const storeName = attr || undefined;
-				const store = globalStores.get(storeName);
-				if (store) {
-					new RegEl(
-						candidate as HTMLElement | SVGElement | MathMLElement,
-						store
-					);
-					// Remove mf-hidden class after registration
-					candidate.classList.remove("mf-hidden");
-				}
-			}
+			_registerElement(candidate);
 		}
 	}
 };
@@ -144,7 +146,7 @@ export default class RegEl {
 	}
 
 	static _handleExistingElements(storeName?: string) {
-		// Process each element individually using the same logic as handleNewElements
+		// Process each element individually using the same shared logic
 		for (const node of document?.querySelectorAll(
 			`[data-mf-register${
 				storeName !== undefined && storeName !== null
@@ -155,20 +157,12 @@ export default class RegEl {
 			if (node.nodeType !== 1) continue; // ELEMENT_NODE = 1
 			const el = node as Element;
 
-			// Check if this element needs registration
+			// Use shared registration logic but filter by store name
 			const attr = el.getAttribute("data-mf-register");
 			if (attr !== null) {
 				const candidateStoreName = attr || undefined;
 				if (candidateStoreName === storeName) {
-					const store = globalStores.get(candidateStoreName);
-					if (store) {
-						new RegEl(
-							el as HTMLElement | SVGElement | MathMLElement,
-							store
-						);
-						// Remove mf-hidden class after registration
-						el.classList.remove("mf-hidden");
-					}
+					_registerElement(el);
 				}
 			}
 		}
