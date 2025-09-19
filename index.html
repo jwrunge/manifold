@@ -97,6 +97,16 @@
 			</ul>
 		</div>
 
+		<!-- Final -->
+		<div style="margin-top: 1rem" :if="list.length > 2">
+			<div>Family Members:</div>
+			<ul>
+				<li :each="list as { id, text }, key">${key}: ${id} ${text}</li>
+			</ul>
+		</div>
+		<button :onclick="addToList()">Add to List</button>
+		<button :onclick="list.pop()">Remove from List</button>
+
 		<script type="module">
 			window.__MF_DEBUG_EACH = true;
 			import $ from "./src/main.js";
@@ -111,6 +121,17 @@
 					{ name: "Isaac", age: 6 },
 					{ name: "Elinor", age: 4 },
 				])
+				.add("list", [
+					{ id: 1, text: "Item 1" },
+					{ id: 2, text: "Item 2" },
+					{ id: 3, text: "Item 3" },
+				])
+				.add("addToList", () => {
+					const nextId = myState.list.length
+						? myState.list[myState.list.length - 1].id + 1
+						: 1;
+					myState.list.push({ id: nextId, text: `Item ${nextId}` });
+				})
 				.build();
 
 			myState.loadUser = () => {
