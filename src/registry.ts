@@ -255,7 +255,10 @@ export default class RegEl {
 			// Parse out expression and optional alias (for :each)
 			const [exp, rootAlias] = splitAs(value);
 
-			const { _fn, _syncRef } = evaluateExpression(exp);
+			// Determine if this is a style value for better expression parsing
+			const isStyleValue = attrName.startsWith("style:");
+
+			const { _fn, _syncRef } = evaluateExpression(exp, { isStyleValue });
 			const isTemplateRoot = templLogicAttrSet.has(
 				attrName as "if" | "each" | "await"
 			);

@@ -387,9 +387,22 @@ const parse = (raw: string): ParsedExpression => {
 	}
 	return { _fn: () => expr };
 };
-const evaluateExpression = (expr: string): ParsedExpression => {
+const evaluateExpression = (
+	expr: string,
+	context?: { isStyleValue?: boolean }
+): ParsedExpression => {
 	const cached = CACHE.get(expr);
 	if (cached) return cached;
+
+	// Special handling for CSS-style identifiers in style contexts
+	if (context?.isStyleValue && /^[a-zA-Z][a-zA-Z0-9-]*$/.test(expr)) {
+		// If it looks like a CSS identifier (letters, numbers, hyphens only)
+		// and we're in a style context, treat as literal string
+		const literalResult = { _fn: () => expr };
+		CACHE.set(expr, literalResult);
+		return literalResult;
+	}
+
 	const parsed = parse(expr);
 	CACHE.set(expr, parsed);
 	// Remove multiple entries when limit hit
