@@ -196,13 +196,8 @@ export default class RegEl {
 			"view-transition-name"
 		);
 		if (!currentTransitionName) {
-			const transitionName = `mf${Math.random()
-				.toString(36)
-				.slice(2)}`;
-			el.style.setProperty(
-				"view-transition-name",
-				transitionName
-			);
+			const transitionName = `mf${Math.random().toString(36).slice(2)}`;
+			el.style.setProperty("view-transition-name", transitionName);
 		}
 
 		for (const child of el.children) {

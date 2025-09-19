@@ -71,7 +71,8 @@ describe("registry basics", () => {
 		if (!template) throw new Error("template missing");
 		new RegEl(template as HTMLElement, state);
 		await flush();
-		const countLis = () => ul.querySelectorAll("li:not([style*='display: none'])").length;
+		const countLis = () =>
+			ul.querySelectorAll("li:not([style*='display: none'])").length;
 		expect(countLis()).toBe(2);
 		state.list.push({ id: 3, v: "c" });
 		state.list = [...state.list];
@@ -99,9 +100,9 @@ describe("registry basics", () => {
 			local as unknown as Record<string, unknown>
 		);
 		await flush();
-		const texts = Array.from(ul.querySelectorAll("li:not([style*='display: none'])")).map(
-			(el) => el.textContent?.trim()
-		);
+		const texts = Array.from(
+			ul.querySelectorAll("li:not([style*='display: none'])")
+		).map((el) => el.textContent?.trim());
 		expect(texts).toEqual(["Item 0: 10", "Item 1: 20", "Item 2: 30"]);
 	});
 
@@ -121,9 +122,9 @@ describe("registry basics", () => {
 			local as unknown as Record<string, unknown>
 		);
 		await flush();
-		const texts = Array.from(ul.querySelectorAll("li:not([style*='display: none'])")).map(
-			(el) => el.textContent?.trim()
-		);
+		const texts = Array.from(
+			ul.querySelectorAll("li:not([style*='display: none'])")
+		).map((el) => el.textContent?.trim());
 		expect(texts).toEqual(["Val 5", "Val 6"]);
 	});
 
@@ -482,9 +483,9 @@ describe("extended registry features", () => {
 		);
 		await flush();
 		const texts = () =>
-			Array.from(ul.querySelectorAll("li:not([style*='display: none'])")).map((el) =>
-				el.textContent?.trim()
-			);
+			Array.from(
+				ul.querySelectorAll("li:not([style*='display: none'])")
+			).map((el) => el.textContent?.trim());
 		expect(texts()).toEqual(["(0) a", "(1) b", "(2) c"]);
 		local.arr[3] = "d"; // direct index set beyond current length
 		await flush();
