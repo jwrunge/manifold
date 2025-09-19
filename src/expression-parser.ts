@@ -202,26 +202,8 @@ const parse = (raw: string): ParsedExpression => {
 	}
 	// Array literal: [a, b, c]
 	if (expr[0] === "[" && expr[expr.length - 1] === "]") {
-		let depth = 0,
-			q = "",
-			last = 1;
-		const items: string[] = [];
-		for (let i = 0; i < expr.length; i++) {
-			const ch = expr[i];
-			if (q) {
-				if (ch === q && expr[i - 1] !== "\\") q = "";
-				continue;
-			}
-			if (ch === '"' || ch === "'") q = ch;
-			else if (ch === "[") depth++;
-			else if (ch === "]") depth--;
-			else if (ch === "," && depth === 1) {
-				items.push(expr.slice(last, i).trim());
-				last = i + 1;
-			}
-		}
-		items.push(expr.slice(last, expr.length - 1).trim());
-		const parts = items.filter(Boolean).map((s) => parse(s));
+		const inner = expr.slice(1, -1);
+		const parts = splitCSV(inner).map((s) => parse(s));
 		return { _fn: (c) => parts.map((p) => p._fn(c)) };
 	}
 	{

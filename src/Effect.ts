@@ -22,15 +22,12 @@ export class Effect {
 	static #pool: Effect[] = [];
 
 	static _acquire(fn: () => void) {
-		const inst = Effect.#pool.pop();
-		if (inst) {
-			inst._fn = fn;
-			inst.#active = true;
-			inst.#deps.length = 0;
-			inst._level = Effect._current ? Effect._current._level + 1 : 0;
-			return inst;
-		}
-		return new Effect(fn);
+		const inst = Effect.#pool.pop() ?? new Effect(fn);
+		inst._fn = fn;
+		inst.#active = true;
+		inst.#deps.length = 0;
+		inst._level = Effect._current ? Effect._current._level + 1 : 0;
+		return inst;
 	}
 
 	#deps: SubscriptionRef[] = [];
@@ -48,29 +45,25 @@ export class Effect {
 	}
 
 	_run() {
-		if (this.#active) {
-			this.#clean();
-			const prev = Effect._current;
-			Effect._current = this;
-			try {
-				this._fn();
-			} finally {
-				Effect._current = prev;
-			}
+		if (!this.#active) return;
+		this.#clean();
+		const prev = Effect._current;
+		Effect._current = this;
+		try {
+			this._fn();
+		} finally {
+			Effect._current = prev;
 		}
 	}
 
 	_stop() {
-		if (this.#active) {
-			this.#active = false;
-			this.#clean();
-
-			// Return to pool for reuse
-			if (Effect.#pool.length < 1024) {
-				this._fn = () => {};
-				this.#deps.length = 0;
-				Effect.#pool.push(this);
-			}
+		if (!this.#active) return;
+		this.#active = false;
+		this.#clean();
+		if (Effect.#pool.length < 1024) {
+			this._fn = () => {};
+			this.#deps.length = 0;
+			Effect.#pool.push(this);
 		}
 	}
 

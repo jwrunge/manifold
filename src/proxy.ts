@@ -2,7 +2,7 @@ import { Effect, type Subscriptions } from "./Effect.ts";
 import isEqual from "./equality.ts";
 import type { StateConstraint } from "./main.ts";
 
-const proxyCache = new WeakMap<object, Map<string, unknown>>();
+const proxyCache = new WeakMap<object, StateConstraint>();
 const depMap = new WeakMap<object, Map<PropertyKey, Subscriptions>>();
 const pendingEffects = new Set<Effect>();
 let isFlushScheduled = false;
@@ -46,12 +46,7 @@ const notify = (target: object, key: PropertyKey) => {
 	const bucket = depMap.get(target)?.get(key);
 	if (bucket) batchEffects(bucket);
 };
-const track = (
-	target: object,
-	key: PropertyKey,
-	effect: Effect,
-	_path: string
-) => {
+const track = (target: object, key: PropertyKey, effect: Effect) => {
 	let keyMap = depMap.get(target);
 	if (!keyMap) {
 		keyMap = new Map();
@@ -69,22 +64,12 @@ const track = (
 		effect._addDep(bucket, idx);
 	}
 };
-const getOrCreateProxy = (
-	obj: object,
-	prefix: string,
-	factory: () => unknown
-) => {
-	let entry = proxyCache.get(obj);
-	if (!entry) {
-		entry = new Map();
-		proxyCache.set(obj, entry);
-	}
-	let cached = entry.get(prefix);
-	if (!cached) {
-		cached = factory();
-		entry.set(prefix, cached);
-	}
-	return cached as StateConstraint;
+const getOrCreateProxy = (obj: object, factory: () => unknown) => {
+	const cached = proxyCache.get(obj);
+	if (cached) return cached;
+	const created = factory() as StateConstraint;
+	proxyCache.set(obj, created);
+	return created;
 };
 const arrMethods = [
 	"push",
@@ -95,16 +80,12 @@ const arrMethods = [
 	"sort",
 	"reverse",
 ];
-export const proxy = (
-	obj: object,
-	prefix = ""
-): StateConstraint | Promise<unknown> => {
+export const proxy = (obj: object): StateConstraint | Promise<unknown> => {
 	if (!obj || typeof obj !== "object") return obj;
 	// Do not proxy Promises!
 	if (obj instanceof Promise) return obj;
 	return getOrCreateProxy(
 		obj,
-		prefix,
 		() =>
 			new Proxy(obj, {
 				get(state, key, receiver) {
@@ -113,13 +94,7 @@ export const proxy = (
 					const curEffect = Effect._current;
 					const target = Reflect.get(state as object, key);
 					const isObj = target && typeof target === "object";
-					let path: string | undefined;
-					if (curEffect || isObj)
-						path = prefix
-							? `${prefix}.${String(key)}`
-							: String(key);
-					if (curEffect && path)
-						track(state as object, key, curEffect, path);
+					if (curEffect) track(state as object, key, curEffect);
 					if (Array.isArray(state) && typeof target === "function") {
 						if (arrMethods.includes(key as string)) {
 							return function (
@@ -135,7 +110,7 @@ export const proxy = (
 							};
 						}
 					}
-					if (isObj) return proxy(target, path as string);
+					if (isObj) return proxy(target);
 					return target;
 				},
 				set(state, key, value) {

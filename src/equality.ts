@@ -16,22 +16,17 @@ const _isEqual = (a: any, b: any): boolean => {
 		cB = b[_constructor];
 	if (cA !== cB) return false;
 
-	const ret =
-		cA === Array
-			? a.length === b.length &&
-			  (() => {
-					for (let i = 0; i < a.length; i++)
-						if (!_isEqual(a[i], b[i])) return false;
-					return true;
-			  })()
-			: cA === Date
-			? a.getTime() === b.getTime()
-			: null;
+	if (cA === Array) {
+		if (a.length !== b.length) return false;
+		for (let i = 0; i < a.length; i++)
+			if (!_isEqual(a[i], b[i])) return false;
+		return true;
+	}
+	if (cA === Date) return a.getTime() === b.getTime();
 
-	if (ret !== null) return ret;
-
-	const kA = _keys(a);
-	if (kA.length !== _keys(b).length) return false;
+	const kA = _keys(a),
+		kB = _keys(b);
+	if (kA.length !== kB.length) return false;
 
 	for (const k of kA) if (!(k in b) || !_isEqual(a[k], b[k])) return false;
 	return true;

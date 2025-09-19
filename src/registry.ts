@@ -122,10 +122,9 @@ export default class RegEl {
 
 		// EARLY HANDLE :each to keep template pristine (avoid text interpolation on template)
 		// Use a static snapshot to avoid mutating the live NamedNodeMap during iteration
-		for (const { name, value } of Array.from(el.attributes).map((a) => ({
-			name: a.name,
-			value: a.value,
-		}))) {
+		for (const a of Array.from(el.attributes)) {
+			const name = a.name;
+			const value = a.value;
 			const info = getAttrName(name);
 			if (!info) continue;
 			const { attrName } = info;
@@ -157,10 +156,9 @@ export default class RegEl {
 
 		// Handle attributes
 		// Snapshot attributes first since we remove them during processing
-		for (const { name, value } of Array.from(el.attributes).map((a) => ({
-			name: a.name,
-			value: a.value,
-		}))) {
+		for (const a of Array.from(el.attributes)) {
+			const name = a.name;
+			const value = a.value;
 			const attrInfo = getAttrName(name);
 			if (!attrInfo) continue;
 			const { attrName, sync } = attrInfo;
@@ -239,85 +237,73 @@ export default class RegEl {
 
 			// Handle prop/attribute bindings
 			const [attrPropName, attrProp] = attrName.split(":", 2);
-			let ef: Effect;
+			if (attrProp && sync)
+				throwError(`Sync on granular bindings: ${attrName}`, el, true);
 
-			if (attrProp) {
-				if (sync)
-					throwError(
-						`Sync on granular bindings: ${attrName}`,
-						el,
-						true
-					);
-
-				if (attrPropName === "style" || attrPropName === "class") {
-					ef = effect(() => {
-						const res = _fn({ state: this._state, element: el });
-						if (attrPropName === "class") {
-							if (res) el.classList.add(String(attrProp));
-							else el.classList.remove(String(attrProp));
-						} else {
-							(el as HTMLElement).style[
-								attrProp as WritableCSSKeys
-							] = `${res}`;
-						}
-					});
+			const apply = (val: unknown) => {
+				if (attrProp) {
+					if (attrPropName === "class") {
+						if (val) el.classList.add(String(attrProp));
+						else el.classList.remove(String(attrProp));
+					} else if (attrPropName === "style") {
+						(el as HTMLElement).style[
+							attrProp as WritableCSSKeys
+						] = `${val}`;
+					} else {
+						throwError(`bind ${attrName}`, el, true);
+					}
 				} else {
-					throwError(`bind ${attrName}`, el, true);
-				}
-			} else {
-				ef = effect(() => {
-					const result = _fn({ state: this._state, element: el });
 					if (attrName in el) {
-						// Avoid setting DOM properties to undefined (e.g., input.type)
-						if (result !== undefined) {
+						if (val !== undefined) {
 							// biome-ignore lint/suspicious/noExplicitAny: Unknown element properties
-							(el as any)[attrName] = result;
+							(el as any)[attrName] = val;
 						}
 					} else {
-						if (result === false || result == null)
+						if (val === false || val == null)
 							el.removeAttribute(attrName);
-						else el.setAttribute(attrName, String(result));
+						else el.setAttribute(attrName, String(val));
 					}
-				});
+				}
+			};
 
-				// Sync back special cases
-				if (sync) {
-					const capture = () => {
-						try {
-							const val =
-								attrName in el
-									? // biome-ignore lint/suspicious/noExplicitAny: Unknown element properties
-									  (el as any)[attrName]
-									: el.getAttribute(attrName);
-							if (_syncRef)
-								_syncRef(
-									{ state } as unknown as Record<
-										string,
-										unknown
-									>,
-									val as unknown
-								);
-							else
-								(state as Record<string, unknown>)[attrName] =
-									val as unknown;
-						} catch {}
-					};
-					this.#mutations.set(attrName, capture);
-					if (
-						attrName === "value" ||
-						attrName === "checked" ||
-						(attrName === "open" &&
-							(el as HTMLElement).tagName.toLowerCase() ===
-								"details")
-					) {
-						this.#cleanups.add(
-							this._setupSyncEvents(
-								attrName,
-								registeredEvents,
-								capture as EventListener
-							)
-						);
-					}
+			const ef: Effect = effect(() => {
+				const v = _fn({ state: this._state, element: el });
+				apply(v);
+			});
+
+			// Sync back special cases (only for non-granular bindings)
+			if (!attrProp && sync) {
+				const capture = () => {
+					try {
+						const val =
+							attrName in el
+								? // biome-ignore lint/suspicious/noExplicitAny: Unknown element properties
+								  (el as any)[attrName]
+								: el.getAttribute(attrName);
+						if (_syncRef)
+							_syncRef(
+								{ state } as unknown as Record<string, unknown>,
+								val as unknown
+							);
+						else
+							(state as Record<string, unknown>)[attrName] =
+								val as unknown;
+					} catch {}
+				};
+				this.#mutations.set(attrName, capture);
+				if (
+					attrName === "value" ||
+					attrName === "checked" ||
+					(attrName === "open" &&
+						(el as HTMLElement).tagName.toLowerCase() === "details")
+				) {
+					this.#cleanups.add(
+						this._setupSyncEvents(
+							attrName,
+							registeredEvents,
+							capture as EventListener
+						)
+					);
 				}
 			}
 
