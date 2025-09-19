@@ -14,6 +14,16 @@ const registerChildren = (root: Element, state: Record<string, unknown>) => {
 	);
 };
 
+// Determine if an element is effectively displayed (none on self or any ancestor)
+const isDisplayed = (el: Element | null): boolean => {
+	let cur: Element | null = el;
+	while (cur && cur instanceof HTMLElement) {
+		if ((cur as HTMLElement).style.display === "none") return false;
+		cur = cur.parentElement;
+	}
+	return !!el;
+};
+
 describe("DOM behavior / structural stability", () => {
 	interface TestState extends Record<string, unknown> {
 		count: number;
@@ -74,7 +84,7 @@ describe("DOM behavior / structural stability", () => {
 
 	// 4 Else not required
 	test("else not required (case 4)", async () => {
-		document.body.innerHTML = `<div id=\"c4\"><span :if=\"count < 2\" id=\"a\">LT2</span><span id=\"b\">Static</span></div>`;
+		document.body.innerHTML = `<div id="c4"><span :if="count < 2" id="a">LT2</span><span id="b">Static</span></div>`;
 		const root = document.getElementById("c4");
 		if (!root) throw new Error("c4 root missing");
 		registerChildren(root, state);
@@ -89,30 +99,26 @@ describe("DOM behavior / structural stability", () => {
 		).toBe("none");
 	});
 
-	// 5 If required
-	test("elseif without leading if never displays (case 5)", async () => {
-		document.body.innerHTML = `<div id=\"c5\"><p :elseif=\"count === 0\" id=\"bad\">ShouldNotShow</p></div>`;
+	// 5 Elseif without leading if has no gating effect
+	test("elseif without leading if remains unaffected (case 5)", async () => {
+		document.body.innerHTML = `<div id="c5"><p :elseif="count === 0" id="bad">ShouldNotShow</p></div>`;
 		const root = document.getElementById("c5");
 		if (!root) throw new Error("c5 root missing");
 		registerChildren(root, state);
 		await flush();
-		// Without a leading :if, :elseif should remain hidden by default
-		expect(
-			(document.getElementById("bad") as HTMLElement).style.display
-		).toBe("none");
+		// Without a leading :if, :elseif does nothing; element remains as-is
+		expect(isDisplayed(document.getElementById("bad"))).toBe(true);
 		state.count = 0;
 		await flush();
-		expect(
-			(document.getElementById("bad") as HTMLElement).style.display
-		).toBe("none");
+		expect(isDisplayed(document.getElementById("bad"))).toBe(true);
 	});
 
 	// 6 Else must be last
 	test("else preceding an elseif prevents later elseif from showing (case 6)", async () => {
-		document.body.innerHTML = `<div id=\"c6\">
-		  <p :if=\"count===1\" id=\"if\">One</p>
-		  <p :else id=\"else\">ElseShown</p>
-		  <p :elseif=\"count===2\" id=\"later\">Two</p>
+		document.body.innerHTML = `<div id="c6">
+		  <p :if="count===1" id="if">One</p>
+		  <p :else id="else">ElseShown</p>
+		  <p :elseif="count===2" id="later">Two</p>
 		</div>`;
 		const root = document.getElementById("c6");
 		if (!root) throw new Error("c6 root missing");
@@ -130,7 +136,7 @@ describe("DOM behavior / structural stability", () => {
 
 	// 7 Complex interpolation
 	test("complex expression interpolation updates (case 7)", async () => {
-		document.body.innerHTML = `<div id=\"c7\"><span id=\"expr\">Sum: \${count + arr.length * 2 + (flag ? 10 : 0)}</span></div>`;
+		document.body.innerHTML = `<div id="c7"><span id="expr">Sum: \${count + arr.length * 2 + (flag ? 10 : 0)}</span></div>`;
 		const root = document.getElementById("c7");
 		if (!root) throw new Error("c7 root missing");
 		registerChildren(root, state);
@@ -144,7 +150,7 @@ describe("DOM behavior / structural stability", () => {
 
 	// 8 Former ignore marker removed; both subtrees interpolate
 	test("removed ignore marker allows interpolation in subtree (case 8)", async () => {
-		document.body.innerHTML = `<div id=\"c8\"><div><span id=\"sub\">Value: \${count}</span></div><span id=\"ok\">Here: \${count}</span></div>`;
+		document.body.innerHTML = `<div id="c8"><div><span id="sub">Value: \${count}</span></div><span id="ok">Here: \${count}</span></div>`;
 		const root = document.getElementById("c8");
 		if (!root) throw new Error("c8 root missing");
 		registerChildren(root, state);
@@ -162,7 +168,7 @@ describe("DOM behavior / structural stability", () => {
 
 	// 9 Each hides when array empty
 	test("each template hides when array empty (case 9)", async () => {
-		document.body.innerHTML = `<ul id=\"c9\"><li :each=\"arr as v, i\">(\${i}) \${v}</li></ul>`;
+		document.body.innerHTML = `<ul id="c9"><li :each="arr as v, i">(\${i}) \${v}</li></ul>`;
 		const ul = document.getElementById("c9");
 		if (!ul) throw new Error("c9 root missing");
 		const template = ul.querySelector("li");
@@ -170,22 +176,20 @@ describe("DOM behavior / structural stability", () => {
 		new RegEl(template as HTMLElement, state);
 		await flush();
 		expect(
-			Array.from(ul.querySelectorAll("li")).filter(
-				(n) => (n as HTMLElement).style.display !== "none"
-			).length
+			Array.from(ul.querySelectorAll("li")).filter((n) => isDisplayed(n))
+				.length
 		).toBe(3);
 		state.arr = [];
 		await flush();
 		expect(
-			Array.from(ul.querySelectorAll("li")).filter(
-				(n) => (n as HTMLElement).style.display !== "none"
-			).length
+			Array.from(ul.querySelectorAll("li")).filter((n) => isDisplayed(n))
+				.length
 		).toBe(0);
 	});
 
 	// 10 Array item update preserves sibling identity
 	test("updating individual array item preserves sibling node identities (case 10)", async () => {
-		document.body.innerHTML = `<ul id=\"list\"><li :each=\"arr as v, i\">(\${i}) \${v}</li></ul>`;
+		document.body.innerHTML = `<ul id="list"><li :each="arr as v, i">(\${i}) \${v}</li></ul>`;
 		const ul = document.getElementById("list");
 		if (!ul) throw new Error("list missing");
 		const template = ul.querySelector("li");
@@ -193,9 +197,7 @@ describe("DOM behavior / structural stability", () => {
 		new RegEl(template as HTMLElement, state);
 		await flush();
 		const items = () =>
-			Array.from(ul.querySelectorAll("li")).filter(
-				(n) => (n as HTMLElement).style.display !== "none"
-			);
+			Array.from(ul.querySelectorAll("li")).filter((n) => isDisplayed(n));
 		const nodes = items();
 		expect(nodes.map((n) => n.textContent?.trim())).toEqual([
 			"(0) a",
@@ -213,7 +215,7 @@ describe("DOM behavior / structural stability", () => {
 
 	// 11 Interpolation within each
 	test("interpolation inside each clones (case 11)", async () => {
-		document.body.innerHTML = `<div id=\"c11\"><p :each=\"arr as v, i\">IDX=\${i} :: \${v.toUpperCase()}</p></div>`;
+		document.body.innerHTML = `<div id="c11"><p :each="arr as v, i">IDX=\${i} :: \${v.toUpperCase()}</p></div>`;
 		const root = document.getElementById("c11");
 		if (!root) throw new Error("c11 root missing");
 		const template = root.querySelector("p");
@@ -221,25 +223,25 @@ describe("DOM behavior / structural stability", () => {
 		new RegEl(template as HTMLElement, state);
 		await flush();
 		const texts = Array.from(root.querySelectorAll("p"))
-			.filter((n) => (n as HTMLElement).style.display !== "none")
+			.filter((n) => isDisplayed(n))
 			.map((n) => n.textContent?.trim());
 		expect(texts).toEqual(["IDX=0 :: A", "IDX=1 :: B", "IDX=2 :: C"]);
 	});
 
 	// 12 Nested if inside each
 	test("nested if within each (case 12)", async () => {
-		document.body.innerHTML = `<div id=\"c12\"><div :each=\"arr as v, i\"><span :if=\"v==='a'\" class=\"hit\">A</span><span :else class=\"miss\">NotA</span></div></div>`;
+		document.body.innerHTML = `<div id="c12"><div :each="arr as v, i"><span :if="v==='a'" class="hit">A</span><span :else class="miss">NotA</span></div></div>`;
 		const root = document.getElementById("c12");
 		if (!root) throw new Error("c12 root missing");
 		const template = root.querySelector("div");
 		if (!template) throw new Error("template missing");
 		new RegEl(template as HTMLElement, state);
 		await flush();
-		const hits = Array.from(root.querySelectorAll(".hit")).filter(
-			(n) => (n as HTMLElement).style.display !== "none"
+		const hits = Array.from(root.querySelectorAll(".hit")).filter((n) =>
+			isDisplayed(n)
 		);
-		const misses = Array.from(root.querySelectorAll(".miss")).filter(
-			(n) => (n as HTMLElement).style.display !== "none"
+		const misses = Array.from(root.querySelectorAll(".miss")).filter((n) =>
+			isDisplayed(n)
 		);
 		expect(hits.length).toBe(1);
 		expect(misses.length).toBe(2);
@@ -289,10 +291,10 @@ describe("DOM behavior / structural stability", () => {
 
 	// 14 Interpolations inside async then/catch
 	test("interpolation inside async then/catch (case 14)", async () => {
-		document.body.innerHTML = `<div id=\"c14\">
-		 <div :await=\"ok ? Promise.resolve(2) : Promise.reject(3)\" id=\"await14\">Loading</div>
-		 <div :then=\"res\" id=\"then14\">Double: \${res * 2}</div>
-		 <div :catch=\"err\" id=\"catch14\">Triple: \${err * 3}</div>
+		document.body.innerHTML = `<div id="c14">
+		 <div :await="ok ? Promise.resolve(2) : Promise.reject(3)" id="await14">Loading</div>
+		 <div :then="res" id="then14">Double: \${res * 2}</div>
+		 <div :catch="err" id="catch14">Triple: \${err * 3}</div>
 		</div>`;
 		const root = document.getElementById("c14");
 		if (!root) throw new Error("c14 root missing");
@@ -310,10 +312,10 @@ describe("DOM behavior / structural stability", () => {
 
 	// 15 Await/then/catch can contain conditionals & each
 	test("then/catch blocks can host conditionals and each (case 15)", async () => {
-		document.body.innerHTML = `<div id=\"c15\">
-		 <section :await=\"ok ? Promise.resolve(arr) : Promise.reject(arr)\" id=\"await15\">Loading</section>
-		 <section :then=\"vals\" id=\"then15\"><ul><li :each=\"vals as v, i\"><span :if=\"i===0\">First: \${v}</span><span :else>Idx \${i}: \${v}</span></li></ul></section>
-		 <section :catch=\"errs\" id=\"catch15\"><p :if=\"errs.length===0\">None</p><p :else>Err Count: \${errs.length}</p></section>
+		document.body.innerHTML = `<div id="c15">
+		 <section :await="ok ? Promise.resolve(arr) : Promise.reject(arr)" id="await15">Loading</section>
+		 <section :then="vals" id="then15"><ul><li :each="vals as v, i"><span :if="i===0">First: \${v}</span><span :else>Idx \${i}: \${v}</span></li></ul></section>
+		 <section :catch="errs" id="catch15"><p :if="errs.length===0">None</p><p :else>Err Count: \${errs.length}</p></section>
 		</div>`;
 		const root = document.getElementById("c15");
 		if (!root) throw new Error("c15 root missing");
@@ -332,12 +334,12 @@ describe("DOM behavior / structural stability", () => {
 
 	// 16 Conditionals / each can contain await/then/catch
 	test("conditionals and each can host await/then/catch (case 16)", async () => {
-		document.body.innerHTML = `<div id=\"c16\">
-		 <div :if=\"flag\">
-		   <div :await=\"Promise.resolve(3)\" id=\"innerAwait\">Loading</div>
-		   <div :then=\"v\" id=\"innerThen\">Val=\${v}</div>
+		document.body.innerHTML = `<div id="c16">
+		 <div :if="flag">
+		   <div :await="Promise.resolve(3)" id="innerAwait">Loading</div>
+		   <div :then="v" id="innerThen">Val=\${v}</div>
 		 </div>
-		 <div :each=\"arr as v, i\"><span :await=\"Promise.resolve(v)\" class=\"aw\">L</span><span :then=\"x\" class=\"th\">X=\${x}</span></div>
+		 <div :each="arr as v, i"><span :await="Promise.resolve(v)" class="aw">L</span><span :then="x" class="th">X=\${x}</span></div>
 		</div>`;
 		const root = document.getElementById("c16");
 		if (!root) throw new Error("c16 root missing");
@@ -346,18 +348,18 @@ describe("DOM behavior / structural stability", () => {
 		expect(
 			(document.getElementById("innerThen") as HTMLElement).textContent
 		).toBe("Val=3");
-		const ths = Array.from(root.querySelectorAll(".th")).filter(
-			(n) => (n as HTMLElement).style.display !== "none"
+		const ths = Array.from(root.querySelectorAll(".th")).filter((n) =>
+			isDisplayed(n)
 		);
 		expect(ths.length).toBe(state.arr.length);
 	});
 
 	// 17 Sibling order rules
 	test("then/catch must follow await (case 17)", async () => {
-		document.body.innerHTML = `<div id=\"c17\">
-		 <div :then=\"v\" id=\"prematureThen\">Early \${v}</div>
-		 <div :await=\"Promise.resolve('ok')\" id=\"await17\">Load</div>
-		 <div :catch=\"e\" id=\"catch17\">Err: \${e}</div>
+		document.body.innerHTML = `<div id="c17">
+		 <div :then="v" id="prematureThen">Early \${v}</div>
+		 <div :await="Promise.resolve('ok')" id="await17">Load</div>
+		 <div :catch="e" id="catch17">Err: \${e}</div>
 		</div>`;
 		const root = document.getElementById("c17");
 		if (!root) throw new Error("c17 root missing");

@@ -53,6 +53,13 @@ for (const { name, StateBuilder } of builders) {
 	});
 
 	test(`${name}: :await with function re-runs when reactive deps are read synchronously`, async () => {
+		document.body.innerHTML = tpl(`
+<div data-mf-register>
+  <p :await="loadUser()" id="await">Loading</p>
+  <p :then="val" id="then">Val: \${val}</p>
+  <p :catch="err" id="catch">Err: \${err}</p>
+</div>
+`);
 		const state = StateBuilder.create(undefined, { ok: true }).build();
 		(state as Record<string, unknown>).loadUser = () => {
 			const ok = (state as Record<string, unknown>).ok as boolean; // track synchronously
@@ -62,15 +69,6 @@ for (const { name, StateBuilder } of builders) {
 				}, 0);
 			});
 		};
-		document.body.innerHTML = tpl(`
-<div data-mf-register>
-  <p :await="loadUser()" id="await">Loading</p>
-  <p :then="val" id="then">Val: \${val}</p>
-  <p :catch="err" id="catch">Err: \${err}</p>
-</div>
-`);
-		// Trigger auto-registration by building any state after DOM is set up
-		StateBuilder.create().build();
 		await flush();
 		await flush();
 		expect(

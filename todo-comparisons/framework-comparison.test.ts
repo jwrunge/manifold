@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import $ from "../src/main.ts";
+import $ from "../tests/helpers/api.ts";
 
 describe("Framework Comparison Benchmarks", () => {
 	describe("React-style Component Updates", () => {
@@ -345,7 +345,7 @@ describe("Framework Comparison Benchmarks", () => {
 			// Helper function for memory usage (fallback for environments without process)
 			const getMemoryUsage = () => {
 				try {
-					// @ts-ignore - process might not be available in all environments
+					// @ts-expect-error - process might not be available in all environments
 					return typeof process !== "undefined" && process.memoryUsage
 						? process.memoryUsage().heapUsed
 						: 0;

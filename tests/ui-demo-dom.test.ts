@@ -43,8 +43,55 @@ const tpl = (s: string) => s;
 
 const builders = await loadBuilders();
 
+// Helper: check if visible considering ancestor display toggles
+const isDisplayed = (el: Element | null): boolean => {
+	let cur: Element | null = el;
+	while (cur && cur instanceof HTMLElement) {
+		if ((cur as HTMLElement).style.display === "none") return false;
+		cur = cur.parentElement;
+	}
+	return !!el;
+};
+
 for (const { name, StateBuilder } of builders) {
 	test(`${name}: UI demo basics (counts, derived, bindings)`, async () => {
+		document.body.innerHTML = tpl(`
+<div data-mf-register>
+	<p id="c1">The current count is: \${count}</p>
+	<p id="c2">The second count is: \${count2}</p>
+	<p id="sum">The sum of both counts is: \${sum}</p>
+	<p id="dbl">The double of count is: \${doubleCount}; the double of count 2 is: \${count2 * 2}</p>
+
+	<p :if="count >= 15" id="if15">Count is 15 or more!</p>
+	<p :elseif="count >= 10" id="if10_14">Count is between 10 and 14!</p>
+	<p :elseif="count === 9" id="if9">Count is 9!</p>
+	<p :else id="ifElse">Count is less than 10!</p>
+
+	<button id="btnInc1" :onclick="count = count + 1">Increment Count</button>
+	<button id="btnInc2" :onclick="count2 = count2 + 2">Increment Count2</button>
+	<button id="btnInc5" :onclick="increment(5)">+5</button>
+
+	<label>Count 1: <input id="inp1" type="number" sync:value="count" /></label>
+	<label>Count 2: <input id="inp2" type="number" :value="count2" :oninput="setCount2(event.target.value)" /></label>
+
+	<div>
+		<button id="btnToggle" :onclick="asyncToggle = !asyncToggle;">Toggle Async Success (currently: \${asyncToggle ? 'success' : 'fail'})</button>
+		<p id="await" :await="loadUser()">Loading user...</p>
+		<p id="then" :then="user">Loaded: ID=\${user.id} Name=\${user.name}</p>
+		<p id="catch" :catch="err">Error: \${err.message}</p>
+	</div>
+
+	<ul id="list">
+		<li :each="items as item, idx">Item \${idx}: \${item}</li>
+	</ul>
+	<button id="btnAdd" :onclick="items = items.concat(items.length + 1)">Add Item</button>
+	<button id="btnRemove" :onclick="items = items.slice(0, -1)">Remove Item</button>
+	<button id="btnPush" :onclick="items.push(items.length + 1)">Add Item (alt)</button>
+	<button id="btnPop" :onclick="items.pop()">Remove Item</button>
+	<button id="btnJake" :onclick="items[3] = 'Jake!'">Change 3</button>
+</div>
+`);
+
 		const state = StateBuilder.create<DemoState>(undefined, {
 			count: 10,
 			count2: 4,
@@ -79,44 +126,7 @@ for (const { name, StateBuilder } of builders) {
 			});
 		};
 
-		document.body.innerHTML = tpl(`
-<div data-mf-register>
-  <p id="c1">The current count is: \${count}</p>
-  <p id="c2">The second count is: \${count2}</p>
-  <p id="sum">The sum of both counts is: \${sum}</p>
-  <p id="dbl">The double of count is: \${doubleCount}; the double of count 2 is: \${count2 * 2}</p>
-
-  <p :if="count >= 15" id="if15">Count is 15 or more!</p>
-  <p :elseif="count >= 10" id="if10_14">Count is between 10 and 14!</p>
-  <p :elseif="count === 9" id="if9">Count is 9!</p>
-  <p :else id="ifElse">Count is less than 10!</p>
-
-  <button id="btnInc1" :onclick="count = count + 1">Increment Count</button>
-  <button id="btnInc2" :onclick="count2 = count2 + 2">Increment Count2</button>
-  <button id="btnInc5" :onclick="increment(5)">+5</button>
-
-  <label>Count 1: <input id="inp1" type="number" sync:value="count" /></label>
-  <label>Count 2: <input id="inp2" type="number" :value="count2" :oninput="setCount2(event.target.value)" /></label>
-
-  <div>
-    <button id="btnToggle" :onclick="asyncToggle = !asyncToggle;">Toggle Async Success (currently: \${asyncToggle ? 'success' : 'fail'})</button>
-    <p id="await" :await="loadUser()">Loading user...</p>
-    <p id="then" :then="user">Loaded: ID=\${user.id} Name=\${user.name}</p>
-    <p id="catch" :catch="err">Error: \${err.message}</p>
-  </div>
-
-  <ul id="list">
-    <li :each="items as item, idx">Item \${idx}: \${item}</li>
-  </ul>
-  <button id="btnAdd" :onclick="items = items.concat(items.length + 1)">Add Item</button>
-  <button id="btnRemove" :onclick="items = items.slice(0, -1)">Remove Item</button>
-  <button id="btnPush" :onclick="items.push(items.length + 1)">Add Item (alt)</button>
-  <button id="btnPop" :onclick="items.pop()">Remove Item</button>
-  <button id="btnJake" :onclick="items[3] = 'Jake!'">Change 3</button>
-</div>
-`);
-		// trigger auto-registration with same default name
-		StateBuilder.create().build();
+		// Auto-registration already triggered by the build above
 
 		// initial
 		await flush();
@@ -132,12 +142,8 @@ for (const { name, StateBuilder } of builders) {
 		expect(
 			(document.getElementById("dbl") as HTMLElement).textContent
 		).toContain("20");
-		expect(
-			(document.getElementById("if10_14") as HTMLElement).style.display
-		).toBe("");
-		expect(
-			(document.getElementById("if15") as HTMLElement).style.display
-		).toBe("none");
+		expect(isDisplayed(document.getElementById("if10_14"))).toBe(true);
+		expect(isDisplayed(document.getElementById("if15"))).toBe(false);
 
 		// click +1
 		(document.getElementById("btnInc1") as HTMLButtonElement).click();
@@ -158,12 +164,8 @@ for (const { name, StateBuilder } of builders) {
 		expect(
 			(document.getElementById("c1") as HTMLElement).textContent
 		).toContain("16");
-		expect(
-			(document.getElementById("if15") as HTMLElement).style.display
-		).toBe("");
-		expect(
-			(document.getElementById("if10_14") as HTMLElement).style.display
-		).toBe("none");
+		expect(isDisplayed(document.getElementById("if15"))).toBe(true);
+		expect(isDisplayed(document.getElementById("if10_14"))).toBe(false);
 
 		// two-way input 1
 		const inp1 = document.getElementById("inp1") as HTMLInputElement;
@@ -191,7 +193,7 @@ for (const { name, StateBuilder } of builders) {
 		// each list initial
 		const lis = () =>
 			Array.from(document.querySelectorAll("#list li"))
-				.filter((n) => (n as HTMLElement).style.display !== "none")
+				.filter((n) => isDisplayed(n))
 				.map((el) => el.textContent?.trim());
 		expect(lis()).toEqual(["Item 0: 1", "Item 1: 2", "Item 2: 3"]);
 		// add item via concat
@@ -249,6 +251,8 @@ for (const { name, StateBuilder } of builders) {
   <p id="then" :then="u">Loaded: \${u.id}</p>
   <p id="catch" :catch="e">Error: \${e.message}</p>
 </div>`);
+		// Build the state after DOM is ready so auto-registration binds correctly
+		// (This build also creates a new empty state but registration targets the existing DOM regions)
 		StateBuilder.create().build();
 
 		await flush();
