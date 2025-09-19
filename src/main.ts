@@ -82,13 +82,21 @@ export default class StateBuilder<TState extends StateConstraint> {
 		) ?? [])
 			new RegEl(el as HTMLElement | SVGElement | MathMLElement, state);
 
+		afterBuild();
+
 		return state as TState;
 	}
 }
 
 // on dom content load
-document.addEventListener("DOMContentLoaded", () => {
-	for (const el of document.querySelectorAll(".mf-hidden") ?? []) {
-		el.classList.remove("mf-hidden");
-	}
-});
+const afterBuild = () => {
+	const run = () => {
+		for (const el of document.querySelectorAll(".mf-hidden") ?? []) {
+			el.classList.remove("mf-hidden");
+		}
+	};
+
+	if (document.readyState === "loading")
+		document.addEventListener("DOMContentLoaded", run);
+	else run();
+};
