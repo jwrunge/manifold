@@ -77,26 +77,6 @@
 			</ul>
 		</div>
 
-		<!-- Keyed each demo -->
-		<div style="margin-top: 1rem">
-			<div>Family Members:</div>
-			<ul>
-				<li :each="someArray as value, key">
-					${key}: ${value.name} (${value.age} years old)
-				</li>
-			</ul>
-		</div>
-
-		<!-- Aliased each demo -->
-		<div style="margin-top: 1rem">
-			<div>Family Members:</div>
-			<ul>
-				<li :each="someArray as {name, age}, key">
-					${key}: ${name} (${age} years old)
-				</li>
-			</ul>
-		</div>
-
 		<!-- Final -->
 		<div style="margin-top: 1rem" :if="list.length > 2">
 			<div>Family Members:</div>

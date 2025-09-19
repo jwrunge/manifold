@@ -29,55 +29,6 @@ const templLogicAttrSet = new Set(templLogicAttrs);
 const dependentLogicAttrSet = new Set(["elseif", "else", "then", "catch"]);
 const prefixes = [":", "data-mf-"] as const;
 
-// View transition management
-type TransitionQueueItem = {
-	element: HTMLElement;
-	transitionName: string;
-	queuedAt: number;
-};
-
-const transitionQueue = new Set<TransitionQueueItem>();
-let isTransitioning = false;
-let pendingTransition: ReturnType<typeof setTimeout> | null = null;
-
-const queueElementForTransition = (el: HTMLElement, transitionName: string) => {
-	// Only queue if view transitions are supported
-	if (!document.startViewTransition) return;
-
-	transitionQueue.add({
-		element: el,
-		transitionName,
-		queuedAt: Date.now(),
-	});
-
-	// Debounce transition execution to batch multiple changes
-	if (pendingTransition) {
-		clearTimeout(pendingTransition);
-	}
-
-	pendingTransition = setTimeout(() => {
-		executeQueuedTransition();
-	}, 16); // One frame delay to batch changes
-};
-
-const executeQueuedTransition = () => {
-	if (isTransitioning || transitionQueue.size === 0) return;
-
-	isTransitioning = true;
-	transitionQueue.clear();
-
-	// Start view transition
-	document
-		.startViewTransition(() => {
-			// The actual DOM changes have already happened,
-			// this just triggers the transition capture
-			return Promise.resolve();
-		})
-		.finished.finally(() => {
-			isTransitioning = false;
-		});
-};
-
 // Shared registration logic for both new and existing elements
 const _registerElement = (el: Element) => {
 	const attr = el.getAttribute("data-mf-register");
@@ -182,7 +133,6 @@ export default class RegEl {
 	static _mutations = new WeakMap<Registerable, Map<string, () => void>>();
 	#mutations = new Map<string, () => void>();
 	#cleanups = new Set<() => void>();
-	#displayStates = new Map<HTMLElement, boolean>(); // Track previous visibility states
 	_el: Registerable;
 	_state: Record<string, unknown>;
 	_cachedContent?: Registerable;
@@ -281,9 +231,19 @@ export default class RegEl {
 			);
 
 			if (isTemplateDependent || isTemplateRoot) {
-				el.style.viewTransitionName ??= `mf${Math.random()
-					.toString(36)
-					.slice(2)}`;
+				// Only set a transition name if one isn't already set
+				const currentTransitionName = el.style.getPropertyValue(
+					"view-transition-name"
+				);
+				if (!currentTransitionName) {
+					const transitionName = `mf${Math.random()
+						.toString(36)
+						.slice(2)}`;
+					el.style.setProperty(
+						"view-transition-name",
+						transitionName
+					);
+				}
 			}
 
 			// Handle special attributes
@@ -799,26 +759,35 @@ export default class RegEl {
 	}
 
 	_updateDisplay(sibs: Pick<Sibling, "el">[]) {
-		for (const { el } of sibs) {
+		// Check if any elements will change display state
+		const elementsChanging = sibs.filter(({ el }) => {
 			const htmlEl = el as HTMLElement;
 			const shouldShow = (el.mfshow ?? true) && (el.mfawait ?? true);
 			const newDisplay = shouldShow ? "" : "none";
+			return htmlEl.style.display !== newDisplay;
+		});
 
-			// Track previous visibility state
-			const wasVisible = this.#displayStates.get(htmlEl) ?? true;
-			const isVisible = Boolean(shouldShow);
-
-			// Queue for view transition if element is becoming hidden
-			if (wasVisible && !isVisible && htmlEl.style.viewTransitionName) {
-				queueElementForTransition(
-					htmlEl,
-					htmlEl.style.viewTransitionName
-				);
+		if (elementsChanging.length > 0 && "startViewTransition" in document) {
+			// Use view transitions for display changes
+			(
+				document as Document & {
+					startViewTransition: (callback: () => void) => void;
+				}
+			).startViewTransition(() => {
+				for (const { el } of elementsChanging) {
+					const htmlEl = el as HTMLElement;
+					const shouldShow =
+						(el.mfshow ?? true) && (el.mfawait ?? true);
+					htmlEl.style.display = shouldShow ? "" : "none";
+				}
+			});
+		} else {
+			// Fallback for browsers without view transitions or no changes
+			for (const { el } of elementsChanging) {
+				const htmlEl = el as HTMLElement;
+				const shouldShow = (el.mfshow ?? true) && (el.mfawait ?? true);
+				htmlEl.style.display = shouldShow ? "" : "none";
 			}
-
-			// Update display and track new state
-			htmlEl.style.display = newDisplay;
-			this.#displayStates.set(htmlEl, isVisible);
 		}
 	}
 
