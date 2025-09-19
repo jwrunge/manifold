@@ -27,6 +27,10 @@ type Sibling = {
 const templLogicAttrSet = new Set(templLogicAttrs);
 const dependentLogicAttrSet = new Set(["elseif", "else", "then", "catch"]);
 const prefixes = [":", "data-mf-"] as const;
+
+// Utility to split on "as" and trim parts
+const splitAs = (str: string): string[] =>
+	str.split(/\s*as\s*/).map((s) => s.trim());
 const throwError = (msg: string, cause: unknown, unsupported = false) => {
 	console.error(`${unsupported ? "Unsupported: " : ""}${msg}`, cause);
 	throw new Error("Manifold Error");
@@ -88,19 +92,6 @@ const getAttrName = (
 	return { attrName, sync };
 };
 
-const getDependentAttr = (el: Element, root: "await" | "if") => {
-	for (const p of prefixes) {
-		for (const dep of root === "await"
-			? ["then", "catch"]
-			: ["elseif", "else"]) {
-			const attr = `${p}${dep}`;
-			if (el.hasAttribute(attr))
-				return { prefixed: attr, unprefixed: dep };
-		}
-	}
-	return { prefixed: null, unprefixed: null };
-};
-
 export default class RegEl {
 	static _registry = new WeakMap<Registerable, RegEl>();
 	static _mutations = new WeakMap<Registerable, Map<string, () => void>>();
@@ -135,9 +126,7 @@ export default class RegEl {
 			if (!info) continue;
 			const { attrName } = info;
 			if (attrName === "each") {
-				const [exp, rootAlias] = value
-					.split(/\s*as\s*/)
-					.map((s) => s.trim());
+				const [exp, rootAlias] = splitAs(value);
 				const { _fn } = evaluateExpression(exp);
 				this._handleTemplating("each", name, _fn, rootAlias);
 				return;
@@ -173,9 +162,7 @@ export default class RegEl {
 				throwError(`Attribute ${attrName} duplicate`, el);
 
 			// Parse out expression and optional alias (for :each)
-			const [exp, rootAlias] = value
-				.split(/\s*as\s*/)
-				.map((s) => s.trim());
+			const [exp, rootAlias] = splitAs(value);
 
 			const { _fn, _syncRef } = evaluateExpression(exp);
 
@@ -529,10 +516,23 @@ export default class RegEl {
 			let sib = this._el.nextElementSibling;
 
 			while (sib) {
-				const { prefixed, unprefixed } = getDependentAttr(
-					sib,
-					attrName
-				);
+				// Inline getDependentAttr
+				let prefixed: string | null = null;
+				let unprefixed: string | null = null;
+				for (const p of prefixes) {
+					for (const dep of attrName === "await"
+						? ["then", "catch"]
+						: ["elseif", "else"]) {
+						const attr = `${p}${dep}`;
+						if (sib.hasAttribute(attr)) {
+							prefixed = attr;
+							unprefixed = dep;
+							break;
+						}
+					}
+					if (prefixed) break;
+				}
+
 				if (!unprefixed || !prefixed) break;
 
 				let fn: ParsedExpression["_fn"] | null = null;
@@ -540,9 +540,7 @@ export default class RegEl {
 
 				if (unprefixed !== "else") {
 					const raw = sib.getAttribute(prefixed) || "";
-					const [left, right] = raw
-						.split(/\s*as\s*/)
-						.map((s) => s.trim());
+					const [left, right] = splitAs(raw);
 					// For :then/:catch, treat entire value as alias if no 'as' part provided
 					if (
 						attrName === "await" &&

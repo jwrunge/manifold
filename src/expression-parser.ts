@@ -1,4 +1,4 @@
-import { isIdentContinuation, splitTopLevel } from "./parsing-utils.js";
+import { splitTopLevel } from "./parsing-utils.js";
 
 // Expression parser expects state injected via ctx.state
 export interface ParsedExpression {
@@ -91,15 +91,14 @@ const buildChain = (
 	if (!/^[a-zA-Z_$]/.test(expr)) return null;
 	let i = 0,
 		base = "";
-	while (i < expr.length && isIdentContinuation(expr[i])) base += expr[i++];
+	while (i < expr.length && /[\w$]/.test(expr[i])) base += expr[i++];
 	const segs: ChainSeg[] = [];
 	while (i < expr.length) {
 		if (expr[i] === ".") {
 			i++;
 			let prop = "";
 			if (!/[a-zA-Z_$]/.test(expr[i])) return null;
-			while (i < expr.length && isIdentContinuation(expr[i]))
-				prop += expr[i++];
+			while (i < expr.length && /[\w$]/.test(expr[i])) prop += expr[i++];
 			segs.push({ t: "prop", k: prop });
 			continue;
 		}

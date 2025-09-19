@@ -1,5 +1,7 @@
 /**
- * Find the index of a top-level character (not inside parentheses, brackets, braces, or quotes)
+ * Find the index of a top-level character (not inside paren	out.push(src.slice(last).trim());
+	return out;
+};, brackets, braces, or quotes)
  */
 export const indexOfTopLevel = (src: string, chr: string): number => {
 	let p = 0,
