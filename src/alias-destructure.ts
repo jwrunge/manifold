@@ -1,6 +1,4 @@
-import { indexOfTopLevel, splitTopLevel } from "./parsing-utils.js";
-
-const isIdent = (s: string) => /^[A-Za-z_$][\w$]*$/.test(s);
+import { indexOfTopLevel, isIdent, splitTopLevel } from "./parsing-utils.js";
 
 const bindIdent = (
 	ident: string,

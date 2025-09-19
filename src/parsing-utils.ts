@@ -26,6 +26,11 @@ export const indexOfTopLevel = (src: string, chr: string): number => {
 };
 
 /**
+ * Check if a string is a valid identifier
+ */
+export const isIdent = (s: string): boolean => /^[A-Za-z_$][\w$]*$/.test(s);
+
+/**
  * Split a string by a separator at the top level (not inside parentheses, brackets, braces, or quotes)
  */
 export const splitTopLevel = (src: string, sep: string): string[] => {
@@ -60,3 +65,7 @@ export const splitTopLevel = (src: string, sep: string): string[] => {
 	out.push(src.slice(last).trim());
 	return out;
 };
+
+// Shared regex for identifier continuation (letter, digit, underscore, or dollar sign)
+export const isIdentContinuation = (char: string): boolean =>
+	/[\w$]/.test(char);

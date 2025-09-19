@@ -2,7 +2,7 @@ import applyAliasPattern from "./alias-destructure";
 import type { WritableCSSKeys } from "./css";
 import { type Effect, effect } from "./Effect";
 import evaluateExpression, { type ParsedExpression } from "./expression-parser";
-import { indexOfTopLevel } from "./parsing-utils";
+import { indexOfTopLevel, isIdent } from "./parsing-utils";
 import { scopeProxy } from "./proxy";
 
 type Registerable = (HTMLElement | SVGElement | MathMLElement) & {
@@ -30,6 +30,13 @@ const prefixes = [":", "data-mf-"] as const;
 const throwError = (msg: string, cause: unknown, unsupported = false) => {
 	console.error(`${unsupported ? "Unsupported: " : ""}${msg}`, cause);
 	throw new Error("Manifold Error");
+};
+
+const hasAnyPrefixedAttr = (el: Element, attrName: string): boolean => {
+	return (
+		el.hasAttribute(`:${attrName}`) ||
+		el.hasAttribute(`data-mf-${attrName}`)
+	);
 };
 
 const observer = new MutationObserver((mRecord) => {
@@ -335,8 +342,7 @@ export default class RegEl {
 		)}`;
 
 		for (const ca of conflictAttrs)
-			if (el.hasAttribute(`:${ca}`) || el.hasAttribute(`data-mf-${ca}`))
-				throwError(errorMsg, el);
+			if (hasAnyPrefixedAttr(el, ca)) throwError(errorMsg, el);
 
 		for (const t of types) {
 			if (registered.has(t)) throwError(errorMsg, el);
@@ -456,7 +462,7 @@ export default class RegEl {
 						const left = alias.slice(0, comma).trim();
 						const right = alias.slice(comma + 1).trim();
 						if (left) applyAliasPattern(left, val, inst._state);
-						if (right && /^[A-Za-z_$][\w$]*$/.test(right))
+						if (right && isIdent(right))
 							(inst._state as Record<string, unknown>)[right] =
 								idx;
 						return;
