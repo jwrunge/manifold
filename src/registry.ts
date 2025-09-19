@@ -2,6 +2,7 @@ import applyAliasPattern from "./alias-destructure";
 import type { WritableCSSKeys } from "./css";
 import { type Effect, effect } from "./Effect";
 import evaluateExpression, { type ParsedExpression } from "./expression-parser";
+import { globalStores } from "./main";
 import { indexOfTopLevel, isIdent } from "./parsing-utils";
 import { scopeProxy } from "./proxy";
 
@@ -28,6 +29,32 @@ const templLogicAttrSet = new Set(templLogicAttrs);
 const dependentLogicAttrSet = new Set(["elseif", "else", "then", "catch"]);
 const prefixes = [":", "data-mf-"] as const;
 
+// Handle incremental registration of new elements
+const _handleNewElements = (addedNodes: NodeList) => {
+	for (const node of addedNodes) {
+		if (node.nodeType !== 1) continue; // ELEMENT_NODE = 1
+		const el = node as Element;
+
+		// Check if this element or any descendant needs registration
+		const candidates = [el, ...el.querySelectorAll("[data-mf-register]")];
+		for (const candidate of candidates) {
+			const attr = candidate.getAttribute("data-mf-register");
+			if (attr !== null) {
+				const storeName = attr || undefined;
+				const store = globalStores.get(storeName);
+				if (store) {
+					new RegEl(
+						candidate as HTMLElement | SVGElement | MathMLElement,
+						store
+					);
+					// Remove mf-hidden class after registration
+					candidate.classList.remove("mf-hidden");
+				}
+			}
+		}
+	}
+};
+
 // Utility to split on "as" and trim parts
 const splitAs = (str: string): string[] =>
 	str.split(/\s*as\s*/).map((s) => s.trim());
@@ -45,9 +72,11 @@ const hasAnyPrefixedAttr = (el: Element, attrName: string): boolean => {
 
 const observer = new MutationObserver((mRecord) => {
 	for (const m of mRecord) {
-		if (m.type === "childList")
+		if (m.type === "childList") {
+			// Handle removal
 			for (const el of m.removedNodes as Iterable<Registerable>) {
-				if (el.nodeType !== Node.ELEMENT_NODE || el.isConnected)
+				if (el.nodeType !== 1 || el.isConnected)
+					// ELEMENT_NODE = 1
 					continue;
 				RegEl._registry.get(el)?._dispose?.();
 				for (const d of el.querySelectorAll(
@@ -56,6 +85,11 @@ const observer = new MutationObserver((mRecord) => {
 					RegEl._registry.get(d)?._dispose?.();
 				}
 			}
+			// Handle incremental registration of added nodes
+			if (m.addedNodes.length > 0) {
+				_handleNewElements(m.addedNodes);
+			}
+		}
 		if (m.type === "attributes") {
 			const el = m.target as Registerable;
 			const attrName = m.attributeName;
@@ -107,6 +141,37 @@ export default class RegEl {
 
 	static _registerOrGet(el: Registerable, state: Record<string, unknown>) {
 		return RegEl._registry.get(el) ?? new RegEl(el, state);
+	}
+
+	static _handleExistingElements(storeName?: string) {
+		// Process each element individually using the same logic as handleNewElements
+		for (const node of document?.querySelectorAll(
+			`[data-mf-register${
+				storeName !== undefined && storeName !== null
+					? `="${String(storeName)}"`
+					: ``
+			}]`
+		) ?? []) {
+			if (node.nodeType !== 1) continue; // ELEMENT_NODE = 1
+			const el = node as Element;
+
+			// Check if this element needs registration
+			const attr = el.getAttribute("data-mf-register");
+			if (attr !== null) {
+				const candidateStoreName = attr || undefined;
+				if (candidateStoreName === storeName) {
+					const store = globalStores.get(candidateStoreName);
+					if (store) {
+						new RegEl(
+							el as HTMLElement | SVGElement | MathMLElement,
+							store
+						);
+						// Remove mf-hidden class after registration
+						el.classList.remove("mf-hidden");
+					}
+				}
+			}
+		}
 	}
 
 	constructor(el: Registerable, state: Record<string, unknown>) {

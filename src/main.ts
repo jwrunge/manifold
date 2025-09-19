@@ -5,6 +5,9 @@ import RegEl from "./registry.ts";
 
 export type StateConstraint = Record<string, unknown>;
 
+// Global registry for incremental DOM registration
+export const globalStores = new Map<string | undefined, StateConstraint>();
+
 export default class StateBuilder<TState extends StateConstraint> {
 	#name?: string;
 	#scopedState: TState;
@@ -58,7 +61,7 @@ export default class StateBuilder<TState extends StateConstraint> {
 
 		const state = proxy(this.#scopedState) as TState;
 		for (const [key, deriveFn] of this.#derivations) {
-			// Seed inside effect to compute once and establish dependencies
+			// Compute once and establish dependencies
 			let hasRun = false,
 				prevVal: unknown;
 
@@ -72,31 +75,12 @@ export default class StateBuilder<TState extends StateConstraint> {
 		}
 		this.#built = true;
 
-		// Auto-register on build: bind all [data-mf-register] regions to the global state
-		for (const el of document?.querySelectorAll(
-			`[data-mf-register${
-				this.#name !== undefined && this.#name !== null
-					? `="${String(this.#name)}"`
-					: ``
-			}]`
-		) ?? [])
-			new RegEl(el as HTMLElement | SVGElement | MathMLElement, state);
+		// Register store globally for incremental registration
+		globalStores.set(this.#name, state);
 
-		afterBuild();
+		// Trigger registration for existing DOM elements by treating the entire document as "newly added"
+		RegEl._handleExistingElements(this.#name);
 
 		return state as TState;
 	}
 }
-
-// on dom content load
-const afterBuild = () => {
-	const run = () => {
-		for (const el of document.querySelectorAll(".mf-hidden") ?? []) {
-			el.classList.remove("mf-hidden");
-		}
-	};
-
-	if (document.readyState === "loading")
-		document.addEventListener("DOMContentLoaded", run);
-	else run();
-};

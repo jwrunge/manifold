@@ -11,7 +11,7 @@ export interface ParsedExpression {
 	) => void;
 }
 const CACHE = new Map<string, ParsedExpression>();
-const CACHE_MAX = 500;
+const CACHE_MAX = 1000;
 const NUM = /^-?\d+(?:\.[\d]+)?$/;
 interface ChainSegmentProp {
 	t: "prop";
@@ -392,9 +392,11 @@ const evaluateExpression = (expr: string): ParsedExpression => {
 	if (cached) return cached;
 	const parsed = parse(expr);
 	CACHE.set(expr, parsed);
+	// Remove multiple entries when limit hit
 	if (CACHE.size > CACHE_MAX) {
-		const k = CACHE.keys().next().value as string | undefined;
-		if (k !== undefined) CACHE.delete(k);
+		const entries = Array.from(CACHE.keys());
+		const toDelete = entries.slice(0, Math.floor(CACHE_MAX * 0.25)); // Remove 25%
+		for (const key of toDelete) CACHE.delete(key);
 	}
 	return parsed;
 };
