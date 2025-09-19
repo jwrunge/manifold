@@ -191,6 +191,20 @@ export default class RegEl {
 			}
 		}
 
+		// Ensure all RegEl elements (except :each templates) have a view transition name for consistent behavior
+		const currentTransitionName = el.style.getPropertyValue(
+			"view-transition-name"
+		);
+		if (!currentTransitionName) {
+			const transitionName = `mf${Math.random()
+				.toString(36)
+				.slice(2)}`;
+			el.style.setProperty(
+				"view-transition-name",
+				transitionName
+			);
+		}
+
 		for (const child of el.children) {
 			if (
 				!child.getAttribute("data-mf-ignore") &&
@@ -231,19 +245,7 @@ export default class RegEl {
 			);
 
 			if (isTemplateDependent || isTemplateRoot) {
-				// Only set a transition name if one isn't already set
-				const currentTransitionName = el.style.getPropertyValue(
-					"view-transition-name"
-				);
-				if (!currentTransitionName) {
-					const transitionName = `mf${Math.random()
-						.toString(36)
-						.slice(2)}`;
-					el.style.setProperty(
-						"view-transition-name",
-						transitionName
-					);
-				}
+				// Templating logic elements are handled specially
 			}
 
 			// Handle special attributes
