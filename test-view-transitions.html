@@ -1,68 +1,91 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
-    <title>View Transition Test</title>
-    <style>
-        body { font-family: sans-serif; padding: 20px; }
-        div { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
-        .results { background: #f0f8ff; }
-    </style>
-</head>
-<body data-mf-register>
-    <h1>View Transition Name Test</h1>
-    
-    <!-- Normal div -->
-    <div id="normal">Normal div without templating</div>
-    
-    <!-- Conditional div -->
-    <div id="conditional" :if="true">Conditional div with :if</div>
-    
-    <!-- Each demo (template will be hidden) -->
-    <div id="each-container">
-        Each demo:
-        <ul>
-            <li :each="items as item">Item: ${item}</li>
-        </ul>
-    </div>
-    
-    <div class="results">
-        <h2>View Transition Names:</h2>
-        <div id="results"></div>
-    </div>
+	<head>
+		<meta charset="UTF-8" />
+		<title>View Transition Test</title>
+		<style>
+			body {
+				font-family: sans-serif;
+				padding: 20px;
+			}
+			div {
+				margin: 10px 0;
+				padding: 10px;
+				border: 1px solid #ccc;
+			}
+			.results {
+				background: #f0f8ff;
+			}
+		</style>
+	</head>
+	<body data-mf-register>
+		<h1>View Transition Name Test</h1>
 
-    <script type="module">
-        import $ from "./src/main.js";
-        
-        const state = $.create()
-            .add("items", ["A", "B", "C"])
-            .build();
+		<!-- Normal div -->
+		<div id="normal">Normal div without templating</div>
 
-        // Wait a bit for everything to render
-        setTimeout(() => {
-            const results = document.getElementById('results');
-            const elements = [
-                { id: 'normal', el: document.getElementById('normal') },
-                { id: 'conditional', el: document.getElementById('conditional') },
-                { id: 'each-container', el: document.getElementById('each-container') },
-            ];
-            
-            elements.forEach(({ id, el }) => {
-                const vtn = el?.style.getPropertyValue('view-transition-name');
-                const p = document.createElement('p');
-                p.innerHTML = `<strong>${id}:</strong> ${vtn ? `✅ ${vtn}` : '❌ No view-transition-name'}`;
-                results.appendChild(p);
-            });
-            
-            // Check the each instances too
-            const eachInstances = document.querySelectorAll('li:not([style*="display: none"])');
-            eachInstances.forEach((el, i) => {
-                const vtn = el.style.getPropertyValue('view-transition-name');
-                const p = document.createElement('p');
-                p.innerHTML = `<strong>each-instance-${i}:</strong> ${vtn ? `✅ ${vtn}` : '❌ No view-transition-name'}`;
-                results.appendChild(p);
-            });
-        }, 100);
-    </script>
-</body>
+		<!-- Conditional div -->
+		<div id="conditional" :if="true">Conditional div with :if</div>
+
+		<!-- Each demo (template will be hidden) -->
+		<div id="each-container">
+			Each demo:
+			<ul>
+				<li :each="items as item">Item: ${item}</li>
+			</ul>
+		</div>
+
+		<div class="results">
+			<h2>View Transition Names:</h2>
+			<div id="results"></div>
+		</div>
+
+		<script type="module">
+			import $ from "./src/main.js";
+
+			const state = $.create().add("items", ["A", "B", "C"]).build();
+
+			// Wait a bit for everything to render
+			setTimeout(() => {
+				const results = document.getElementById("results");
+				const elements = [
+					{ id: "normal", el: document.getElementById("normal") },
+					{
+						id: "conditional",
+						el: document.getElementById("conditional"),
+					},
+					{
+						id: "each-container",
+						el: document.getElementById("each-container"),
+					},
+				];
+
+				elements.forEach(({ id, el }) => {
+					const vtn = el?.style.getPropertyValue(
+						"view-transition-name"
+					);
+					const p = document.createElement("p");
+					p.innerHTML = `<strong>${id}:</strong> ${
+						vtn ? `✅ ${vtn}` : "❌ No view-transition-name"
+					}`;
+					results.appendChild(p);
+				});
+
+				// Check the each instances too
+				const eachInstances = document.querySelectorAll(
+					'li:not([style*="display: none"])'
+				);
+				eachInstances.forEach((el, i) => {
+					const vtn = el.style.getPropertyValue(
+						"view-transition-name"
+					);
+					const p = document.createElement("p");
+					p.innerHTML = `<strong>each-instance-${i}:</strong> ${
+						vtn ? `✅ ${vtn}` : "❌ No view-transition-name"
+					}`;
+					results.appendChild(p);
+				});
+			}, 100);
+		</script>
+	</body>
 </html>
