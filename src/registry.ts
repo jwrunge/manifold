@@ -131,6 +131,8 @@ const getAttrName = (
 export default class RegEl {
 	static _registry = new WeakMap<Registerable, RegEl>();
 	static _mutations = new WeakMap<Registerable, Map<string, () => void>>();
+	static _viewTransitionsEnabled = false;
+	static _initialBufferTimeout: number | null = null;
 	#mutations = new Map<string, () => void>();
 	#cleanups = new Set<() => void>();
 	_el: Registerable;
@@ -166,6 +168,22 @@ export default class RegEl {
 				}
 			}
 		}
+
+		// Schedule view transitions to be enabled after initial setup
+		RegEl._scheduleViewTransitionBuffer();
+	}
+
+	static _scheduleViewTransitionBuffer() {
+		// Clear any existing timeout
+		if (RegEl._initialBufferTimeout) {
+			clearTimeout(RegEl._initialBufferTimeout);
+		}
+
+		// Enable view transitions after a brief delay to allow initial rendering
+		RegEl._initialBufferTimeout = setTimeout(() => {
+			RegEl._viewTransitionsEnabled = true;
+			RegEl._initialBufferTimeout = null;
+		}, 100) as unknown as number; // Brief delay for initial setup
 	}
 
 	constructor(el: Registerable, state: Record<string, unknown>) {
@@ -175,6 +193,12 @@ export default class RegEl {
 		RegEl._mutations.set(el, this.#mutations);
 		const attrWasRegistered = new Set<string>();
 		const registeredEvents = new Set<string>();
+
+		// If this is a new registration and view transitions aren't enabled yet,
+		// schedule the buffer (this handles dynamic element registration)
+		if (!RegEl._viewTransitionsEnabled) {
+			RegEl._scheduleViewTransitionBuffer();
+		}
 
 		// EARLY HANDLE :each to avoid text interpolation on template
 		for (const a of Array.from(el.attributes)) {
@@ -575,12 +599,48 @@ export default class RegEl {
 							}
 						} catch {}
 					}
-					parent.insertBefore(frag, end);
+					// Use view transition for adding items
+					if (
+						RegEl._viewTransitionsEnabled &&
+						"startViewTransition" in document
+					) {
+						(
+							document as Document & {
+								startViewTransition: (
+									callback: () => void
+								) => void;
+							}
+						).startViewTransition(() => {
+							parent.insertBefore(frag, end);
+						});
+					} else {
+						parent.insertBefore(frag, end);
+					}
 				} else if (next < cur) {
-					for (let i = cur - 1; i >= next; i--) {
-						const node = instances?.[i];
-						instances?.pop();
-						node?.remove(); // disposal handled by mutation observer
+					// Use view transition for removing items
+					if (
+						RegEl._viewTransitionsEnabled &&
+						"startViewTransition" in document
+					) {
+						(
+							document as Document & {
+								startViewTransition: (
+									callback: () => void
+								) => void;
+							}
+						).startViewTransition(() => {
+							for (let i = cur - 1; i >= next; i--) {
+								const node = instances?.[i];
+								instances?.pop();
+								node?.remove(); // disposal handled by mutation observer
+							}
+						});
+					} else {
+						for (let i = cur - 1; i >= next; i--) {
+							const node = instances?.[i];
+							instances?.pop();
+							node?.remove(); // disposal handled by mutation observer
+						}
 					}
 				}
 			});
@@ -764,7 +824,11 @@ export default class RegEl {
 			return htmlEl.style.display !== newDisplay;
 		});
 
-		if (elementsChanging.length > 0 && "startViewTransition" in document) {
+		if (
+			elementsChanging.length > 0 &&
+			RegEl._viewTransitionsEnabled &&
+			"startViewTransition" in document
+		) {
 			// Use view transitions for display changes
 			(
 				document as Document & {
