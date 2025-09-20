@@ -230,10 +230,7 @@ export default class RegEl {
 				!RegEl._registry.has(child as Registerable)
 			) {
 				// Cascade overlay so child scopes can see parent aliases
-				new RegEl(
-					child as Registerable,
-					this._state as unknown as Record<string, unknown>
-				);
+				new RegEl(child as Registerable, this._stateAsRecord());
 			}
 		}
 
@@ -470,6 +467,32 @@ export default class RegEl {
 		}
 	}
 
+	// Helper to reduce view transition boilerplate
+	private _transition(callback: () => void) {
+		if (
+			RegEl._viewTransitionsEnabled &&
+			"startViewTransition" in document
+		) {
+			(
+				document as Document & {
+					startViewTransition: (cb: () => void) => void;
+				}
+			).startViewTransition(callback);
+		} else {
+			callback();
+		}
+	}
+
+	// Helper to determine if element should be shown
+	private _shouldShow(el: Registerable): boolean {
+		return Boolean(el.mfshow ?? true) && Boolean(el.mfawait ?? true);
+	}
+
+	// Helper to cast state as record
+	private _stateAsRecord(): Record<string, unknown> {
+		return this._state as unknown as Record<string, unknown>;
+	}
+
 	_handleTemplating(
 		attrName: templLogicAttr,
 		attrTagName: string,
@@ -583,7 +606,7 @@ export default class RegEl {
 						) as Registerable;
 						// Create a per-item overlay state and pre-apply aliases so initial text effects see values
 						const childBase = scopeProxy(
-							this._state as unknown as Record<string, unknown>
+							this._stateAsRecord()
 						) as Record<string, unknown>;
 						bindEachAliases(
 							{ _state: childBase } as unknown as RegEl,
@@ -603,48 +626,18 @@ export default class RegEl {
 						} catch {}
 					}
 					// Use view transition for adding items
-					if (
-						RegEl._viewTransitionsEnabled &&
-						"startViewTransition" in document
-					) {
-						(
-							document as Document & {
-								startViewTransition: (
-									callback: () => void
-								) => void;
-							}
-						).startViewTransition(() => {
-							parent.insertBefore(frag, end);
-						});
-					} else {
+					this._transition(() => {
 						parent.insertBefore(frag, end);
-					}
+					});
 				} else if (next < cur) {
 					// Use view transition for removing items
-					if (
-						RegEl._viewTransitionsEnabled &&
-						"startViewTransition" in document
-					) {
-						(
-							document as Document & {
-								startViewTransition: (
-									callback: () => void
-								) => void;
-							}
-						).startViewTransition(() => {
-							for (let i = cur - 1; i >= next; i--) {
-								const node = instances?.[i];
-								instances?.pop();
-								node?.remove(); // disposal handled by mutation observer
-							}
-						});
-					} else {
+					this._transition(() => {
 						for (let i = cur - 1; i >= next; i--) {
 							const node = instances?.[i];
 							instances?.pop();
 							node?.remove(); // disposal handled by mutation observer
 						}
-					}
+					});
 				}
 			});
 		} else if (isConditional || isAsync) {
@@ -718,8 +711,8 @@ export default class RegEl {
 									  });
 							matched = !!el.mfshow;
 						}
-						this._updateDisplay([{ el }]);
 					}
+					this._updateDisplay(siblings);
 				} else {
 					// Async :await / :then / :catch handling
 					const root = siblings[0];
@@ -822,36 +815,19 @@ export default class RegEl {
 		// Check if any elements will change display state
 		const elementsChanging = sibs.filter(({ el }) => {
 			const htmlEl = el as HTMLElement;
-			const shouldShow = (el.mfshow ?? true) && (el.mfawait ?? true);
+			const shouldShow = this._shouldShow(el);
 			const newDisplay = shouldShow ? "" : "none";
 			return htmlEl.style.display !== newDisplay;
 		});
 
-		if (
-			elementsChanging.length > 0 &&
-			RegEl._viewTransitionsEnabled &&
-			"startViewTransition" in document
-		) {
+		if (elementsChanging.length > 0) {
 			// Use view transitions for display changes
-			(
-				document as Document & {
-					startViewTransition: (callback: () => void) => void;
-				}
-			).startViewTransition(() => {
+			this._transition(() => {
 				for (const { el } of elementsChanging) {
 					const htmlEl = el as HTMLElement;
-					const shouldShow =
-						(el.mfshow ?? true) && (el.mfawait ?? true);
-					htmlEl.style.display = shouldShow ? "" : "none";
+					htmlEl.style.display = this._shouldShow(el) ? "" : "none";
 				}
 			});
-		} else {
-			// Fallback for browsers without view transitions or no changes
-			for (const { el } of elementsChanging) {
-				const htmlEl = el as HTMLElement;
-				const shouldShow = (el.mfshow ?? true) && (el.mfawait ?? true);
-				htmlEl.style.display = shouldShow ? "" : "none";
-			}
 		}
 	}
 
