@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<title>Async Race Condition Test</title>
+		<style>
+			body {
+				font-family: sans-serif;
+				padding: 20px;
+				background: #1a1a1a;
+				color: #e0e0e0;
+			}
+
+			button {
+				background: #4caf50;
+				color: white;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				margin: 10px 5px;
+				font-size: 16px;
+			}
+
+			button:hover {
+				background: #45a049;
+			}
+
+			.test-section {
+				background: #2a2a2a;
+				padding: 20px;
+				margin: 20px 0;
+				border-radius: 8px;
+				border-left: 4px solid #4caf50;
+			}
+
+			.await-state {
+				color: #ffc107;
+				background: #333;
+				padding: 10px;
+				border-radius: 4px;
+				margin: 10px 0;
+			}
+
+			.then-state {
+				color: #4caf50;
+				background: #1e3a2e;
+				padding: 10px;
+				border-radius: 4px;
+				margin: 10px 0;
+			}
+
+			.catch-state {
+				color: #f44336;
+				background: #3a1e1e;
+				padding: 10px;
+				border-radius: 4px;
+				margin: 10px 0;
+			}
+
+			.instructions {
+				background: #333;
+				padding: 15px;
+				border-radius: 4px;
+				margin-bottom: 20px;
+			}
+		</style>
+	</head>
+	<body data-mf-register>
+		<h1>🐛 Async Race Condition Test</h1>
+
+		<div class="instructions">
+			<h3>🎯 Test Instructions:</h3>
+			<ol>
+				<li>
+					<strong>Single Click Test:</strong> Click "Load User" once -
+					should show loading, then success or error
+				</li>
+				<li>
+					<strong>Double Click Test:</strong> Click "Load User"
+					rapidly multiple times - should only show the MOST RECENT
+					result
+				</li>
+				<li>
+					<strong>Race Condition Test:</strong> Click "Fast Success"
+					then immediately "Slow Error" - should show error (most
+					recent)
+				</li>
+			</ol>
+			<p>
+				<strong>✅ Fixed:</strong> Only the most recent promise result
+				should be visible at any time.
+			</p>
+			<p>
+				<strong>❌ Bug:</strong> Multiple states (then AND catch) should
+				never be visible simultaneously.
+			</p>
+		</div>
+
+		<div class="test-section">
+			<h3>Main Test - Alternating Success/Error</h3>
+			<button :onclick="loadUser()">
+				Load User (alternates success/error)
+			</button>
+
+			<div class="await-state" :await="currentUserPromise">
+				⏳ Loading user...
+			</div>
+			<div class="then-state" :then="user">
+				✅ User loaded: ${user?.name} (${user?.age})
+			</div>
+			<div class="catch-state" :catch="errorMsg">
+				❌ Failed to load user: ${errorMsg}
+			</div>
+		</div>
+
+		<div class="test-section">
+			<h3>Race Condition Tests</h3>
+			<button :onclick="loadFastSuccess()">Fast Success (100ms)</button>
+			<button :onclick="loadSlowError()">Slow Error (500ms)</button>
+			<button :onclick="loadSlowSuccess()">Slow Success (500ms)</button>
+			<button :onclick="loadFastError()">Fast Error (100ms)</button>
+
+			<div class="await-state" :await="testPromise">
+				⏳ Loading test...
+			</div>
+			<div class="then-state" :then="testResult">
+				✅ Test result: ${testResult}
+			</div>
+			<div class="catch-state" :catch="testError">
+				❌ Test error: ${testError}
+			</div>
+		</div>
+
+		<div class="test-section">
+			<h3>Debug Info</h3>
+			<p>Promise counter: ${promiseCounter}</p>
+			<p>Last action: ${lastAction}</p>
+			<button :onclick="resetAll()">🔄 Reset All</button>
+		</div>
+
+		<script type="module">
+			import $ from "./src/main.js";
+
+			const state = $.create()
+				.add("currentUserPromise", null)
+				.add("user", null)
+				.add("errorMsg", null)
+				.add("testPromise", null)
+				.add("testResult", null)
+				.add("testError", null)
+				.add("nextFail", false)
+				.add("promiseCounter", 0)
+				.add("lastAction", "none")
+				.add("loadUser", () => {
+					const fail = !!state.nextFail;
+					state.nextFail = !fail;
+					state.promiseCounter++;
+					state.lastAction = `loadUser (${
+						fail ? "will fail" : "will succeed"
+					})`;
+
+					const p = new Promise((res, rej) =>
+						setTimeout(() => {
+							if (fail) {
+								rej(new Error("Network error"));
+							} else {
+								res({
+									name: "Ada",
+									age: 37 + Math.floor(Math.random() * 10),
+								});
+							}
+						}, 300)
+					);
+					state.currentUserPromise = p;
+					return p;
+				})
+				.add("loadFastSuccess", () => {
+					state.promiseCounter++;
+					state.lastAction = "Fast Success (100ms)";
+					const p = new Promise((res) =>
+						setTimeout(() => res("Fast success!"), 100)
+					);
+					state.testPromise = p;
+					return p;
+				})
+				.add("loadSlowError", () => {
+					state.promiseCounter++;
+					state.lastAction = "Slow Error (500ms)";
+					const p = new Promise((res, rej) =>
+						setTimeout(() => rej(new Error("Slow error!")), 500)
+					);
+					state.testPromise = p;
+					return p;
+				})
+				.add("loadSlowSuccess", () => {
+					state.promiseCounter++;
+					state.lastAction = "Slow Success (500ms)";
+					const p = new Promise((res) =>
+						setTimeout(() => res("Slow success!"), 500)
+					);
+					state.testPromise = p;
+					return p;
+				})
+				.add("loadFastError", () => {
+					state.promiseCounter++;
+					state.lastAction = "Fast Error (100ms)";
+					const p = new Promise((res, rej) =>
+						setTimeout(() => rej(new Error("Fast error!")), 100)
+					);
+					state.testPromise = p;
+					return p;
+				})
+				.add("resetAll", () => {
+					state.currentUserPromise = null;
+					state.user = null;
+					state.errorMsg = null;
+					state.testPromise = null;
+					state.testResult = null;
+					state.testError = null;
+					state.promiseCounter = 0;
+					state.lastAction = "Reset";
+				})
+				.build();
+
+			// Initial load
+			state.loadUser();
+		</script>
+	</body>
+</html>
