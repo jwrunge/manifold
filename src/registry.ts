@@ -1,33 +1,20 @@
-import applyAliasPattern from "./alias-destructure";
 import type { WritableCSSKeys } from "./css";
 import { type Effect, effect } from "./Effect";
-import evaluateExpression, { type ParsedExpression } from "./expression-parser";
+import evaluateExpression from "./expression-parser";
 import { globalStores } from "./main";
-import { indexOfTopLevel, isIdent } from "./parsing-utils";
 import { scopeProxy } from "./proxy";
-
-type Registerable = (HTMLElement | SVGElement | MathMLElement) & {
-	mfshow?: unknown;
-	mfawait?: unknown;
-	mfeach?: number;
-};
-
-const templLogicAttrs = ["if", "each", "await"] as const;
-type templLogicAttr =
-	| (typeof templLogicAttrs)[number]
-	| "elseif"
-	| "else"
-	| "then"
-	| "catch";
-type Sibling = {
-	el: Registerable;
-	fn: ParsedExpression["_fn"] | null;
-	attrName: templLogicAttr;
-	alias?: string;
-};
-const templLogicAttrSet = new Set(templLogicAttrs);
-const dependentLogicAttrSet = new Set(["elseif", "else", "then", "catch"]);
-const prefixes = [":", "data-mf-"] as const;
+import { handleAsync } from "./templating/async-handler";
+import { handleConditional } from "./templating/conditional-handler";
+import { handleEach } from "./templating/each-handler";
+import { findDependentSiblings } from "./templating/sibling-resolver";
+import {
+	dependentLogicAttrSet,
+	prefixes,
+	type Registerable,
+	type Sibling,
+	type templLogicAttr,
+	templLogicAttrSet,
+} from "./templating/types";
 
 // Shared registration logic for both new and existing elements
 const _registerElement = (el: Element) => {
@@ -503,309 +490,43 @@ export default class RegEl {
 		const isAsync = attrName === "await";
 		let ef: Effect;
 
-		const siblings: Sibling[] = [
-			{
-				el: this._el,
-				attrName,
-				fn: _fn,
-			},
-		];
-
-		this._el.removeAttribute(attrTagName);
-
 		if (attrName === "each") {
-			// Cache a pristine template clone for repeated use (without the :each attribute)
-			if (!this._cachedContent) {
-				const tmpl = this._el.cloneNode(true) as Registerable;
-				// Remove the templating attribute so clones don't re-trigger :each handling
-				tmpl.removeAttribute(attrTagName);
-				this._cachedContent = tmpl;
-			}
-
-			// Establish stable start/end anchors and remove the original template element
-			if (!this._eachStart || !this._eachEnd) {
-				const start = document.createComment(":each-start");
-				const end = document.createComment(":each-end");
-				const parent = this._el.parentNode;
-				if (parent) {
-					parent.insertBefore(start, this._el);
-					parent.insertBefore(end, this._el.nextSibling);
-					// Keep the template element in the DOM but hidden to avoid disposal
-					(this._el as HTMLElement).style.display = "none";
-				}
-				this._eachStart = start;
-				this._eachEnd = end;
-			}
-
-			this._eachInstances ??= [];
-
-			ef = effect(() => {
-				const list =
-					(_fn({
-						state: this._state,
-						element: this._eachStart ?? this._el,
-					}) as unknown[] | undefined) ?? [];
-				if (!Array.isArray(list)) {
-					throwError(`Non-array in :each`, this._el);
-				}
-
-				const end = this._eachEnd;
-				const parent = end?.parentNode;
-				if (!end || !parent) return;
-
-				const instances = this._eachInstances;
-				const cur = instances?.length ?? 0;
-				const next = list.length;
-
-				// Debug output for diagnosing :each behavior
-
-				const bindEachAliases = (
-					inst: RegEl | undefined,
-					val: unknown,
-					idx: number
-				) => {
-					if (!inst || !eachAlias) return;
-					const alias = eachAlias.trim();
-					if (!alias) return;
-					const comma = indexOfTopLevel(alias, ",");
-					if (comma !== -1) {
-						const left = alias.slice(0, comma).trim();
-						const right = alias.slice(comma + 1).trim();
-						if (left) applyAliasPattern(left, val, inst._state);
-						if (right && isIdent(right))
-							(inst._state as Record<string, unknown>)[right] =
-								idx;
-						return;
-					}
-					if (alias.startsWith("[")) {
-						applyAliasPattern(alias, [val, idx], inst._state);
-						return;
-					}
-					if (alias.startsWith("{") || alias.startsWith("[")) {
-						applyAliasPattern(alias, val, inst._state);
-						return;
-					}
-					applyAliasPattern(alias, val, inst._state);
-				};
-
-				// Update aliases for existing instances (ensures index/value kept in sync)
-				const minLen = Math.min(cur, next);
-				for (let i = 0; i < minLen; i++) {
-					const node = instances?.[i];
-					if (!node) continue;
-					const childReg = RegEl._registry.get(node);
-					if (!childReg) continue;
-					bindEachAliases(childReg, list[i], i);
-				}
-
-				if (next > cur) {
-					const frag = document.createDocumentFragment();
-					for (let i = cur; i < next; i++) {
-						const clone = this._cachedContent?.cloneNode(
-							true
-						) as Registerable;
-						// Create a per-item overlay state and pre-apply aliases so initial text effects see values
-						const childBase = scopeProxy(
-							this._stateAsRecord()
-						) as Record<string, unknown>;
-						bindEachAliases(
-							{ _state: childBase } as unknown as RegEl,
-							list[i],
-							i
-						);
-						RegEl._registerOrGet(clone, childBase);
-						instances?.push(clone);
-						frag.appendChild(clone);
-						// Safety: ensure text nodes on the clone are handled if registration did not due to early :each intercept
-						try {
-							const childReg = RegEl._registry.get(clone);
-							if (childReg) {
-								for (const n of clone.childNodes)
-									childReg._handleTextNode(n);
-							}
-						} catch {}
-					}
-					// Use view transition for adding items
-					this._transition(() => {
-						parent.insertBefore(frag, end);
-					});
-				} else if (next < cur) {
-					// Use view transition for removing items
-					this._transition(() => {
-						for (let i = cur - 1; i >= next; i--) {
-							const node = instances?.[i];
-							instances?.pop();
-							node?.remove(); // disposal handled by mutation observer
-						}
-					});
-				}
-			});
+			ef = handleEach(
+				// biome-ignore lint/suspicious/noExplicitAny: temporary for refactoring
+				this as any,
+				// biome-ignore lint/suspicious/noExplicitAny: temporary for refactoring
+				RegEl as any,
+				attrTagName,
+				_fn,
+				throwError,
+				eachAlias
+			);
 		} else if (isConditional || isAsync) {
-			// Get dependent siblings
-			let sib = this._el.nextElementSibling;
+			const siblings = findDependentSiblings(
+				this._el,
+				attrName,
+				attrTagName
+			);
+			// Set the function for the root element
+			siblings[0].fn = _fn;
 
-			while (sib) {
-				// Inline getDependentAttr
-				let prefixed: string | null = null;
-				let unprefixed: string | null = null;
-				for (const p of prefixes) {
-					for (const dep of attrName === "await"
-						? ["then", "catch"]
-						: ["elseif", "else"]) {
-						const attr = `${p}${dep}`;
-						if (sib.hasAttribute(attr)) {
-							prefixed = attr;
-							unprefixed = dep;
-							break;
-						}
-					}
-					if (prefixed) break;
-				}
-
-				if (!unprefixed || !prefixed) break;
-
-				let fn: ParsedExpression["_fn"] | null = null;
-				let alias: string | undefined;
-
-				if (unprefixed !== "else") {
-					const raw = sib.getAttribute(prefixed) || "";
-					const [left, right] = splitAs(raw);
-					// For :then/:catch, treat entire value as alias if no 'as' part provided
-					if (
-						attrName === "await" &&
-						(unprefixed === "then" || unprefixed === "catch")
-					) {
-						alias = right || left || undefined;
-						fn = null;
-					} else {
-						fn = evaluateExpression(left)._fn;
-						alias = right || undefined;
-					}
-				}
-
-				siblings.push({
-					el: sib as Registerable,
-					attrName: unprefixed as templLogicAttr,
-					fn,
-					alias,
-				});
-
-				sib.removeAttribute(prefixed);
-				sib = sib.nextElementSibling;
+			if (isConditional) {
+				ef = handleConditional(
+					this._state,
+					siblings,
+					this._updateDisplay.bind(this)
+				);
+			} else {
+				ef = handleAsync(
+					this._state,
+					siblings,
+					// biome-ignore lint/suspicious/noExplicitAny: temporary for refactoring
+					RegEl as any,
+					this._updateDisplay.bind(this)
+				);
 			}
-
-			// Effect on root and dependents
-			let lastPromise: Promise<unknown> | null = null;
-			ef = effect(() => {
-				if (isConditional) {
-					let matched = false;
-					for (const { el, fn, attrName } of siblings) {
-						el.mfshow = false;
-						if (!matched) {
-							el.mfshow =
-								attrName === "else"
-									? true
-									: !!fn?.({
-											state: this._state,
-											element: el,
-									  });
-							matched = !!el.mfshow;
-						}
-					}
-					this._updateDisplay(siblings);
-				} else {
-					// Async :await / :then / :catch handling
-					const root = siblings[0];
-					const thenLink = siblings.find(
-						(s) => s.attrName === "then"
-					);
-					const catchLink = siblings.find(
-						(s) => s.attrName === "catch"
-					);
-
-					// Evaluate expression to obtain maybe-promise
-					const result = root.fn?.({
-						state: this._state,
-						element: root.el,
-					});
-
-					const isThenable =
-						result &&
-						// biome-ignore lint/suspicious/noExplicitAny: explicit any for thenable check
-						(typeof (result as any).then === "function" ||
-							// biome-ignore lint/suspicious/noExplicitAny: explicit any for thenable check
-							typeof (result as any).catch === "function");
-
-					// Reset gating
-					root.el.mfawait = isThenable; // show loader
-					if (thenLink) thenLink.el.mfawait = !isThenable;
-					if (catchLink) catchLink.el.mfawait = false;
-
-					this._updateDisplay(siblings);
-
-					if (!isThenable) {
-						// Treat non-promise as immediate success
-						root.el.mfawait = false;
-						if (thenLink) thenLink.el.mfawait = true;
-						// Apply alias pattern for immediate value to then-link's scope
-						if (thenLink?.alias) {
-							const thenInst = RegEl._registerOrGet(
-								thenLink.el,
-								this._state
-							);
-							if (thenInst)
-								applyAliasPattern(
-									thenLink.alias,
-									result,
-									thenInst._state
-								);
-						}
-						this._updateDisplay(siblings);
-						return;
-					}
-
-					if ((result as Promise<unknown>) === lastPromise) return; // avoid duplicating handlers
-					lastPromise = result as Promise<unknown>;
-
-					(result as Promise<unknown>).then(
-						(_val) => {
-							root.el.mfawait = false;
-							if (thenLink) thenLink.el.mfawait = true;
-							// Destructure aliases for :then value using the sibling's expression string
-							if (thenLink?.alias) {
-								const thenInst = RegEl._registerOrGet(
-									thenLink.el,
-									this._state
-								);
-
-								if (thenInst)
-									applyAliasPattern(
-										thenLink.alias,
-										_val,
-										thenInst._state
-									);
-							}
-							this._updateDisplay(siblings);
-						},
-						(_err) => {
-							root.el.mfawait = false;
-							if (catchLink) catchLink.el.mfawait = true;
-							if (catchLink?.alias) {
-								const catchInst = RegEl._registry.get(
-									catchLink.el
-								);
-								if (catchInst)
-									applyAliasPattern(
-										catchLink.alias,
-										_err,
-										catchInst._state
-									);
-							}
-							this._updateDisplay(siblings);
-						}
-					);
-				}
-			});
+		} else {
+			throw new Error(`Unknown templating attribute: ${attrName}`);
 		}
 
 		this.#cleanups.add(() => ef._stop());

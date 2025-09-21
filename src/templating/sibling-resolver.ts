@@ -1,0 +1,92 @@
+import evaluateExpression from "../expression-parser";
+import { indexOfTopLevel } from "../parsing-utils";
+import {
+	prefixes,
+	type Registerable,
+	type Sibling,
+	type templLogicAttr,
+} from "./types";
+
+// Utility function for splitting 'as' expressions
+function splitAs(rawAttr: string): [string, string | undefined] {
+	const asIndex = indexOfTopLevel(rawAttr, " as ");
+	if (asIndex === -1) return [rawAttr.trim(), undefined];
+
+	const left = rawAttr.slice(0, asIndex).trim();
+	const right = rawAttr.slice(asIndex + 4).trim();
+	return [left, right || undefined];
+}
+
+/**
+ * Discovers and processes dependent siblings for conditional and async templating
+ */
+export function findDependentSiblings(
+	element: Registerable,
+	attrName: templLogicAttr,
+	attrTagName: string
+): Sibling[] {
+	const siblings: Sibling[] = [
+		{
+			el: element,
+			attrName,
+			fn: null, // Will be set by caller
+		},
+	];
+
+	element.removeAttribute(attrTagName);
+
+	// Get dependent siblings
+	let sib = element.nextElementSibling;
+
+	while (sib) {
+		// Inline getDependentAttr
+		let prefixed: string | null = null;
+		let unprefixed: string | null = null;
+		for (const p of prefixes) {
+			for (const dep of attrName === "await"
+				? ["then", "catch"]
+				: ["elseif", "else"]) {
+				const attr = `${p}${dep}`;
+				if (sib.hasAttribute(attr)) {
+					prefixed = attr;
+					unprefixed = dep;
+					break;
+				}
+			}
+			if (prefixed) break;
+		}
+
+		if (!unprefixed || !prefixed) break;
+
+		let fn: ReturnType<typeof evaluateExpression>["_fn"] | null = null;
+		let alias: string | undefined;
+
+		if (unprefixed !== "else") {
+			const raw = sib.getAttribute(prefixed) || "";
+			const [left, right] = splitAs(raw);
+			// For :then/:catch, treat entire value as alias if no 'as' part provided
+			if (
+				attrName === "await" &&
+				(unprefixed === "then" || unprefixed === "catch")
+			) {
+				alias = right || left || undefined;
+				fn = null;
+			} else {
+				fn = evaluateExpression(left)._fn;
+				alias = right || undefined;
+			}
+		}
+
+		siblings.push({
+			el: sib as Registerable,
+			attrName: unprefixed as templLogicAttr,
+			fn,
+			alias,
+		});
+
+		sib.removeAttribute(prefixed);
+		sib = sib.nextElementSibling;
+	}
+
+	return siblings;
+}
