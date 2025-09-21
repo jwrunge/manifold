@@ -12,6 +12,8 @@ interface RegElLike {
 	_eachStart?: Comment;
 	_eachEnd?: Comment;
 	_eachInstances?: Registerable[];
+	_eachElementMap?: WeakMap<Registerable, { value: unknown; index: number }>;
+	_eachPreviousArray?: unknown[];
 	_stateAsRecord(): Record<string, unknown>;
 	_transition(callback: () => void): void;
 	_handleTextNode(node: Node): void;
@@ -57,6 +59,8 @@ export function handleEach(
 	}
 
 	regEl._eachInstances ??= [];
+	regEl._eachElementMap ??= new WeakMap();
+	regEl._eachPreviousArray ??= [];
 
 	const ef = effect(() => {
 		const list =
@@ -74,6 +78,8 @@ export function handleEach(
 		if (!end || !parent) return;
 
 		const instances = regEl._eachInstances;
+		const elementMap = regEl._eachElementMap;
+		const previousArray = regEl._eachPreviousArray || [];
 		const cur = instances?.length ?? 0;
 		const next = list.length;
 
@@ -105,60 +111,145 @@ export function handleEach(
 			applyAliasPattern(alias, val, inst._state);
 		};
 
-		// Update aliases for existing instances (ensures index/value kept in sync)
-		const minLen = Math.min(cur, next);
-		for (let i = 0; i < minLen; i++) {
-			const node = instances?.[i];
-			if (!node) continue;
-			const childReg = RegElClass._registry.get(node);
-			if (!childReg) continue;
-			bindEachAliases(childReg, list[i], i);
+		// Detect removed items by comparing with previous array
+		if (next < cur && previousArray.length > 0) {
+			// Find elements that should be removed by comparing previous vs current array
+			const elementsToRemove: Registerable[] = [];
+			const currentSet = new Set(list);
+
+			// Track which previous values are no longer present
+			const removedIndices = new Set<number>();
+			for (let i = 0; i < previousArray.length; i++) {
+				if (!currentSet.has(previousArray[i])) {
+					removedIndices.add(i);
+				}
+			}
+
+			// Find DOM elements corresponding to removed array values
+			if (instances && elementMap) {
+				for (let i = 0; i < instances.length; i++) {
+					const element = instances[i];
+					const mapping = elementMap.get(element);
+					if (mapping && removedIndices.has(mapping.index)) {
+						elementsToRemove.push(element);
+					}
+				}
+			}
+
+			// If we identified specific elements to remove, remove them
+			if (elementsToRemove.length > 0) {
+				regEl._transition(() => {
+					for (const element of elementsToRemove) {
+						if (instances) {
+							const index = instances.indexOf(element);
+							if (index !== -1) {
+								instances.splice(index, 1);
+							}
+						}
+						if (elementMap) {
+							elementMap.delete(element);
+						}
+						element.remove();
+					}
+
+					// After removal, update the remaining elements with correct indices and values
+					const remainingElements = instances || [];
+					for (
+						let i = 0;
+						i < Math.min(remainingElements.length, list.length);
+						i++
+					) {
+						const element = remainingElements[i];
+						const childReg = RegElClass._registry.get(element);
+						if (childReg) {
+							bindEachAliases(childReg, list[i], i);
+
+							// Update tracking map with new index
+							if (elementMap) {
+								elementMap.set(element, {
+									value: list[i],
+									index: i,
+								});
+							}
+						}
+					}
+				});
+			} else {
+				// Fallback to original behavior if we can't identify specific elements
+				regEl._transition(() => {
+					for (let i = cur - 1; i >= next; i--) {
+						const node = instances?.[i];
+						instances?.pop();
+						if (elementMap && node) {
+							elementMap.delete(node);
+						}
+						node?.remove();
+					}
+				});
+			}
+		} else {
+			// Handle the normal cases: adding elements or updating in place
+
+			// Update aliases for existing instances that will remain
+			const minLen = Math.min(cur, next);
+			for (let i = 0; i < minLen; i++) {
+				const node = instances?.[i];
+				if (!node) continue;
+				const childReg = RegElClass._registry.get(node);
+				if (!childReg) continue;
+				bindEachAliases(childReg, list[i], i);
+
+				// Update our tracking map with the new value for this element
+				if (elementMap) {
+					elementMap.set(node, { value: list[i], index: i });
+				}
+			}
+
+			if (next > cur) {
+				// Adding new elements
+				const frag = document.createDocumentFragment();
+				for (let i = cur; i < next; i++) {
+					const clone = regEl._cachedContent?.cloneNode(
+						true
+					) as Registerable;
+					// Create a per-item overlay state and pre-apply aliases so initial text effects see values
+					const childBase = scopeProxy(
+						regEl._stateAsRecord()
+					) as Record<string, unknown>;
+					bindEachAliases(
+						{ _state: childBase } as unknown as {
+							_state: Record<string, unknown>;
+						},
+						list[i],
+						i
+					);
+					RegElClass._registerOrGet(clone, childBase);
+					instances?.push(clone);
+
+					// Track this new element in our mapping
+					if (elementMap) {
+						elementMap.set(clone, { value: list[i], index: i });
+					}
+
+					frag.appendChild(clone);
+					// Safety: ensure text nodes on the clone are handled if registration did not due to early :each intercept
+					try {
+						const childReg = RegElClass._registry.get(clone);
+						if (childReg) {
+							for (const n of clone.childNodes)
+								childReg._handleTextNode(n);
+						}
+					} catch {}
+				}
+				// Use view transition for adding items
+				regEl._transition(() => {
+					parent.insertBefore(frag, end);
+				});
+			}
 		}
 
-		if (next > cur) {
-			const frag = document.createDocumentFragment();
-			for (let i = cur; i < next; i++) {
-				const clone = regEl._cachedContent?.cloneNode(
-					true
-				) as Registerable;
-				// Create a per-item overlay state and pre-apply aliases so initial text effects see values
-				const childBase = scopeProxy(regEl._stateAsRecord()) as Record<
-					string,
-					unknown
-				>;
-				bindEachAliases(
-					{ _state: childBase } as unknown as {
-						_state: Record<string, unknown>;
-					},
-					list[i],
-					i
-				);
-				RegElClass._registerOrGet(clone, childBase);
-				instances?.push(clone);
-				frag.appendChild(clone);
-				// Safety: ensure text nodes on the clone are handled if registration did not due to early :each intercept
-				try {
-					const childReg = RegElClass._registry.get(clone);
-					if (childReg) {
-						for (const n of clone.childNodes)
-							childReg._handleTextNode(n);
-					}
-				} catch {}
-			}
-			// Use view transition for adding items
-			regEl._transition(() => {
-				parent.insertBefore(frag, end);
-			});
-		} else if (next < cur) {
-			// Use view transition for removing items
-			regEl._transition(() => {
-				for (let i = cur - 1; i >= next; i--) {
-					const node = instances?.[i];
-					instances?.pop();
-					node?.remove(); // disposal handled by mutation observer
-				}
-			});
-		}
+		// Update the previous array for next comparison
+		regEl._eachPreviousArray = [...list];
 	});
 
 	return ef;
