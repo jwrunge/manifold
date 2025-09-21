@@ -187,6 +187,35 @@ export default class RegEl {
 			RegEl._scheduleViewTransitionBuffer();
 		}
 
+		// Check if this element has any templating attributes before processing them
+		let hasTemplatingAttribute = false;
+		for (const a of Array.from(el.attributes)) {
+			const info = getAttrName(a.name);
+			if (info) {
+				const { attrName } = info;
+				if (
+					templLogicAttrSet.has(
+						attrName as "if" | "each" | "await"
+					) ||
+					dependentLogicAttrSet.has(
+						attrName as "elseif" | "else" | "then" | "catch"
+					)
+				) {
+					hasTemplatingAttribute = true;
+					break;
+				}
+			}
+		}
+
+		// Only add view-transition-name to template elements if not already provided
+		if (hasTemplatingAttribute) {
+			if (RegEl._viewTransitionsEnabled && !el.style.viewTransitionName) {
+				el.style.viewTransitionName = `mf${Math.random()
+					.toString(36)
+					.slice(2)}`;
+			}
+		}
+
 		// EARLY HANDLE :each to avoid text interpolation on template
 		for (const a of Array.from(el.attributes)) {
 			const name = a.name;
@@ -200,15 +229,6 @@ export default class RegEl {
 				this._handleTemplating("each", name, _fn, rootAlias);
 				return;
 			}
-		}
-
-		// Ensure all RegEl elements (except :each templates) have a view transition name for consistent behavior
-		const currentTransitionName = el.style.getPropertyValue(
-			"view-transition-name"
-		);
-		if (!currentTransitionName) {
-			const transitionName = `mf${Math.random().toString(36).slice(2)}`;
-			el.style.setProperty("view-transition-name", transitionName);
 		}
 
 		for (const child of el.children) {
