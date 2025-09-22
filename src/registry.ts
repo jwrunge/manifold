@@ -166,7 +166,7 @@ export default class RegEl {
 			clearTimeout(RegEl._initialBufferTimeout);
 		}
 
-		// Enable view transitions after a brief delay to allow initial rendering
+		// Enable view transitions after a brief delay to prevent transitions on initial load
 		RegEl._initialBufferTimeout = setTimeout(() => {
 			RegEl._viewTransitionsEnabled = true;
 			RegEl._initialBufferTimeout = null;
@@ -185,35 +185,6 @@ export default class RegEl {
 		// schedule the buffer (this handles dynamic element registration)
 		if (!RegEl._viewTransitionsEnabled) {
 			RegEl._scheduleViewTransitionBuffer();
-		}
-
-		// Check if this element has any templating attributes before processing them
-		let hasTemplatingAttribute = false;
-		for (const a of Array.from(el.attributes)) {
-			const info = getAttrName(a.name);
-			if (info) {
-				const { attrName } = info;
-				if (
-					templLogicAttrSet.has(
-						attrName as "if" | "each" | "await"
-					) ||
-					dependentLogicAttrSet.has(
-						attrName as "elseif" | "else" | "then" | "catch"
-					)
-				) {
-					hasTemplatingAttribute = true;
-					break;
-				}
-			}
-		}
-
-		// Only add view-transition-name to template elements if not already provided
-		if (hasTemplatingAttribute) {
-			if (RegEl._viewTransitionsEnabled && !el.style.viewTransitionName) {
-				el.style.viewTransitionName = `mf${Math.random()
-					.toString(36)
-					.slice(2)}`;
-			}
 		}
 
 		// EARLY HANDLE :each to avoid text interpolation on template
@@ -243,6 +214,28 @@ export default class RegEl {
 
 		// Handle text nodes (template elements used by :each are hidden and preserved; clones get their own effects)
 		for (const node of el.childNodes) this._handleTextNode(node);
+
+		// Handle transition or data-mf-transition attribute (process immediately, regardless of delay)
+		const hasTransitionAttr =
+			el.hasAttribute("transition") ||
+			el.hasAttribute("data-mf-transition");
+		if (hasTransitionAttr) {
+			const transitionPrefixAttr =
+				el.getAttribute("transition") ||
+				el.getAttribute("data-mf-transition");
+			const randomId = Math.random().toString(36).slice(2);
+
+			// If no value provided, just use random ID, otherwise use prefix-randomId
+			if (transitionPrefixAttr && transitionPrefixAttr.trim()) {
+				el.style.viewTransitionName = `${transitionPrefixAttr}-${randomId}`;
+			} else {
+				el.style.viewTransitionName = `mf${randomId}`;
+			}
+
+			// Remove the attribute after processing
+			el.removeAttribute("transition");
+			el.removeAttribute("data-mf-transition");
+		}
 
 		// Handle attributes
 		// Snapshot attributes first since we remove them during processing

@@ -9,7 +9,7 @@ describe("View transition name optimization", () => {
 		)._viewTransitionsEnabled = true;
 	});
 
-	it("should add view-transition-name to template elements only", () => {
+	it("should only add view-transition-name when explicitly requested", () => {
 		// Create a regular element without templating attributes
 		const regularElement = document.createElement("div");
 		new RegEl(regularElement, {});
@@ -17,7 +17,7 @@ describe("View transition name optimization", () => {
 		// Check that regular elements don't get view-transition-name
 		expect(regularElement.style.viewTransitionName).toBe("");
 
-		// Create template elements with various templating attributes
+		// Create template elements with various templating attributes but no transition-prefix
 		const ifElement = document.createElement("div");
 		ifElement.setAttribute(":if", "true");
 		new RegEl(ifElement, {});
@@ -30,43 +30,20 @@ describe("View transition name optimization", () => {
 		awaitElement.setAttribute(":await", "promise");
 		new RegEl(awaitElement, {});
 
-		const elseifElement = document.createElement("div");
-		elseifElement.setAttribute(":elseif", "condition");
-		new RegEl(elseifElement, {});
+		// Check that template elements DON'T automatically get view-transition-name
+		expect(ifElement.style.viewTransitionName).toBe("");
+		expect(eachElement.style.viewTransitionName).toBe("");
+		expect(awaitElement.style.viewTransitionName).toBe("");
 
-		const elseElement = document.createElement("div");
-		elseElement.setAttribute(":else", "");
-		new RegEl(elseElement, {});
+		// But elements with transition should get view-transition-name
+		const prefixElement = document.createElement("div");
+		prefixElement.setAttribute(":if", "true");
+		prefixElement.setAttribute("transition", "test");
+		new RegEl(prefixElement, {});
 
-		const thenElement = document.createElement("div");
-		thenElement.setAttribute(":then", "");
-		new RegEl(thenElement, {});
-
-		const catchElement = document.createElement("div");
-		catchElement.setAttribute(":catch", "");
-		new RegEl(catchElement, {});
-
-		// Check that template elements DO get view-transition-name
-		expect(ifElement.style.viewTransitionName).toBeTruthy();
-		expect(eachElement.style.viewTransitionName).toBeTruthy();
-		expect(awaitElement.style.viewTransitionName).toBeTruthy();
-		expect(elseifElement.style.viewTransitionName).toBeTruthy();
-		expect(elseElement.style.viewTransitionName).toBeTruthy();
-		expect(thenElement.style.viewTransitionName).toBeTruthy();
-		expect(catchElement.style.viewTransitionName).toBeTruthy();
-
-		// Verify they're all unique
-		const names = [
-			ifElement.style.viewTransitionName,
-			eachElement.style.viewTransitionName,
-			awaitElement.style.viewTransitionName,
-			elseifElement.style.viewTransitionName,
-			elseElement.style.viewTransitionName,
-			thenElement.style.viewTransitionName,
-			catchElement.style.viewTransitionName,
-		];
-		const uniqueNames = new Set(names);
-		expect(uniqueNames.size).toBe(names.length);
+		expect(prefixElement.style.viewTransitionName).toMatch(
+			/^test-[a-z0-9]+$/
+		);
 	});
 
 	it("should not override existing view-transition-name", () => {
@@ -81,15 +58,46 @@ describe("View transition name optimization", () => {
 		expect(element.style.viewTransitionName).toBe("custom-name");
 	});
 
-	it("should handle elements with multiple templating attributes", () => {
-		// Create element with multiple templating attributes
-		const element = document.createElement("div");
-		element.setAttribute(":if", "condition");
-		element.setAttribute(":await", "promise");
+	it("should handle transition attribute correctly", () => {
+		// Test transition
+		const element1 = document.createElement("div");
+		element1.setAttribute(":if", "condition");
+		element1.setAttribute("transition", "sidebar");
 
-		new RegEl(element, {});
+		new RegEl(element1, {});
 
-		// Should still get view-transition-name
-		expect(element.style.viewTransitionName).toBeTruthy();
+		expect(element1.style.viewTransitionName).toMatch(
+			/^sidebar-[a-z0-9]+$/
+		);
+		expect(element1.hasAttribute("transition")).toBe(false); // Should be removed
+
+		// Test data-mf-transition
+		const element2 = document.createElement("div");
+		element2.setAttribute(":await", "promise");
+		element2.setAttribute("data-mf-transition", "modal");
+
+		new RegEl(element2, {});
+
+		expect(element2.style.viewTransitionName).toMatch(/^modal-[a-z0-9]+$/);
+		expect(element2.hasAttribute("data-mf-transition")).toBe(false); // Should be removed
+
+		// Test transition without value (empty string)
+		const element3 = document.createElement("div");
+		element3.setAttribute(":if", "condition");
+		element3.setAttribute("transition", "");
+
+		new RegEl(element3, {});
+
+		expect(element3.style.viewTransitionName).toMatch(/^mf[a-z0-9]+$/);
+		expect(element3.hasAttribute("transition")).toBe(false); // Should be removed
+
+		// Test transition with just whitespace
+		const element4 = document.createElement("div");
+		element4.setAttribute("transition", "  ");
+
+		new RegEl(element4, {});
+
+		expect(element4.style.viewTransitionName).toMatch(/^mf[a-z0-9]+$/);
+		expect(element4.hasAttribute("transition")).toBe(false); // Should be removed
 	});
 });

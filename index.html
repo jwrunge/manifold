@@ -19,20 +19,39 @@
 				color: white;
 			}
 
+			@keyframes list-item {
+				from {
+					opacity: 0;
+					transform: translateX(20px);
+				}
+				to {
+					opacity: 1;
+					transform: translateX(0);
+				}
+			}
+
+			@keyframes list-item-out {
+				from {
+					opacity: 1;
+					transform: translateX(0);
+				}
+				to {
+					opacity: 0;
+					transform: translateX(-20px);
+				}
+			}
+
 			.mf-hidden {
 				display: none;
 			}
 
-			.list-item {
-				opacity: 1;
-				transform: translateX(0);
-				transition: all 0.3s ease;
+			/* Disable default animations for all transitions */
+			::view-transition-old(root) {
+				animation: none;
 			}
 
-			.list-item.mf-in,
-			.list-item.mf-out {
-				opacity: 0;
-				transform: translateX(20px);
+			::view-transition-new(root) {
+				animation: none;
 			}
 		</style>
 	</head>
@@ -52,10 +71,30 @@
 
 		<input type="number" :sync:value="count" />
 
-		<div :if="count < 10">The count is less than 10! ${count}</div>
-		<div :elseif="count < 20">The count is between 10 and 19! ${count}</div>
-		<div :elseif="count < 30">The count is between 20 and 29! ${count}</div>
-		<div :else>The count is 30 or more! ${count}</div>
+		<div
+			:if="count < 10"
+			transition="funtimes"
+			:style:view-transition-class="list-item"
+		>
+			The count is less than 10! ${count}
+		</div>
+		<div
+			:elseif="count < 20"
+			transition
+			:style:view-transition-class="list-item"
+		>
+			The count is between 10 and 19! ${count}
+		</div>
+		<div
+			:elseif="count < 30"
+			transition
+			:style:view-transition-class="list-item"
+		>
+			The count is between 20 and 29! ${count}
+		</div>
+		<div :else transition :style:view-transition-class="list-item">
+			The count is 30 or more! ${count}
+		</div>
 		<div>Count squared is ${count * count}</div>
 
 		<!-- Await / Then / Catch demo with reload toggle -->
@@ -80,7 +119,7 @@
 		</div>
 
 		<!-- Each demo -->
-		<div style="margin-top: 1rem">
+		<div style="margin-top: 1rem" transition>
 			<div>Family Members:</div>
 			<ul>
 				<li :each="someArray as {name, age}">
@@ -93,7 +132,11 @@
 		<div style="margin-top: 1rem" :if="list.length > 2">
 			<div>Family Members:</div>
 			<ul>
-				<li class="list-item" :each="list as { id, text }, key">
+				<li
+					class="list-item"
+					transition="list-item"
+					:each="list as { id, text }, key"
+				>
 					${key}: ${id} ${text}
 					<button :onclick="removeFromList(key)">REMOVE</button>
 				</li>
@@ -106,7 +149,7 @@
 
 		<script type="module">
 			window.__MF_DEBUG_EACH = true;
-			import $ from "./src/main.js";
+			import $ from "./src/main.ts";
 			const myState = $.create()
 				.add("count", 0)
 				.add("popup", (e) => console.log(e))
@@ -164,6 +207,37 @@
 
 			// Initial load
 			myState.loadUser();
+
+			// Add dynamic CSS rules for list-item transitions
+			function addListItemTransitionRules() {
+				const style = document.createElement("style");
+				document.head.appendChild(style);
+				const sheet = style.sheet;
+
+				// Find all elements with view-transition-name starting with 'list-item-'
+				const listItems = document.querySelectorAll(
+					'[style*="view-transition-name"][style*="list-item-"]'
+				);
+
+				listItems.forEach((item) => {
+					const viewTransitionName = item.style.viewTransitionName;
+					if (
+						viewTransitionName &&
+						viewTransitionName.startsWith("list-item-")
+					) {
+						// Add rules for this specific view-transition-name
+						sheet.insertRule(`::view-transition-old(${viewTransitionName}) { 
+							animation: list-item-out 0.3s ease-out !important; 
+						}`);
+						sheet.insertRule(`::view-transition-new(${viewTransitionName}) { 
+							animation: list-item 0.3s ease-in !important; 
+						}`);
+					}
+				});
+			}
+
+			// Apply rules after a short delay to ensure elements are ready
+			setTimeout(addListItemTransitionRules, 200);
 
 			// setInterval(() => {
 			// 	myState.count += 1;
