@@ -23,34 +23,16 @@
 				display: none;
 			}
 
-			::view-transition-group(*.list-item) ::view-transition-old(*) {
-				animation: list-item-out 0.3s ease-out;
+			.list-item {
+				opacity: 1;
+				transform: translateX(0);
+				transition: all 0.3s ease;
 			}
 
-			::view-transition-group(*.list-item) ::view-transition-new(*) {
-				animation: list-item-in 0.3s ease-in;
-			}
-
-			@keyframes list-item-in {
-				from {
-					opacity: 0;
-					transform: translateX(-20px);
-				}
-				to {
-					opacity: 1;
-					transform: translateX(0);
-				}
-			}
-
-			@keyframes list-item-out {
-				from {
-					opacity: 1;
-					transform: translateX(0);
-				}
-				to {
-					opacity: 0;
-					transform: translateX(20px);
-				}
+			.list-item.mf-in,
+			.list-item.mf-out {
+				opacity: 0;
+				transform: translateX(20px);
 			}
 		</style>
 	</head>
