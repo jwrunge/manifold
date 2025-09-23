@@ -44,15 +44,6 @@
 			.mf-hidden {
 				display: none;
 			}
-
-			/* Disable default animations for all transitions */
-			::view-transition-old(root) {
-				animation: none;
-			}
-
-			::view-transition-new(root) {
-				animation: none;
-			}
 		</style>
 	</head>
 
@@ -149,7 +140,7 @@
 
 		<script type="module">
 			window.__MF_DEBUG_EACH = true;
-			import $ from "./src/main.ts";
+			import $ from "./dist/manifold.es.js";
 			const myState = $.create()
 				.add("count", 0)
 				.add("popup", (e) => console.log(e))
@@ -207,41 +198,6 @@
 
 			// Initial load
 			myState.loadUser();
-
-			// Add dynamic CSS rules for list-item transitions
-			function addListItemTransitionRules() {
-				const style = document.createElement("style");
-				document.head.appendChild(style);
-				const sheet = style.sheet;
-
-				// Find all elements with view-transition-name starting with 'list-item-'
-				const listItems = document.querySelectorAll(
-					'[style*="view-transition-name"][style*="list-item-"]'
-				);
-
-				listItems.forEach((item) => {
-					const viewTransitionName = item.style.viewTransitionName;
-					if (
-						viewTransitionName &&
-						viewTransitionName.startsWith("list-item-")
-					) {
-						// Add rules for this specific view-transition-name
-						sheet.insertRule(`::view-transition-old(${viewTransitionName}) { 
-							animation: list-item-out 0.3s ease-out !important; 
-						}`);
-						sheet.insertRule(`::view-transition-new(${viewTransitionName}) { 
-							animation: list-item 0.3s ease-in !important; 
-						}`);
-					}
-				});
-			}
-
-			// Apply rules after a short delay to ensure elements are ready
-			setTimeout(addListItemTransitionRules, 200);
-
-			// setInterval(() => {
-			// 	myState.count += 1;
-			// }, 1000);
 		</script>
 	</body>
 </html>
