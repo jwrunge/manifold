@@ -567,6 +567,44 @@ export default class RegEl {
 		this.#cleanups.add(() => ef._stop());
 	}
 
+	// Small helper to stage unified view-transition styling, run update, and cleanup
+	private _withTransitionStaging(nodes: Registerable[], run: () => void) {
+		if (nodes.length === 0) return;
+		// Apply unified class if present
+		if (this._vtClass) {
+			for (const el of nodes) {
+				(el as HTMLElement).style.setProperty(VT_CLASS, this._vtClass);
+			}
+		}
+		// Shared temporary name to pair old/new snapshots as a group
+		const tempName = `mfpair-${Math.random().toString(36).slice(2)}`;
+		const prevNames: Array<{ el: HTMLElement; prev: string }> = [];
+		for (const el of nodes) {
+			const hel = el as HTMLElement;
+			prevNames.push({ el: hel, prev: hel.style.viewTransitionName });
+			hel.style.setProperty(VT_NAME, tempName);
+		}
+		// Flush styles to ensure properties are applied before capture
+		try {
+			// biome-ignore lint/style/noUnusedExpressions: intentional reflow
+			void (nodes[0] as HTMLElement).offsetWidth;
+		} catch {}
+
+		const trans = this._transition(run);
+		const cleanup = () => {
+			for (const el of nodes) {
+				(el as HTMLElement).style.removeProperty(VT_CLASS);
+			}
+			for (const { el, prev } of prevNames) {
+				if (prev) el.style.setProperty(VT_NAME, prev);
+				else el.style.removeProperty(VT_NAME);
+			}
+		};
+
+		if (!trans) cleanup();
+		else trans.finished.finally(cleanup);
+	}
+
 	_updateDisplay(sibs: Pick<Sibling, "el">[]) {
 		// Check if any elements will change display state
 		const elementsChanging = sibs.filter(({ el }) => {
@@ -576,56 +614,16 @@ export default class RegEl {
 		});
 
 		if (elementsChanging.length > 0) {
-			// Apply unified view-transition-class to both old and new snapshots
-			if (this._vtClass) {
-				for (const { el } of elementsChanging) {
-					(el as HTMLElement).style.setProperty(
-						VT_CLASS,
-						this._vtClass
-					);
-				}
-			}
-
-			// Give changing siblings a temporary shared name so old/new pair
-			const tempName = `mfpair-${Math.random().toString(36).slice(2)}`;
-			const prevNames: Array<{ el: HTMLElement; prev: string }> = [];
-			for (const { el } of elementsChanging) {
-				const hel = el as HTMLElement;
-				prevNames.push({ el: hel, prev: hel.style.viewTransitionName });
-				hel.style.setProperty(VT_NAME, tempName);
-			}
-
-			// Flush styles to ensure properties are applied before capture
-			try {
-				// biome-ignore lint/style/noUnusedExpressions: intentional reflow
-				void (elementsChanging[0]?.el as HTMLElement).offsetWidth;
-			} catch {}
-
 			const run = () => {
 				for (const { el } of elementsChanging) {
 					el.style.display = this._shouldShow(el) ? "" : "none";
 				}
 			};
-
-			const trans =
-				RegEl._viewTransitionsEnabled &&
-				document.startViewTransition?.(run);
-			const cleanup = () => {
-				for (const { el } of elementsChanging) {
-					(el as HTMLElement).style.removeProperty(VT_CLASS);
-				}
-				for (const { el, prev } of prevNames) {
-					if (prev) el.style.setProperty(VT_NAME, prev);
-					else el.style.removeProperty(VT_NAME);
-				}
-			};
-
-			if (!trans) {
-				run();
-				cleanup();
-			} else {
-				trans.finished.finally(cleanup);
-			}
+			// Stage VT properties, run within transition, and cleanup
+			this._withTransitionStaging(
+				elementsChanging.map(({ el }) => el),
+				run
+			);
 		}
 	}
 
