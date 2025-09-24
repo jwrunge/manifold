@@ -1,4 +1,3 @@
-import type { WritableCSSKeys } from "./css";
 import { type Effect, effect } from "./Effect";
 import evaluateExpression from "./expression-parser";
 import { globalStores } from "./main";
@@ -129,9 +128,25 @@ export default class RegEl {
 	_eachStart?: Comment;
 	_eachEnd?: Comment;
 	_eachInstances?: Registerable[];
+	_vtClass?: string;
 
 	static _registerOrGet(el: Registerable, state: Record<string, unknown>) {
 		return RegEl._registry.get(el) ?? new RegEl(el, state);
+	}
+
+	// Helper to reduce view transition boilerplate for callers like :each
+	_transition(callback: () => void) {
+		const trans =
+			RegEl._viewTransitionsEnabled &&
+			typeof document !== "undefined" &&
+			"startViewTransition" in document &&
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			(document as any).startViewTransition?.(callback);
+		if (!trans) {
+			callback();
+			return null as unknown as { finished: Promise<unknown> } | null;
+		}
+		return trans as unknown as { finished: Promise<unknown> };
 	}
 
 	static _handleExistingElements(storeName?: string) {
@@ -215,26 +230,24 @@ export default class RegEl {
 		// Handle text nodes (template elements used by :each are hidden and preserved; clones get their own effects)
 		for (const node of el.childNodes) this._handleTextNode(node);
 
-		// Handle transition or data-mf-transition attribute (process immediately, regardless of delay)
-		const hasTransitionAttr =
-			el.hasAttribute("transition") ||
-			el.hasAttribute("data-mf-transition");
-		if (hasTransitionAttr) {
-			const transitionPrefixAttr =
-				el.getAttribute("transition") ||
-				el.getAttribute("data-mf-transition");
-			const randomId = Math.random().toString(36).slice(2);
-
-			// If no value provided, just use random ID, otherwise use prefix-randomId
-			if (transitionPrefixAttr && transitionPrefixAttr.trim()) {
-				el.style.viewTransitionName = `${transitionPrefixAttr}-${randomId}`;
-			} else {
-				el.style.viewTransitionName = `mf${randomId}`;
-			}
-
-			// Remove the attribute after processing
+		// Pre-process transition attributes (support both raw and data-mf-)
+		let transitionValue: string | null = null;
+		if (el.hasAttribute("transition")) {
+			transitionValue = el.getAttribute("transition");
 			el.removeAttribute("transition");
+		} else if (el.hasAttribute("data-mf-transition")) {
+			transitionValue = el.getAttribute("data-mf-transition");
 			el.removeAttribute("data-mf-transition");
+		}
+		if (transitionValue !== null) {
+			const prefix = (transitionValue ?? "").trim();
+			const rand = Math.random().toString(36).slice(2);
+			if (!el.style.viewTransitionName) {
+				el.style.viewTransitionName = prefix
+					? `${prefix}-${rand}`
+					: `mf${rand}`;
+			}
+			this._vtClass = prefix; // unified class applied to both old/new
 		}
 
 		// Handle attributes
@@ -262,10 +275,9 @@ export default class RegEl {
 			const isTemplateDependent = dependentLogicAttrSet.has(
 				attrName as "elseif" | "else" | "then" | "catch"
 			);
+			// Note: transition-related handling occurs above (pre-processed)
 
-			if (isTemplateDependent || isTemplateRoot) {
-				// Templating logic elements are handled specially
-			}
+			// Remove support for :intro and :outro in favor of unified transition
 
 			// Handle special attributes
 			if (isTemplateRoot) {
@@ -285,6 +297,18 @@ export default class RegEl {
 				continue;
 			} else if (isTemplateDependent) {
 				continue;
+			}
+
+			// Handle :transition binding (unified attr)
+			if (attrName === "transition") {
+				const prefix = (value ?? "").trim();
+				if (!el.style.viewTransitionName) {
+					const rand = Math.random().toString(36).slice(2);
+					el.style.viewTransitionName = prefix
+						? `${prefix}-${rand}`
+						: `mf${rand}`;
+				}
+				this._vtClass = prefix || this._vtClass;
 			}
 
 			// Handle event bindings
@@ -336,9 +360,12 @@ export default class RegEl {
 						if (val) el.classList.add(String(attrProp));
 						else el.classList.remove(String(attrProp));
 					} else if (attrPropName === "style") {
-						(el as HTMLElement).style[
-							attrProp as WritableCSSKeys
-						] = `${val}`;
+						const style = (el as HTMLElement).style;
+						const prop = String(attrProp);
+						// Use setProperty/removeProperty to support hyphenated CSS props
+						if (val === false || val == null || val === "")
+							style.removeProperty(prop);
+						else style.setProperty(prop, String(val));
 					} else {
 						throwError(`bind ${attrName}`, el, true);
 					}
@@ -467,22 +494,6 @@ export default class RegEl {
 		}
 	}
 
-	// Helper to reduce view transition boilerplate
-	private _transition(callback: () => void) {
-		if (
-			RegEl._viewTransitionsEnabled &&
-			"startViewTransition" in document
-		) {
-			(
-				document as Document & {
-					startViewTransition: (cb: () => void) => void;
-				}
-			).startViewTransition(callback);
-		} else {
-			callback();
-		}
-	}
-
 	// Helper to determine if element should be shown
 	private _shouldShow(el: Registerable): boolean {
 		return Boolean(el.mfshow ?? true) && Boolean(el.mfawait ?? true);
@@ -548,20 +559,65 @@ export default class RegEl {
 	_updateDisplay(sibs: Pick<Sibling, "el">[]) {
 		// Check if any elements will change display state
 		const elementsChanging = sibs.filter(({ el }) => {
-			const htmlEl = el as HTMLElement;
 			const shouldShow = this._shouldShow(el);
 			const newDisplay = shouldShow ? "" : "none";
-			return htmlEl.style.display !== newDisplay;
+			return el.style.display !== newDisplay;
 		});
 
 		if (elementsChanging.length > 0) {
-			// Use view transitions for display changes
-			this._transition(() => {
+			// Apply unified view-transition-class to both old and new snapshots
+			if (this._vtClass) {
 				for (const { el } of elementsChanging) {
-					const htmlEl = el as HTMLElement;
-					htmlEl.style.display = this._shouldShow(el) ? "" : "none";
+					(el as HTMLElement).style.setProperty(
+						"view-transition-class",
+						this._vtClass
+					);
 				}
-			});
+			}
+
+			// Give changing siblings a temporary shared name so old/new pair
+			const tempName = `mfpair-${Math.random().toString(36).slice(2)}`;
+			const prevNames: Array<{ el: HTMLElement; prev: string }> = [];
+			for (const { el } of elementsChanging) {
+				const hel = el as HTMLElement;
+				prevNames.push({ el: hel, prev: hel.style.viewTransitionName });
+				hel.style.setProperty("view-transition-name", tempName);
+			}
+
+			// Flush styles to ensure properties are applied before capture
+			try {
+				// biome-ignore lint/style/noUnusedExpressions: intentional reflow
+				void (elementsChanging[0]?.el as HTMLElement).offsetWidth;
+			} catch {}
+
+			const run = () => {
+				for (const { el } of elementsChanging) {
+					el.style.display = this._shouldShow(el) ? "" : "none";
+				}
+			};
+
+			const trans =
+				RegEl._viewTransitionsEnabled &&
+				document.startViewTransition?.(run);
+			const cleanup = () => {
+				for (const { el } of elementsChanging) {
+					(el as HTMLElement).style.removeProperty(
+						"view-transition-class"
+					);
+				}
+				for (const { el, prev } of prevNames) {
+					if (prev)
+						el.style.setProperty("view-transition-name", prev);
+					else el.style.removeProperty("view-transition-name");
+				}
+			};
+
+			if (!trans) {
+				run();
+				cleanup();
+			} else {
+				trans.finished.finally(cleanup);
+			}
 		}
 	}
 

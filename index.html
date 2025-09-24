@@ -41,6 +41,14 @@
 				}
 			}
 
+			/* Separate animations for new vs old snapshots */
+			::view-transition-new(*.list-item) {
+				animation: list-item 300ms ease both;
+			}
+			::view-transition-old(*.list-item) {
+				animation: list-item-out 300ms ease both;
+			}
+
 			.mf-hidden {
 				display: none;
 			}
@@ -62,28 +70,16 @@
 
 		<input type="number" :sync:value="count" />
 
-		<div
-			:if="count < 10"
-			transition="funtimes"
-			:style:view-transition-class="list-item"
-		>
+		<div :if="count < 10" :transition="list-item">
 			The count is less than 10! ${count}
 		</div>
-		<div
-			:elseif="count < 20"
-			transition
-			:style:view-transition-class="list-item"
-		>
+		<div :elseif="count < 20" :transition="list-item">
 			The count is between 10 and 19! ${count}
 		</div>
-		<div
-			:elseif="count < 30"
-			transition
-			:style:view-transition-class="list-item"
-		>
+		<div :elseif="count < 30" :transition="list-item">
 			The count is between 20 and 29! ${count}
 		</div>
-		<div :else transition :style:view-transition-class="list-item">
+		<div :else :transition="list-item">
 			The count is 30 or more! ${count}
 		</div>
 		<div>Count squared is ${count * count}</div>
@@ -125,7 +121,7 @@
 			<ul>
 				<li
 					class="list-item"
-					transition="list-item"
+					:transition="list-item"
 					:each="list as { id, text }, key"
 				>
 					${key}: ${id} ${text}
@@ -140,7 +136,7 @@
 
 		<script type="module">
 			window.__MF_DEBUG_EACH = true;
-			import $ from "./dist/manifold.es.js";
+			import $ from "./src/main.ts";
 			const myState = $.create()
 				.add("count", 0)
 				.add("popup", (e) => console.log(e))

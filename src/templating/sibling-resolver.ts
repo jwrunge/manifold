@@ -77,6 +77,9 @@ export function findDependentSiblings(
 			}
 		}
 
+		// Do not set view-transition-class here; it should be applied
+		// immediately before a transition and cleared after.
+
 		siblings.push({
 			el: sib as Registerable,
 			attrName: unprefixed as templLogicAttr,
