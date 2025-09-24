@@ -1,5 +1,5 @@
 import evaluateExpression from "../expression-parser";
-import { indexOfTopLevel } from "../parsing-utils";
+import { splitAs } from "../parsing-utils";
 import {
 	prefixes,
 	type Registerable,
@@ -7,15 +7,7 @@ import {
 	type templLogicAttr,
 } from "./types";
 
-// Utility function for splitting 'as' expressions
-function splitAs(rawAttr: string): [string, string | undefined] {
-	const asIndex = indexOfTopLevel(rawAttr, " as ");
-	if (asIndex === -1) return [rawAttr.trim(), undefined];
-
-	const left = rawAttr.slice(0, asIndex).trim();
-	const right = rawAttr.slice(asIndex + 4).trim();
-	return [left, right || undefined];
-}
+// Reuse shared splitAs from parsing-utils to reduce duplication
 
 /**
  * Discovers and processes dependent siblings for conditional and async templating

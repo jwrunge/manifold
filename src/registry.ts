@@ -43,12 +43,23 @@ const _handleNewElements = (addedNodes: NodeList) => {
 	}
 };
 
-// Utility to split on "as" and trim parts
-const splitAs = (str: string): string[] =>
-	str.split(/\s*as\s*/).map((s) => s.trim());
+import { VT_CLASS, VT_NAME } from "./css";
+import { splitAs } from "./parsing-utils";
 const throwError = (msg: string, cause: unknown, unsupported = false) => {
-	console.error(`${unsupported ? "Unsupported: " : ""}${msg}`, cause);
-	throw new Error("Manifold Error");
+	let hint = "";
+	if (cause && typeof Node !== "undefined" && cause instanceof Node) {
+		const el = cause as Element;
+		if (el && el.nodeType === 1) {
+			const tag = (el as Element).tagName?.toLowerCase?.() || "element";
+			const id = (el as Element).id ? `#${(el as Element).id}` : "";
+			const cls = (el as Element).classList?.length
+				? `.${Array.from((el as Element).classList).join(".")}`
+				: "";
+			hint = ` @ <${tag}${id}${cls}>`;
+		}
+	}
+	const prefix = unsupported ? "Unsupported: " : "";
+	throw new Error(`Manifold: ${prefix}${msg}${hint}`);
 };
 
 const hasAnyPrefixedAttr = (el: Element, attrName: string): boolean => {
@@ -569,7 +580,7 @@ export default class RegEl {
 			if (this._vtClass) {
 				for (const { el } of elementsChanging) {
 					(el as HTMLElement).style.setProperty(
-						"view-transition-class",
+						VT_CLASS,
 						this._vtClass
 					);
 				}
@@ -581,7 +592,7 @@ export default class RegEl {
 			for (const { el } of elementsChanging) {
 				const hel = el as HTMLElement;
 				prevNames.push({ el: hel, prev: hel.style.viewTransitionName });
-				hel.style.setProperty("view-transition-name", tempName);
+				hel.style.setProperty(VT_NAME, tempName);
 			}
 
 			// Flush styles to ensure properties are applied before capture
@@ -601,14 +612,11 @@ export default class RegEl {
 				document.startViewTransition?.(run);
 			const cleanup = () => {
 				for (const { el } of elementsChanging) {
-					(el as HTMLElement).style.removeProperty(
-						"view-transition-class"
-					);
+					(el as HTMLElement).style.removeProperty(VT_CLASS);
 				}
 				for (const { el, prev } of prevNames) {
-					if (prev)
-						el.style.setProperty("view-transition-name", prev);
-					else el.style.removeProperty("view-transition-name");
+					if (prev) el.style.setProperty(VT_NAME, prev);
+					else el.style.removeProperty(VT_NAME);
 				}
 			};
 

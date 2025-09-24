@@ -1,4 +1,5 @@
 import applyAliasPattern from "../alias-destructure";
+import { VT_CLASS } from "../css";
 import { type Effect, effect } from "../Effect";
 import { indexOfTopLevel, isIdent } from "../parsing-utils";
 import { scopeProxy } from "../proxy";
@@ -35,6 +36,23 @@ export function handleEach(
 	throwError: (msg: string, cause?: unknown) => void,
 	eachAlias?: string
 ): Effect {
+	const markWithVTClass = (nodes: Registerable[]) => {
+		const marked: Registerable[] = [];
+		for (const element of nodes) {
+			const childReg = RegElClass._registry.get(element);
+			// @ts-expect-error accessing internal optional vt class
+			const vt = childReg?._vtClass as string | undefined;
+			if (vt) {
+				(element as HTMLElement).style.setProperty(VT_CLASS, vt);
+				marked.push(element);
+			}
+		}
+		return () => {
+			for (const el of marked) {
+				(el as HTMLElement).style.removeProperty(VT_CLASS);
+			}
+		};
+	};
 	// Cache a pristine template clone for repeated use (without the :each attribute)
 	if (!regEl._cachedContent) {
 		const tmpl = regEl._el.cloneNode(true) as Registerable;
@@ -140,18 +158,7 @@ export function handleEach(
 
 			// If we identified specific elements to remove, remove them
 			if (elementsToRemove.length > 0) {
-				// Mark removed elements with their view-transition-class before transition
-				for (const element of elementsToRemove) {
-					const childReg = RegElClass._registry.get(element);
-					// @ts-expect-error accessing internal optional vt class
-					const vt = childReg?._vtClass as string | undefined;
-					if (vt)
-						(element as HTMLElement).style.setProperty(
-							"view-transition-class",
-							vt
-						);
-				}
-
+				const unmark = markWithVTClass(elementsToRemove);
 				const t = regEl._transition(() => {
 					for (const element of elementsToRemove) {
 						if (instances) {
@@ -188,21 +195,8 @@ export function handleEach(
 						}
 					}
 				});
-				if (t) {
-					t.finished.finally(() => {
-						for (const element of elementsToRemove) {
-							(element as HTMLElement).style.removeProperty(
-								"view-transition-class"
-							);
-						}
-					});
-				} else {
-					for (const element of elementsToRemove) {
-						(element as HTMLElement).style.removeProperty(
-							"view-transition-class"
-						);
-					}
-				}
+				if (t) t.finished.finally(unmark);
+				else unmark();
 			} else {
 				// Fallback to original behavior if we can't identify specific elements
 				// Collect nodes to remove so we can mark them before the transition
@@ -211,16 +205,7 @@ export function handleEach(
 					const node = instances?.[i];
 					if (node) nodesToRemove.push(node);
 				}
-				for (const element of nodesToRemove) {
-					const childReg = RegElClass._registry.get(element);
-					// @ts-expect-error accessing internal optional vt class
-					const vt = childReg?._vtClass as string | undefined;
-					if (vt)
-						(element as HTMLElement).style.setProperty(
-							"view-transition-class",
-							vt
-						);
-				}
+				const unmark = markWithVTClass(nodesToRemove);
 				const t = regEl._transition(() => {
 					for (const node of nodesToRemove) {
 						instances?.pop();
@@ -230,15 +215,8 @@ export function handleEach(
 						node.remove();
 					}
 				});
-				if (t) {
-					t.finished.finally(() => {
-						for (const node of nodesToRemove) {
-							(node as HTMLElement).style.removeProperty(
-								"view-transition-class"
-							);
-						}
-					});
-				}
+				if (t) t.finished.finally(unmark);
+				else unmark();
 			}
 		} else {
 			// Handle the normal cases: adding elements or updating in place
@@ -296,35 +274,12 @@ export function handleEach(
 				}
 				// Use view transition for adding items
 				const newClones: Registerable[] = instances?.slice(cur) ?? [];
+				const unmark = markWithVTClass(newClones);
 				const t = regEl._transition(() => {
 					parent.insertBefore(frag, end);
-					// After insertion (before new snapshot), mark new elements with their vt class
-					for (const node of newClones) {
-						const childReg = RegElClass._registry.get(node);
-						// @ts-expect-error accessing internal optional vt class
-						const vt = childReg?._vtClass as string | undefined;
-						if (vt)
-							(node as HTMLElement).style.setProperty(
-								"view-transition-class",
-								vt
-							);
-					}
 				});
-				if (t) {
-					t.finished.finally(() => {
-						for (const node of newClones) {
-							(node as HTMLElement).style.removeProperty(
-								"view-transition-class"
-							);
-						}
-					});
-				} else {
-					for (const node of newClones) {
-						(node as HTMLElement).style.removeProperty(
-							"view-transition-class"
-						);
-					}
-				}
+				if (t) t.finished.finally(unmark);
+				else unmark();
 			}
 		}
 

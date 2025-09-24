@@ -12,3 +12,6 @@ export type WritableCSSProperties = Omit<
 >;
 
 export type WritableCSSKeys = keyof WritableCSSProperties;
+
+export const VT_CLASS = "view-transition-class";
+export const VT_NAME = "view-transition-name";
