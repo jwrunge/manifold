@@ -99,6 +99,11 @@ export function handleEach(
 					(inst._state as Record<string, unknown>)[right] = idx;
 				return;
 			}
+			if (alias.startsWith("{")) {
+				// Object destructuring e.g. {name, age}
+				applyAliasPattern(alias, val, inst._state);
+				return;
+			}
 			if (alias.startsWith("[")) {
 				applyAliasPattern(alias, [val, idx], inst._state);
 				return;
