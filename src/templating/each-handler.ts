@@ -133,17 +133,18 @@ export function handleEach(
 
 		// Detect removed items by comparing with previous array
 		if (next < cur && previousArray.length > 0) {
-			// Find elements that should be removed by comparing previous vs current array
-			const elementsToRemove: Registerable[] = [];
-			const currentSet = new Set(list);
-
-			// Track which previous values are no longer present
+			// Build a multiset of current values to preserve correct duplicates handling
+			const counts = new Map<unknown, number>();
+			for (const v of list) counts.set(v, (counts.get(v) || 0) + 1);
 			const removedIndices = new Set<number>();
 			for (let i = 0; i < previousArray.length; i++) {
-				if (!currentSet.has(previousArray[i])) {
-					removedIndices.add(i);
-				}
+				const v = previousArray[i];
+				const c = counts.get(v) || 0;
+				if (c > 0) counts.set(v, c - 1);
+				else removedIndices.add(i);
 			}
+
+			const elementsToRemove: Registerable[] = [];
 
 			// Find DOM elements corresponding to removed array values
 			if (instances && elementMap) {
@@ -263,14 +264,6 @@ export function handleEach(
 					}
 
 					frag.appendChild(clone);
-					// Safety: ensure text nodes on the clone are handled if registration did not due to early :each intercept
-					try {
-						const childReg = RegElClass._registry.get(clone);
-						if (childReg) {
-							for (const n of clone.childNodes)
-								childReg._handleTextNode(n);
-						}
-					} catch {}
 				}
 				// Use view transition for adding items
 				const newClones: Registerable[] = instances?.slice(cur) ?? [];
