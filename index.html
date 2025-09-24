@@ -89,11 +89,13 @@
 			<button :onclick="loadUser()" style="margin-bottom: 0.5rem">
 				Reload User (alternates success/error)
 			</button>
-			<div :await="currentUserPromise">Loading user...</div>
-			<div :then="user">
+			<div :await="currentUserPromise" :transition="list-item">
+				Loading user...
+			</div>
+			<div :then="user" :transition="list-item">
 				User loaded: ${user.name} (${user.age}) ${count}
 			</div>
-			<div :catch="errorMsg" style="color: red">
+			<div :catch="errorMsg" style="color: red" :transition="list-item">
 				Failed to load user: ${errorMsg}
 				<p>Here is a list of all the error messages:</p>
 				<ul>
