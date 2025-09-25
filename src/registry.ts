@@ -1,6 +1,6 @@
 import { type Effect, effect } from "./Effect";
 import evaluateExpression from "./expression-parser";
-import { globalStores } from "./main";
+import { globalStores } from "./globalstores";
 import { scopeProxy } from "./proxy";
 import { handleAsync } from "./templating/async-handler";
 import { handleConditional } from "./templating/conditional-handler";

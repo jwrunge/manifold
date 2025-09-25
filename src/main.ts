@@ -1,13 +1,11 @@
 import { Effect } from "./Effect.ts";
 import isEqual from "./equality.ts";
 import serverPage from "./fetch.ts";
+import { globalStores } from "./globalstores.ts";
 import { proxy } from "./proxy.ts";
 import RegEl from "./registry.ts";
 
 export type StateConstraint = Record<string, unknown>;
-
-// Global registry for incremental DOM registration
-export const globalStores = new Map<string | undefined, StateConstraint>();
 
 export default class StateBuilder<TState extends StateConstraint> {
 	#name?: string;
