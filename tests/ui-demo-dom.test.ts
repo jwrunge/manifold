@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-type Builder = typeof import("../src/main.ts").Manifold;
+type Builder = typeof import("../src/main.ts").default;
 
 type DemoState = {
 	count: number;

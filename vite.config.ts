@@ -20,6 +20,7 @@ export default defineConfig({
 			entry: "src/main.ts",
 			name: "Manifold",
 			formats: ["es", "umd", "cjs"],
+			fileName: "manifold",
 		},
 	},
 });
