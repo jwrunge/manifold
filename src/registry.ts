@@ -593,7 +593,7 @@ export default class RegEl {
 		}
 		// Flush styles to ensure properties are applied before capture
 		try {
-			// biome-ignore lint/style/noUnusedExpressions: intentional reflow
+			// biome-ignore lint/performance/noDelete: force synchronous layout, intentional side-effect
 			void (nodes[0] as HTMLElement).offsetWidth;
 		} catch {}
 
