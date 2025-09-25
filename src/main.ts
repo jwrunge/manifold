@@ -31,9 +31,30 @@ export default class Manifold<TState extends StateConstraint> {
 		return new Manifold<S>(name, initial);
 	}
 
-	static get = serverPage.get;
-	static post = serverPage.post;
-	static fetch = serverPage.fetch;
+	// Static helpers to use as $.get/$.post/$.fetch without early initialization
+	static get(
+		url: string | URL,
+		fetchOps?: RequestInit,
+		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">
+	) {
+		return serverPage.get(url, fetchOps, defaultOps);
+	}
+
+	static post(
+		url: string | URL,
+		fetchOps?: RequestInit,
+		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">
+	) {
+		return serverPage.post(url, fetchOps, defaultOps);
+	}
+
+	static fetch(
+		url: string | URL,
+		ops: import("./fetch.ts").FetchDOMOptions,
+		fetchOps?: RequestInit
+	) {
+		return serverPage.fetch(url, ops, fetchOps);
+	}
 
 	add<K extends string, V>(
 		key: K,

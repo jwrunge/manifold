@@ -1,4 +1,4 @@
-import { splitTopLevel } from "./parsing-utils.js";
+import { indexOfTopLevel, isIdent, splitTopLevel } from "./parsing-utils.js";
 
 // Expression parser expects state injected via ctx.state
 export interface ParsedExpression {
@@ -173,6 +173,37 @@ const parse = (raw: string): ParsedExpression => {
 			.filter(Boolean)
 			.map((s) => parse(s));
 		return { _fn: (c) => parts.map((p) => p._fn(c)) };
+	}
+	// Object literal: { key: value, 'k': v, "k2": v2, shorthand }
+	if (expr[0] === "{" && expr[expr.length - 1] === "}") {
+		const inner = expr.slice(1, -1).trim();
+		if (!inner) return { _fn: () => ({}) };
+		const entries = splitTopLevel(inner, ",").filter(Boolean);
+		const parts = entries.map((entry) => {
+			const idx = indexOfTopLevel(entry, ":");
+			if (idx === -1) {
+				// Shorthand property: { foo }
+				const key = entry.trim();
+				if (!isIdent(key))
+					return { k: key, v: { _fn: () => undefined } };
+				return { k: key, v: parse(key) };
+			}
+			const left = entry.slice(0, idx).trim();
+			const right = entry.slice(idx + 1).trim();
+			// Key can be identifier or quoted string
+			let key: string;
+			const m = left.match(/^(?:'([^']*)'|"([^"]*)")$/);
+			if (m) key = m[1] ?? m[2] ?? "";
+			else key = left;
+			return { k: key, v: parse(right) };
+		});
+		return {
+			_fn: (c) => {
+				const obj: Record<string, unknown> = {};
+				for (const p of parts) obj[p.k] = p.v._fn(c);
+				return obj;
+			},
+		};
 	}
 	{
 		let p = 0,
