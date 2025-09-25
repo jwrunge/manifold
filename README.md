@@ -26,7 +26,7 @@ Options:
 -   from: optional CSS selector scoped to the fetched document; defaults to its body.
 -   to: required CSS selector in the current document; insertion target.
 -   method: one of "replace" (clear and insert), "append", or "prepend".
--   addTransitionClass: when set, both outgoing (on replace) and incoming top-level elements are given this class and a shared view-transition-name so your VT CSS applies.
+-   addTransitionClass: when set, both outgoing (on replace) and incoming top-level elements are given this class so your VT CSS (e.g., ::view-transition-old(\*.fade)) applies.
 -   insertScripts: boolean or selector[] to filter which scripts to run/inject; external and inline scripts are deduped.
 -   insertStyles: boolean or selector[] to filter which styles/links to inject; deduped by href/content.
 
