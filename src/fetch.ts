@@ -208,22 +208,23 @@ export const fetchContent = async (
 	const frag = document.createDocumentFragment();
 	const topLevel = cloneAndAppendChildren(sourceRoot, frag);
 
-	// Add transition attributes/classes and ensure a VT name is present for immediate entry animations
+	// Add transition attributes/classes to incoming nodes; ensure they are name-captured for VT
 	if (ops.addTransitionClass) {
 		for (const el of topLevel) {
 			el.setAttribute("data-mf-transition", ops.addTransitionClass);
-			// Apply a CSS class so ::view-transition-new(*.class) rules can match
 			el.classList.add(ops.addTransitionClass);
-			(el as HTMLElement).style.setProperty(
-				VT_CLASS,
-				ops.addTransitionClass
+			const hel = el as HTMLElement;
+			hel.style.setProperty(VT_CLASS, ops.addTransitionClass);
+			// Ensure this element is independently captured by VT
+			const existingName = hel.style.getPropertyValue(
+				"view-transition-name"
 			);
-			const style = (el as HTMLElement).style as CSSStyleDeclaration & {
-				viewTransitionName?: string;
-			};
-			if (!style.viewTransitionName) {
+			if (!existingName) {
 				const rand = Math.random().toString(36).slice(2);
-				style.viewTransitionName = `${ops.addTransitionClass}-${rand}`;
+				hel.style.setProperty(
+					"view-transition-name",
+					`mf-${ops.addTransitionClass}-${rand}`
+				);
 			}
 		}
 	}
@@ -258,6 +259,56 @@ export const fetchContent = async (
 		cb();
 		return null as { finished?: Promise<unknown> } | null;
 	};
+
+	// If replacing, mark outgoing direct children so they participate in the outro
+	let outgoing: HTMLElement[] = [];
+	if (ops.method === "replace") {
+		const targetEl = target as HTMLElement | null;
+		if (targetEl) {
+			outgoing = Array.from(targetEl.children).filter(
+				(n): n is HTMLElement => n instanceof HTMLElement
+			);
+			if (ops.addTransitionClass) {
+				for (const el of outgoing) {
+					el.classList.add(ops.addTransitionClass);
+					el.style.setProperty(VT_CLASS, ops.addTransitionClass);
+					// Ensure outgoing has a VT name so ::view-transition-old(*.class) can match
+					const existingName = el.style.getPropertyValue(
+						"view-transition-name"
+					);
+					if (!existingName) {
+						const rand = Math.random().toString(36).slice(2);
+						el.style.setProperty(
+							"view-transition-name",
+							`mf-${ops.addTransitionClass}-${rand}`
+						);
+					}
+				}
+			}
+		}
+	}
+
+	// Flush styles on outgoing + incoming before snapshot
+	if (RegEl._viewTransitionsEnabled) {
+		try {
+			const toFlush = [...outgoing, ...topLevel];
+			for (const el of toFlush) void (el as HTMLElement).offsetWidth;
+			const container = target as HTMLElement | null;
+			if (container) void container.getBoundingClientRect();
+			void document.body.offsetWidth;
+		} catch {}
+		// One or two RAFs to ensure UA applies classes before snapshot
+		await new Promise<void>((r) =>
+			typeof requestAnimationFrame !== "undefined"
+				? requestAnimationFrame(() => r())
+				: setTimeout(() => r(), 0)
+		);
+		await new Promise<void>((r) =>
+			typeof requestAnimationFrame !== "undefined"
+				? requestAnimationFrame(() => r())
+				: setTimeout(() => r(), 0)
+		);
+	}
 
 	const t = startVT(performInsert);
 	if (t?.finished) await t.finished.catch(() => {});
