@@ -96,12 +96,12 @@
 			<div id="remote-to" data-mf-register></div>
 			<div style="margin-top: 0.5rem">
 				<button
-					:onclick="$.get('/snippets/snippet-a.html').replace('#remote-to', { from: '#payload', addTransitionClass: 'fade' })"
+					:onclick="$.get('/snippets/snippet-a.html').replace('#remote-to', { from: '#payload', addTransitionClass: 'list-item' })"
 				>
 					Replace with snippet-a (#payload → #remote-to)
 				</button>
 				<button
-					:onclick="$.get('/snippets/snippet-b.html').append('#remote-to', { from: '#payload', addTransitionClass: 'fade' })"
+					:onclick="$.get('/snippets/snippet-b.html').append('#remote-to', { from: '#payload', addTransitionClass: 'list-item' })"
 				>
 					Append snippet-b (full body)
 				</button>
