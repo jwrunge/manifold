@@ -327,23 +327,28 @@ export const fetchContent = async (
 };
 
 export default {
-	get(url: string | URL, ops: FetchDOMOptions, fetchOps?: RequestInit) {
+	get(
+		url: string | URL,
+		to: string,
+		ops?: Omit<FetchDOMOptions, "to">,
+		fetchOps?: RequestInit
+	) {
 		return fetchContent(
 			url,
-			{ ...ops, method: ops.method || "replace" },
+			{ ...ops, method: ops?.method ?? "replace", to },
 			{ ...(fetchOps || {}), method: "GET" }
 		);
 	},
 	post(
 		url: string | URL,
-		body: BodyInit | null,
-		ops: FetchDOMOptions,
+		to: string,
+		ops?: Omit<FetchDOMOptions, "to">,
 		fetchOps?: RequestInit
 	) {
 		return fetchContent(
 			url,
-			{ ...ops, method: ops.method || "replace" },
-			{ ...(fetchOps || {}), method: "POST", body }
+			{ ...ops, method: ops?.method ?? "replace", to },
+			{ ...(fetchOps || {}), method: "POST" }
 		);
 	},
 	fetch: fetchContent,

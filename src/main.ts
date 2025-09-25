@@ -1,5 +1,6 @@
 import { Effect } from "./Effect.ts";
 import isEqual from "./equality.ts";
+import serverPage from "./fetch.ts";
 import { proxy } from "./proxy.ts";
 import RegEl from "./registry.ts";
 
@@ -30,6 +31,8 @@ export default class StateBuilder<TState extends StateConstraint> {
 	): StateBuilder<S> {
 		return new StateBuilder<S>(name, initial);
 	}
+
+	static server = serverPage;
 
 	add<K extends string, V>(
 		key: K,
