@@ -2,6 +2,77 @@
 
 Small reactive toolkit with optional, minimal View Transitions support.
 
+## HTML fetching helper: fetchContent
+
+Fetch remote HTML and insert it into the current document with optional View Transitions and asset (script/style) injection.
+
+Quick example:
+
+```ts
+import { fetchContent } from "./src/fetch";
+
+await fetchContent("/snippets/snippet-a.html", {
+	from: "#payload", // optional subselector inside the fetched HTML
+	to: "#remote-to", // required target in the current document
+	method: "replace", // "replace" | "append" | "prepend"
+	addTransitionClass: "fade", // optional: pair old/new with this class for VT CSS
+	insertScripts: true, // optional: execute/inject scripts (deduped)
+	insertStyles: true, // optional: inject styles/links (deduped)
+});
+```
+
+Options:
+
+-   from: optional CSS selector scoped to the fetched document; defaults to its body.
+-   to: required CSS selector in the current document; insertion target.
+-   method: one of "replace" (clear and insert), "append", or "prepend".
+-   addTransitionClass: when set, both outgoing (on replace) and incoming top-level elements are given this class and a shared view-transition-name so your VT CSS applies.
+-   insertScripts: boolean or selector[] to filter which scripts to run/inject; external and inline scripts are deduped.
+-   insertStyles: boolean or selector[] to filter which styles/links to inject; deduped by href/content.
+
+Notes:
+
+-   View Transitions are used only if the environment supports `document.startViewTransition`. The helper pairs outgoing/incoming elements when method = "replace" so both fade/motion can apply.
+-   Inserted DOM is auto-registered by Manifold’s MutationObserver; anything with data-mf-\* becomes live without manual wiring.
+-   In tests/Node environments, local file URLs and inline script execution are supported to simulate browser behavior; browsers use standard fetch/DOM insertion paths.
+
+Minimal VT CSS (optional) for a simple fade with `addTransitionClass: "fade"`:
+
+```css
+/* Disable page-wide fading so only targeted elements animate */
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation: none;
+}
+
+/* Fade-in new */
+::view-transition-new(*.fade) {
+	animation: 180ms ease both fade-in;
+}
+
+/* Fade-out old */
+::view-transition-old(*.fade) {
+	animation: 180ms ease both fade-out;
+}
+
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+@keyframes fade-out {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+```
+
 ## View Transitions behavior
 
 Manifold only starts a View Transition for batches that include visible DOM changes:

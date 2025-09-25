@@ -41,6 +41,30 @@
 				}
 			}
 
+			/* Fade transitions for fetchContent demo */
+			@keyframes fade-in {
+				from {
+					opacity: 0;
+				}
+				to {
+					opacity: 1;
+				}
+			}
+			@keyframes fade-out {
+				from {
+					opacity: 1;
+				}
+				to {
+					opacity: 0;
+				}
+			}
+			::view-transition-new(*.fade) {
+				animation: fade-in 250ms ease both;
+			}
+			::view-transition-old(*.fade) {
+				animation: fade-out 250ms ease both;
+			}
+
 			/* Separate animations for new vs old snapshots */
 			::view-transition-new(*.list-item) {
 				animation: list-item 300ms ease both;
@@ -58,13 +82,10 @@
 	<body data-mf-register class="mf-hidden">
 		<input
 			:value="count"
-			:type="count === 3 || count === 5 ? 'text' :
-		'number'"
+			:type="count === 3 || count === 5 ? 'text' : 'number'"
 			:class:red="count % 5 === 0"
-			:style:background-color="count %
-		2 === 0 ? 'lightblue' : 'lightgreen'"
-			:onclick="(e)=>
-		popup(e.target.value)"
+			:style:background-color="count % 2 === 0 ? 'lightblue' : 'lightgreen'"
+			:onclick="(e)=> popup(e.target.value)"
 			:something="count * 2"
 		/>
 
@@ -136,66 +157,30 @@
 
 		<p>End content</p>
 
-		<script type="module">
-			window.__MF_DEBUG_EACH = true;
-			import $ from "./src/main.ts";
-			const myState = $.create()
-				.add("count", 0)
-				.add("popup", (e) => console.log(e))
-				.add("nextFail", false)
-				.add("currentUserPromise", null)
-				.add("someArray", [
-					{ name: "Jake", age: 37 },
-					{ name: "Mary", age: 37 },
-					{ name: "Isaac", age: 6 },
-					{ name: "Elinor", age: 4 },
-				])
-				.add("list", [
-					{ id: 1, text: "Item 1" },
-					{ id: 2, text: "Item 2" },
-					{ id: 3, text: "Item 3" },
-				])
-				.add("addToList", () => {
-					const nextId = myState.list.length
-						? myState.list[myState.list.length - 1].id + 1
-						: 1;
-					myState.list.push({ id: nextId, text: `Item ${nextId}` });
-				})
-				.add("removeFromList", (key) => {
-					myState.list.splice(key, 1);
-				})
-				.build();
+		<!-- fetchContent demo -->
+		<section
+			style="
+				margin-top: 1rem;
+				padding-top: 1rem;
+				border-top: 1px solid #444;
+			"
+		>
+			<h3>fetchContent demo</h3>
+			<div id="remote-to" data-mf-register></div>
+			<div style="margin-top: 0.5rem">
+				<button :onclick="fetchReplace()">
+					Replace with snippet-a (#payload → #remote-to)
+				</button>
+				<button :onclick="fetchAppend()">
+					Append snippet-b (full body)
+				</button>
+			</div>
+			<p style="opacity: 0.8">
+				Transitions use class <code>fade</code> and auto-cleanup after
+				VT finishes.
+			</p>
+		</section>
 
-			myState.loadUser = () => {
-				const fail = !!myState.nextFail;
-				myState.nextFail = !fail;
-
-				const p = new Promise((res, rej) =>
-					setTimeout(() => {
-						if (fail) console.log("REJECTING PROMISE");
-						else console.log("RESOLVING PROMISE");
-
-						if (fail) rej(new Error("Network"));
-						else
-							res({
-								name: "Ada",
-								age: 37 + Math.floor(Math.random() * 10),
-							});
-					}, 800)
-				);
-				myState.currentUserPromise = p;
-
-				// p.then(
-				// 	(u) => (myState.user = u),
-				// 	(err) =>
-				// 		(myState.errorMsg =
-				// 			err && err.message ? err.message : String(err))
-				// );
-				return p;
-			};
-
-			// Initial load
-			myState.loadUser();
-		</script>
+		<script type="module" src="./index.ts"></script>
 	</body>
 </html>
