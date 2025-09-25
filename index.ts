@@ -1,4 +1,3 @@
-import { fetchContent } from "./src/fetch.ts";
 import $ from "./src/main.ts";
 
 const myState = $.create()
@@ -26,27 +25,24 @@ const myState = $.create()
 	.add("removeFromList", (key: number) => {
 		myState.list.splice(key, 1);
 	})
-	.add("fetchReplace", async () => {
-		await fetchContent("/snippets/snippet-a.html", {
+	// Provide placeholder so the property exists on the type
+	.add("loadUser", () => Promise.resolve<unknown>(undefined))
+	// Add server fetch functions
+	.add("fetchReplace", () => {
+		return $.server.get("/snippets/snippet-a.html").replace("#remote-to", {
 			from: "#payload",
-			to: "#remote-to",
-			method: "replace",
 			addTransitionClass: "list-item",
 			insertScripts: true,
 			insertStyles: true,
 		});
 	})
-	.add("fetchAppend", async () => {
-		await fetchContent("/snippets/snippet-b.html", {
-			to: "#remote-to",
-			method: "append",
+	.add("fetchAppend", () => {
+		return $.server.get("/snippets/snippet-b.html").append("#remote-to", {
 			addTransitionClass: "list-item",
-			insertScripts: ["#run-once"],
-			insertStyles: ["#style-once"],
+			insertScripts: true,
+			insertStyles: true,
 		});
 	})
-	// Provide placeholder so the property exists on the type
-	.add("loadUser", () => Promise.resolve<unknown>(undefined))
 	.build();
 
 myState.loadUser = () => {

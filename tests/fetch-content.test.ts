@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { fetchContent } from "../src/fetch.ts";
+import serverFetch from "../src/fetch.ts";
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -17,7 +17,7 @@ describe("fetchContent DOM insertion", () => {
 
 	test("replace content from #payload into #to with transitions", async () => {
 		const url = "/snippets/snippet-a.html";
-		await fetchContent(url, {
+		await serverFetch.fetch(url, {
 			from: "#payload",
 			to: "#to",
 			method: "replace",
@@ -35,7 +35,7 @@ describe("fetchContent DOM insertion", () => {
 
 	test("append whole body content and filter script/style injection", async () => {
 		const url = "/snippets/snippet-b.html";
-		await fetchContent(url, {
+		await serverFetch.fetch(url, {
 			to: "#to",
 			method: "append",
 			insertScripts: ["#run-once"],

@@ -120,7 +120,7 @@ const insertStyles = (
 	}
 };
 
-export const fetchContent = async (
+const fetchContent = async (
 	url: string | URL,
 	ops: FetchDOMOptions,
 	fetchOps?: RequestInit
@@ -326,29 +326,68 @@ export const fetchContent = async (
 	insertStyles(styles, ops.insertStyles);
 };
 
+class FetchedContent {
+	constructor(
+		private url: string | URL,
+		private fetchOps: RequestInit,
+		private defaultOps?: Omit<FetchDOMOptions, "to" | "method">
+	) {}
+
+	replace(
+		to: string,
+		ops?: Omit<FetchDOMOptions, "to" | "method">
+	): Promise<void> {
+		return fetchContent(
+			this.url,
+			{ ...this.defaultOps, ...ops, method: "replace", to },
+			this.fetchOps
+		);
+	}
+
+	append(
+		to: string,
+		ops?: Omit<FetchDOMOptions, "to" | "method">
+	): Promise<void> {
+		return fetchContent(
+			this.url,
+			{ ...this.defaultOps, ...ops, method: "append", to },
+			this.fetchOps
+		);
+	}
+
+	prepend(
+		to: string,
+		ops?: Omit<FetchDOMOptions, "to" | "method">
+	): Promise<void> {
+		return fetchContent(
+			this.url,
+			{ ...this.defaultOps, ...ops, method: "prepend", to },
+			this.fetchOps
+		);
+	}
+}
+
 export default {
 	get(
 		url: string | URL,
-		to: string,
-		ops?: Omit<FetchDOMOptions, "to">,
-		fetchOps?: RequestInit
-	) {
-		return fetchContent(
+		fetchOps?: RequestInit,
+		defaultOps?: Omit<FetchDOMOptions, "to" | "method">
+	): FetchedContent {
+		return new FetchedContent(
 			url,
-			{ ...ops, method: ops?.method ?? "replace", to },
-			{ ...(fetchOps || {}), method: "GET" }
+			{ ...(fetchOps || {}), method: "GET" },
+			defaultOps
 		);
 	},
 	post(
 		url: string | URL,
-		to: string,
-		ops?: Omit<FetchDOMOptions, "to">,
-		fetchOps?: RequestInit
-	) {
-		return fetchContent(
+		fetchOps?: RequestInit,
+		defaultOps?: Omit<FetchDOMOptions, "to" | "method">
+	): FetchedContent {
+		return new FetchedContent(
 			url,
-			{ ...ops, method: ops?.method ?? "replace", to },
-			{ ...(fetchOps || {}), method: "POST" }
+			{ ...(fetchOps || {}), method: "POST" },
+			defaultOps
 		);
 	},
 	fetch: fetchContent,

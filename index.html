@@ -101,6 +101,11 @@
 				<button :onclick="fetchAppend()">
 					Append snippet-b (full body)
 				</button>
+				<button
+					:onclick="server.get('/snippets/snippet-a.html').replace('#remote-to', { from: '#payload', addTransitionClass: 'fade', insertScripts: true, insertStyles: true })"
+				>
+					Direct fluent server.get().replace() call
+				</button>
 			</div>
 			<p style="opacity: 0.8">
 				Transitions use class <code>fade</code> and auto-cleanup after
