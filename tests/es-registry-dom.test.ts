@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-type Builder = typeof import("../src/main.ts").default;
+type Builder = typeof import("../src/main.ts").Manifold;
 
 // Load all builders: source, ES bundle, and UMD bundle
 const loadBuilders = async () => {

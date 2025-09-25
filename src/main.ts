@@ -7,11 +7,12 @@ import RegEl from "./registry.ts";
 
 export type StateConstraint = Record<string, unknown>;
 
-export default class StateBuilder<TState extends StateConstraint> {
+export default class Manifold<TState extends StateConstraint> {
 	#name?: string;
 	#scopedState: TState;
 	#derivations: Map<string, (store: StateConstraint) => unknown>;
 	#built = false;
+	static _current: Manifold<any> | null = null;
 
 	constructor(
 		name?: string,
@@ -26,39 +27,44 @@ export default class StateBuilder<TState extends StateConstraint> {
 	static create<S extends StateConstraint>(
 		name?: string,
 		initial?: S
-	): StateBuilder<S> {
-		return new StateBuilder<S>(name, initial);
+	): Manifold<S> {
+		return new Manifold<S>(name, initial);
 	}
 
-	static server = serverPage;
+	static get = serverPage.get;
+	static post = serverPage.post;
+	static fetch = serverPage.fetch;
 
 	add<K extends string, V>(
 		key: K,
 		value: V
-	): StateBuilder<TState & Record<K, V>> {
-		return new StateBuilder(
+	): Manifold<TState & Record<K, V>> {
+		return new Manifold(
 			this.#name,
 			{ ...this.#scopedState, [key]: value },
 			new Map(this.#derivations)
-		) as StateBuilder<TState & Record<K, V>>;
+		) as Manifold<TState & Record<K, V>>;
 	}
 
 	derive<K extends string, T>(
 		key: K,
 		fn: (store: TState) => T
-	): StateBuilder<TState & Record<K, T>> {
-		return new StateBuilder(
+	): Manifold<TState & Record<K, T>> {
+		return new Manifold(
 			this.#name,
 			{ ...this.#scopedState },
 			new Map(this.#derivations).set(
 				key,
 				fn as (store: StateConstraint) => unknown
 			)
-		) as StateBuilder<TState & Record<K, T>>;
+		) as Manifold<TState & Record<K, T>>;
 	}
 
 	build() {
 		if (this.#built) throw "Multiple state builds unsupported";
+
+		// Set as current instance for registry access
+		Manifold._current = this;
 
 		const state = proxy(this.#scopedState) as TState;
 		for (const [key, deriveFn] of this.#derivations) {
@@ -83,5 +89,30 @@ export default class StateBuilder<TState extends StateConstraint> {
 		RegEl._handleExistingElements(this.#name);
 
 		return state as TState;
+	}
+
+	// Server methods for use in expressions
+	get(
+		url: string | URL,
+		fetchOps?: RequestInit,
+		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">
+	) {
+		return serverPage.get(url, fetchOps, defaultOps);
+	}
+
+	post(
+		url: string | URL,
+		fetchOps?: RequestInit,
+		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">
+	) {
+		return serverPage.post(url, fetchOps, defaultOps);
+	}
+
+	fetch(
+		url: string | URL,
+		ops: import("./fetch.ts").FetchDOMOptions,
+		fetchOps?: RequestInit
+	) {
+		return serverPage.fetch(url, ops, fetchOps);
 	}
 }

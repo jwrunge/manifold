@@ -27,22 +27,6 @@ const myState = $.create()
 	})
 	// Provide placeholder so the property exists on the type
 	.add("loadUser", () => Promise.resolve<unknown>(undefined))
-	// Add server fetch functions
-	.add("fetchReplace", () => {
-		return $.server.get("/snippets/snippet-a.html").replace("#remote-to", {
-			from: "#payload",
-			addTransitionClass: "list-item",
-			insertScripts: true,
-			insertStyles: true,
-		});
-	})
-	.add("fetchAppend", () => {
-		return $.server.get("/snippets/snippet-b.html").append("#remote-to", {
-			addTransitionClass: "list-item",
-			insertScripts: true,
-			insertStyles: true,
-		});
-	})
 	.build();
 
 myState.loadUser = () => {

@@ -1,6 +1,7 @@
 import applyAliasPattern from "../alias-destructure";
 import { VT_CLASS } from "../css";
 import { type Effect, effect } from "../Effect";
+import Manifold from "../main";
 import { indexOfTopLevel, isIdent } from "../parsing-utils";
 import { scopeProxy } from "../proxy";
 import type { Registerable } from "./types";
@@ -85,6 +86,7 @@ export function handleEach(
 			(_fn({
 				state: regEl._state,
 				element: regEl._eachStart ?? regEl._el,
+				$: Manifold,
 			}) as unknown[] | undefined) ?? [];
 
 		if (!Array.isArray(list)) {

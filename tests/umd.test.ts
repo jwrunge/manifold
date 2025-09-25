@@ -1,11 +1,11 @@
 import { expect, test } from "vitest";
 // Import the UMD bundle. In a Node + Vitest environment with ESM, dynamic import via createRequire or eval would be needed.
 // Since the UMD builds attaches to a namespace when required, we can import it directly and access exports.
-// @ts-ignore - ignore type checking for built dist file
+// @ts-expect-error - ignore type checking for built dist file
 import * as UMD from "../dist/manifold.umd.js";
 
 const { default: StateBuilder } = UMD as unknown as {
-	default: typeof import("../src/main.ts").default;
+	default: typeof import("../src/main.ts").Manifold;
 };
 
 test("UMD build: create store, update, derived", async () => {

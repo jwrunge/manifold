@@ -2,12 +2,12 @@ import {
 	type Effect as EffectClass,
 	effect as runEffect,
 } from "../../src/Effect.ts";
-import StateBuilder from "../../src/main.ts";
+import Manifold from "../../src/main.ts";
 
 export type Effect = { stop(): void };
 
 const $ = {
-	create: StateBuilder.create.bind(StateBuilder),
+	create: Manifold.create.bind(Manifold),
 	effect(fn: () => void): Effect {
 		const e: EffectClass = runEffect(fn);
 		return {

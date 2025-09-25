@@ -95,16 +95,15 @@
 			<h3>fetchContent demo</h3>
 			<div id="remote-to" data-mf-register></div>
 			<div style="margin-top: 0.5rem">
-				<button :onclick="fetchReplace()">
+				<button
+					:onclick="$.get('/snippets/snippet-a.html').replace('#remote-to', { from: '#payload', addTransitionClass: 'fade' })"
+				>
 					Replace with snippet-a (#payload → #remote-to)
 				</button>
-				<button :onclick="fetchAppend()">
-					Append snippet-b (full body)
-				</button>
 				<button
-					:onclick="server.get('/snippets/snippet-a.html').replace('#remote-to', { from: '#payload', addTransitionClass: 'fade', insertScripts: true, insertStyles: true })"
+					:onclick="$.get('/snippets/snippet-b.html').append('#remote-to', { from: '#payload', addTransitionClass: 'fade' })"
 				>
-					Direct fluent server.get().replace() call
+					Append snippet-b (full body)
 				</button>
 			</div>
 			<p style="opacity: 0.8">
