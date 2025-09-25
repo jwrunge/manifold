@@ -1,4 +1,5 @@
-import { VT_CLASS, VT_NAME } from "./css";
+import { VT_CLASS } from "./css";
+import RegEl from "./registry";
 
 type InsertContentMethod = "append" | "prepend" | "replace";
 export type FetchDOMOptions = {
@@ -207,34 +208,23 @@ export const fetchContent = async (
 	const frag = document.createDocumentFragment();
 	const topLevel = cloneAndAppendChildren(sourceRoot, frag);
 
-	// Add transition attributes/classes and ensure a shared VT name is present
-	let vtName: string | undefined;
-	let targetEl: HTMLElement | null = null;
+	// Add transition attributes/classes and ensure a VT name is present for immediate entry animations
 	if (ops.addTransitionClass) {
-		vtName = `${ops.addTransitionClass}-${Math.random()
-			.toString(36)
-			.slice(2)}`;
-		// For replace, mark existing top-level children so they transition out
-		targetEl = document.querySelector(ops.to) as HTMLElement | null;
-		if (targetEl && ops.method === "replace") {
-			for (const el of Array.from(targetEl.children)) {
-				el.classList.add(ops.addTransitionClass);
-				(el as HTMLElement).style.setProperty(
-					VT_CLASS,
-					ops.addTransitionClass
-				);
-				(el as HTMLElement).style.setProperty(VT_NAME, vtName);
-			}
-		}
-		// Mark incoming new top-level nodes so they transition in
 		for (const el of topLevel) {
 			el.setAttribute("data-mf-transition", ops.addTransitionClass);
+			// Apply a CSS class so ::view-transition-new(*.class) rules can match
 			el.classList.add(ops.addTransitionClass);
 			(el as HTMLElement).style.setProperty(
 				VT_CLASS,
 				ops.addTransitionClass
 			);
-			(el as HTMLElement).style.setProperty(VT_NAME, vtName);
+			const style = (el as HTMLElement).style as CSSStyleDeclaration & {
+				viewTransitionName?: string;
+			};
+			if (!style.viewTransitionName) {
+				const rand = Math.random().toString(36).slice(2);
+				style.viewTransitionName = `${ops.addTransitionClass}-${rand}`;
+			}
 		}
 	}
 
@@ -252,43 +242,29 @@ export const fetchContent = async (
 		}
 	};
 
-	type DocWithVT = Document & {
-		startViewTransition?: (cb: () => void) => {
-			finished?: Promise<unknown>;
+	const startVT = (cb: () => void) => {
+		type DocWithVT = Document & {
+			startViewTransition?: (cb: () => void) => {
+				finished?: Promise<unknown>;
+			};
 		};
-	};
-	const docVT = document as DocWithVT;
-
-	// Ensure style/class assignments are flushed before snapshot
-	if (vtName && typeof docVT.startViewTransition === "function") {
-		// Force synchronous style/layout flush
-		try {
-			void document.body.offsetWidth;
-			if (targetEl) void targetEl.getBoundingClientRect();
-		} catch {}
-		// And yield to next animation frame to be extra safe
-		await new Promise<void>((r) =>
-			typeof requestAnimationFrame !== "undefined"
-				? requestAnimationFrame(() => r())
-				: setTimeout(() => r(), 0)
-		);
-	}
-	if (typeof docVT.startViewTransition === "function") {
-		const t = docVT.startViewTransition(performInsert);
-		if (t?.finished) await t.finished.catch(() => {});
-		if (ops.addTransitionClass) {
-			for (const el of topLevel) {
-				(el as HTMLElement).style.removeProperty(VT_CLASS);
-				el.classList.remove(ops.addTransitionClass);
-			}
+		const d = document as DocWithVT;
+		const canVT =
+			RegEl._viewTransitionsEnabled &&
+			typeof d.startViewTransition === "function";
+		if (canVT && d.startViewTransition) {
+			return d.startViewTransition(cb);
 		}
-	} else {
-		performInsert();
-		if (ops.addTransitionClass) {
-			for (const el of topLevel) {
-				(el as HTMLElement).style.removeProperty(VT_CLASS);
-				el.classList.remove(ops.addTransitionClass);
-			}
+		cb();
+		return null as { finished?: Promise<unknown> } | null;
+	};
+
+	const t = startVT(performInsert);
+	if (t?.finished) await t.finished.catch(() => {});
+	if (ops.addTransitionClass) {
+		for (const el of topLevel) {
+			(el as HTMLElement).style.removeProperty(VT_CLASS);
+			el.classList.remove(ops.addTransitionClass);
 		}
 	}
 
