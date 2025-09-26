@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
 
 function readJson(file) {
 	const p = path.resolve(process.cwd(), file);
