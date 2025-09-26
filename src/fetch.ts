@@ -138,14 +138,21 @@ const fetchContent = async (
 					import("node:path"),
 				]);
 				const stripped = url.replace(/^\/+/, "");
-				const filePath = path.resolve(process.cwd(), stripped);
+				// Use globalThis to access process safely
+				const globalProcess = (globalThis as Record<string, unknown>).process as
+					| { cwd?: () => string }
+					| undefined;
+				const filePath = path.resolve(globalProcess?.cwd?.() || ".", stripped);
 				return readFile(filePath, "utf8");
 			}
 			// Browser relative URL fallback
+			const globalWindow = (globalThis as Record<string, unknown>).window as
+				| { location?: { href?: string } }
+				| undefined;
 			const baseHref =
-				typeof window !== "undefined" &&
-				typeof window.location?.href === "string"
-					? window.location.href
+				typeof globalWindow !== "undefined" &&
+				typeof globalWindow.location?.href === "string"
+					? globalWindow.location.href
 					: "";
 			const abs = new URL(url, baseHref);
 			const res = await fetch(abs, fetchOps);

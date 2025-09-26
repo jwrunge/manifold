@@ -160,7 +160,7 @@ jobs:
                   # Show current jsr.json content for debugging
                   echo "Current jsr.json:"
                   cat jsr.json
-                  # Use deno publish with explicit DOM lib support
+                  # Use deno publish with DOM lib support
                   deno publish --allow-dirty
 
             # Setup Deno Land publishing (via GitHub release)

@@ -150,12 +150,18 @@ export default class RegEl {
 			RegEl._viewTransitionsEnabled &&
 			typeof document !== "undefined" &&
 			"startViewTransition" in document &&
-			document.startViewTransition?.(callback);
+			(
+				document as {
+					startViewTransition?: (callback: () => void) => {
+						finished: Promise<unknown>;
+					};
+				}
+			).startViewTransition?.(callback);
 		if (!trans) {
 			callback();
-			return null as unknown as { finished: Promise<unknown> } | null;
+			return null as { finished: Promise<unknown> } | null;
 		}
-		return trans as unknown as { finished: Promise<unknown> };
+		return trans as { finished: Promise<unknown> };
 	}
 
 	static _handleExistingElements(storeName?: string) {
@@ -251,10 +257,11 @@ export default class RegEl {
 		if (transitionValue !== null) {
 			const prefix = (transitionValue ?? "").trim();
 			const rand = Math.random().toString(36).slice(2);
-			if (!el.style.viewTransitionName) {
-				el.style.viewTransitionName = prefix
-					? `${prefix}-${rand}`
-					: `mf${rand}`;
+			const elStyle = el.style as CSSStyleDeclaration & {
+				viewTransitionName?: string;
+			};
+			if (!elStyle.viewTransitionName) {
+				elStyle.viewTransitionName = prefix ? `${prefix}-${rand}` : `mf${rand}`;
 			}
 			this._vtClass = prefix; // unified class applied to both old/new
 		}
@@ -306,9 +313,12 @@ export default class RegEl {
 			// Handle :transition binding (unified attr)
 			if (attrName === "transition") {
 				const prefix = (value ?? "").trim();
-				if (!el.style.viewTransitionName) {
+				const elStyle = el.style as CSSStyleDeclaration & {
+					viewTransitionName?: string;
+				};
+				if (!elStyle.viewTransitionName) {
 					const rand = Math.random().toString(36).slice(2);
-					el.style.viewTransitionName = prefix
+					elStyle.viewTransitionName = prefix
 						? `${prefix}-${rand}`
 						: `mf${rand}`;
 				}
@@ -571,7 +581,13 @@ export default class RegEl {
 		const prevNames: Array<{ el: HTMLElement; prev: string }> = [];
 		for (const el of nodes) {
 			const hel = el as HTMLElement;
-			prevNames.push({ el: hel, prev: hel.style.viewTransitionName });
+			const helStyle = hel.style as CSSStyleDeclaration & {
+				viewTransitionName?: string;
+			};
+			prevNames.push({
+				el: hel,
+				prev: helStyle.viewTransitionName || "",
+			});
 			hel.style.setProperty(VT_NAME, tempName);
 		}
 		// Flush styles to ensure properties are applied before capture
