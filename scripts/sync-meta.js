@@ -27,11 +27,7 @@ function readJson(file) {
 			// block comment
 			if (ch === "/" && next === "*") {
 				i += 2;
-				while (
-					i < raw.length &&
-					!(raw[i] === "*" && raw[i + 1] === "/")
-				)
-					i++;
+				while (i < raw.length && !(raw[i] === "*" && raw[i + 1] === "/")) i++;
 				i += 2;
 				continue;
 			}
@@ -97,7 +93,7 @@ function main() {
 		jsr.compilerOptions = Object.assign(
 			{},
 			jsr.compilerOptions || {},
-			tsconfig.compilerOptions
+			tsconfig.compilerOptions,
 		);
 	}
 
