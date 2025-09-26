@@ -46,36 +46,20 @@ jobs:
             - name: Build package
               run: npm run build
 
-            # Scripts are executable in git; no runtime chmod required
-
             - name: Check version and set outputs
               id: version_check
               run: |
-                  #!/usr/bin/env bash
-                  set -euo pipefail
-
                   PACKAGE_VERSION=$(node -p "require('./package.json').version")
                   echo "Current version: $PACKAGE_VERSION"
-                  if [ -n "${GITHUB_OUTPUT-}" ]; then
-                    echo "version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
-                  else
-                    echo "version=$PACKAGE_VERSION"
-                  fi
+                  echo "version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
 
-                  if npm view mfld@"$PACKAGE_VERSION" version 2>/dev/null; then
+                  # Check if this version exists on npm
+                  if npm view mfld@$PACKAGE_VERSION version 2>/dev/null; then
                     echo "Version $PACKAGE_VERSION already exists on npm"
-                    if [ -n "${GITHUB_OUTPUT-}" ]; then
-                      echo "should_publish_npm=false" >> "$GITHUB_OUTPUT"
-                    else
-                      echo "should_publish_npm=false"
-                    fi
+                    echo "should_publish_npm=false" >> $GITHUB_OUTPUT
                   else
                     echo "Version $PACKAGE_VERSION does not exist on npm, proceeding with publish"
-                    if [ -n "${GITHUB_OUTPUT-}" ]; then
-                      echo "should_publish_npm=true" >> "$GITHUB_OUTPUT"
-                    else
-                      echo "should_publish_npm=true"
-                    fi
+                    echo "should_publish_npm=true" >> $GITHUB_OUTPUT
                   fi
 
             # Publish to NPM
@@ -99,46 +83,28 @@ jobs:
             - name: Authenticate with GitHub Packages
               if: steps.version_check.outputs.should_publish_npm == 'true'
               run: |
-                  #!/usr/bin/env bash
-                  set -euo pipefail
-
-                  # Configure GitHub Packages registry and token
                   echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> ~/.npmrc
                   echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
-              - name: Publish to GitHub Packages
-                if: steps.version_check.outputs.should_publish_npm == 'true'
-                run: |
-                    echo "Publishing version ${{ steps.version_check.outputs.version }} to GitHub Packages"
-                    echo "Repository owner: ${{ github.repository_owner }}"
-                    echo "Repository: ${{ github.repository }}"
-                    cp package.json package.json.bak
 
-                    node -e "const fs=require('fs');const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));const owner=process.env.GITHUB_REPOSITORY_OWNER||'${{ github.repository_owner }}';pkg.name='@'+owner+'/manifold';pkg.publishConfig={registry:'https://npm.pkg.github.com'};pkg.publishConfig['@'+owner+':registry']='https://npm.pkg.github.com';fs.writeFileSync('package.json',JSON.stringify(pkg,null,2));console.log('Modified package.json for GitHub Packages');"
-
-                    npm publish --access public
-                    mv package.json.bak package.json
-                env:
-                    NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                    GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
             - name: Publish to GitHub Packages
               if: steps.version_check.outputs.should_publish_npm == 'true'
               run: |
                   echo "Publishing version ${{ steps.version_check.outputs.version }} to GitHub Packages"
                   echo "Repository owner: ${{ github.repository_owner }}"
                   echo "Repository: ${{ github.repository }}"
+                  # Create a temporary package.json with scoped name for GitHub Packages
                   cp package.json package.json.bak
-
-                  # Modify package.json for GitHub Packages publishing
-                  node <<'NODE'
-const fs = require('fs');
-const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
-const owner = process.env.GITHUB_REPOSITORY_OWNER || "${{ github.repository_owner }}";
-pkg.name = `@${owner}/manifold`;
-pkg.publishConfig = { registry: 'https://npm.pkg.github.com', [`@${owner}:registry`]: 'https://npm.pkg.github.com' };
-fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-console.log('Modified package.json for GitHub Packages');
-NODE
-
+                  node -e "
+                    const pkg = require('./package.json');
+                    pkg.name = '@${{ github.repository_owner }}/manifold';
+                    pkg.publishConfig = { 
+                      registry: 'https://npm.pkg.github.com',
+                      '@${{ github.repository_owner }}:registry': 'https://npm.pkg.github.com'
+                    };
+                    console.log('Modified package.json for GitHub Packages:');
+                    console.log(JSON.stringify(pkg, null, 2));
+                    require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+                  "
                   npm publish --access public
                   mv package.json.bak package.json
               env:
@@ -177,8 +143,5 @@ NODE
             - name: Skip publish (version exists)
               if: steps.version_check.outputs.should_publish_npm == 'false'
               run: |
-                  #!/usr/bin/env bash
-                  set -euo pipefail
-
                   echo "Skipping publish - version already exists on NPM"
                   echo "If you intended to publish a new version, please update the version in package.json"
