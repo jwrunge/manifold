@@ -5,6 +5,11 @@ const _objStr = "object",
 // Note: Map/Set contents are not deeply compared - this is intentional
 // for granular reactivity (UI updates happen via property access, not container equality)
 // biome-ignore lint/suspicious/noExplicitAny: Type checking is dynamic here
+/**
+ * Shallow/deep comparison helper used to determine if values changed for reactivity.
+ * Note: Map/Set contents are intentionally not deeply compared (see note above).
+ * @public
+ */
 const _isEqual = (a: any, b: any): boolean => {
 	if (a === b) return true;
 	// Always treat Promises as unequal for reactivity
@@ -18,7 +23,8 @@ const _isEqual = (a: any, b: any): boolean => {
 
 	if (cA === Array) {
 		if (a.length !== b.length) return false;
-		for (let i = 0; i < a.length; i++) if (!_isEqual(a[i], b[i])) return false;
+		for (let i = 0; i < a.length; i++)
+			if (!_isEqual(a[i], b[i])) return false;
 		return true;
 	}
 	if (cA === Date) return a.getTime() === b.getTime();

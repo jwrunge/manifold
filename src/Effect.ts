@@ -11,12 +11,21 @@ export interface Subscriptions {
 	_holes?: number; // Allow holes in the effects array to optimize memory -- compacted in #clean()
 }
 
+/**
+ * Create and run a reactive effect. The returned Effect can be used to stop the effect
+ * or for testing. Typical usage is `effect(() => { console.log("run") })`.
+ * @public
+ */
 export const effect = (fn: EffectFn) => {
 	const e = Effect._acquire(fn);
 	e._run();
 	return e;
 };
 
+/**
+ * Internal Effect implementation backing the `effect` helper. Effects track
+ * dependencies and re-run when dependent state changes.
+ */
 export class Effect {
 	static _current: Effect | null = null;
 	static #pool: Effect[] = [];
