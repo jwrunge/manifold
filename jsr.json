@@ -7,10 +7,5 @@
 	"publish": {
 		"include": ["src/", "dist/", "README.md", "LICENSE"],
 		"exclude": ["**/*.test.ts", "**/*.test.js"]
-	},
-	"compilerOptions": {
-		"lib": ["ES2022", "DOM", "DOM.Iterable"],
-		"strict": true,
-		"skipLibCheck": true
 	}
 }
