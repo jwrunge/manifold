@@ -49,7 +49,7 @@ jobs:
             - name: Check version and set outputs
               id: version_check
               run: |
-                  ./.github/workflows/scripts/check-version.sh
+                  bash ./.github/workflows/scripts/check-version.sh
 
             # Publish to NPM
             - name: Publish to NPM
@@ -72,7 +72,7 @@ jobs:
             - name: Authenticate with GitHub Packages
               if: steps.version_check.outputs.should_publish_npm == 'true'
               run: |
-                  ./.github/workflows/scripts/auth-github-packages.sh
+                  bash ./.github/workflows/scripts/auth-github-packages.sh
 
             - name: Publish to GitHub Packages
               if: steps.version_check.outputs.should_publish_npm == 'true'
@@ -120,4 +120,4 @@ jobs:
             - name: Skip publish (version exists)
               if: steps.version_check.outputs.should_publish_npm == 'false'
               run: |
-                  ./.github/workflows/scripts/skip-publish.sh
+                  bash ./.github/workflows/scripts/skip-publish.sh
