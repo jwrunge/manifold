@@ -27,7 +27,11 @@ function readJson(file) {
 			// block comment
 			if (ch === "/" && next === "*") {
 				i += 2;
-				while (i < raw.length && !(raw[i] === "*" && raw[i + 1] === "/")) i++;
+				while (
+					i < raw.length &&
+					!(raw[i] === "*" && raw[i + 1] === "/")
+				)
+					i++;
 				i += 2;
 				continue;
 			}
@@ -59,7 +63,7 @@ function readJson(file) {
 
 function writeJson(file, obj) {
 	const p = path.resolve(process.cwd(), file);
-	fs.writeFileSync(p, JSON.stringify(obj, null, 2) + "\n", "utf8");
+	fs.writeFileSync(p, `${JSON.stringify(obj, null, 2)}\n`, "utf8");
 	console.log(`Wrote ${file}`);
 }
 
@@ -93,7 +97,7 @@ function main() {
 		jsr.compilerOptions = Object.assign(
 			{},
 			jsr.compilerOptions || {},
-			tsconfig.compilerOptions,
+			tsconfig.compilerOptions
 		);
 	}
 
