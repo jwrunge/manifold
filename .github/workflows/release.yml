@@ -146,14 +146,22 @@ jobs:
               if: steps.version_check.outputs.should_publish_npm == 'true'
               run: |
                   echo "Publishing version ${{ steps.version_check.outputs.version }} to JSR"
-                  # Update JSR version to match package.json
+                  echo "Repository owner: ${{ github.repository_owner }}"
+                  # Update JSR version and ensure proper naming
                   node -e "
                     const pkg = require('./package.json');
                     const jsr = require('./jsr.json');
                     jsr.version = pkg.version;
+                    jsr.name = '@${{ github.repository_owner }}/manifold';
+                    console.log('Updated JSR configuration:');
+                    console.log(JSON.stringify(jsr, null, 2));
                     require('fs').writeFileSync('jsr.json', JSON.stringify(jsr, null, 2));
                   "
-                  npx jsr publish
+                  # Show current jsr.json content for debugging
+                  echo "Current jsr.json:"
+                  cat jsr.json
+                  # Try using deno publish directly instead of npx jsr
+                  deno publish --allow-dirty
 
             # Setup Deno Land publishing (via GitHub release)
             - name: Create GitHub Release for Deno Land
