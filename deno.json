@@ -13,7 +13,6 @@
 	"exclude": ["node_modules/", "dist/", ".github/"],
 	"compilerOptions": {
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
-		"strict": true,
-		"skipLibCheck": true
+		"strict": true
 	}
 }
