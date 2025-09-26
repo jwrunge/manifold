@@ -28,7 +28,7 @@ export default class Manifold<TState extends StateConstraint> {
 	constructor(
 		name?: string,
 		initialState?: TState,
-		derivations?: Map<string, (store: StateConstraint) => unknown>
+		derivations?: Map<string, (store: StateConstraint) => unknown>,
 	) {
 		this.#name = name;
 		this.#scopedState = (initialState || {}) as TState;
@@ -37,7 +37,7 @@ export default class Manifold<TState extends StateConstraint> {
 
 	static create<S extends StateConstraint>(
 		name?: string,
-		initial?: S
+		initial?: S,
 	): Manifold<S> {
 		return new Manifold<S>(name, initial);
 	}
@@ -46,7 +46,7 @@ export default class Manifold<TState extends StateConstraint> {
 	static get(
 		url: string | URL,
 		fetchOps?: RequestInit,
-		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">
+		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
 	): import("./fetch.ts").FetchedContent {
 		return serverPage.get(url, fetchOps, defaultOps);
 	}
@@ -54,7 +54,7 @@ export default class Manifold<TState extends StateConstraint> {
 	static post(
 		url: string | URL,
 		fetchOps?: RequestInit,
-		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">
+		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
 	): import("./fetch.ts").FetchedContent {
 		return serverPage.post(url, fetchOps, defaultOps);
 	}
@@ -62,32 +62,29 @@ export default class Manifold<TState extends StateConstraint> {
 	static fetch(
 		url: string | URL,
 		ops: import("./fetch.ts").FetchDOMOptions,
-		fetchOps?: RequestInit
+		fetchOps?: RequestInit,
 	): Promise<void> {
 		return serverPage.fetch(url, ops, fetchOps);
 	}
-	add<K extends string, V>(
-		key: K,
-		value: V
-	): Manifold<TState & Record<K, V>> {
+	add<K extends string, V>(key: K, value: V): Manifold<TState & Record<K, V>> {
 		return new Manifold(
 			this.#name,
 			{ ...this.#scopedState, [key]: value },
-			new Map(this.#derivations)
+			new Map(this.#derivations),
 		) as Manifold<TState & Record<K, V>>;
 	}
 
 	derive<K extends string, T>(
 		key: K,
-		fn: (store: TState) => T
+		fn: (store: TState) => T,
 	): Manifold<TState & Record<K, T>> {
 		return new Manifold(
 			this.#name,
 			{ ...this.#scopedState },
 			new Map(this.#derivations).set(
 				key,
-				fn as (store: StateConstraint) => unknown
-			)
+				fn as (store: StateConstraint) => unknown,
+			),
 		) as Manifold<TState & Record<K, T>>;
 	}
 
@@ -126,7 +123,7 @@ export default class Manifold<TState extends StateConstraint> {
 	get(
 		url: string | URL,
 		fetchOps?: RequestInit,
-		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">
+		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
 	): import("./fetch.ts").FetchedContent {
 		return serverPage.get(url, fetchOps, defaultOps);
 	}
@@ -134,7 +131,7 @@ export default class Manifold<TState extends StateConstraint> {
 	post(
 		url: string | URL,
 		fetchOps?: RequestInit,
-		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">
+		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
 	): import("./fetch.ts").FetchedContent {
 		return serverPage.post(url, fetchOps, defaultOps);
 	}
@@ -142,7 +139,7 @@ export default class Manifold<TState extends StateConstraint> {
 	fetch(
 		url: string | URL,
 		ops: import("./fetch.ts").FetchDOMOptions,
-		fetchOps?: RequestInit
+		fetchOps?: RequestInit,
 	): Promise<void> {
 		return serverPage.fetch(url, ops, fetchOps);
 	}
