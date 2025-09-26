@@ -122,6 +122,13 @@ jobs:
                   echo "Publishing version ${{ steps.version_check.outputs.version }} to JSR"
                   # Update both JSR and Deno config versions to match package.json via Deno script
                   deno run --allow-read --allow-write scripts/update-release-config.ts
+                  # Debug: show what will be published so we can verify DOM types are present
+                  echo '--- debug: jsr.json ---'
+                  cat jsr.json || true
+                  echo '--- debug: tsconfig.json ---'
+                  cat tsconfig.json || true
+                  echo '--- debug: src/types ---'
+                  ls -la src/types || true
                   # Use deno publish directly which properly supports --allow-dirty
                   deno publish --allow-dirty || echo "First attempt failed, trying with --allow-slow-types"
                   deno publish --allow-dirty --allow-slow-types || echo "JSR publish failed"
