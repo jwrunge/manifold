@@ -6,7 +6,7 @@ let rootState: Record<string, unknown> = {};
 const initState = (data: Record<string, unknown>) => {
 	rootState = StateBuilder.create(
 		undefined,
-		data as Record<string, unknown>,
+		data as Record<string, unknown>
 	).build() as Record<string, unknown>;
 };
 
@@ -149,7 +149,7 @@ describe("Expression Parser", () => {
 			// Without assignment support, treated as plain string fallback (no assignment performed)
 			const r = run("(count = 10)");
 			expect(r).toBe("count = 10");
-			expect(rootState["count"]).toBe(1); // unchanged
+			expect(rootState.count).toBe(1); // unchanged
 		});
 		test("bare assignment without wrapper is not executed", () => {
 			initState({ count: 7 });
@@ -163,7 +163,7 @@ describe("Expression Parser", () => {
 			initState({
 				inc: (x: number) => x + 1,
 				sum: (a: number, b: number) => a + b,
-			}),
+			})
 		);
 		test("calls state functions", () => {
 			expect(run("inc(4)")).toBe(5);

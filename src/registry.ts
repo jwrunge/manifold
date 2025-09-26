@@ -66,7 +66,8 @@ const throwError = (msg: string, cause: unknown, unsupported = false) => {
 
 const hasAnyPrefixedAttr = (el: Element, attrName: string): boolean => {
 	return (
-		el.hasAttribute(`:${attrName}`) || el.hasAttribute(`data-mf-${attrName}`)
+		el.hasAttribute(`:${attrName}`) ||
+		el.hasAttribute(`data-mf-${attrName}`)
 	);
 };
 
@@ -79,7 +80,9 @@ const observer = new MutationObserver((mRecord) => {
 					// ELEMENT_NODE = 1
 					continue;
 				RegEl._registry.get(el)?._dispose?.();
-				for (const d of el.querySelectorAll("*") as Iterable<Registerable>) {
+				for (const d of el.querySelectorAll(
+					"*"
+				) as Iterable<Registerable>) {
 					RegEl._registry.get(d)?._dispose?.();
 				}
 			}
@@ -104,7 +107,7 @@ observer.observe(document, {
 });
 
 const getAttrName = (
-	name: string,
+	name: string
 ): { attrName: string; sync: boolean } | false => {
 	let attrName = "";
 	for (const prefix of prefixes) {
@@ -150,8 +153,7 @@ export default class RegEl {
 			RegEl._viewTransitionsEnabled &&
 			typeof document !== "undefined" &&
 			"startViewTransition" in document &&
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			(document as any).startViewTransition?.(callback);
+			document.startViewTransition?.(callback);
 		if (!trans) {
 			callback();
 			return null as unknown as { finished: Promise<unknown> } | null;
@@ -166,7 +168,7 @@ export default class RegEl {
 				storeName !== undefined && storeName !== null
 					? `="${String(storeName)}"`
 					: ``
-			}]`,
+			}]`
 		) ?? []) {
 			if (node.nodeType !== 1) continue; // ELEMENT_NODE = 1
 			const el = node as Element;
@@ -280,10 +282,10 @@ export default class RegEl {
 
 			const { _fn, _syncRef } = evaluateExpression(exp, { isStyleValue });
 			const isTemplateRoot = templLogicAttrSet.has(
-				attrName as "if" | "each" | "await",
+				attrName as "if" | "each" | "await"
 			);
 			const isTemplateDependent = dependentLogicAttrSet.has(
-				attrName as "elseif" | "else" | "then" | "catch",
+				attrName as "elseif" | "else" | "then" | "catch"
 			);
 			// Note: transition-related handling occurs above (pre-processed)
 
@@ -291,12 +293,17 @@ export default class RegEl {
 
 			// Handle special attributes
 			if (isTemplateRoot) {
-				if (sync) throwError(`Sync on templating logic: ${attrName}`, el, true);
+				if (sync)
+					throwError(
+						`Sync on templating logic: ${attrName}`,
+						el,
+						true
+					);
 				this._handleTemplating(
 					attrName as templLogicAttr,
 					name,
 					_fn,
-					rootAlias,
+					rootAlias
 				);
 				attrWasRegistered.add(attrName);
 				continue;
@@ -387,7 +394,8 @@ export default class RegEl {
 							(el as any)[attrName] = val;
 						}
 					} else {
-						if (val === false || val == null) el.removeAttribute(attrName);
+						if (val === false || val == null)
+							el.removeAttribute(attrName);
 						else el.setAttribute(attrName, String(val));
 					}
 				}
@@ -405,14 +413,16 @@ export default class RegEl {
 						const val =
 							attrName in el
 								? // biome-ignore lint/suspicious/noExplicitAny: Unknown element properties
-									(el as any)[attrName]
+								  (el as any)[attrName]
 								: el.getAttribute(attrName);
 						if (_syncRef)
 							_syncRef(
 								{ state } as unknown as Record<string, unknown>,
-								val as unknown,
+								val as unknown
 							);
-						else (state as Record<string, unknown>)[attrName] = val as unknown;
+						else
+							(state as Record<string, unknown>)[attrName] =
+								val as unknown;
 					} catch {}
 				};
 				this.#mutations.set(attrName, capture);
@@ -426,8 +436,8 @@ export default class RegEl {
 						this._setupSyncEvents(
 							attrName,
 							registeredEvents,
-							capture as EventListener,
-						),
+							capture as EventListener
+						)
 					);
 				}
 			}
@@ -442,7 +452,7 @@ export default class RegEl {
 	_setupSyncEvents = (
 		attrName: "value" | "checked" | "open",
 		registered: Set<string>,
-		handler: EventListener,
+		handler: EventListener
 	) => {
 		const { _el: el } = this;
 
@@ -451,13 +461,13 @@ export default class RegEl {
 				? [
 						["input", "change"],
 						["oninput", "onchange"],
-					]
+				  ]
 				: attrName === "checked"
-					? [["change"], ["onchange", "onchecked"]]
-					: [["toggle"], ["ontoggle"]];
+				? [["change"], ["onchange", "onchecked"]]
+				: [["toggle"], ["ontoggle"]];
 
 		const errorMsg = `sync:${attrName} conflicts with existing :${conflictAttrs.join(
-			" or :",
+			" or :"
 		)}`;
 
 		for (const ca of conflictAttrs)
@@ -479,7 +489,9 @@ export default class RegEl {
 		if (parts.length > 1) {
 			const tokens = parts.map((part) => {
 				if (part.startsWith("${") && part.endsWith("}")) {
-					const { _fn: fn } = evaluateExpression(part.slice(2, -1).trim());
+					const { _fn: fn } = evaluateExpression(
+						part.slice(2, -1).trim()
+					);
 					return { dynamic: true as const, fn };
 				}
 				return { dynamic: false as const, text: part };
@@ -489,7 +501,7 @@ export default class RegEl {
 					.map((t) =>
 						t.dynamic
 							? t.fn({ state: this._state, element: this._el })
-							: t.text,
+							: t.text
 					)
 					.join("");
 			};
@@ -514,7 +526,7 @@ export default class RegEl {
 		attrName: templLogicAttr,
 		attrTagName: string,
 		_fn: (ctx?: Record<string, unknown> | undefined) => unknown,
-		eachAlias?: string,
+		eachAlias?: string
 	) {
 		const isConditional = attrName === "if";
 		const isAsync = attrName === "await";
@@ -529,10 +541,14 @@ export default class RegEl {
 				attrTagName,
 				_fn,
 				throwError,
-				eachAlias,
+				eachAlias
 			);
 		} else if (isConditional || isAsync) {
-			const siblings = findDependentSiblings(this._el, attrName, attrTagName);
+			const siblings = findDependentSiblings(
+				this._el,
+				attrName,
+				attrTagName
+			);
 			// Set the function for the root element
 			siblings[0].fn = _fn;
 
@@ -540,7 +556,7 @@ export default class RegEl {
 				ef = handleConditional(
 					this._state,
 					siblings,
-					this._updateDisplay.bind(this),
+					this._updateDisplay.bind(this)
 				);
 			} else {
 				ef = handleAsync(
@@ -548,7 +564,7 @@ export default class RegEl {
 					siblings,
 					// biome-ignore lint/suspicious/noExplicitAny: temporary for refactoring
 					RegEl as any,
-					this._updateDisplay.bind(this),
+					this._updateDisplay.bind(this)
 				);
 			}
 		} else {
@@ -577,7 +593,6 @@ export default class RegEl {
 		}
 		// Flush styles to ensure properties are applied before capture
 		try {
-			// biome-ignore lint/performance/noDelete: force synchronous layout, intentional side-effect
 			void (nodes[0] as HTMLElement).offsetWidth;
 		} catch {}
 
@@ -613,7 +628,7 @@ export default class RegEl {
 			// Stage VT properties, run within transition, and cleanup
 			this._withTransitionStaging(
 				elementsChanging.map(({ el }) => el),
-				run,
+				run
 			);
 		}
 	}
