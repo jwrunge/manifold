@@ -48,7 +48,7 @@ describe("Advanced Reactivity Features", () => {
 
 		test("should handle complex circular chains", async () => {
 			const stores = Array.from({ length: 5 }, () =>
-				$.create().add("value", 0).build()
+				$.create().add("value", 0).build(),
 			);
 			const effectCounts = Array.from({ length: 5 }, () => 0);
 			const maxRuns = 20;
@@ -174,10 +174,7 @@ describe("Advanced Reactivity Features", () => {
 		});
 
 		test("should handle multiple effects at the same level", async () => {
-			const store = $.create()
-				.add("trigger", 0)
-				.add("counter", 0)
-				.build();
+			const store = $.create().add("trigger", 0).add("counter", 0).build();
 
 			const executionCounts = {
 				level0a: 0,
@@ -314,7 +311,7 @@ describe("Advanced Reactivity Features", () => {
 				hierarchicalOrder.includes("child")
 			) {
 				expect(hierarchicalOrder.indexOf("parent")).toBeLessThan(
-					hierarchicalOrder.indexOf("child")
+					hierarchicalOrder.indexOf("child"),
 				);
 			}
 		});

@@ -21,14 +21,14 @@ describe(":each duplicate value removals", () => {
 		if (!tmpl) throw new Error("template not found");
 		new RegEl(
 			tmpl as unknown as HTMLElement,
-			state as unknown as Record<string, unknown>
+			state as unknown as Record<string, unknown>,
 		);
 		await flush();
 
 		const texts = () =>
-			Array.from(
-				ul.querySelectorAll("li:not([style*='display: none'])")
-			).map((el) => el.textContent?.trim());
+			Array.from(ul.querySelectorAll("li:not([style*='display: none'])")).map(
+				(el) => el.textContent?.trim(),
+			);
 		expect(texts()).toEqual(["(0) 1", "(1) 2", "(2) 2", "(3) 3"]);
 
 		// remove the second '2' (index 2)

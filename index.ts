@@ -40,7 +40,7 @@ myState.loadUser = () => {
 
 			if (fail) rej(new Error("Network"));
 			else res({ name: "Ada", age: 37 + Math.floor(Math.random() * 10) });
-		}, 800)
+		}, 800),
 	);
 	myState.currentUserPromise = p;
 	return p;

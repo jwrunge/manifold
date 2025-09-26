@@ -88,14 +88,14 @@ describe("DOM behavior / structural stability", () => {
 		if (!root) throw new Error("c4 root missing");
 		registerChildren(root, state);
 		await flush();
-		expect(
-			(document.getElementById("a") as HTMLElement).style.display
-		).toBe("");
+		expect((document.getElementById("a") as HTMLElement).style.display).toBe(
+			"",
+		);
 		state.count = 5;
 		await flush();
-		expect(
-			(document.getElementById("a") as HTMLElement).style.display
-		).toBe("none");
+		expect((document.getElementById("a") as HTMLElement).style.display).toBe(
+			"none",
+		);
 	});
 
 	// 5 Elseif without leading if has no gating effect
@@ -126,11 +126,11 @@ describe("DOM behavior / structural stability", () => {
 		state.count = 2;
 		await flush();
 		expect(
-			(document.getElementById("later") as HTMLElement).style.display
+			(document.getElementById("later") as HTMLElement).style.display,
 		).toBe("none");
-		expect(
-			(document.getElementById("else") as HTMLElement).style.display
-		).toBe("");
+		expect((document.getElementById("else") as HTMLElement).style.display).toBe(
+			"",
+		);
 	});
 
 	// 7 Complex interpolation
@@ -176,13 +176,13 @@ describe("DOM behavior / structural stability", () => {
 		await flush();
 		expect(
 			Array.from(ul.querySelectorAll("li")).filter((n) => isDisplayed(n))
-				.length
+				.length,
 		).toBe(3);
 		state.arr = [];
 		await flush();
 		expect(
 			Array.from(ul.querySelectorAll("li")).filter((n) => isDisplayed(n))
-				.length
+				.length,
 		).toBe(0);
 	});
 
@@ -237,10 +237,10 @@ describe("DOM behavior / structural stability", () => {
 		new RegEl(template as HTMLElement, state);
 		await flush();
 		const hits = Array.from(root.querySelectorAll(".hit")).filter((n) =>
-			isDisplayed(n)
+			isDisplayed(n),
 		);
 		const misses = Array.from(root.querySelectorAll(".miss")).filter((n) =>
-			isDisplayed(n)
+			isDisplayed(n),
 		);
 		expect(hits.length).toBe(1);
 		expect(misses.length).toBe(2);
@@ -258,34 +258,34 @@ describe("DOM behavior / structural stability", () => {
 		if (!root) throw new Error("async root missing");
 		registerChildren(root, state);
 		expect(
-			(document.getElementById("await") as HTMLElement).style.display
+			(document.getElementById("await") as HTMLElement).style.display,
 		).toBe("");
+		expect((document.getElementById("then") as HTMLElement).style.display).toBe(
+			"none",
+		);
 		expect(
-			(document.getElementById("then") as HTMLElement).style.display
-		).toBe("none");
-		expect(
-			(document.getElementById("catch") as HTMLElement).style.display
+			(document.getElementById("catch") as HTMLElement).style.display,
 		).toBe("none");
 		await multiFlush(4);
 		expect(
-			(document.getElementById("await") as HTMLElement).style.display
+			(document.getElementById("await") as HTMLElement).style.display,
 		).toBe("none");
-		expect(
-			(document.getElementById("then") as HTMLElement).textContent
-		).toBe("Val: 21");
+		expect((document.getElementById("then") as HTMLElement).textContent).toBe(
+			"Val: 21",
+		);
 		state.ok = false;
 		await multiFlush(6);
 		expect(
-			(document.getElementById("catch") as HTMLElement).style.display
+			(document.getElementById("catch") as HTMLElement).style.display,
 		).toBe("");
-		expect(
-			(document.getElementById("catch") as HTMLElement).textContent
-		).toBe("Err: nope");
+		expect((document.getElementById("catch") as HTMLElement).textContent).toBe(
+			"Err: nope",
+		);
 		state.ok = true;
 		await multiFlush(6);
-		expect(
-			(document.getElementById("then") as HTMLElement).style.display
-		).toBe("");
+		expect((document.getElementById("then") as HTMLElement).style.display).toBe(
+			"",
+		);
 	});
 
 	// 14 Interpolations inside async then/catch
@@ -299,13 +299,13 @@ describe("DOM behavior / structural stability", () => {
 		if (!root) throw new Error("c14 root missing");
 		registerChildren(root, state);
 		await multiFlush(5);
-		expect(
-			(document.getElementById("then14") as HTMLElement).textContent
-		).toBe("Double: 4");
+		expect((document.getElementById("then14") as HTMLElement).textContent).toBe(
+			"Double: 4",
+		);
 		state.ok = false;
 		await multiFlush(6);
 		expect(
-			(document.getElementById("catch14") as HTMLElement).textContent
+			(document.getElementById("catch14") as HTMLElement).textContent,
 		).toBe("Triple: 9");
 	});
 
@@ -321,13 +321,13 @@ describe("DOM behavior / structural stability", () => {
 		registerChildren(root, state);
 		await multiFlush(6);
 		const thenList = Array.from(
-			document.querySelectorAll("#then15 li:not([data-each])")
+			document.querySelectorAll("#then15 li:not([data-each])"),
 		).map((li) => li.textContent?.trim());
 		expect(thenList[0]?.startsWith("First:")).toBe(true);
 		state.ok = false;
 		await multiFlush(6);
 		expect(
-			(document.getElementById("catch15") as HTMLElement).style.display
+			(document.getElementById("catch15") as HTMLElement).style.display,
 		).toBe("");
 	});
 
@@ -345,10 +345,10 @@ describe("DOM behavior / structural stability", () => {
 		registerChildren(root, state);
 		await multiFlush(6);
 		expect(
-			(document.getElementById("innerThen") as HTMLElement).textContent
+			(document.getElementById("innerThen") as HTMLElement).textContent,
 		).toBe("Val=3");
 		const ths = Array.from(root.querySelectorAll(".th")).filter((n) =>
-			isDisplayed(n)
+			isDisplayed(n),
 		);
 		expect(ths.length).toBe(state.arr.length);
 	});
@@ -364,12 +364,8 @@ describe("DOM behavior / structural stability", () => {
 		if (!root) throw new Error("c17 root missing");
 		registerChildren(root, state);
 		await flush();
-		expect(isDisplayed(document.getElementById("prematureThen"))).toBe(
-			true
-		);
+		expect(isDisplayed(document.getElementById("prematureThen"))).toBe(true);
 		await multiFlush(5);
-		expect(isDisplayed(document.getElementById("prematureThen"))).toBe(
-			true
-		);
+		expect(isDisplayed(document.getElementById("prematureThen"))).toBe(true);
 	});
 });

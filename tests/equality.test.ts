@@ -144,10 +144,7 @@ test("Complex object equality with reactive updates", () => {
 	// Setting to equivalent object should not trigger update
 	const equivalentObject = {
 		users: new Map([
-			[
-				"user1",
-				{ name: "Alice", metadata: { scores: new Set([100, 200]) } },
-			],
+			["user1", { name: "Alice", metadata: { scores: new Set([100, 200]) } }],
 		]),
 		settings: { theme: "dark", notifications: true },
 	};
@@ -160,10 +157,7 @@ test("Complex object equality with reactive updates", () => {
 	// and granular reactivity. Individual property changes are tracked separately.
 	const differentObject = {
 		users: new Map([
-			[
-				"user1",
-				{ name: "Bob", metadata: { scores: new Set([100, 200]) } },
-			],
+			["user1", { name: "Bob", metadata: { scores: new Set([100, 200]) } }],
 		]),
 		settings: { theme: "dark", notifications: true },
 	};

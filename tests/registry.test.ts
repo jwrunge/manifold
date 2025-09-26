@@ -16,7 +16,7 @@ let state: {
 const initState = (data: Record<string, unknown>) => {
 	state = StateBuilder.create(
 		undefined,
-		data as Record<string, unknown>
+		data as Record<string, unknown>,
 	).build() as typeof state;
 };
 
@@ -30,7 +30,7 @@ describe("registry basics", () => {
 			],
 			flag: true,
 			promiseVal: 5,
-		})
+		}),
 	);
 
 	test("conditional chain :if / :elseif / :else", async () => {
@@ -44,22 +44,22 @@ describe("registry basics", () => {
 		for (const el of Array.from(root.querySelectorAll("*")))
 			new RegEl(el as HTMLElement, state);
 		await flush();
+		expect((document.getElementById("ifEl") as HTMLElement).style.display).toBe(
+			"none",
+		);
 		expect(
-			(document.getElementById("ifEl") as HTMLElement).style.display
-		).toBe("none");
-		expect(
-			(document.getElementById("elseifEl") as HTMLElement).style.display
+			(document.getElementById("elseifEl") as HTMLElement).style.display,
 		).toBe("");
 		expect(
-			(document.getElementById("elseEl") as HTMLElement).style.display
+			(document.getElementById("elseEl") as HTMLElement).style.display,
 		).toBe("none");
 		state.count = 3;
 		await flush();
+		expect((document.getElementById("ifEl") as HTMLElement).style.display).toBe(
+			"",
+		);
 		expect(
-			(document.getElementById("ifEl") as HTMLElement).style.display
-		).toBe("");
-		expect(
-			(document.getElementById("elseifEl") as HTMLElement).style.display
+			(document.getElementById("elseifEl") as HTMLElement).style.display,
 		).toBe("none");
 	});
 
@@ -95,13 +95,10 @@ describe("registry basics", () => {
 		if (!ul) throw new Error("ul missing");
 		const li = ul.querySelector("li");
 		if (!li) throw new Error("li missing");
-		new RegEl(
-			li as HTMLElement,
-			local as unknown as Record<string, unknown>
-		);
+		new RegEl(li as HTMLElement, local as unknown as Record<string, unknown>);
 		await flush();
 		const texts = Array.from(
-			ul.querySelectorAll("li:not([style*='display: none'])")
+			ul.querySelectorAll("li:not([style*='display: none'])"),
 		).map((el) => el.textContent?.trim());
 		expect(texts).toEqual(["Item 0: 10", "Item 1: 20", "Item 2: 30"]);
 	});
@@ -117,13 +114,10 @@ describe("registry basics", () => {
 		if (!ul) throw new Error("ul missing");
 		const li = ul.querySelector("li");
 		if (!li) throw new Error("li missing");
-		new RegEl(
-			li as HTMLElement,
-			local as unknown as Record<string, unknown>
-		);
+		new RegEl(li as HTMLElement, local as unknown as Record<string, unknown>);
 		await flush();
 		const texts = Array.from(
-			ul.querySelectorAll("li:not([style*='display: none'])")
+			ul.querySelectorAll("li:not([style*='display: none'])"),
 		).map((el) => el.textContent?.trim());
 		expect(texts).toEqual(["Val 5", "Val 6"]);
 	});
@@ -157,8 +151,7 @@ describe("registry basics", () => {
 	test("event handler executes via function call", async () => {
 		// Add increment function to state
 		(state as Record<string, unknown>).increment = () => {
-			(state as Record<string, unknown>).count =
-				(state.count as number) + 5;
+			(state as Record<string, unknown>).count = (state.count as number) + 5;
 		};
 		document.body.innerHTML = `<button :onclick="increment()" id="btn2">++</button>`;
 		const btn2 = document.getElementById("btn2") as HTMLButtonElement;
@@ -337,27 +330,27 @@ describe("extended registry features", () => {
 			new RegEl(el as HTMLElement, local);
 		// Initial: loading visible, then/catch hidden
 		expect(
-			(document.getElementById("await") as HTMLElement).style.display
+			(document.getElementById("await") as HTMLElement).style.display,
 		).toBe("");
+		expect((document.getElementById("then") as HTMLElement).style.display).toBe(
+			"none",
+		);
 		expect(
-			(document.getElementById("then") as HTMLElement).style.display
-		).toBe("none");
-		expect(
-			(document.getElementById("catch") as HTMLElement).style.display
+			(document.getElementById("catch") as HTMLElement).style.display,
 		).toBe("none");
 		for (let i = 0; i < 4; i++) await flush();
 		// After resolution: loading hidden, then visible with interpolated value, catch hidden
 		expect(
-			(document.getElementById("await") as HTMLElement).style.display
+			(document.getElementById("await") as HTMLElement).style.display,
 		).toBe("none");
+		expect((document.getElementById("then") as HTMLElement).style.display).toBe(
+			"",
+		);
+		expect((document.getElementById("then") as HTMLElement).textContent).toBe(
+			"Val: 42",
+		);
 		expect(
-			(document.getElementById("then") as HTMLElement).style.display
-		).toBe("");
-		expect(
-			(document.getElementById("then") as HTMLElement).textContent
-		).toBe("Val: 42");
-		expect(
-			(document.getElementById("catch") as HTMLElement).style.display
+			(document.getElementById("catch") as HTMLElement).style.display,
 		).toBe("none");
 		// trigger failure path
 		local.ok = false;
@@ -368,11 +361,11 @@ describe("extended registry features", () => {
 		for (let i = 0; i < 2; i++) await flush();
 		// Because we reused same nodes, check that catch becomes visible
 		expect(
-			(document.getElementById("catch") as HTMLElement).style.display
+			(document.getElementById("catch") as HTMLElement).style.display,
 		).toBe("");
-		expect(
-			(document.getElementById("catch") as HTMLElement).textContent
-		).toBe("Err: fail");
+		expect((document.getElementById("catch") as HTMLElement).textContent).toBe(
+			"Err: fail",
+		);
 	});
 
 	test("auto-registration binds all [data-mf-register] using single state", async () => {
@@ -389,22 +382,22 @@ describe("extended registry features", () => {
 			b: number;
 		};
 		await flush();
-		expect(
-			(document.getElementById("aVal") as HTMLElement).textContent
-		).toBe("1");
-		expect(
-			(document.getElementById("bVal") as HTMLElement).textContent
-		).toBe("2");
+		expect((document.getElementById("aVal") as HTMLElement).textContent).toBe(
+			"1",
+		);
+		expect((document.getElementById("bVal") as HTMLElement).textContent).toBe(
+			"2",
+		);
 		// Update and ensure both update
 		b.a = 3;
 		b.b = 4;
 		await flush();
-		expect(
-			(document.getElementById("aVal") as HTMLElement).textContent
-		).toBe("3");
-		expect(
-			(document.getElementById("bVal") as HTMLElement).textContent
-		).toBe("4");
+		expect((document.getElementById("aVal") as HTMLElement).textContent).toBe(
+			"3",
+		);
+		expect((document.getElementById("bVal") as HTMLElement).textContent).toBe(
+			"4",
+		);
 	});
 
 	test("checked sync", async () => {
@@ -437,15 +430,15 @@ describe("extended registry features", () => {
 			new RegEl(el as HTMLElement, s);
 		});
 		for (let i = 0; i < 2; i++) await flush();
-		expect(
-			(document.getElementById("txtInp") as HTMLInputElement).value
-		).toBe("hi");
+		expect((document.getElementById("txtInp") as HTMLInputElement).value).toBe(
+			"hi",
+		);
 		(document.getElementById("btn") as HTMLButtonElement).click();
 		for (let i = 0; i < 2; i++) await flush();
 		expect(s.txt).toBe("yo");
-		expect(
-			(document.getElementById("txtInp") as HTMLInputElement).value
-		).toBe("yo");
+		expect((document.getElementById("txtInp") as HTMLInputElement).value).toBe(
+			"yo",
+		);
 	});
 
 	test("selectedIndex updates via button handler", async () => {
@@ -477,15 +470,12 @@ describe("extended registry features", () => {
 		if (!ul) throw new Error("ul missing");
 		const li = ul.querySelector("li");
 		if (!li) throw new Error("li missing");
-		new RegEl(
-			li as HTMLElement,
-			local as unknown as Record<string, unknown>
-		);
+		new RegEl(li as HTMLElement, local as unknown as Record<string, unknown>);
 		await flush();
 		const texts = () =>
-			Array.from(
-				ul.querySelectorAll("li:not([style*='display: none'])")
-			).map((el) => el.textContent?.trim());
+			Array.from(ul.querySelectorAll("li:not([style*='display: none'])")).map(
+				(el) => el.textContent?.trim(),
+			);
 		expect(texts()).toEqual(["(0) a", "(1) b", "(2) c"]);
 		local.arr[3] = "d"; // direct index set beyond current length
 		await flush();
@@ -503,10 +493,7 @@ describe("extended registry features", () => {
 		if (!ul) throw new Error("ul missing");
 		const li = ul.querySelector("li");
 		if (!li) throw new Error("li missing");
-		new RegEl(
-			li as HTMLElement,
-			local as unknown as Record<string, unknown>
-		);
+		new RegEl(li as HTMLElement, local as unknown as Record<string, unknown>);
 		await flush();
 		const textAt = (i: number) =>
 			Array.from(ul.querySelectorAll("li:not([style*='display: none'])"))[

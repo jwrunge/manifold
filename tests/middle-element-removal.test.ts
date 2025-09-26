@@ -27,7 +27,7 @@ describe("Middle Element Removal Fix", () => {
 		// Initialize the RegEl
 		new RegEl(
 			template as HTMLElement,
-			state as unknown as Record<string, unknown>
+			state as unknown as Record<string, unknown>,
 		);
 		await flush();
 
@@ -83,7 +83,7 @@ describe("Middle Element Removal Fix", () => {
 
 		new RegEl(
 			template as HTMLElement,
-			state as unknown as Record<string, unknown>
+			state as unknown as Record<string, unknown>,
 		);
 		await flush();
 
@@ -123,7 +123,7 @@ describe("Middle Element Removal Fix", () => {
 
 		new RegEl(
 			template as HTMLElement,
-			state as unknown as Record<string, unknown>
+			state as unknown as Record<string, unknown>,
 		);
 		await flush();
 

@@ -24,7 +24,7 @@ describe("Specific Bug Fix: Item 3, 4, 5 scenario", () => {
 
 		new RegEl(
 			template as HTMLElement,
-			state as unknown as Record<string, unknown>
+			state as unknown as Record<string, unknown>,
 		);
 		await flush();
 
@@ -81,7 +81,7 @@ describe("Specific Bug Fix: Item 3, 4, 5 scenario", () => {
 
 		new RegEl(
 			template as HTMLElement,
-			state as unknown as Record<string, unknown>
+			state as unknown as Record<string, unknown>,
 		);
 		await flush();
 
@@ -90,13 +90,7 @@ describe("Specific Bug Fix: Item 3, 4, 5 scenario", () => {
 		const getText = () => getItems().map((el) => el.textContent?.trim());
 
 		// Initial state
-		expect(getText()).toEqual([
-			"(0) a",
-			"(1) b",
-			"(2) c",
-			"(3) d",
-			"(4) e",
-		]);
+		expect(getText()).toEqual(["(0) a", "(1) b", "(2) c", "(3) d", "(4) e"]);
 
 		// Remove "c" (middle element at index 2)
 		state.items = ["a", "b", "d", "e"];

@@ -45,9 +45,7 @@ describe("fetchContent DOM insertion", () => {
 		const to = document.querySelector("#to");
 		if (!to) throw new Error("#to not found");
 		// should contain both registered divs from payload
-		const ids = Array.from(to.querySelectorAll("#b1, #b2")).map(
-			(e) => e.id
-		);
+		const ids = Array.from(to.querySelectorAll("#b1, #b2")).map((e) => e.id);
 		expect(ids).toEqual(["b1", "b2"]);
 		// filtered script executed
 		expect((window as unknown as { __bRan?: number }).__bRan).toBe(1);

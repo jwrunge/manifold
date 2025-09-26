@@ -15,7 +15,7 @@ import {
 export function findDependentSiblings(
 	element: Registerable,
 	attrName: templLogicAttr,
-	attrTagName: string
+	attrTagName: string,
 ): Sibling[] {
 	const siblings: Sibling[] = [
 		{

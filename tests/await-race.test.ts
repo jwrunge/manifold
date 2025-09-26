@@ -33,10 +33,7 @@ describe(":await race handling", () => {
 		const root = document.querySelector("div");
 		if (!root) throw new Error("root missing");
 		for (const el of Array.from(root.children))
-			new RegEl(
-				el as HTMLElement,
-				state as unknown as Record<string, unknown>
-			);
+			new RegEl(el as HTMLElement, state as unknown as Record<string, unknown>);
 
 		// assign first promise, then replace with second before it resolves
 		state.p = pA;

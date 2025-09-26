@@ -19,14 +19,11 @@ describe(":each object destructuring aliases", () => {
 		if (!ul) throw new Error("ul missing");
 		const li = ul.querySelector("li");
 		if (!li) throw new Error("li missing");
-		new RegEl(
-			li as HTMLElement,
-			state as unknown as Record<string, unknown>
-		);
+		new RegEl(li as HTMLElement, state as unknown as Record<string, unknown>);
 		await flush();
 
 		const texts = Array.from(
-			ul.querySelectorAll("li:not([style*='display: none'])")
+			ul.querySelectorAll("li:not([style*='display: none'])"),
 		).map((el) => el.textContent?.trim());
 
 		expect(texts).toEqual(["Jake (37)", "Mary (37)", "Isaac (6)"]);
@@ -45,14 +42,11 @@ describe(":each object destructuring aliases", () => {
 		if (!ul) throw new Error("ul missing");
 		const li = ul.querySelector("li");
 		if (!li) throw new Error("li missing");
-		new RegEl(
-			li as HTMLElement,
-			state as unknown as Record<string, unknown>
-		);
+		new RegEl(li as HTMLElement, state as unknown as Record<string, unknown>);
 		await flush();
 
 		const texts = Array.from(
-			ul.querySelectorAll("li:not([style*='display: none'])")
+			ul.querySelectorAll("li:not([style*='display: none'])"),
 		).map((el) => el.textContent?.trim().replace(/\s+/g, " "));
 
 		expect(texts).toEqual(["0: Ada-40", "1: Alan-42"]);
