@@ -1,0 +1,47 @@
+name: Checks (reusable)
+
+on:
+    workflow_call:
+        inputs:
+            node-version:
+                required: false
+                type: string
+                default: "24"
+
+jobs:
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ inputs.node-version }}
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci --prefer-offline --no-audit || npm install
+
+            - name: Lint (Biome)
+              run: npm run lint
+
+    test:
+        needs: lint
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ inputs.node-version }}
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci --prefer-offline --no-audit || npm install
+
+            - name: Run tests (Vitest)
+              run: npm test --silent

@@ -14,46 +14,15 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
-    # Run the same checks as CI to ensure quality
-    lint:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 22
-                  cache: npm
-
-            - name: Install dependencies
-              run: npm ci --prefer-offline --no-audit || npm install
-
-            - name: Lint (Biome)
-              run: npm run lint
-
-    test:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 24
-                  cache: npm
-
-            - name: Install dependencies
-              run: npm ci --prefer-offline --no-audit || npm install
-
-            - name: Run tests (Vitest)
-              run: npm test --silent
+    # Run checks via the reusable workflow
+    run-checks:
+        uses: ./.github/workflows/checks.yml
+        with:
+            node-version: "24"
 
     # Build and publish to multiple registries
     release:
-        needs: [lint, test]
+        needs: [run-checks]
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
@@ -146,23 +115,8 @@ jobs:
               if: steps.version_check.outputs.should_publish_npm == 'true'
               run: |
                   echo "Publishing version ${{ steps.version_check.outputs.version }} to JSR"
-                  # Update both JSR and Deno config versions to match package.json
-                  node -e "
-                    const pkg = require('./package.json');
-                    
-                    // Update jsr.json
-                    const jsr = require('./jsr.json');
-                    jsr.version = pkg.version;
-                    require('fs').writeFileSync('jsr.json', JSON.stringify(jsr, null, 2));
-                    
-                    // Update deno.json version too
-                    const deno = require('./deno.json');
-                    deno.version = pkg.version;
-                    require('fs').writeFileSync('deno.json', JSON.stringify(deno, null, 2));
-                    
-                    console.log('Updated JSR configuration:');
-                    console.log(JSON.stringify(jsr, null, 2));
-                  "
+                  # Update both JSR and Deno config versions to match package.json via Deno script
+                  deno run --allow-read --allow-write scripts/update-release-config.ts
                   # Use deno publish directly which properly supports --allow-dirty
                   deno publish --allow-dirty || echo "First attempt failed, trying with --allow-slow-types"
                   deno publish --allow-dirty --allow-slow-types || echo "JSR publish failed"
