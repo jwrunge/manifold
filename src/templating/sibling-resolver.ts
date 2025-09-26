@@ -1,11 +1,11 @@
-import evaluateExpression from "../expression-parser";
-import { splitAs } from "../parsing-utils";
+import evaluateExpression from "../expression-parser.ts";
+import { splitAs } from "../parsing-utils.ts";
 import {
 	prefixes,
 	type Registerable,
 	type Sibling,
 	type templLogicAttr,
-} from "./types";
+} from "./types.ts";
 
 // Reuse shared splitAs from parsing-utils to reduce duplication
 
@@ -15,7 +15,7 @@ import {
 export function findDependentSiblings(
 	element: Registerable,
 	attrName: templLogicAttr,
-	attrTagName: string,
+	attrTagName: string
 ): Sibling[] {
 	const siblings: Sibling[] = [
 		{

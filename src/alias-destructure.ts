@@ -1,9 +1,9 @@
-import { indexOfTopLevel, isIdent, splitTopLevel } from "./parsing-utils.js";
+import { indexOfTopLevel, isIdent, splitTopLevel } from "./parsing-utils.ts";
 
 const bindIdent = (
 	ident: string,
 	val: unknown,
-	target: Record<string, unknown>,
+	target: Record<string, unknown>
 ) => {
 	if (!ident) return;
 	if (!isIdent(ident)) return;
@@ -13,7 +13,7 @@ const bindIdent = (
 const applyObjectPattern = (
 	pattern: string,
 	value: unknown,
-	target: Record<string, unknown>,
+	target: Record<string, unknown>
 ) => {
 	if (value == null || typeof value !== "object") return;
 	const inner = pattern.trim().slice(1, -1).trim();
@@ -45,7 +45,7 @@ const applyObjectPattern = (
 const applyArrayPattern = (
 	pattern: string,
 	value: unknown,
-	target: Record<string, unknown>,
+	target: Record<string, unknown>
 ) => {
 	if (!Array.isArray(value)) return;
 	const inner = pattern.trim().slice(1, -1);
@@ -67,7 +67,7 @@ const applyArrayPattern = (
 export const applyAliasPattern = (
 	aliasStr: string | undefined,
 	value: unknown,
-	target: Record<string, unknown>,
+	target: Record<string, unknown>
 ) => {
 	const pat = (aliasStr || "").trim();
 	if (!pat) return;

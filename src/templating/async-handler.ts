@@ -1,6 +1,6 @@
-import applyAliasPattern from "../alias-destructure";
-import { type Effect, effect } from "../Effect";
-import type { Sibling } from "./types";
+import applyAliasPattern from "../alias-destructure.ts";
+import { type Effect, effect } from "../Effect.ts";
+import type { Sibling } from "./types.ts";
 
 // Type for the RegEl class (to avoid circular dependencies)
 interface RegElLike {
@@ -19,7 +19,7 @@ export function handleAsync(
 	state: Record<string, unknown>,
 	siblings: Sibling[],
 	RegElClass: RegElStatic,
-	updateDisplay: (sibs: Pick<Sibling, "el">[]) => void,
+	updateDisplay: (sibs: Pick<Sibling, "el">[]) => void
 ): Effect {
 	let lastPromise: Promise<unknown> | null = null;
 	let promiseId = 0; // Add a unique ID for each promise
@@ -78,10 +78,17 @@ export function handleAsync(
 
 				// Destructure aliases for :then value using the sibling's expression string
 				if (thenLink?.alias) {
-					const thenInst = RegElClass._registerOrGet(thenLink.el, state);
+					const thenInst = RegElClass._registerOrGet(
+						thenLink.el,
+						state
+					);
 
 					if (thenInst)
-						applyAliasPattern(thenLink.alias, _val, thenInst._state);
+						applyAliasPattern(
+							thenLink.alias,
+							_val,
+							thenInst._state
+						);
 				}
 				updateDisplay(siblings);
 			},
@@ -96,10 +103,14 @@ export function handleAsync(
 				if (catchLink?.alias) {
 					const catchInst = RegElClass._registry.get(catchLink.el);
 					if (catchInst)
-						applyAliasPattern(catchLink.alias, _err, catchInst._state);
+						applyAliasPattern(
+							catchLink.alias,
+							_err,
+							catchInst._state
+						);
 				}
 				updateDisplay(siblings);
-			},
+			}
 		);
 	});
 

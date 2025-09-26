@@ -1,10 +1,10 @@
-import applyAliasPattern from "../alias-destructure";
-import { VT_CLASS } from "../css";
-import { type Effect, effect } from "../Effect";
-import Manifold from "../main";
-import { indexOfTopLevel, isIdent } from "../parsing-utils";
-import { scopeProxy } from "../proxy";
-import type { Registerable } from "./types";
+import applyAliasPattern from "../alias-destructure.ts";
+import { VT_CLASS } from "../css.ts";
+import { type Effect, effect } from "../Effect.ts";
+import Manifold from "../main.ts";
+import { indexOfTopLevel, isIdent } from "../parsing-utils.ts";
+import { scopeProxy } from "../proxy.ts";
+import type { Registerable } from "./types.ts";
 
 // Type for the RegEl class (to avoid circular dependencies)
 interface RegElLike {
@@ -35,7 +35,7 @@ export function handleEach(
 	attrTagName: string,
 	_fn: (ctx?: Record<string, unknown> | undefined) => unknown,
 	throwError: (msg: string, cause?: unknown) => void,
-	eachAlias?: string,
+	eachAlias?: string
 ): Effect {
 	const markWithVTClass = (nodes: Registerable[]) => {
 		const marked: Registerable[] = [];
@@ -106,7 +106,7 @@ export function handleEach(
 		const bindEachAliases = (
 			inst: { _state: Record<string, unknown> } | undefined,
 			val: unknown,
-			idx: number,
+			idx: number
 		) => {
 			if (!inst || !eachAlias) return;
 			const alias = eachAlias;
@@ -243,18 +243,19 @@ export function handleEach(
 				// Adding new elements
 				const frag = document.createDocumentFragment();
 				for (let i = cur; i < next; i++) {
-					const clone = regEl._cachedContent?.cloneNode(true) as Registerable;
+					const clone = regEl._cachedContent?.cloneNode(
+						true
+					) as Registerable;
 					// Create a per-item overlay state and pre-apply aliases so initial text effects see values
-					const childBase = scopeProxy(regEl._stateAsRecord()) as Record<
-						string,
-						unknown
-					>;
+					const childBase = scopeProxy(
+						regEl._stateAsRecord()
+					) as Record<string, unknown>;
 					bindEachAliases(
 						{ _state: childBase } as unknown as {
 							_state: Record<string, unknown>;
 						},
 						list[i],
-						i,
+						i
 					);
 					RegElClass._registerOrGet(clone, childBase);
 					instances?.push(clone);

@@ -1,11 +1,14 @@
-import { indexOfTopLevel, isIdent, splitTopLevel } from "./parsing-utils.js";
+import { indexOfTopLevel, isIdent, splitTopLevel } from "./parsing-utils.ts";
 
 // Expression parser expects state injected via ctx.state
 export interface ParsedExpression {
 	_fn: (ctx?: Record<string, unknown>) => unknown | Promise<unknown>;
 	// For simple reference chains (e.g., foo, foo.bar, foo[0].baz), provide a setter to update state
 	// Not provided for expressions with operators or function calls
-	_syncRef?: (ctx: Record<string, unknown> | undefined, value: unknown) => void;
+	_syncRef?: (
+		ctx: Record<string, unknown> | undefined,
+		value: unknown
+	) => void;
 }
 const CACHE = new Map<string, ParsedExpression>();
 const CACHE_MAX = 1000;
@@ -26,7 +29,7 @@ type ChainSeg = ChainSegmentProp | ChainSegmentIdx | ChainSegmentCall;
 const splitOuterRightmost = (
 	expr: string,
 	ops: string[],
-	guardUnaryPM = false,
+	guardUnaryPM = false
 ): [string, string, string] | null => {
 	let p = 0,
 		b = 0,
@@ -83,7 +86,7 @@ const splitByPrecedence = (expr: string): [string, string, string] | null => {
 	return null;
 };
 const buildChain = (
-	expr: string,
+	expr: string
 ): { _base: string; _segs: ChainSeg[] } | null => {
 	if (!/^[a-zA-Z_$]/.test(expr)) return null;
 	let i = 0,
@@ -181,7 +184,8 @@ const parse = (raw: string): ParsedExpression => {
 			if (idx === -1) {
 				// Shorthand property: { foo }
 				const key = entry.trim();
-				if (!isIdent(key)) return { k: key, v: { _fn: () => undefined } };
+				if (!isIdent(key))
+					return { k: key, v: { _fn: () => undefined } };
 				return { k: key, v: parse(key) };
 			}
 			const left = entry.slice(0, idx).trim();
@@ -243,7 +247,8 @@ const parse = (raw: string): ParsedExpression => {
 			const elseP = parse(expr.slice(cIdx + 1).trim());
 			if (cond && thenP && elseP)
 				return {
-					_fn: (ctx) => (cond._fn(ctx) ? thenP._fn(ctx) : elseP._fn(ctx)),
+					_fn: (ctx) =>
+						cond._fn(ctx) ? thenP._fn(ctx) : elseP._fn(ctx),
 				};
 		}
 	}
@@ -274,8 +279,11 @@ const parse = (raw: string): ParsedExpression => {
 						const A = l._fn(c) as unknown;
 						const B = r._fn(c) as unknown;
 						if (OP === "+")
-							return typeof A === "string" || typeof B === "string"
-								? `${A as string | number}${B as string | number}`
+							return typeof A === "string" ||
+								typeof B === "string"
+								? `${A as string | number}${
+										B as string | number
+								  }`
 								: (A as number) + (B as number);
 						if (OP === "-") return (A as number) - (B as number);
 						if (OP === "*") return (A as number) * (B as number);
@@ -353,8 +361,10 @@ const parse = (raw: string): ParsedExpression => {
 					if (typeof fn === "function") {
 						const argVals = seg.args.map((a) => a._fn(ctx));
 						cur = (fn as (...x: unknown[]) => unknown).apply(
-							lastObjForCall !== undefined ? lastObjForCall : undefined,
-							argVals,
+							lastObjForCall !== undefined
+								? lastObjForCall
+								: undefined,
+							argVals
 						);
 						lastObjForCall = cur;
 					} else return undefined;
@@ -366,9 +376,12 @@ const parse = (raw: string): ParsedExpression => {
 			? undefined
 			: (c: Record<string, unknown> | undefined, value: unknown) => {
 					const ctx = (c || {}) as Record<string, unknown>;
-					const injected = ctx.state as Record<string, unknown> | undefined;
+					const injected = ctx.state as
+						| Record<string, unknown>
+						| undefined;
 					let rootHolder: Record<string, unknown> | undefined;
-					if (injected && chain._base in injected) rootHolder = injected;
+					if (injected && chain._base in injected)
+						rootHolder = injected;
 					else if (ctx && chain._base in ctx) rootHolder = ctx;
 					else return;
 					if (chain._segs.length === 0) {
@@ -383,9 +396,13 @@ const parse = (raw: string): ParsedExpression => {
 						const seg = chain._segs[i];
 						if (obj == null) return;
 						if (seg.t === "prop")
-							obj = (obj as Record<string, unknown>)[seg.k as never];
+							obj = (obj as Record<string, unknown>)[
+								seg.k as never
+							];
 						else if (seg.t === "idx")
-							obj = (obj as Record<string, unknown>)[seg.e._fn(ctx) as never];
+							obj = (obj as Record<string, unknown>)[
+								seg.e._fn(ctx) as never
+							];
 					}
 					if (obj == null) return;
 					const last = chain._segs[chain._segs.length - 1];
@@ -393,16 +410,17 @@ const parse = (raw: string): ParsedExpression => {
 						(obj as Record<string, unknown>)[last.k as never] =
 							value as unknown;
 					else if (last.t === "idx")
-						(obj as Record<string, unknown>)[last.e._fn(ctx) as never] =
-							value as unknown;
-				};
+						(obj as Record<string, unknown>)[
+							last.e._fn(ctx) as never
+						] = value as unknown;
+			  };
 		return { _fn: fn, _syncRef: syncRef };
 	}
 	return { _fn: () => expr };
 };
 const evaluateExpression = (
 	expr: string,
-	context?: { isStyleValue?: boolean },
+	context?: { isStyleValue?: boolean }
 ): ParsedExpression => {
 	const cached = CACHE.get(expr);
 	if (cached) return cached;

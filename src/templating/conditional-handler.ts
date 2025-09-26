@@ -1,5 +1,5 @@
-import { type Effect, effect } from "../Effect";
-import type { Sibling } from "./types";
+import { type Effect, effect } from "../Effect.ts";
+import type { Sibling } from "./types.ts";
 
 /**
  * Handles conditional templating logic (if/elseif/else)
@@ -7,7 +7,7 @@ import type { Sibling } from "./types";
 export function handleConditional(
 	state: Record<string, unknown>,
 	siblings: Sibling[],
-	updateDisplay: (sibs: Pick<Sibling, "el">[]) => void,
+	updateDisplay: (sibs: Pick<Sibling, "el">[]) => void
 ): Effect {
 	const ef = effect(() => {
 		let matched = false;
@@ -20,7 +20,7 @@ export function handleConditional(
 						: !!fn?.({
 								state,
 								element: el,
-							});
+						  });
 				matched = !!el.mfshow;
 			}
 		}
