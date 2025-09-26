@@ -80,6 +80,14 @@ const arrMethods = [
 	"sort",
 	"reverse",
 ];
+/**
+ * Wrap an object in Manifold's reactivity proxy.
+ *
+ * This returns a proxied version of `obj` that tracks property access and
+ * notifies dependent effects on changes. Non-object inputs are returned as-is
+ * and Promises are intentionally not proxied.
+ * @public
+ */
 export const proxy = (obj: object): StateConstraint | Promise<unknown> => {
 	if (!obj || typeof obj !== "object") return obj;
 	// Do not proxy Promises!
@@ -127,6 +135,14 @@ export const proxy = (obj: object): StateConstraint | Promise<unknown> => {
 			}),
 	);
 };
+/**
+ * Create a small overlay proxy scoped to a base object.
+ *
+ * The returned proxy behaves like an overlay: reads fall back to `base` when
+ * not present locally, while writes prefer the local overlay unless the key
+ * exists on the base. This is used to create isolated view scopes.
+ * @public
+ */
 export const scopeProxy = <T extends object>(base: T): T => {
 	const localTarget: Record<PropertyKey, unknown> = Object.create(null);
 	const local = proxy(localTarget) as Record<PropertyKey, unknown>;

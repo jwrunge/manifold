@@ -1,12 +1,28 @@
 import { VT_CLASS } from "./css.ts";
 import RegEl from "./registry.ts";
 
-/** Methods used when inserting fetched content into the DOM. */
-type InsertContentMethod = "append" | "prepend" | "replace";
+/**
+ * Methods used when inserting fetched content into the DOM.
+ *
+ * Example:
+ * ```ts
+ * // insert content by replacing the target
+ * const handle = Manifold.get('/snippet.html');
+ * await handle.replace('#root');
+ * ```
+ * @public
+ */
+export type InsertContentMethod = "append" | "prepend" | "replace";
 
 /**
  * Options controlling how fetched DOM content is inserted.
  * @public
+ * Example:
+ * ```ts
+ * // Fetch a snippet and append it to #main, including inline scripts
+ * const h = Manifold.get('/snippet.html', undefined, { insertScripts: true });
+ * await h.append('#main');
+ * ```
  */
 export type FetchDOMOptions = {
 	from?: string;
@@ -127,6 +143,8 @@ const insertStyles = (
 
 /**
  * Fetch HTML content and insert it into the document according to options.
+ * This helper works in both browser and Node (test) environments; when run
+ * under Node it supports reading local files via file: URLs or paths.
  * @public
  */
 const fetchContent = async (

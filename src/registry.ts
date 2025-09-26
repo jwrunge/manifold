@@ -124,6 +124,15 @@ const getAttrName = (
 	return { attrName, sync };
 };
 
+/**
+ * Registration helper that manages bindings between DOM elements and store state.
+ *
+ * RegEl instances are created for elements annotated with `data-mf-register`.
+ * The class coordinates templating handlers, attribute bindings, and cleanup.
+ * Only instance construction and the static registration helpers are intended
+ * to be used externally; most methods are internal implementation details.
+ * @public
+ */
 export default class RegEl {
 	static _registry = new WeakMap<Registerable, RegEl>();
 	static _mutations = new WeakMap<Registerable, Map<string, () => void>>();

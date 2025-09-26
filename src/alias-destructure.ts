@@ -64,6 +64,14 @@ const applyArrayPattern = (
 	}
 };
 
+/**
+ * Apply an alias destructure pattern to a value and bind identifiers on `target`.
+ *
+ * Supports object patterns (`{a, b}`), array patterns (`[a, b]`) and simple
+ * identifier aliases. Used internally by the templating engine to expose
+ * loop/alias variables.
+ * @public
+ */
 export const applyAliasPattern = (
 	aliasStr: string | undefined,
 	value: unknown,

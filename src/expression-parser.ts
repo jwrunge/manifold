@@ -1,5 +1,11 @@
 import { indexOfTopLevel, isIdent, splitTopLevel } from "./parsing-utils.ts";
 
+/**
+ * Expression parser utilities used to evaluate template expressions against a state object.
+ * The parser returns a small object with a function to evaluate the expression and an
+ * optional sync setter for simple reference chains.
+ * @module
+ */
 // Expression parser expects state injected via ctx.state
 export interface ParsedExpression {
 	_fn: (ctx?: Record<string, unknown>) => unknown | Promise<unknown>;

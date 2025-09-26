@@ -1,8 +1,27 @@
+/**
+ * Manifold
+ *
+ * A compact reactive templating and state-management library for the DOM.
+ * The module exports the default Manifold class and a few helper types used
+ * by advanced consumers (e.g. fetch helpers). See individual symbols for
+ * usage examples.
+ * @module
+ */
+
 import { Effect } from "./Effect.ts";
 import isEqual from "./equality.ts";
 import serverPage from "./fetch.ts";
 
-export type { FetchDOMOptions, FetchedContent } from "./fetch.ts";
+/**
+ * Options for DOM-targeted fetch helpers and the returned content handle.
+ * These are re-exported here for convenience.
+ * @public
+ */
+export type {
+	FetchDOMOptions,
+	FetchedContent,
+	InsertContentMethod,
+} from "./fetch.ts";
 
 import { globalStores } from "./globalstores.ts";
 import { proxy } from "./proxy.ts";
