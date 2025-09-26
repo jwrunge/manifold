@@ -18,7 +18,7 @@ const flushEffects = () => {
 			if (maxLevel > 0) {
 				const buckets: Effect[][] = Array.from(
 					{ length: maxLevel + 1 },
-					() => [],
+					() => []
 				);
 				for (const e of effectsToRun) buckets[e._level].push(e);
 				for (const b of buckets) for (const e of b) e._run();
@@ -80,6 +80,14 @@ const arrMethods = [
 	"sort",
 	"reverse",
 ];
+/**
+ * Wrap an object in Manifold's reactivity proxy.
+ *
+ * This returns a proxied version of `obj` that tracks property access and
+ * notifies dependent effects on changes. Non-object inputs are returned as-is
+ * and Promises are intentionally not proxied.
+ * @public
+ */
 export const proxy = (obj: object): StateConstraint | Promise<unknown> => {
 	if (!obj || typeof obj !== "object") return obj;
 	// Do not proxy Promises!
@@ -89,15 +97,22 @@ export const proxy = (obj: object): StateConstraint | Promise<unknown> => {
 		() =>
 			new Proxy(obj, {
 				get(state, key, receiver) {
-					if (typeof key === "symbol") return Reflect.get(state, key, receiver);
+					if (typeof key === "symbol")
+						return Reflect.get(state, key, receiver);
 					const curEffect = Effect._current;
 					const target = Reflect.get(state as object, key);
 					const isObj = target && typeof target === "object";
 					if (curEffect) track(state as object, key, curEffect);
 					if (Array.isArray(state) && typeof target === "function") {
 						if (arrMethods.includes(key as string)) {
-							return function (this: unknown[], ...args: unknown[]) {
-								const result = target.apply(state as unknown[], args);
+							return function (
+								this: unknown[],
+								...args: unknown[]
+							) {
+								const result = target.apply(
+									state as unknown[],
+									args
+								);
 								notify(state as object, "length");
 								return result;
 							};
@@ -120,13 +135,22 @@ export const proxy = (obj: object): StateConstraint | Promise<unknown> => {
 					notify(state as object, key);
 					if (isArr && key !== "length") {
 						const newLen = (state as unknown[]).length;
-						if (newLen !== prevLen) notify(state as object, "length");
+						if (newLen !== prevLen)
+							notify(state as object, "length");
 					}
 					return true;
 				},
-			}),
+			})
 	);
 };
+/**
+ * Create a small overlay proxy scoped to a base object.
+ *
+ * The returned proxy behaves like an overlay: reads fall back to `base` when
+ * not present locally, while writes prefer the local overlay unless the key
+ * exists on the base. This is used to create isolated view scopes.
+ * @public
+ */
 export const scopeProxy = <T extends object>(base: T): T => {
 	const localTarget: Record<PropertyKey, unknown> = Object.create(null);
 	const local = proxy(localTarget) as Record<PropertyKey, unknown>;
@@ -154,7 +178,7 @@ export const scopeProxy = <T extends object>(base: T): T => {
 				new Set([
 					...Reflect.ownKeys(localTarget),
 					...Reflect.ownKeys(base as object),
-				]),
+				])
 			);
 		},
 		getOwnPropertyDescriptor(_t, k) {
