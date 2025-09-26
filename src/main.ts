@@ -1,12 +1,23 @@
 import { Effect } from "./Effect.ts";
 import isEqual from "./equality.ts";
 import serverPage from "./fetch.ts";
+
+export type { FetchDOMOptions, FetchedContent } from "./fetch.ts";
+
 import { globalStores } from "./globalstores.ts";
 import { proxy } from "./proxy.ts";
 import RegEl from "./registry.ts";
 
+/**
+ * A constraint representing a plain object state bag for stores.
+ * @public
+ */
 export type StateConstraint = Record<string, unknown>;
 
+/**
+ * The primary Manifold class used to create and manage reactive state.
+ * @public
+ */
 export default class Manifold<TState extends StateConstraint> {
 	#name?: string;
 	#scopedState: TState;

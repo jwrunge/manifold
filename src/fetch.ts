@@ -1,7 +1,13 @@
 import { VT_CLASS } from "./css.ts";
 import RegEl from "./registry.ts";
 
+/** Methods used when inserting fetched content into the DOM. */
 type InsertContentMethod = "append" | "prepend" | "replace";
+
+/**
+ * Options controlling how fetched DOM content is inserted.
+ * @public
+ */
 export type FetchDOMOptions = {
 	from?: string;
 	to: string;
@@ -11,6 +17,7 @@ export type FetchDOMOptions = {
 	addTransitionClass?: string;
 };
 
+/** @internal */
 const cssEscape = (value: string) => {
 	// Prefer native if available
 	if (typeof CSS !== "undefined" && typeof CSS.escape === "function")
@@ -19,6 +26,7 @@ const cssEscape = (value: string) => {
 	return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 };
 
+/** @internal */
 const cloneAndAppendChildren = (src: ParentNode, dest: DocumentFragment) => {
 	const topLevel: Element[] = [];
 	for (const node of Array.from(src.childNodes)) {
@@ -29,6 +37,7 @@ const cloneAndAppendChildren = (src: ParentNode, dest: DocumentFragment) => {
 	return topLevel;
 };
 
+/** @internal */
 const insertScripts = (
 	scripts: HTMLScriptElement[],
 	filter?: boolean | string[],
@@ -74,6 +83,7 @@ const insertScripts = (
 	}
 };
 
+/** @internal */
 const insertStyles = (
 	styles: (HTMLStyleElement | HTMLLinkElement)[],
 	filter?: boolean | string[],
@@ -115,6 +125,10 @@ const insertStyles = (
 	}
 };
 
+/**
+ * Fetch HTML content and insert it into the document according to options.
+ * @public
+ */
 const fetchContent = async (
 	url: string | URL,
 	ops: FetchDOMOptions,
@@ -290,7 +304,9 @@ const fetchContent = async (
 			const container = target as HTMLElement | null;
 			if (container) void container.getBoundingClientRect();
 			void document.body.offsetWidth;
-		} catch {}
+		} catch (_e) {
+			// ignore
+		}
 		// One or two RAFs to ensure UA applies classes before snapshot
 		await new Promise<void>((r) =>
 			typeof requestAnimationFrame !== "undefined"
@@ -320,6 +336,11 @@ const fetchContent = async (
 	insertStyles(styles, ops.insertStyles);
 };
 
+/**
+ * A handle for content fetched from a remote resource with convenience
+ * methods to insert the content into the document.
+ * @public
+ */
 export class FetchedContent {
 	constructor(
 		private url: string | URL,
@@ -361,6 +382,12 @@ export class FetchedContent {
 	}
 }
 
+/**
+ * Fetch utilities used by the library. Consumers typically use the static
+ * helpers on `Manifold` but these helpers are exported here for tests and
+ * advanced usage.
+ * @internal
+ */
 export default {
 	get(
 		url: string | URL,
