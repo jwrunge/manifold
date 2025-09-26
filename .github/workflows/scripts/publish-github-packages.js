@@ -6,7 +6,7 @@ const pkg = require("../../package.json");
 const owner = process.env.GITHUB_REPOSITORY_OWNER;
 if (!owner) {
 	console.error(
-		"GITHUB_REPOSITORY_OWNER is not set. Cannot modify package.json for GitHub Packages."
+		"GITHUB_REPOSITORY_OWNER is not set. Cannot modify package.json for GitHub Packages.",
 	);
 	process.exit(1);
 }
