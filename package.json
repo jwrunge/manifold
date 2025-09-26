@@ -6,7 +6,7 @@
 	"sideEffects": false,
 	"main": "./dist/manifold.cjs",
 	"module": "./dist/manifold.es.js",
-	"types": "./src/main.ts",
+	"types": "./dist/manifold.d.ts",
 	"unpkg": "./dist/manifold.umd.js",
 	"jsdelivr": "./dist/manifold.umd.js",
 	"browser": "./dist/manifold.es.js",
@@ -37,7 +37,7 @@
 	"license": "MIT",
 	"exports": {
 		".": {
-			"types": "./src/main.ts",
+			"types": "./dist/manifold.d.ts",
 			"import": "./dist/manifold.es.js",
 			"require": "./dist/manifold.cjs",
 			"default": "./dist/manifold.es.js"
@@ -49,6 +49,8 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build && node ./minify.js",
+		"build:types": "tsc -p tsconfig.build.json",
+		"build:dts": "npm run -s build:types && api-extractor run --local",
 		"build:debug": "MF_DEBUG_BUILD=1 tsc && MF_DEBUG_BUILD=1 node ./scripts/build.mjs",
 		"test": "vitest --run",
 		"test:watch": "vitest",
@@ -59,6 +61,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.4",
+		"@microsoft/api-extractor": "^7.38.8",
 		"@types/node": "^24.5.2",
 		"esbuild": "^0.25.10",
 		"jsdom": "^26.1.0",
