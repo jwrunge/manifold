@@ -5,7 +5,8 @@ on:
         branches: ["release"]
 
 permissions:
-    contents: read
+    contents: write # For creating releases
+    packages: write # For GitHub Packages
     id-token: write # For npm provenance
 
 concurrency:
@@ -108,18 +109,31 @@ jobs:
               with:
                   node-version: 24
                   registry-url: https://npm.pkg.github.com
-                  scope: "@jwrunge"
+                  scope: "@${{ github.repository_owner }}"
+
+            - name: Authenticate with GitHub Packages
+              if: steps.version_check.outputs.should_publish_npm == 'true'
+              run: |
+                  echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> ~/.npmrc
+                  echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
 
             - name: Publish to GitHub Packages
               if: steps.version_check.outputs.should_publish_npm == 'true'
               run: |
                   echo "Publishing version ${{ steps.version_check.outputs.version }} to GitHub Packages"
+                  echo "Repository owner: ${{ github.repository_owner }}"
+                  echo "Repository: ${{ github.repository }}"
                   # Create a temporary package.json with scoped name for GitHub Packages
                   cp package.json package.json.bak
                   node -e "
                     const pkg = require('./package.json');
-                    pkg.name = '@jwrunge/manifold';
-                    pkg.publishConfig = { registry: 'https://npm.pkg.github.com' };
+                    pkg.name = '@${{ github.repository_owner }}/manifold';
+                    pkg.publishConfig = { 
+                      registry: 'https://npm.pkg.github.com',
+                      '@${{ github.repository_owner }}:registry': 'https://npm.pkg.github.com'
+                    };
+                    console.log('Modified package.json for GitHub Packages:');
+                    console.log(JSON.stringify(pkg, null, 2));
                     require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
                   "
                   npm publish --access public
