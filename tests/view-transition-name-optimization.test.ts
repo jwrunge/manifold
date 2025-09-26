@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import RegEl from "../src/registry";
+import RegEl from "../src/registry.ts";
 
 describe("View transition name optimization", () => {
 	beforeEach(() => {
