@@ -1,7 +1,7 @@
 {
 	"name": "mfld",
 	"private": false,
-	"version": "0.4.6",
+	"version": "0.4.7",
 	"type": "module",
 	"sideEffects": false,
 	"main": "./dist/manifold.cjs",
