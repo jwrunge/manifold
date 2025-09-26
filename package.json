@@ -62,7 +62,9 @@
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
 		"clean:dist-dts": "node ./scripts/cleanup-dist.js",
-		"pretest": "npm run -s build"
+		"pretest": "npm run -s build",
+		"sync:meta": "node ./scripts/sync-meta.js",
+		"sync:meta:check": "node ./scripts/sync-meta.js --check"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.4",

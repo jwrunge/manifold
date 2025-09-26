@@ -43,6 +43,11 @@ jobs:
             - name: Install dependencies
               run: npm ci --prefer-offline --no-audit || npm install
 
+            - name: Run transient sync (no commit)
+              run: |
+                  echo "Running sync script to update deno/jsr in the workspace (transient)"
+                  npm run sync:meta
+
             - name: Build package
               run: npm run build
 
