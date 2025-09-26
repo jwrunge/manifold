@@ -25,3 +25,5 @@ else
     echo "should_publish_npm=true"
   fi
 fi
+
+# EOF (no-op)

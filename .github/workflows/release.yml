@@ -46,10 +46,37 @@ jobs:
             - name: Build package
               run: npm run build
 
+            # Scripts are executable in git; no runtime chmod required
+
             - name: Check version and set outputs
               id: version_check
               run: |
-                  bash ./.github/workflows/scripts/check-version.sh
+                  #!/usr/bin/env bash
+                  set -euo pipefail
+
+                  PACKAGE_VERSION=$(node -p "require('./package.json').version")
+                  echo "Current version: $PACKAGE_VERSION"
+                  if [ -n "${GITHUB_OUTPUT-}" ]; then
+                    echo "version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
+                  else
+                    echo "version=$PACKAGE_VERSION"
+                  fi
+
+                  if npm view mfld@"$PACKAGE_VERSION" version 2>/dev/null; then
+                    echo "Version $PACKAGE_VERSION already exists on npm"
+                    if [ -n "${GITHUB_OUTPUT-}" ]; then
+                      echo "should_publish_npm=false" >> "$GITHUB_OUTPUT"
+                    else
+                      echo "should_publish_npm=false"
+                    fi
+                  else
+                    echo "Version $PACKAGE_VERSION does not exist on npm, proceeding with publish"
+                    if [ -n "${GITHUB_OUTPUT-}" ]; then
+                      echo "should_publish_npm=true" >> "$GITHUB_OUTPUT"
+                    else
+                      echo "should_publish_npm=true"
+                    fi
+                  fi
 
             # Publish to NPM
             - name: Publish to NPM
@@ -69,12 +96,14 @@ jobs:
                   registry-url: https://npm.pkg.github.com
                   scope: "@${{ github.repository_owner }}"
 
-            - name: Authenticate with GitHub Packages
+            - name: Authenticate with GitHub Packages (external script)
               if: steps.version_check.outputs.should_publish_npm == 'true'
-              run: |
-                  bash ./.github/workflows/scripts/auth-github-packages.sh
+              run: ./.github/workflows/scripts/auth-github-packages.sh
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
 
-            - name: Publish to GitHub Packages
+            - name: Publish to GitHub Packages (external script)
               if: steps.version_check.outputs.should_publish_npm == 'true'
               run: |
                   echo "Publishing version ${{ steps.version_check.outputs.version }} to GitHub Packages"
@@ -85,7 +114,8 @@ jobs:
                   npm publish --access public
                   mv package.json.bak package.json
               env:
-                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
 
             # Publish to JSR (using OIDC - no token needed!)
             - name: Publish to JSR
@@ -120,4 +150,8 @@ jobs:
             - name: Skip publish (version exists)
               if: steps.version_check.outputs.should_publish_npm == 'false'
               run: |
-                  bash ./.github/workflows/scripts/skip-publish.sh
+                  #!/usr/bin/env bash
+                  set -euo pipefail
+
+                  echo "Skipping publish - version already exists on NPM"
+                  echo "If you intended to publish a new version, please update the version in package.json"
