@@ -6,7 +6,51 @@ const enc = new TextEncoder();
 
 function readJson(path: string) {
 	const txt = Deno.readTextFileSync(path);
-	return JSON.parse(txt);
+	// Support JSONC by stripping comments while preserving string literals
+	const raw = txt;
+	let out = "";
+	let inString = false;
+	let stringChar = "";
+	let i = 0;
+	while (i < raw.length) {
+		const ch = raw[i];
+		const next = raw[i + 1];
+		if (!inString) {
+			if (ch === '"' || ch === "'") {
+				inString = true;
+				stringChar = ch;
+				out += ch;
+				i++;
+				continue;
+			}
+			if (ch === "/" && next === "*") {
+				i += 2;
+				while (i < raw.length && !(raw[i] === "*" && raw[i + 1] === "/")) i++;
+				i += 2;
+				continue;
+			}
+			if (ch === "/" && next === "/") {
+				i += 2;
+				while (i < raw.length && raw[i] !== "\n") i++;
+				continue;
+			}
+			out += ch;
+			i++;
+		} else {
+			if (ch === "\\") {
+				out += ch + raw[i + 1];
+				i += 2;
+				continue;
+			}
+			out += ch;
+			if (ch === stringChar) {
+				inString = false;
+				stringChar = "";
+			}
+			i++;
+		}
+	}
+	return JSON.parse(out);
 }
 
 function writeJson(path: string, obj: unknown) {
@@ -33,6 +77,26 @@ try {
 		const jsrPath = "jsr.json";
 		const jsr = readJson(jsrPath);
 		jsr.version = version;
+		// Also merge compilerOptions from tsconfig.json if present so JSR publishes with correct libs
+		try {
+			const tsconfig = readJson("tsconfig.json");
+			if (tsconfig?.compilerOptions) {
+				jsr.compilerOptions = Object.assign(
+					{},
+					jsr.compilerOptions || {},
+					tsconfig.compilerOptions,
+				);
+				console.log(
+					`Merged compilerOptions from tsconfig.json into ${jsrPath}`,
+				);
+			}
+		} catch (e) {
+			console.warn(
+				`Could not read tsconfig.json to merge compilerOptions: ${getMessage(
+					e,
+				)}`,
+			);
+		}
 		writeJson(jsrPath, jsr);
 		console.log(`Updated ${jsrPath} -> version ${version}`);
 	} catch (err) {
