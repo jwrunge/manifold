@@ -48,7 +48,7 @@
 	},
 	"scripts": {
 		"dev": "vite",
-		"build": "vite build && node ./minify.js",
+		"build": "vite build && node ./minify.js && npm run -s build:dts",
 		"build:types": "tsc -p tsconfig.build.json",
 		"build:dts": "npm run -s build:types && api-extractor run --local",
 		"build:debug": "MF_DEBUG_BUILD=1 tsc && MF_DEBUG_BUILD=1 node ./scripts/build.mjs",
