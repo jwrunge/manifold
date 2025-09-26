@@ -25,11 +25,7 @@ function readJson(path: string) {
 			}
 			if (ch === "/" && next === "*") {
 				i += 2;
-				while (
-					i < raw.length &&
-					!(raw[i] === "*" && raw[i + 1] === "/")
-				)
-					i++;
+				while (i < raw.length && !(raw[i] === "*" && raw[i + 1] === "/")) i++;
 				i += 2;
 				continue;
 			}
@@ -88,17 +84,17 @@ try {
 				jsr.compilerOptions = Object.assign(
 					{},
 					jsr.compilerOptions || {},
-					tsconfig.compilerOptions
+					tsconfig.compilerOptions,
 				);
 				console.log(
-					`Merged compilerOptions from tsconfig.json into ${jsrPath}`
+					`Merged compilerOptions from tsconfig.json into ${jsrPath}`,
 				);
 			}
 		} catch (e) {
 			console.warn(
 				`Could not read tsconfig.json to merge compilerOptions: ${getMessage(
-					e
-				)}`
+					e,
+				)}`,
 			);
 		}
 		writeJson(jsrPath, jsr);
