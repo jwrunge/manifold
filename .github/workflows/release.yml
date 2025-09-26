@@ -160,7 +160,18 @@ jobs:
                   # Show current jsr.json content for debugging
                   echo "Current jsr.json:"
                   cat jsr.json
-                  # Use deno publish with DOM lib support
+                  # Validate JSON syntax and package name
+                  echo "Validating configuration:"
+                  node -e "
+                    const jsr = require('./jsr.json');
+                    console.log('Package name:', jsr.name);
+                    console.log('Name format valid:', /^@[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(jsr.name));
+                    console.log('Version:', jsr.version);
+                  "
+                  # Try deno publish with dry run first
+                  echo "Testing publish (dry run):"
+                  deno publish --dry-run --allow-dirty || echo "Dry run failed, continuing with actual publish"
+                  # Use deno publish with more verbose output
                   deno publish --allow-dirty
 
             # Setup Deno Land publishing (via GitHub release)
