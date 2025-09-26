@@ -1,0 +1,102 @@
+name: Release
+
+on:
+    push:
+        branches: ["release"]
+
+permissions:
+    contents: read
+    id-token: write # For npm provenance
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    # Run the same checks as CI to ensure quality
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci --prefer-offline --no-audit || npm install
+
+            - name: Lint (Biome)
+              run: npm run lint
+
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci --prefer-offline --no-audit || npm install
+
+            - name: Run tests (Vitest)
+              run: npm test --silent
+
+    # Build and publish to NPM
+    release:
+        needs: [lint, test]
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  cache: npm
+                  registry-url: https://registry.npmjs.org
+
+            - name: Install dependencies
+              run: npm ci --prefer-offline --no-audit || npm install
+
+            - name: Build package
+              run: npm run build
+
+            - name: Check if version already published
+              id: version_check
+              run: |
+                  PACKAGE_VERSION=$(node -p "require('./package.json').version")
+                  echo "Current version: $PACKAGE_VERSION"
+
+                  # Check if this version exists on npm
+                  if npm view mfld@$PACKAGE_VERSION version 2>/dev/null; then
+                    echo "Version $PACKAGE_VERSION already exists on npm"
+                    echo "should_publish=false" >> $GITHUB_OUTPUT
+                  else
+                    echo "Version $PACKAGE_VERSION does not exist on npm, proceeding with publish"
+                    echo "should_publish=true" >> $GITHUB_OUTPUT
+                    echo "version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+                  fi
+
+            - name: Publish to NPM
+              if: steps.version_check.outputs.should_publish == 'true'
+              run: |
+                  echo "Publishing version ${{ steps.version_check.outputs.version }} to NPM"
+                  npm publish --provenance --access public
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            - name: Skip publish (version exists)
+              if: steps.version_check.outputs.should_publish == 'false'
+              run: |
+                  echo "Skipping publish - version already exists on NPM"
+                  echo "If you intended to publish a new version, please update the version in package.json"
