@@ -41,18 +41,6 @@ Perfect for:
 npm install mfld
 ```
 
-Or use directly from a CDN (because sometimes you just want to get things done):
-
-```html
-<!-- ES Modules -->
-<script type="module">
-	import Manifold from "https://cdn.jsdelivr.net/npm/mfld/dist/manifold.es.js";
-</script>
-
-<!-- UMD (global Manifold variable) -->
-<script src="https://cdn.jsdelivr.net/npm/mfld/dist/manifold.umd.js"></script>
-```
-
 ## Quick Start
 
 Here's a complete reactive counter app in pure HTML:
