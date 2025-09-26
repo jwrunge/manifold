@@ -1,5 +1,5 @@
-import { type Effect, effect } from "../Effect";
-import type { Sibling } from "./types";
+import { type Effect, effect } from "../Effect.ts";
+import type { Sibling } from "./types.ts";
 
 /**
  * Handles conditional templating logic (if/elseif/else)

@@ -1,12 +1,12 @@
-import { type Effect, effect } from "./Effect";
-import evaluateExpression from "./expression-parser";
-import { globalStores } from "./globalstores";
-import Manifold from "./main";
-import { scopeProxy } from "./proxy";
-import { handleAsync } from "./templating/async-handler";
-import { handleConditional } from "./templating/conditional-handler";
-import { handleEach } from "./templating/each-handler";
-import { findDependentSiblings } from "./templating/sibling-resolver";
+import { type Effect, effect } from "./Effect.ts";
+import evaluateExpression from "./expression-parser.ts";
+import { globalStores } from "./globalstores.ts";
+import Manifold from "./main.ts";
+import { scopeProxy } from "./proxy.ts";
+import { handleAsync } from "./templating/async-handler.ts";
+import { handleConditional } from "./templating/conditional-handler.ts";
+import { handleEach } from "./templating/each-handler.ts";
+import { findDependentSiblings } from "./templating/sibling-resolver.ts";
 import {
 	dependentLogicAttrSet,
 	prefixes,
@@ -14,7 +14,7 @@ import {
 	type Sibling,
 	type templLogicAttr,
 	templLogicAttrSet,
-} from "./templating/types";
+} from "./templating/types.ts";
 
 // Shared registration logic for both new and existing elements
 const _registerElement = (el: Element) => {
@@ -44,8 +44,8 @@ const _handleNewElements = (addedNodes: NodeList) => {
 	}
 };
 
-import { VT_CLASS, VT_NAME } from "./css";
-import { splitAs } from "./parsing-utils";
+import { VT_CLASS, VT_NAME } from "./css.ts";
+import { splitAs } from "./parsing-utils.ts";
 
 const throwError = (msg: string, cause: unknown, unsupported = false) => {
 	let hint = "";

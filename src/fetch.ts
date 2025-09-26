@@ -1,5 +1,5 @@
-import { VT_CLASS } from "./css";
-import RegEl from "./registry";
+import { VT_CLASS } from "./css.ts";
+import RegEl from "./registry.ts";
 
 type InsertContentMethod = "append" | "prepend" | "replace";
 export type FetchDOMOptions = {

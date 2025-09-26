@@ -1,4 +1,4 @@
-import { indexOfTopLevel, isIdent, splitTopLevel } from "./parsing-utils.js";
+import { indexOfTopLevel, isIdent, splitTopLevel } from "./parsing-utils.ts";
 
 // Expression parser expects state injected via ctx.state
 export interface ParsedExpression {

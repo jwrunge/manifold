@@ -1,4 +1,4 @@
-import { indexOfTopLevel, isIdent, splitTopLevel } from "./parsing-utils.js";
+import { indexOfTopLevel, isIdent, splitTopLevel } from "./parsing-utils.ts";
 
 const bindIdent = (
 	ident: string,

@@ -1,10 +1,10 @@
-import applyAliasPattern from "../alias-destructure";
-import { VT_CLASS } from "../css";
-import { type Effect, effect } from "../Effect";
-import Manifold from "../main";
-import { indexOfTopLevel, isIdent } from "../parsing-utils";
-import { scopeProxy } from "../proxy";
-import type { Registerable } from "./types";
+import applyAliasPattern from "../alias-destructure.ts";
+import { VT_CLASS } from "../css.ts";
+import { type Effect, effect } from "../Effect.ts";
+import Manifold from "../main.ts";
+import { indexOfTopLevel, isIdent } from "../parsing-utils.ts";
+import { scopeProxy } from "../proxy.ts";
+import type { Registerable } from "./types.ts";
 
 // Type for the RegEl class (to avoid circular dependencies)
 interface RegElLike {

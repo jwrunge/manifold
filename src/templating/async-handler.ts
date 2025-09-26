@@ -1,6 +1,6 @@
-import applyAliasPattern from "../alias-destructure";
-import { type Effect, effect } from "../Effect";
-import type { Sibling } from "./types";
+import applyAliasPattern from "../alias-destructure.ts";
+import { type Effect, effect } from "../Effect.ts";
+import type { Sibling } from "./types.ts";
 
 // Type for the RegEl class (to avoid circular dependencies)
 interface RegElLike {
