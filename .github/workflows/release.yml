@@ -50,7 +50,7 @@ jobs:
             - name: Run tests (Vitest)
               run: npm test --silent
 
-    # Build and publish to NPM
+    # Build and publish to multiple registries
     release:
         needs: [lint, test]
         runs-on: ubuntu-latest
@@ -65,38 +65,103 @@ jobs:
                   cache: npm
                   registry-url: https://registry.npmjs.org
 
+            - name: Setup Deno
+              uses: denoland/setup-deno@v1
+              with:
+                  deno-version: v1.x
+
             - name: Install dependencies
               run: npm ci --prefer-offline --no-audit || npm install
 
             - name: Build package
               run: npm run build
 
-            - name: Check if version already published
+            - name: Check version and set outputs
               id: version_check
               run: |
                   PACKAGE_VERSION=$(node -p "require('./package.json').version")
                   echo "Current version: $PACKAGE_VERSION"
+                  echo "version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
 
                   # Check if this version exists on npm
                   if npm view mfld@$PACKAGE_VERSION version 2>/dev/null; then
                     echo "Version $PACKAGE_VERSION already exists on npm"
-                    echo "should_publish=false" >> $GITHUB_OUTPUT
+                    echo "should_publish_npm=false" >> $GITHUB_OUTPUT
                   else
                     echo "Version $PACKAGE_VERSION does not exist on npm, proceeding with publish"
-                    echo "should_publish=true" >> $GITHUB_OUTPUT
-                    echo "version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+                    echo "should_publish_npm=true" >> $GITHUB_OUTPUT
                   fi
 
+            # Publish to NPM
             - name: Publish to NPM
-              if: steps.version_check.outputs.should_publish == 'true'
+              if: steps.version_check.outputs.should_publish_npm == 'true'
               run: |
                   echo "Publishing version ${{ steps.version_check.outputs.version }} to NPM"
                   npm publish --provenance --access public
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+            # Publish to GitHub Packages
+            - name: Setup Node.js for GitHub Packages
+              if: steps.version_check.outputs.should_publish_npm == 'true'
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  registry-url: https://npm.pkg.github.com
+                  scope: "@jwrunge"
+
+            - name: Publish to GitHub Packages
+              if: steps.version_check.outputs.should_publish_npm == 'true'
+              run: |
+                  echo "Publishing version ${{ steps.version_check.outputs.version }} to GitHub Packages"
+                  # Create a temporary package.json with scoped name for GitHub Packages
+                  cp package.json package.json.bak
+                  node -e "
+                    const pkg = require('./package.json');
+                    pkg.name = '@jwrunge/manifold';
+                    pkg.publishConfig = { registry: 'https://npm.pkg.github.com' };
+                    require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+                  "
+                  npm publish --access public
+                  mv package.json.bak package.json
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            # Publish to JSR (using OIDC - no token needed!)
+            - name: Publish to JSR
+              if: steps.version_check.outputs.should_publish_npm == 'true'
+              run: |
+                  echo "Publishing version ${{ steps.version_check.outputs.version }} to JSR"
+                  # Update JSR version to match package.json
+                  node -e "
+                    const pkg = require('./package.json');
+                    const jsr = require('./jsr.json');
+                    jsr.version = pkg.version;
+                    require('fs').writeFileSync('jsr.json', JSON.stringify(jsr, null, 2));
+                  "
+                  npx jsr publish
+
+            # Setup Deno Land publishing (via GitHub release)
+            - name: Create GitHub Release for Deno Land
+              if: steps.version_check.outputs.should_publish_npm == 'true'
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: v${{ steps.version_check.outputs.version }}
+                  name: Release v${{ steps.version_check.outputs.version }}
+                  body: |
+                      ## Release v${{ steps.version_check.outputs.version }}
+
+                      Available on:
+                      - NPM: `npm install mfld`
+                      - JSR: `deno add @jwrunge/manifold`
+                      - GitHub Packages: `npm install @jwrunge/manifold`
+                      - Deno Land: `import Manifold from "https://deno.land/x/manifold@v${{ steps.version_check.outputs.version }}/src/main.ts"`
+                      - CDN: `https://cdn.jsdelivr.net/npm/mfld@${{ steps.version_check.outputs.version }}/dist/manifold.umd.js`
+                  draft: false
+                  prerelease: false
+
             - name: Skip publish (version exists)
-              if: steps.version_check.outputs.should_publish == 'false'
+              if: steps.version_check.outputs.should_publish_npm == 'false'
               run: |
                   echo "Skipping publish - version already exists on NPM"
                   echo "If you intended to publish a new version, please update the version in package.json"

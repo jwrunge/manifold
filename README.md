@@ -37,8 +37,46 @@ Perfect for:
 
 ## Installing
 
+### NPM (Node.js/Bun)
+
 ```bash
 npm install mfld
+```
+
+### JSR (Deno/Modern Runtime)
+
+```bash
+deno add @jwrunge/manifold
+```
+
+### GitHub Packages
+
+```bash
+npm install @jwrunge/manifold --registry=https://npm.pkg.github.com
+```
+
+### CDN (No Installation)
+
+```html
+<!-- ES Modules -->
+<script type="module">
+	import Manifold from "https://cdn.jsdelivr.net/npm/mfld@latest/dist/manifold.es.js";
+</script>
+
+<!-- UMD (global Manifold variable) -->
+<script src="https://cdn.jsdelivr.net/npm/mfld@latest/dist/manifold.umd.js"></script>
+
+<!-- Alternative CDNs -->
+<script src="https://unpkg.com/mfld@latest/dist/manifold.umd.js"></script>
+<script type="module">
+	import Manifold from "https://esm.sh/mfld";
+</script>
+```
+
+### Deno Land
+
+```typescript
+import Manifold from "https://deno.land/x/manifold@v0.4.0/src/main.ts";
 ```
 
 ## Quick Start
