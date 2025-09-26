@@ -1,21 +1,10 @@
 import { defineConfig } from "vite";
+import terserOptions from "./terser.config.js";
 
 export default defineConfig({
 	build: {
 		minify: "terser",
-		terserOptions: {
-			compress: {
-				module: true,
-				toplevel: true,
-				passes: 3,
-				pure_getters: true,
-				unsafe_arrows: true,
-				unsafe_methods: true,
-				unused: true,
-			},
-			mangle: { toplevel: true },
-			format: { comments: false },
-		},
+		terserOptions,
 		lib: {
 			entry: "src/main.ts",
 			name: "Manifold",
