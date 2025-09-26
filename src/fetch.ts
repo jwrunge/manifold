@@ -31,11 +31,13 @@ const cloneAndAppendChildren = (src: ParentNode, dest: DocumentFragment) => {
 
 const insertScripts = (
 	scripts: HTMLScriptElement[],
-	filter?: boolean | string[],
+	filter?: boolean | string[]
 ) => {
 	let candidates = scripts;
 	if (Array.isArray(filter)) {
-		candidates = scripts.filter((s) => filter.some((sel) => s.matches(sel)));
+		candidates = scripts.filter((s) =>
+			filter.some((sel) => s.matches(sel))
+		);
 	} else if (filter !== true) {
 		return; // nothing to do
 	}
@@ -46,7 +48,8 @@ const insertScripts = (
 	for (const s of candidates) {
 		const src = s.getAttribute("src");
 		if (src) {
-			if (document.querySelector(`script[src="${cssEscape(src)}"]`)) continue;
+			if (document.querySelector(`script[src="${cssEscape(src)}"]`))
+				continue;
 			const ns = document.createElement("script");
 			for (const { name, value } of Array.from(s.attributes))
 				ns.setAttribute(name, value);
@@ -55,7 +58,7 @@ const insertScripts = (
 			const code = s.textContent || "";
 			if (
 				Array.from(document.querySelectorAll("script:not([src])")).some(
-					(e) => (e as HTMLScriptElement).textContent === code,
+					(e) => (e as HTMLScriptElement).textContent === code
 				)
 			)
 				continue;
@@ -76,11 +79,13 @@ const insertScripts = (
 
 const insertStyles = (
 	styles: (HTMLStyleElement | HTMLLinkElement)[],
-	filter?: boolean | string[],
+	filter?: boolean | string[]
 ) => {
 	let candidates = styles;
 	if (Array.isArray(filter)) {
-		candidates = styles.filter((st) => filter.some((sel) => st.matches(sel)));
+		candidates = styles.filter((st) =>
+			filter.some((sel) => st.matches(sel))
+		);
 	} else if (filter !== true) {
 		return; // nothing to do
 	}
@@ -90,7 +95,7 @@ const insertStyles = (
 			if (!href) continue;
 			if (
 				document.querySelector(
-					`link[rel="stylesheet"][href="${cssEscape(href)}"]`,
+					`link[rel="stylesheet"][href="${cssEscape(href)}"]`
 				)
 			)
 				continue;
@@ -102,7 +107,7 @@ const insertStyles = (
 			const code = (st as HTMLStyleElement).textContent || "";
 			if (
 				Array.from(document.querySelectorAll("style")).some(
-					(e) => (e as HTMLStyleElement).textContent === code,
+					(e) => (e as HTMLStyleElement).textContent === code
 				)
 			)
 				continue;
@@ -118,7 +123,7 @@ const insertStyles = (
 const fetchContent = async (
 	url: string | URL,
 	ops: FetchDOMOptions,
-	fetchOps?: RequestInit,
+	fetchOps?: RequestInit
 ) => {
 	const loadHTML = async (): Promise<string> => {
 		const isHttpUrl = (u: string) => /^https?:\/\//i.test(u);
@@ -128,7 +133,8 @@ const fetchContent = async (
 		if (typeof url === "string") {
 			if (isHttpUrl(url)) {
 				const res = await fetch(url, fetchOps);
-				if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+				if (!res.ok)
+					throw new Error(`HTTP ${res.status} ${res.statusText}`);
 				return res.text();
 			}
 			// Relative or absolute path on local FS for test environments
@@ -139,16 +145,17 @@ const fetchContent = async (
 				]);
 				const stripped = url.replace(/^\/+/, "");
 				// Use globalThis to access process safely
-				const globalProcess = (globalThis as Record<string, unknown>).process as
-					| { cwd?: () => string }
-					| undefined;
-				const filePath = path.resolve(globalProcess?.cwd?.() || ".", stripped);
+				const globalProcess = (globalThis as Record<string, unknown>)
+					.process as { cwd?: () => string } | undefined;
+				const filePath = path.resolve(
+					globalProcess?.cwd?.() || ".",
+					stripped
+				);
 				return readFile(filePath, "utf8");
 			}
 			// Browser relative URL fallback
-			const globalWindow = (globalThis as Record<string, unknown>).window as
-				| { location?: { href?: string } }
-				| undefined;
+			const globalWindow = (globalThis as Record<string, unknown>)
+				.window as { location?: { href?: string } } | undefined;
 			const baseHref =
 				typeof globalWindow !== "undefined" &&
 				typeof globalWindow.location?.href === "string"
@@ -156,21 +163,26 @@ const fetchContent = async (
 					: "";
 			const abs = new URL(url, baseHref);
 			const res = await fetch(abs, fetchOps);
-			if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+			if (!res.ok)
+				throw new Error(`HTTP ${res.status} ${res.statusText}`);
 			return res.text();
 		} else {
 			const proto = url.protocol;
 			if (proto === "http:" || proto === "https:") {
 				const res = await fetch(url, fetchOps);
-				if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+				if (!res.ok)
+					throw new Error(`HTTP ${res.status} ${res.statusText}`);
 				return res.text();
 			}
 			if (proto === "file:") {
 				type MaybeNodeProcess = { versions?: { node?: string } };
-				const proc = (globalThis as { process?: MaybeNodeProcess }).process;
+				const proc = (globalThis as { process?: MaybeNodeProcess })
+					.process;
 				const isNode = !!proc?.versions?.node;
 				if (!isNode)
-					throw new Error("file: URLs are not supported in this environment");
+					throw new Error(
+						"file: URLs are not supported in this environment"
+					);
 				const [{ readFile }, nodeUrl] = await Promise.all([
 					import("node:fs/promises"),
 					import("node:url"),
@@ -196,7 +208,7 @@ const fetchContent = async (
 	for (const s of scripts) s.remove();
 
 	const styles = Array.from(
-		sourceRoot.querySelectorAll("style,link[rel='stylesheet']"),
+		sourceRoot.querySelectorAll("style,link[rel='stylesheet']")
 	) as (HTMLStyleElement | HTMLLinkElement)[];
 	for (const st of styles) st.remove();
 
@@ -212,12 +224,14 @@ const fetchContent = async (
 			const hel = el as HTMLElement;
 			hel.style.setProperty(VT_CLASS, ops.addTransitionClass);
 			// Ensure this element is independently captured by VT
-			const existingName = hel.style.getPropertyValue("view-transition-name");
+			const existingName = hel.style.getPropertyValue(
+				"view-transition-name"
+			);
 			if (!existingName) {
 				const rand = Math.random().toString(36).slice(2);
 				hel.style.setProperty(
 					"view-transition-name",
-					`mf-${ops.addTransitionClass}-${rand}`,
+					`mf-${ops.addTransitionClass}-${rand}`
 				);
 			}
 		}
@@ -260,7 +274,7 @@ const fetchContent = async (
 		const targetEl = target as HTMLElement | null;
 		if (targetEl) {
 			outgoing = Array.from(targetEl.children).filter(
-				(n): n is HTMLElement => n instanceof HTMLElement,
+				(n): n is HTMLElement => n instanceof HTMLElement
 			);
 			if (ops.addTransitionClass) {
 				for (const el of outgoing) {
@@ -268,13 +282,13 @@ const fetchContent = async (
 					el.style.setProperty(VT_CLASS, ops.addTransitionClass);
 					// Ensure outgoing has a VT name so ::view-transition-old(*.class) can match
 					const existingName = el.style.getPropertyValue(
-						"view-transition-name",
+						"view-transition-name"
 					);
 					if (!existingName) {
 						const rand = Math.random().toString(36).slice(2);
 						el.style.setProperty(
 							"view-transition-name",
-							`mf-${ops.addTransitionClass}-${rand}`,
+							`mf-${ops.addTransitionClass}-${rand}`
 						);
 					}
 				}
@@ -295,12 +309,12 @@ const fetchContent = async (
 		await new Promise<void>((r) =>
 			typeof requestAnimationFrame !== "undefined"
 				? requestAnimationFrame(() => r())
-				: setTimeout(() => r(), 0),
+				: setTimeout(() => r(), 0)
 		);
 		await new Promise<void>((r) =>
 			typeof requestAnimationFrame !== "undefined"
 				? requestAnimationFrame(() => r())
-				: setTimeout(() => r(), 0),
+				: setTimeout(() => r(), 0)
 		);
 	}
 
@@ -320,43 +334,43 @@ const fetchContent = async (
 	insertStyles(styles, ops.insertStyles);
 };
 
-class FetchedContent {
+export class FetchedContent {
 	constructor(
 		private url: string | URL,
 		private fetchOps: RequestInit,
-		private defaultOps?: Omit<FetchDOMOptions, "to" | "method">,
+		private defaultOps?: Omit<FetchDOMOptions, "to" | "method">
 	) {}
 
 	replace(
 		to: string,
-		ops?: Omit<FetchDOMOptions, "to" | "method">,
+		ops?: Omit<FetchDOMOptions, "to" | "method">
 	): Promise<void> {
 		return fetchContent(
 			this.url,
 			{ ...this.defaultOps, ...ops, method: "replace", to },
-			this.fetchOps,
+			this.fetchOps
 		);
 	}
 
 	append(
 		to: string,
-		ops?: Omit<FetchDOMOptions, "to" | "method">,
+		ops?: Omit<FetchDOMOptions, "to" | "method">
 	): Promise<void> {
 		return fetchContent(
 			this.url,
 			{ ...this.defaultOps, ...ops, method: "append", to },
-			this.fetchOps,
+			this.fetchOps
 		);
 	}
 
 	prepend(
 		to: string,
-		ops?: Omit<FetchDOMOptions, "to" | "method">,
+		ops?: Omit<FetchDOMOptions, "to" | "method">
 	): Promise<void> {
 		return fetchContent(
 			this.url,
 			{ ...this.defaultOps, ...ops, method: "prepend", to },
-			this.fetchOps,
+			this.fetchOps
 		);
 	}
 }
@@ -365,23 +379,23 @@ export default {
 	get(
 		url: string | URL,
 		fetchOps?: RequestInit,
-		defaultOps?: Omit<FetchDOMOptions, "to" | "method">,
+		defaultOps?: Omit<FetchDOMOptions, "to" | "method">
 	): FetchedContent {
 		return new FetchedContent(
 			url,
 			{ ...(fetchOps || {}), method: "GET" },
-			defaultOps,
+			defaultOps
 		);
 	},
 	post(
 		url: string | URL,
 		fetchOps?: RequestInit,
-		defaultOps?: Omit<FetchDOMOptions, "to" | "method">,
+		defaultOps?: Omit<FetchDOMOptions, "to" | "method">
 	): FetchedContent {
 		return new FetchedContent(
 			url,
 			{ ...(fetchOps || {}), method: "POST" },
-			defaultOps,
+			defaultOps
 		);
 	},
 	fetch: fetchContent,
