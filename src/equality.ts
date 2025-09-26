@@ -39,7 +39,7 @@ const _isEqual = (a: unknown, b: unknown): boolean => {
 			!(k in (b as object)) ||
 			!_isEqual(
 				(a as Record<string, unknown>)[k],
-				(b as Record<string, unknown>)[k]
+				(b as Record<string, unknown>)[k],
 			)
 		)
 			return false;
