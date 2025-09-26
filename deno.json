@@ -1,5 +1,5 @@
 {
-	"name": "manifold",
+	"name": "@jwrunge/manifold",
 	"version": "0.4.0",
 	"description": "A lightweight, no-build reactive state and templating library for the modern web",
 	"exports": "./src/main.ts",

@@ -146,14 +146,22 @@ jobs:
               if: steps.version_check.outputs.should_publish_npm == 'true'
               run: |
                   echo "Publishing version ${{ steps.version_check.outputs.version }} to JSR"
-                  # Update JSR version to match package.json
+                  # Update both JSR and Deno config versions to match package.json
                   node -e "
                     const pkg = require('./package.json');
+                    
+                    // Update jsr.json
                     const jsr = require('./jsr.json');
                     jsr.version = pkg.version;
+                    require('fs').writeFileSync('jsr.json', JSON.stringify(jsr, null, 2));
+                    
+                    // Update deno.json version too
+                    const deno = require('./deno.json');
+                    deno.version = pkg.version;
+                    require('fs').writeFileSync('deno.json', JSON.stringify(deno, null, 2));
+                    
                     console.log('Updated JSR configuration:');
                     console.log(JSON.stringify(jsr, null, 2));
-                    require('fs').writeFileSync('jsr.json', JSON.stringify(jsr, null, 2));
                   "
                   # Publish using JSR's recommended command
                   npx jsr publish
