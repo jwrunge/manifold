@@ -10,5 +10,10 @@
 	"imports": {
 		"@std/assert": "jsr:@std/assert@^1.0.0"
 	},
-	"exclude": ["node_modules/", "dist/", ".github/"]
+	"exclude": ["node_modules/", "dist/", ".github/"],
+	"compilerOptions": {
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"strict": true,
+		"skipLibCheck": true
+	}
 }
