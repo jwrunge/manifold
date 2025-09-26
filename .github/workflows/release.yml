@@ -160,7 +160,7 @@ jobs:
                   # Show current jsr.json content for debugging
                   echo "Current jsr.json:"
                   cat jsr.json
-                  # Try using deno publish directly instead of npx jsr
+                  # Use deno publish with explicit DOM lib support
                   deno publish --allow-dirty
 
             # Setup Deno Land publishing (via GitHub release)
