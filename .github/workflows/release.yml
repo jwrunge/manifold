@@ -49,18 +49,7 @@ jobs:
             - name: Check version and set outputs
               id: version_check
               run: |
-                  PACKAGE_VERSION=$(node -p "require('./package.json').version")
-                  echo "Current version: $PACKAGE_VERSION"
-                  echo "version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
-
-                  # Check if this version exists on npm
-                  if npm view mfld@$PACKAGE_VERSION version 2>/dev/null; then
-                    echo "Version $PACKAGE_VERSION already exists on npm"
-                    echo "should_publish_npm=false" >> $GITHUB_OUTPUT
-                  else
-                    echo "Version $PACKAGE_VERSION does not exist on npm, proceeding with publish"
-                    echo "should_publish_npm=true" >> $GITHUB_OUTPUT
-                  fi
+                  ./.github/workflows/scripts/check-version.sh
 
             # Publish to NPM
             - name: Publish to NPM
@@ -83,8 +72,7 @@ jobs:
             - name: Authenticate with GitHub Packages
               if: steps.version_check.outputs.should_publish_npm == 'true'
               run: |
-                  echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> ~/.npmrc
-                  echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+                  ./.github/workflows/scripts/auth-github-packages.sh
 
             - name: Publish to GitHub Packages
               if: steps.version_check.outputs.should_publish_npm == 'true'
@@ -92,19 +80,8 @@ jobs:
                   echo "Publishing version ${{ steps.version_check.outputs.version }} to GitHub Packages"
                   echo "Repository owner: ${{ github.repository_owner }}"
                   echo "Repository: ${{ github.repository }}"
-                  # Create a temporary package.json with scoped name for GitHub Packages
                   cp package.json package.json.bak
-                  node -e "
-                    const pkg = require('./package.json');
-                    pkg.name = '@${{ github.repository_owner }}/manifold';
-                    pkg.publishConfig = { 
-                      registry: 'https://npm.pkg.github.com',
-                      '@${{ github.repository_owner }}:registry': 'https://npm.pkg.github.com'
-                    };
-                    console.log('Modified package.json for GitHub Packages:');
-                    console.log(JSON.stringify(pkg, null, 2));
-                    require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-                  "
+                  node ./.github/workflows/scripts/publish-github-packages.js
                   npm publish --access public
                   mv package.json.bak package.json
               env:
@@ -143,5 +120,4 @@ jobs:
             - name: Skip publish (version exists)
               if: steps.version_check.outputs.should_publish_npm == 'false'
               run: |
-                  echo "Skipping publish - version already exists on NPM"
-                  echo "If you intended to publish a new version, please update the version in package.json"
+                  ./.github/workflows/scripts/skip-publish.sh
