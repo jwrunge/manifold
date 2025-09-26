@@ -25,7 +25,11 @@ function readJson(path: string) {
 			}
 			if (ch === "/" && next === "*") {
 				i += 2;
-				while (i < raw.length && !(raw[i] === "*" && raw[i + 1] === "/")) i++;
+				while (
+					i < raw.length &&
+					!(raw[i] === "*" && raw[i + 1] === "/")
+				)
+					i++;
 				i += 2;
 				continue;
 			}
@@ -84,19 +88,21 @@ try {
 				jsr.compilerOptions = Object.assign(
 					{},
 					jsr.compilerOptions || {},
-					tsconfig.compilerOptions,
+					tsconfig.compilerOptions
 				);
 				console.log(
-					`Merged compilerOptions from tsconfig.json into ${jsrPath}`,
+					`Merged compilerOptions from tsconfig.json into ${jsrPath}`
 				);
 			}
 		} catch (e) {
 			console.warn(
 				`Could not read tsconfig.json to merge compilerOptions: ${getMessage(
-					e,
-				)}`,
+					e
+				)}`
 			);
 		}
+		// Log final jsr json for release-time debugging (so CI logs show what JSR saw)
+		console.log("Final jsr.json:", JSON.stringify(jsr, null, 2));
 		writeJson(jsrPath, jsr);
 		console.log(`Updated ${jsrPath} -> version ${version}`);
 	} catch (err) {
@@ -108,6 +114,7 @@ try {
 		const denoPath = "deno.json";
 		const deno = readJson(denoPath);
 		deno.version = version;
+		console.log("Final deno.json:", JSON.stringify(deno, null, 2));
 		writeJson(denoPath, deno);
 		console.log(`Updated ${denoPath} -> version ${version}`);
 	} catch (err) {
