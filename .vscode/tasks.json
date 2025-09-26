@@ -1,0 +1,59 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run tests",
+			"type": "shell",
+			"command": "npm",
+			"args": ["test"],
+			"isBackground": false,
+			"problemMatcher": ["$tsc", "$eslint-stylish"],
+			"group": "build"
+		},
+		{
+			"label": "Run tests again",
+			"type": "shell",
+			"command": "npm",
+			"args": ["test"],
+			"isBackground": false,
+			"problemMatcher": ["$tsc", "$eslint-stylish"],
+			"group": "build"
+		},
+		{
+			"label": "Run tests after auto-register fix",
+			"type": "shell",
+			"command": "npm",
+			"args": ["test"],
+			"isBackground": false,
+			"problemMatcher": ["$tsc", "$eslint-stylish"],
+			"group": "build"
+		},
+		{
+			"label": "Run tests to confirm all green",
+			"type": "shell",
+			"command": "npm",
+			"args": ["test"],
+			"isBackground": false,
+			"problemMatcher": ["$tsc", "$eslint-stylish"],
+			"group": "build"
+		},
+		{
+			"label": "Build dist to ensure minify plugin still works",
+			"type": "shell",
+			"command": "npm",
+			"args": ["run", "build"],
+			"isBackground": false,
+			"problemMatcher": ["$tsc", "$eslint-stylish"],
+			"group": "build"
+		},
+		{
+			"label": "Run tests after auto-registration change",
+			"type": "shell",
+			"command": "npm",
+			"args": ["test", "--silent"],
+			"isBackground": false,
+			"problemMatcher": ["$tsc"],
+			"group": "build"
+		}
+	]
+}

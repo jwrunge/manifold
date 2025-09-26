@@ -1,0 +1,117 @@
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Manifold Demo</title>
+		<link rel="stylesheet" href="index.css" />
+	</head>
+
+	<body data-mf-register class="mf-hidden">
+		<input
+			:value="count"
+			:type="count === 3 || count === 5 ? 'text' : 'number'"
+			:class:red="count % 5 === 0"
+			:style:background-color="count % 2 === 0 ? 'lightblue' : 'lightgreen'"
+			:onclick="(e)=> popup(e.target.value)"
+			:something="count * 2"
+		/>
+
+		<input type="number" :sync:value="count" />
+
+		<div :if="count < 10" :transition="list-item">
+			The count is less than 10! ${count}
+		</div>
+		<div :elseif="count < 20" :transition="list-item">
+			The count is between 10 and 19! ${count}
+		</div>
+		<div :elseif="count < 30" :transition="list-item">
+			The count is between 20 and 29! ${count}
+		</div>
+		<div :else :transition="list-item">
+			The count is 30 or more! ${count}
+		</div>
+		<div>Count squared is ${count * count}</div>
+
+		<!-- Await / Then / Catch demo with reload toggle -->
+		<div style="margin-top: 1rem">
+			<button :onclick="loadUser()" style="margin-bottom: 0.5rem">
+				Reload User (alternates success/error)
+			</button>
+			<div :await="currentUserPromise" :transition="list-item">
+				Loading user...
+			</div>
+			<div :then="user" :transition="list-item">
+				User loaded: ${user.name} (${user.age}) ${count}
+			</div>
+			<div :catch="errorMsg" style="color: red" :transition="list-item">
+				Failed to load user: ${errorMsg}
+				<p>Here is a list of all the error messages:</p>
+				<ul>
+					<li>${errorMsg}</li>
+					<li :each="['Error A', 'Error B', 'Error C'] as msg, idx">
+						#${idx} ${msg}: ${errorMsg}
+					</li>
+				</ul>
+			</div>
+		</div>
+
+		<!-- Each demo -->
+		<div style="margin-top: 1rem" transition>
+			<div>Family Members:</div>
+			<ul>
+				<li :each="someArray as {name, age}">
+					${name} (${age} years old) ${count}
+				</li>
+			</ul>
+		</div>
+
+		<!-- Final -->
+		<div style="margin-top: 1rem" :if="list.length > 2">
+			<div>Family Members:</div>
+			<ul>
+				<li
+					class="list-item"
+					:transition="list-item"
+					:each="list as { id, text }, key"
+				>
+					${key}: ${id} ${text}
+					<button :onclick="removeFromList(key)">REMOVE</button>
+				</li>
+			</ul>
+		</div>
+		<button :onclick="addToList()">Add to List</button>
+		<button :onclick="list.pop()">Remove from List</button>
+
+		<p>End content</p>
+
+		<!-- fetchContent demo -->
+		<section
+			style="
+				margin-top: 1rem;
+				padding-top: 1rem;
+				border-top: 1px solid #444;
+			"
+		>
+			<h3>fetchContent demo</h3>
+			<div id="remote-to" data-mf-register></div>
+			<div style="margin-top: 0.5rem">
+				<button
+					:onclick="$.get('/snippets/snippet-a.html').replace('#remote-to', { from: '#payload', addTransitionClass: 'list-item' })"
+				>
+					Replace with snippet-a (#payload → #remote-to)
+				</button>
+				<button
+					:onclick="$.get('/snippets/snippet-b.html').append('#remote-to', { from: '#payload', addTransitionClass: 'list-item' })"
+				>
+					Append snippet-b (full body)
+				</button>
+			</div>
+			<p style="opacity: 0.8">
+				Transitions use class <code>fade</code> and auto-cleanup after
+				VT finishes.
+			</p>
+		</section>
+
+		<script type="module" src="./index.ts"></script>
+	</body>
+</html>

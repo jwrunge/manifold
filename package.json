@@ -1,0 +1,45 @@
+{
+	"name": "mfld",
+	"private": false,
+	"version": "0.0.0",
+	"type": "module",
+	"sideEffects": false,
+	"main": "./dist/manifold.cjs",
+	"module": "./dist/manifold.es.js",
+	"types": "./src/main.ts",
+	"unpkg": "./dist/manifold.umd.js",
+	"jsdelivr": "./dist/manifold.umd.js",
+	"browser": "./dist/manifold.es.js",
+	"exports": {
+		".": {
+			"types": "./src/main.ts",
+			"import": "./dist/manifold.es.js",
+			"require": "./dist/manifold.cjs",
+			"default": "./dist/manifold.es.js"
+		},
+		"./umd": {
+			"default": "./dist/manifold.umd.js"
+		}
+	},
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build && node ./minify.js",
+		"build:debug": "MF_DEBUG_BUILD=1 tsc && MF_DEBUG_BUILD=1 node ./scripts/build.mjs",
+		"test": "vitest --run",
+		"test:watch": "vitest",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write .",
+		"pretest": "npm run -s build"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.2.4",
+		"@types/node": "^24.5.2",
+		"esbuild": "^0.25.10",
+		"jsdom": "^26.1.0",
+		"terser": "^5.44.0",
+		"typescript": "~5.9.2",
+		"vite": "^7.1.7",
+		"vitest": "^3.2.4"
+	}
+}
