@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import evaluateExpression from "../src/expression-parser";
-import StateBuilder from "../src/main";
+import evaluateExpression from "../src/expression-parser.ts";
+import StateBuilder from "../src/main.ts";
 
 let rootState: Record<string, unknown> = {};
 const initState = (data: Record<string, unknown>) => {
 	rootState = StateBuilder.create(
 		undefined,
-		data as Record<string, unknown>,
+		data as Record<string, unknown>
 	).build() as Record<string, unknown>;
 };
 
@@ -163,7 +163,7 @@ describe("Expression Parser", () => {
 			initState({
 				inc: (x: number) => x + 1,
 				sum: (a: number, b: number) => a + b,
-			}),
+			})
 		);
 		test("calls state functions", () => {
 			expect(run("inc(4)")).toBe(5);

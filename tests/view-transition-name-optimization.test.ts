@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import RegEl from "../src/registry";
+import RegEl from "../src/registry.ts";
 
 describe("View transition name optimization", () => {
 	beforeEach(() => {
@@ -41,7 +41,9 @@ describe("View transition name optimization", () => {
 		prefixElement.setAttribute("transition", "test");
 		new RegEl(prefixElement, {});
 
-		expect(prefixElement.style.viewTransitionName).toMatch(/^test-[a-z0-9]+$/);
+		expect(prefixElement.style.viewTransitionName).toMatch(
+			/^test-[a-z0-9]+$/
+		);
 	});
 
 	it("should not override existing view-transition-name", () => {
@@ -64,7 +66,9 @@ describe("View transition name optimization", () => {
 
 		new RegEl(element1, {});
 
-		expect(element1.style.viewTransitionName).toMatch(/^sidebar-[a-z0-9]+$/);
+		expect(element1.style.viewTransitionName).toMatch(
+			/^sidebar-[a-z0-9]+$/
+		);
 		expect(element1.hasAttribute("transition")).toBe(false); // Should be removed
 
 		// Test data-mf-transition

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import $ from "./helpers/api";
+import $ from "./helpers/api.ts";
 
 describe("True Circular Dependency Detection", () => {
 	test("should demonstrate circular dependency prevention in action", async () => {
@@ -80,8 +80,8 @@ describe("True Circular Dependency Detection", () => {
 			"Execution log:",
 			executionLog.map(
 				(entry) =>
-					`${entry.effect}: a=${entry.values.a}, b=${entry.values.b}, c=${entry.values.c}`,
-			),
+					`${entry.effect}: a=${entry.values.a}, b=${entry.values.b}, c=${entry.values.c}`
+			)
 		);
 
 		// The batching system should prevent infinite loops
@@ -223,13 +223,13 @@ describe("True Circular Dependency Detection", () => {
 
 		// Verify effects executed
 		expect(effectLog.some((log) => log.includes("Jane, 30"))).toBe(true);
-		expect(effectLog.some((log) => log.includes("Theme-change: light"))).toBe(
-			true,
-		);
+		expect(
+			effectLog.some((log) => log.includes("Theme-change: light"))
+		).toBe(true);
 		expect(
 			effectLog.some((log) =>
-				log.includes("Voting-eligibility: true for Jane"),
-			),
+				log.includes("Voting-eligibility: true for Jane")
+			)
 		).toBe(true);
 
 		// No infinite loops should have occurred

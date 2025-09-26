@@ -1,4 +1,4 @@
-import type { ParsedExpression } from "../expression-parser";
+import type { ParsedExpression } from "../expression-parser.ts";
 
 export type Registerable = (HTMLElement | SVGElement | MathMLElement) & {
 	mfshow?: unknown;
