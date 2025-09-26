@@ -10,6 +10,31 @@
 	"unpkg": "./dist/manifold.umd.js",
 	"jsdelivr": "./dist/manifold.umd.js",
 	"browser": "./dist/manifold.es.js",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jwrunge/manifold.git"
+	},
+	"homepage": "https://github.com/jwrunge/manifold",
+	"bugs": {
+		"url": "https://github.com/jwrunge/manifold/issues"
+	},
+	"files": [
+		"dist/",
+		"src/",
+		"README.md"
+	],
+	"keywords": [
+		"reactive",
+		"templating",
+		"state-management",
+		"no-build",
+		"javascript",
+		"typescript",
+		"dom",
+		"framework"
+	],
+	"author": "jwrunge",
+	"license": "MIT",
 	"exports": {
 		".": {
 			"types": "./src/main.ts",
