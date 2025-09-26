@@ -36,7 +36,7 @@ export default class Manifold<TState extends StateConstraint> {
 		url: string | URL,
 		fetchOps?: RequestInit,
 		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
-	) {
+	): import("./fetch.ts").FetchedContent {
 		return serverPage.get(url, fetchOps, defaultOps);
 	}
 
@@ -44,7 +44,7 @@ export default class Manifold<TState extends StateConstraint> {
 		url: string | URL,
 		fetchOps?: RequestInit,
 		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
-	) {
+	): import("./fetch.ts").FetchedContent {
 		return serverPage.post(url, fetchOps, defaultOps);
 	}
 
@@ -52,10 +52,9 @@ export default class Manifold<TState extends StateConstraint> {
 		url: string | URL,
 		ops: import("./fetch.ts").FetchDOMOptions,
 		fetchOps?: RequestInit,
-	) {
+	): Promise<void> {
 		return serverPage.fetch(url, ops, fetchOps);
 	}
-
 	add<K extends string, V>(key: K, value: V): Manifold<TState & Record<K, V>> {
 		return new Manifold(
 			this.#name,
@@ -78,7 +77,7 @@ export default class Manifold<TState extends StateConstraint> {
 		) as Manifold<TState & Record<K, T>>;
 	}
 
-	build() {
+	build(): TState {
 		if (this.#built) throw "Multiple state builds unsupported";
 
 		// Set as current instance for registry access
@@ -114,7 +113,7 @@ export default class Manifold<TState extends StateConstraint> {
 		url: string | URL,
 		fetchOps?: RequestInit,
 		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
-	) {
+	): import("./fetch.ts").FetchedContent {
 		return serverPage.get(url, fetchOps, defaultOps);
 	}
 
@@ -122,7 +121,7 @@ export default class Manifold<TState extends StateConstraint> {
 		url: string | URL,
 		fetchOps?: RequestInit,
 		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
-	) {
+	): import("./fetch.ts").FetchedContent {
 		return serverPage.post(url, fetchOps, defaultOps);
 	}
 
@@ -130,7 +129,7 @@ export default class Manifold<TState extends StateConstraint> {
 		url: string | URL,
 		ops: import("./fetch.ts").FetchDOMOptions,
 		fetchOps?: RequestInit,
-	) {
+	): Promise<void> {
 		return serverPage.fetch(url, ops, fetchOps);
 	}
 }

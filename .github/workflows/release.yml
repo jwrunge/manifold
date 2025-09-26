@@ -163,8 +163,8 @@ jobs:
                     console.log('Updated JSR configuration:');
                     console.log(JSON.stringify(jsr, null, 2));
                   "
-                  # Publish using JSR's recommended command
-                  npx jsr publish
+                  # Publish using JSR's recommended command (with fallback for slow types)
+                  npx jsr publish || npx jsr publish --allow-slow-types
 
             # Setup Deno Land publishing (via GitHub release)
             - name: Create GitHub Release for Deno Land

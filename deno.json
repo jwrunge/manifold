@@ -2,6 +2,7 @@
 	"name": "@jwrunge/manifold",
 	"version": "0.4.0",
 	"description": "A lightweight, no-build reactive state and templating library for the modern web",
+	"license": "MIT",
 	"exports": "./src/main.ts",
 	"tasks": {
 		"test": "deno test --allow-env --allow-read tests/",

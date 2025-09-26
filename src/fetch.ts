@@ -320,7 +320,7 @@ const fetchContent = async (
 	insertStyles(styles, ops.insertStyles);
 };
 
-class FetchedContent {
+export class FetchedContent {
 	constructor(
 		private url: string | URL,
 		private fetchOps: RequestInit,
