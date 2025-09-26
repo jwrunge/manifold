@@ -18,7 +18,7 @@ const flushEffects = () => {
 			if (maxLevel > 0) {
 				const buckets: Effect[][] = Array.from(
 					{ length: maxLevel + 1 },
-					() => []
+					() => [],
 				);
 				for (const e of effectsToRun) buckets[e._level].push(e);
 				for (const b of buckets) for (const e of b) e._run();
@@ -97,22 +97,15 @@ export const proxy = (obj: object): StateConstraint | Promise<unknown> => {
 		() =>
 			new Proxy(obj, {
 				get(state, key, receiver) {
-					if (typeof key === "symbol")
-						return Reflect.get(state, key, receiver);
+					if (typeof key === "symbol") return Reflect.get(state, key, receiver);
 					const curEffect = Effect._current;
 					const target = Reflect.get(state as object, key);
 					const isObj = target && typeof target === "object";
 					if (curEffect) track(state as object, key, curEffect);
 					if (Array.isArray(state) && typeof target === "function") {
 						if (arrMethods.includes(key as string)) {
-							return function (
-								this: unknown[],
-								...args: unknown[]
-							) {
-								const result = target.apply(
-									state as unknown[],
-									args
-								);
+							return function (this: unknown[], ...args: unknown[]) {
+								const result = target.apply(state as unknown[], args);
 								notify(state as object, "length");
 								return result;
 							};
@@ -135,12 +128,11 @@ export const proxy = (obj: object): StateConstraint | Promise<unknown> => {
 					notify(state as object, key);
 					if (isArr && key !== "length") {
 						const newLen = (state as unknown[]).length;
-						if (newLen !== prevLen)
-							notify(state as object, "length");
+						if (newLen !== prevLen) notify(state as object, "length");
 					}
 					return true;
 				},
-			})
+			}),
 	);
 };
 /**
@@ -178,7 +170,7 @@ export const scopeProxy = <T extends object>(base: T): T => {
 				new Set([
 					...Reflect.ownKeys(localTarget),
 					...Reflect.ownKeys(base as object),
-				])
+				]),
 			);
 		},
 		getOwnPropertyDescriptor(_t, k) {

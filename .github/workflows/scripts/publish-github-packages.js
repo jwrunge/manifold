@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const fs = require("fs");
+const fs = require("node:fs");
 
 const pkg = require("../../package.json");
 pkg.name = `@${process.env.GITHUB_REPOSITORY_OWNER}/manifold`;
