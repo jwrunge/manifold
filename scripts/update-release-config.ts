@@ -97,6 +97,8 @@ try {
 				)}`,
 			);
 		}
+		// Log final jsr json for release-time debugging (so CI logs show what JSR saw)
+		console.log("Final jsr.json:", JSON.stringify(jsr, null, 2));
 		writeJson(jsrPath, jsr);
 		console.log(`Updated ${jsrPath} -> version ${version}`);
 	} catch (err) {
@@ -108,6 +110,7 @@ try {
 		const denoPath = "deno.json";
 		const deno = readJson(denoPath);
 		deno.version = version;
+		console.log("Final deno.json:", JSON.stringify(deno, null, 2));
 		writeJson(denoPath, deno);
 		console.log(`Updated ${denoPath} -> version ${version}`);
 	} catch (err) {
