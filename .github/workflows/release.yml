@@ -146,33 +146,17 @@ jobs:
               if: steps.version_check.outputs.should_publish_npm == 'true'
               run: |
                   echo "Publishing version ${{ steps.version_check.outputs.version }} to JSR"
-                  echo "Repository owner: ${{ github.repository_owner }}"
-                  # Update JSR version and ensure proper naming
+                  # Update JSR version to match package.json
                   node -e "
                     const pkg = require('./package.json');
                     const jsr = require('./jsr.json');
                     jsr.version = pkg.version;
-                    jsr.name = '@${{ github.repository_owner }}/manifold';
                     console.log('Updated JSR configuration:');
                     console.log(JSON.stringify(jsr, null, 2));
                     require('fs').writeFileSync('jsr.json', JSON.stringify(jsr, null, 2));
                   "
-                  # Show current jsr.json content for debugging
-                  echo "Current jsr.json:"
-                  cat jsr.json
-                  # Validate JSON syntax and package name
-                  echo "Validating configuration:"
-                  node -e "
-                    const jsr = require('./jsr.json');
-                    console.log('Package name:', jsr.name);
-                    console.log('Name format valid:', /^@[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(jsr.name));
-                    console.log('Version:', jsr.version);
-                  "
-                  # Try deno publish with dry run first
-                  echo "Testing publish (dry run):"
-                  deno publish --dry-run --allow-dirty || echo "Dry run failed, continuing with actual publish"
-                  # Use deno publish with more verbose output
-                  deno publish --allow-dirty
+                  # Publish using JSR's recommended command
+                  npx jsr publish
 
             # Setup Deno Land publishing (via GitHub release)
             - name: Create GitHub Release for Deno Land
