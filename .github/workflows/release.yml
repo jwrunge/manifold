@@ -96,26 +96,53 @@ jobs:
                   registry-url: https://npm.pkg.github.com
                   scope: "@${{ github.repository_owner }}"
 
-            - name: Authenticate with GitHub Packages (external script)
+            - name: Authenticate with GitHub Packages
               if: steps.version_check.outputs.should_publish_npm == 'true'
-              run: ./.github/workflows/scripts/auth-github-packages.sh
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+              run: |
+                  #!/usr/bin/env bash
+                  set -euo pipefail
 
-            - name: Publish to GitHub Packages (external script)
+                  # Configure GitHub Packages registry and token
+                  echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> ~/.npmrc
+                  echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+              - name: Publish to GitHub Packages
+                if: steps.version_check.outputs.should_publish_npm == 'true'
+                run: |
+                    echo "Publishing version ${{ steps.version_check.outputs.version }} to GitHub Packages"
+                    echo "Repository owner: ${{ github.repository_owner }}"
+                    echo "Repository: ${{ github.repository }}"
+                    cp package.json package.json.bak
+
+                    node -e "const fs=require('fs');const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));const owner=process.env.GITHUB_REPOSITORY_OWNER||'${{ github.repository_owner }}';pkg.name='@'+owner+'/manifold';pkg.publishConfig={registry:'https://npm.pkg.github.com'};pkg.publishConfig['@'+owner+':registry']='https://npm.pkg.github.com';fs.writeFileSync('package.json',JSON.stringify(pkg,null,2));console.log('Modified package.json for GitHub Packages');"
+
+                    npm publish --access public
+                    mv package.json.bak package.json
+                env:
+                    NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                    GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+            - name: Publish to GitHub Packages
               if: steps.version_check.outputs.should_publish_npm == 'true'
               run: |
                   echo "Publishing version ${{ steps.version_check.outputs.version }} to GitHub Packages"
                   echo "Repository owner: ${{ github.repository_owner }}"
                   echo "Repository: ${{ github.repository }}"
                   cp package.json package.json.bak
-                  node ./.github/workflows/scripts/publish-github-packages.js
+
+                  # Modify package.json for GitHub Packages publishing
+                  node <<'NODE'
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
+const owner = process.env.GITHUB_REPOSITORY_OWNER || "${{ github.repository_owner }}";
+pkg.name = `@${owner}/manifold`;
+pkg.publishConfig = { registry: 'https://npm.pkg.github.com', [`@${owner}:registry`]: 'https://npm.pkg.github.com' };
+fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+console.log('Modified package.json for GitHub Packages');
+NODE
+
                   npm publish --access public
                   mv package.json.bak package.json
               env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             # Publish to JSR (using OIDC - no token needed!)
             - name: Publish to JSR
