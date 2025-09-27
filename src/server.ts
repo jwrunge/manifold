@@ -1,16 +1,16 @@
 import {
-	createConnection,
-	TextDocuments,
-	Diagnostic,
-	DiagnosticSeverity,
-	ProposedFeatures,
-	InitializeParams,
-	DidChangeConfigurationNotification,
-	CompletionItem,
+	type CompletionItem,
 	CompletionItemKind,
-	TextDocumentPositionParams,
+	createConnection,
+	type Diagnostic,
+	DiagnosticSeverity,
+	DidChangeConfigurationNotification,
+	type InitializeParams,
+	type InitializeResult,
+	ProposedFeatures,
+	type TextDocumentPositionParams,
 	TextDocumentSyncKind,
-	InitializeResult,
+	TextDocuments,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -67,7 +67,7 @@ connection.onInitialized(() => {
 		// Register for all configuration changes.
 		connection.client.register(
 			DidChangeConfigurationNotification.type,
-			undefined
+			undefined,
 		);
 	}
 	if (hasWorkspaceFolderCapability) {
@@ -149,7 +149,7 @@ function validateManifoldAttributes(
 	text: string,
 	document: TextDocument,
 	diagnostics: Diagnostic[],
-	settings: ManifoldSettings
+	settings: ManifoldSettings,
 ): void {
 	// Manifold colon attributes pattern: :if, :each, :onclick, etc.
 	const manifoldAttrPattern = /(:[\w-]+(?::[\w-]+)*)\s*=\s*"([^"]*)"/g;
@@ -212,14 +212,14 @@ function validateManifoldAttributes(
 				value,
 				match.index + fullMatch.indexOf(value),
 				document,
-				diagnostics
+				diagnostics,
 			);
 		} else if (baseName === "if" || baseName === "elseif") {
 			validateExpressionSyntax(
 				value,
 				match.index + fullMatch.indexOf(value),
 				document,
-				diagnostics
+				diagnostics,
 			);
 		}
 	}
@@ -229,7 +229,7 @@ function validateEachSyntax(
 	value: string,
 	offset: number,
 	document: TextDocument,
-	diagnostics: Diagnostic[]
+	diagnostics: Diagnostic[],
 ): void {
 	// :each syntax: "items as item" or "items as item, index"
 	const eachPattern = /^(.+?)\s+as\s+(.+)$/;
@@ -260,11 +260,9 @@ function validateEachSyntax(
 			const diagnostic: Diagnostic = {
 				severity: DiagnosticSeverity.Error,
 				range: {
-					start: document.positionAt(
-						offset + value.indexOf(destructure)
-					),
+					start: document.positionAt(offset + value.indexOf(destructure)),
 					end: document.positionAt(
-						offset + value.indexOf(destructure) + destructure.length
+						offset + value.indexOf(destructure) + destructure.length,
 					),
 				},
 				message:
@@ -280,23 +278,21 @@ function validateInterpolationExpressions(
 	text: string,
 	document: TextDocument,
 	diagnostics: Diagnostic[],
-	settings: ManifoldSettings
+	settings: ManifoldSettings,
 ): void {
 	// Template interpolation pattern: ${expression}
 	const interpolationPattern = /\$\{([^}]+)\}/g;
-	let match;
+	let match = interpolationPattern.exec(text);
 
-	while (
-		(match = interpolationPattern.exec(text)) &&
-		diagnostics.length < settings.maxNumberOfProblems
-	) {
+	while (match && diagnostics.length < settings.maxNumberOfProblems) {
 		const [fullMatch, expression] = match;
 		validateExpressionSyntax(
 			expression,
 			match.index + fullMatch.indexOf(expression),
 			document,
-			diagnostics
+			diagnostics,
 		);
+		match = interpolationPattern.exec(text);
 	}
 }
 
@@ -304,7 +300,7 @@ function validateExpressionSyntax(
 	expression: string,
 	offset: number,
 	document: TextDocument,
-	diagnostics: Diagnostic[]
+	diagnostics: Diagnostic[],
 ): void {
 	const trimmed = expression.trim();
 
@@ -346,8 +342,8 @@ function validateExpressionSyntax(
 				unmatched[0] === "("
 					? "parenthesis"
 					: unmatched[0] === "["
-					? "bracket"
-					: "brace"
+						? "bracket"
+						: "brace"
 			}`,
 			source: "manifold-lsp",
 		};
@@ -370,7 +366,7 @@ connection.onCompletion(
 		const lastSpace = Math.max(
 			beforeCursor.lastIndexOf(" "),
 			beforeCursor.lastIndexOf("\n"),
-			beforeCursor.lastIndexOf("\t")
+			beforeCursor.lastIndexOf("\t"),
 		);
 
 		if (lastColon > lastSpace) {
@@ -379,7 +375,7 @@ connection.onCompletion(
 		}
 
 		return [];
-	}
+	},
 );
 
 function getManifoldAttributeCompletions(): CompletionItem[] {
@@ -518,8 +514,7 @@ connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
 			item.insertText = 'each="items as item"';
 			break;
 		case "if":
-			item.documentation =
-				"Conditionally renders element based on expression";
+			item.documentation = "Conditionally renders element based on expression";
 			item.insertText = 'if="expression"';
 			break;
 		case "onclick":
