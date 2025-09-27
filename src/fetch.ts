@@ -36,8 +36,9 @@ export type FetchDOMOptions = {
 /** @internal */
 const cssEscape = (value: string) => {
 	// Prefer native if available
-	if (typeof CSS !== "undefined" && typeof CSS.escape === "function")
-		return CSS.escape(value);
+	const gCSS = (globalThis as { CSS?: { escape?: (s: string) => string } }).CSS;
+	if (typeof gCSS !== "undefined" && typeof gCSS.escape === "function")
+		return gCSS.escape(value);
 	// Minimal fallback sufficient for attribute selector values used here
 	return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 };
