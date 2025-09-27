@@ -7,7 +7,9 @@
 		"compile": "tsc -b",
 		"compile:watch": "tsc -b --watch",
 		"test": "npm run compile && node ./out/test/runTest.js",
-		"lint": "eslint src --ext ts",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write .",
 		"prepare": "npm run compile"
 	},
 	"engines": {
