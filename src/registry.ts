@@ -77,7 +77,7 @@ const observer = new MutationObserver((mRecord) => {
 	for (const m of mRecord) {
 		if (m.type === "childList") {
 			// Handle removal
-			for (const el of m.removedNodes as Iterable<Registerable>) {
+			for (const el of Array.from(m.removedNodes) as Registerable[]) {
 				if (el.nodeType !== 1 || el.isConnected)
 					// ELEMENT_NODE = 1
 					continue;
