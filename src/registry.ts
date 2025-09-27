@@ -32,12 +32,15 @@ const _registerElement = (el: Element) => {
 
 // Handle incremental registration of new elements
 const _handleNewElements = (addedNodes: NodeList) => {
-	for (const node of addedNodes) {
+	for (const node of Array.from(addedNodes)) {
 		if (node.nodeType !== 1) continue; // ELEMENT_NODE = 1
 		const el = node as Element;
 
 		// Check if this element or any descendant needs registration
-		const candidates = [el, ...el.querySelectorAll("[data-mf-register]")];
+		const candidates = [
+			el,
+			...Array.from(el.querySelectorAll("[data-mf-register]")),
+		];
 		for (const candidate of candidates) {
 			_registerElement(candidate);
 		}
@@ -79,7 +82,9 @@ const observer = new MutationObserver((mRecord) => {
 					// ELEMENT_NODE = 1
 					continue;
 				RegEl._registry.get(el)?._dispose?.();
-				for (const d of el.querySelectorAll("*") as Iterable<Registerable>) {
+				for (const d of Array.from(
+					el.querySelectorAll("*"),
+				) as Registerable[]) {
 					RegEl._registry.get(d)?._dispose?.();
 				}
 			}
@@ -175,13 +180,15 @@ export default class RegEl {
 
 	static _handleExistingElements(storeName?: string) {
 		// Process each element individually using the same shared logic
-		for (const node of document?.querySelectorAll(
-			`[data-mf-register${
-				storeName !== undefined && storeName !== null
-					? `="${String(storeName)}"`
-					: ``
-			}]`,
-		) ?? []) {
+		for (const node of Array.from(
+			document?.querySelectorAll(
+				`[data-mf-register${
+					storeName !== undefined && storeName !== null
+						? `="${String(storeName)}"`
+						: ``
+				}]`,
+			) ?? [],
+		)) {
 			if (node.nodeType !== 1) continue; // ELEMENT_NODE = 1
 			const el = node as Element;
 
@@ -241,7 +248,7 @@ export default class RegEl {
 			}
 		}
 
-		for (const child of el.children) {
+		for (const child of Array.from(el.children)) {
 			if (
 				!child.getAttribute("data-mf-ignore") &&
 				!RegEl._registry.has(child as Registerable)
@@ -252,7 +259,7 @@ export default class RegEl {
 		}
 
 		// Handle text nodes (template elements used by :each are hidden and preserved; clones get their own effects)
-		for (const node of el.childNodes) this._handleTextNode(node);
+		for (const node of Array.from(el.childNodes)) this._handleTextNode(node);
 
 		// Pre-process transition attributes (support both raw and data-mf-)
 		let transitionValue: string | null = null;
