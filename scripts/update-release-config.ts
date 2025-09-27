@@ -25,11 +25,7 @@ function readJson(path: string) {
 			}
 			if (ch === "/" && next === "*") {
 				i += 2;
-				while (
-					i < raw.length &&
-					!(raw[i] === "*" && raw[i + 1] === "/")
-				)
-					i++;
+				while (i < raw.length && !(raw[i] === "*" && raw[i + 1] === "/")) i++;
 				i += 2;
 				continue;
 			}
