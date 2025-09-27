@@ -25,7 +25,11 @@ function readJson(path: string) {
 			}
 			if (ch === "/" && next === "*") {
 				i += 2;
-				while (i < raw.length && !(raw[i] === "*" && raw[i + 1] === "/")) i++;
+				while (
+					i < raw.length &&
+					!(raw[i] === "*" && raw[i + 1] === "/")
+				)
+					i++;
 				i += 2;
 				continue;
 			}
@@ -77,26 +81,7 @@ try {
 		const jsrPath = "jsr.json";
 		const jsr = readJson(jsrPath);
 		jsr.version = version;
-		// Also merge compilerOptions from tsconfig.json if present so JSR publishes with correct libs
-		try {
-			const tsconfig = readJson("tsconfig.json");
-			if (tsconfig?.compilerOptions) {
-				jsr.compilerOptions = Object.assign(
-					{},
-					jsr.compilerOptions || {},
-					tsconfig.compilerOptions,
-				);
-				console.log(
-					`Merged compilerOptions from tsconfig.json into ${jsrPath}`,
-				);
-			}
-		} catch (e) {
-			console.warn(
-				`Could not read tsconfig.json to merge compilerOptions: ${getMessage(
-					e,
-				)}`,
-			);
-		}
+
 		// Log final jsr json for release-time debugging (so CI logs show what JSR saw)
 		console.log("Final jsr.json:", JSON.stringify(jsr, null, 2));
 		writeJson(jsrPath, jsr);
