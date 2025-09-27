@@ -3,6 +3,9 @@
 	"name": "@jwrunge/manifold",
 	"version": "0.4.23",
 	"tsconfig": "tsconfig.json",
+	"compilerOptions": {
+		"lib": ["es2022", "dom", "dom.iterable"]
+	},
 	"exports": {
 		".": "./src/main.ts"
 	},
