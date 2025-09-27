@@ -128,7 +128,7 @@ jobs:
                   echo '--- debug: jsr.json ---'
                   cat jsr.json || true
                   # Use deno publish directly which properly supports --allow-dirty
-                  jsr publish || echo "JSR publish failed"
+                  deno publish --allow-dirty || echo "JSR publish failed"
 
             # Setup Deno Land publishing (via GitHub release)
             - name: Create GitHub Release for Deno Land
