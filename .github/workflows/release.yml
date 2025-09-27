@@ -2,7 +2,9 @@ name: Release
 
 on:
     push:
-        branches: ["release"]
+        branches:
+            - "release"
+            - "release/**"
 
 permissions:
     contents: write # For creating releases
@@ -116,22 +118,17 @@ jobs:
                   NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             # Publish to JSR (using OIDC - no token needed!)
-            - name: Publish to JSR
-              if: steps.version_check.outputs.should_publish_npm == 'true'
-              run: |
-                  echo "Publishing version ${{ steps.version_check.outputs.version }} to JSR"
-                  # Update both JSR and Deno config versions to match package.json via Deno script
-                  deno run --allow-read --allow-write scripts/update-release-config.ts
-                  # Debug: show what will be published so we can verify DOM types are present
-                  echo '--- debug: jsr.json ---'
-                  cat jsr.json || true
-                  echo '--- debug: tsconfig.json ---'
-                  cat tsconfig.json || true
-                  echo '--- debug: src/types ---'
-                  ls -la src/types || true
-                  # Use deno publish directly which properly supports --allow-dirty
-                  deno publish --allow-dirty || echo "First attempt failed, trying with --allow-slow-types"
-                  deno publish --allow-dirty --allow-slow-types || echo "JSR publish failed"
+            # - name: Publish to JSR
+            # if: steps.version_check.outputs.should_publish_npm == 'true'
+            # run: |
+            #     echo "Publishing version ${{ steps.version_check.outputs.version }} to JSR"
+            #     # Update both JSR and Deno config versions to match package.json via Deno script
+            #     deno run --allow-read --allow-write scripts/update-release-config.ts
+            #     # Debug: show what will be published so we can verify DOM types are present
+            #     echo '--- debug: jsr.json ---'
+            #     cat jsr.json || true
+            #     # Use deno publish directly which properly supports --allow-dirty
+            #     jsr publish --allow-dirty || echo "JSR publish failed"
 
             # Setup Deno Land publishing (via GitHub release)
             - name: Create GitHub Release for Deno Land
