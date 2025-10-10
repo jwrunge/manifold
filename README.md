@@ -60,16 +60,16 @@ npm install @jwrunge/manifold --registry=https://npm.pkg.github.com
 ```html
 <!-- ES Modules -->
 <script type="module">
-	import Manifold from "https://cdn.jsdelivr.net/npm/mfld@latest/dist/manifold.es.js";
+	import Manifold from "https://cdn.jsdelivr.net/npm/@jwrunge/manifold@latest/dist/manifold.es.js";
 </script>
 
 <!-- UMD (global Manifold variable) -->
-<script src="https://cdn.jsdelivr.net/npm/mfld@latest/dist/manifold.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@jwrunge/manifold@latest/dist/manifold.umd.js"></script>
 
 <!-- Alternative CDNs -->
-<script src="https://unpkg.com/mfld@latest/dist/manifold.umd.js"></script>
+<script src="https://unpkg.com/@jwrunge/manifold@latest/dist/manifold.umd.js"></script>
 <script type="module">
-	import Manifold from "https://esm.sh/mfld";
+	import Manifold from "https://esm.sh/@jwrunge/manifold";
 </script>
 ```
 
