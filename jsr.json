@@ -3,6 +3,7 @@
 	"name": "@jwrunge/manifold",
 	"version": "0.4.23",
 	"tsconfig": "tsconfig.json",
+	"description": "A lightweight, no-build reactive state and templating library for the modern web",
 	"compilerOptions": {
 		"lib": ["es2022", "dom", "dom.iterable"]
 	},
