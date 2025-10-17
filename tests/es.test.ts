@@ -1,10 +1,14 @@
 import { expect, test } from "vitest";
-// @ts-expect-error - ignore type checking for built dist file
-import StateBuilder from "../dist/manifold.es.js";
+
+const loadESBuilder = async () =>
+	(await import("../dist/manifold.js")) as unknown as {
+		default: typeof import("../src/main.ts").default;
+	};
 
 // Basic sanity tests for ES module bundle
 
 test("ES build: create store, update, derived", async () => {
+	const { default: StateBuilder } = await loadESBuilder();
 	const state = StateBuilder.create()
 		.add("count", 0)
 		.derive("double", (s: { count: number }) => s.count * 2)

@@ -8,8 +8,9 @@ export default defineConfig({
 		lib: {
 			entry: "src/main.ts",
 			name: "Manifold",
-			formats: ["es", "umd", "cjs"],
-			fileName: "manifold",
+			formats: ["es", "umd"],
+			fileName: (format) =>
+				format === "umd" ? "manifold.umd.js" : "manifold.js",
 		},
 	},
 });

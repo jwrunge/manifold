@@ -60,11 +60,19 @@ npm install @jwrunge/manifold --registry=https://npm.pkg.github.com
 ```html
 <!-- ES Modules -->
 <script type="module">
-	import Manifold from "https://cdn.jsdelivr.net/npm/@jwrunge/manifold@latest/dist/manifold.es.js";
+	import Manifold from "https://cdn.jsdelivr.net/npm/@jwrunge/manifold@latest/dist/manifold.js";
+	const state = Manifold.create().add("count", 0).build();
+	state.count++;
 </script>
 
 <!-- UMD (global Manifold variable) -->
 <script src="https://cdn.jsdelivr.net/npm/@jwrunge/manifold@latest/dist/manifold.umd.js"></script>
+<script>
+	document.addEventListener("DOMContentLoaded", () => {
+		const state = window.Manifold.create().add("count", 0).build();
+		document.body.textContent = `Count: ${state.count}`;
+	});
+</script>
 
 <!-- Alternative CDNs -->
 <script src="https://unpkg.com/@jwrunge/manifold@latest/dist/manifold.umd.js"></script>
@@ -97,7 +105,7 @@ Here's a complete reactive counter app in pure HTML:
 		<div :if="count > 10">Wow, you've clicked a lot!</div>
 
 		<script type="module">
-			import Manifold from "./dist/manifold.es.js";
+			import Manifold from "./dist/manifold.js";
 			const state = Manifold.create().add("count", 0).build();
 		</script>
 	</body>

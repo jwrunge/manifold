@@ -21,7 +21,7 @@ type DemoFuncs = {
 const loadBuilders = async () => {
 	const src = (await import("../src/main.ts")).default as Builder;
 	const es = (
-		(await import("../dist/manifold.es.js")) as unknown as {
+		(await import("../dist/manifold.js")) as unknown as {
 			default: Builder;
 		}
 	).default;
@@ -126,26 +126,27 @@ for (const { name, StateBuilder } of builders) {
 		(state as unknown as { removeItem: () => void }).removeItem = () => {
 			state.items = state.items.slice(0, -1);
 		};
-		(state as unknown as { setItem: (i: number, v: unknown) => void }).setItem =
-			(i: number, v: unknown) => {
-				(state.items as unknown[])[i] = v;
-			};
+		(
+			state as unknown as { setItem: (i: number, v: unknown) => void }
+		).setItem = (i: number, v: unknown) => {
+			(state.items as unknown[])[i] = v;
+		};
 
 		// Auto-registration already triggered by the build above
 
 		// initial
 		await flush();
 		expect(
-			(document.getElementById("c1") as HTMLElement).textContent,
+			(document.getElementById("c1") as HTMLElement).textContent
 		).toContain("10");
 		expect(
-			(document.getElementById("c2") as HTMLElement).textContent,
+			(document.getElementById("c2") as HTMLElement).textContent
 		).toContain("4");
 		expect(
-			(document.getElementById("sum") as HTMLElement).textContent,
+			(document.getElementById("sum") as HTMLElement).textContent
 		).toContain("14");
 		expect(
-			(document.getElementById("dbl") as HTMLElement).textContent,
+			(document.getElementById("dbl") as HTMLElement).textContent
 		).toContain("20");
 		expect(isDisplayed(document.getElementById("if10_14"))).toBe(true);
 		expect(isDisplayed(document.getElementById("if15"))).toBe(false);
@@ -154,20 +155,20 @@ for (const { name, StateBuilder } of builders) {
 		(document.getElementById("btnInc1") as HTMLButtonElement).click();
 		await flush();
 		expect(
-			(document.getElementById("c1") as HTMLElement).textContent,
+			(document.getElementById("c1") as HTMLElement).textContent
 		).toContain("11");
 		expect(
-			(document.getElementById("sum") as HTMLElement).textContent,
+			(document.getElementById("sum") as HTMLElement).textContent
 		).toContain("15");
 		expect(
-			(document.getElementById("dbl") as HTMLElement).textContent,
+			(document.getElementById("dbl") as HTMLElement).textContent
 		).toContain("22");
 
 		// click +5
 		(document.getElementById("btnInc5") as HTMLButtonElement).click();
 		await flush();
 		expect(
-			(document.getElementById("c1") as HTMLElement).textContent,
+			(document.getElementById("c1") as HTMLElement).textContent
 		).toContain("16");
 		expect(isDisplayed(document.getElementById("if15"))).toBe(true);
 		expect(isDisplayed(document.getElementById("if10_14"))).toBe(false);
@@ -181,7 +182,7 @@ for (const { name, StateBuilder } of builders) {
 		// reflects back
 		await flush();
 		expect(
-			(document.getElementById("c1") as HTMLElement).textContent,
+			(document.getElementById("c1") as HTMLElement).textContent
 		).toContain("7");
 
 		// explicit oninput for count2
@@ -192,7 +193,7 @@ for (const { name, StateBuilder } of builders) {
 		expect(state.count2).toBe("12");
 		await flush();
 		expect(
-			(document.getElementById("c2") as HTMLElement).textContent,
+			(document.getElementById("c2") as HTMLElement).textContent
 		).toContain("12");
 
 		// each list initial
@@ -204,7 +205,12 @@ for (const { name, StateBuilder } of builders) {
 		// add item via concat
 		(document.getElementById("btnAdd") as HTMLButtonElement).click();
 		await flush();
-		expect(lis()).toEqual(["Item 0: 1", "Item 1: 2", "Item 2: 3", "Item 3: 4"]);
+		expect(lis()).toEqual([
+			"Item 0: 1",
+			"Item 1: 2",
+			"Item 2: 3",
+			"Item 3: 4",
+		]);
 		// remove last via slice
 		(document.getElementById("btnRemove") as HTMLButtonElement).click();
 		await flush();
