@@ -40,8 +40,8 @@
 			<div :await="currentUserPromise" :transition="list-item">
 				Loading user...
 			</div>
-			<div :then="user" :transition="list-item">
-				User loaded: ${user.name} (${user.age}) ${count}
+			<div :then="{name, age}" :transition="list-item">
+				User loaded: ${name} (${age}) ${count}
 			</div>
 			<div :catch="errorMsg" style="color: red" :transition="list-item">
 				Failed to load user: ${errorMsg}
