@@ -1,3 +1,5 @@
+import { globalComponents } from "./globalstores.ts";
+
 export interface ComponentOptions {
 	href: string;
 	shadow: "open" | "closed" | false;
@@ -10,17 +12,16 @@ export interface ComponentOptions {
 	onAttributeChanged: (
 		attrName: string,
 		oldVal: string | null,
-		newVal: string | null,
+		newVal: string | null
 	) => void;
 	observedAttributes: Array<string>;
 }
 
 export const _makeComponent = (
 	name: string,
-	template: HTMLTemplateElement | string,
+	template: HTMLTemplateElement | string
 ): void => {
-	if (MFLD.comp[name]) return;
-	MFLD.comp[name] = class extends HTMLElement {
+	globalComponents[name] ??= class extends HTMLElement {
 		template: HTMLTemplateElement | null = null;
 		context: Set<{ key: string; store: string }> = new Set();
 		deps: Set<string> = new Set();
@@ -44,7 +45,7 @@ export const _makeComponent = (
 			this.onAttributeChanged = ops?.onAttributeChanged?.bind(this);
 			this.template =
 				(document.getElementById(
-					ops?.selector || name,
+					ops?.selector || name
 				) as HTMLTemplateElement) ||
 				(this.querySelector("template") as HTMLTemplateElement) ||
 				(() => {
@@ -52,20 +53,24 @@ export const _makeComponent = (
 					_swapInnerHTML(T, this);
 					return T;
 				})();
-			if (!this.classList.contains("_mf-cmp")) this.classList.add("_mf-cmp");
+			if (!this.classList.contains("_mf-cmp"))
+				this.classList.add("_mf-cmp");
 		}
 
 		connectedCallback(): void {
 			if (ops?.shadow != false)
-				this.shadow = this.attachShadow({ mode: ops?.shadow || "closed" });
+				this.shadow = this.attachShadow({
+					mode: ops?.shadow || "closed",
+				});
 
 			// Get previous context
-			const containingComponent = (this.parentNode as HTMLElement)?.closest?.(
-				"._mf-cmp",
-			);
+			const containingComponent = (
+				this.parentNode as HTMLElement
+			)?.closest?.("._mf-cmp");
 			if (containingComponent) {
 				this.context =
-					(containingComponent as MfldComponent)?.context || new Map();
+					(containingComponent as MfldComponent)?.context ||
+					new Map();
 			}
 
 			// Internal data (if, else, elseif affects show store; each affects duplication; all others affect value replacement and bring $var lookups into scope)
@@ -75,7 +80,9 @@ export const _makeComponent = (
 					attr.name.startsWith(ATTR_PREFIX)
 				)
 					continue;
-				let isConditional = ["if", "else", "elseif"].includes(attr.name),
+				let isConditional = ["if", "else", "elseif"].includes(
+						attr.name
+					),
 					subConditional = ["else", "elseif"].includes(attr.name),
 					store: Store<any> | null = null,
 					prevConditions: string[] = [];
@@ -83,7 +90,9 @@ export const _makeComponent = (
 				// Get previous conditions
 				if (subConditional) {
 					let prev = this as MfldComponent;
-					while ((prev = prev?.previousElementSibling as MfldComponent)) {
+					while (
+						(prev = prev?.previousElementSibling as MfldComponent)
+					) {
 						if (!prev.classList.contains("_mf-cmp")) break;
 						if (prev.showController)
 							prevConditions.push(prev.showController?.name);
@@ -96,21 +105,21 @@ export const _makeComponent = (
 				const { func, as, dependencyList } = _parseFunction(
 					attr.value,
 					Array.from(this.context),
-					prevConditions,
+					prevConditions
 				);
 
 				if (isConditional) {
 					this.showController = _registerInternalStore(
 						this,
 						func,
-						prevConditions,
+						prevConditions
 					);
 				} else if (attr.name == "each") {
 					this.eachAliases = as || ["val", "key"];
 					this.eachController = _registerInternalStore(
 						this,
 						func,
-						dependencyList,
+						dependencyList
 					);
 				} else {
 					for (const [searchIn, subprop] of [
@@ -120,12 +129,18 @@ export const _makeComponent = (
 						for (const dep of searchIn || []) {
 							this.deps.add(
 								subprop
-									? (dep[subprop as keyof typeof dep] as string)
-									: (dep as string),
+									? (dep[
+											subprop as keyof typeof dep
+									  ] as string)
+									: (dep as string)
 							);
 						}
 					}
-					store = _registerInternalStore(this, func, Array.from(this.deps));
+					store = _registerInternalStore(
+						this,
+						func,
+						Array.from(this.deps)
+					);
 				}
 
 				this.context.add({ key: attr.name, store: store?.name || "" });
@@ -144,7 +159,12 @@ export const _makeComponent = (
 		_clear() {
 			// Transition out all elements from the previous condition
 			const container = document.createElement("span");
-			console.log("CLEARING", this.innerHTML, "SHADOW", this.shadow?.innerHTML);
+			console.log(
+				"CLEARING",
+				this.innerHTML,
+				"SHADOW",
+				this.shadow?.innerHTML
+			);
 			// _swapInnerHTML(container, this);
 			// this.before(container);
 			// console.log("CLEARING", container.innerHTML)
@@ -158,9 +178,9 @@ export const _makeComponent = (
 
 			console.log("RENDERING");
 
-			const template = (this.template as HTMLTemplateElement).content.cloneNode(
-				true,
-			) as HTMLTemplateElement;
+			const template = (
+				this.template as HTMLTemplateElement
+			).content.cloneNode(true) as HTMLTemplateElement;
 			this.shadow?.append(template);
 
 			// Iterate over all values (only one if not each) and transition them in
@@ -212,9 +232,11 @@ export const _swapInnerHTML = (el: HTMLElement, newEl: HTMLElement) => {
 export const _fetchComponent = async (
 	name: string,
 	src: string,
-	ops?: Partial<ComponentOptions>,
+	ops?: Partial<ComponentOptions>
 ): Promise<void> => {
-	document.querySelectorAll(name).forEach((el) => el.classList.add("_mf-cmp"));
+	document
+		.querySelectorAll(name)
+		.forEach((el) => el.classList.add("_mf-cmp"));
 	_fetchAndInsert(
 		undefined,
 		"get",
@@ -222,7 +244,7 @@ export const _fetchComponent = async (
 		src,
 		"template -> body",
 		null,
-		false,
+		false
 	).then(() => {
 		_makeComponent(name, ops);
 	});
