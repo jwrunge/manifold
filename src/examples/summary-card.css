@@ -1,0 +1,124 @@
+:host {
+	display: block;
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+		sans-serif;
+	color: #101828;
+}
+
+.summary-card {
+	background: #ffffff;
+	border-radius: 1.25rem;
+	border: 2px solid rgba(15, 23, 42, 0.08);
+	box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+	padding: 1.75rem;
+	display: grid;
+	gap: 1.4rem;
+	transition: border-color 160ms ease, box-shadow 160ms ease,
+		transform 160ms ease;
+}
+
+.summary-card.highlighted {
+	border-color: var(--accent-color, #2563eb);
+	box-shadow: 0 24px 48px rgba(37, 99, 235, 0.18);
+	transform: translateY(-2px);
+}
+
+.summary-header {
+	display: grid;
+	gap: 0.45rem;
+}
+
+.summary-chip {
+	display: inline-flex;
+	align-items: center;
+	width: fit-content;
+	font-size: 0.75rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	background: rgba(37, 99, 235, 0.08);
+	color: var(--accent-color, #2563eb);
+	border-radius: 999px;
+	padding: 0.25rem 0.65rem;
+	font-weight: 600;
+}
+
+.summary-title {
+	margin: 0;
+	font-size: 1.4rem;
+	font-weight: 700;
+	color: #0f172a;
+}
+
+.summary-description {
+	margin: 0;
+	font-size: 0.98rem;
+	line-height: 1.6;
+	color: rgba(15, 23, 42, 0.72);
+}
+
+.summary-metrics {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
+}
+
+.summary-metric {
+	background: rgba(15, 23, 42, 0.04);
+	border-radius: 0.95rem;
+	padding: 1rem 1.1rem;
+	display: grid;
+	gap: 0.35rem;
+}
+
+.metric-value {
+	font-size: 1.5rem;
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+	color: #0f172a;
+}
+
+.metric-label {
+	font-size: 0.85rem;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: rgba(15, 23, 42, 0.55);
+}
+
+.summary-footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+}
+
+.summary-trend {
+	margin: 0;
+	font-size: 0.9rem;
+	color: rgba(15, 23, 42, 0.7);
+}
+
+button {
+	align-items: center;
+	background: var(--accent-color, #2563eb);
+	border: none;
+	border-radius: 0.75rem;
+	color: #ffffff;
+	cursor: pointer;
+	display: inline-flex;
+	font: inherit;
+	font-weight: 600;
+	gap: 0.5rem;
+	letter-spacing: 0.02em;
+	padding: 0.6rem 1.15rem;
+	transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+button:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 10px 25px rgba(37, 99, 235, 0.28);
+}
+
+button:active {
+	transform: translateY(0);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}

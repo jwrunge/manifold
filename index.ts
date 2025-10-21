@@ -1,6 +1,8 @@
 import { effect } from "./src/Effect.ts";
 import "./src/examples/counter-component.ts";
 import type { CounterElementInstance } from "./src/examples/counter-component.ts";
+import "./src/examples/summary-card-component.ts";
+import type { SummaryCardElementInstance } from "./src/examples/summary-card-component.ts";
 import $ from "./src/main.ts";
 
 const myState = $.create()
@@ -65,12 +67,36 @@ const mountCounterBridge = () => {
 	});
 };
 
+const mountSummaryBridge = () => {
+	const summary = document.querySelector<SummaryCardElementInstance>(
+		"#summary-card-showcase"
+	);
+	if (!summary) return;
+
+	effect(() => {
+		summary.updateProps({
+			primaryValue: 1280 + myState.count * 3,
+			secondaryValue: 42 + Math.floor(myState.count / 4),
+			trend:
+				myState.count % 2 === 0
+					? "Up 12% from last week"
+					: "Up 5% from last refresh",
+			highlight: myState.count % 2 === 0,
+			accentColor: myState.count % 2 === 0 ? "#16a34a" : "#2563eb",
+		});
+	});
+};
+
 if (document.readyState === "loading") {
 	document.addEventListener("DOMContentLoaded", mountCounterBridge, {
 		once: true,
 	});
+	document.addEventListener("DOMContentLoaded", mountSummaryBridge, {
+		once: true,
+	});
 } else {
 	mountCounterBridge();
+	mountSummaryBridge();
 }
 
 export type DemoState = typeof myState;

@@ -94,3 +94,20 @@ input {
 	line-height: 1.5;
 	color: rgba(248, 249, 250, 0.8);
 }
+
+.component-demo h3 {
+	margin: 0;
+	font-size: 1.15rem;
+	color: #e9ecef;
+}
+
+.component-divider {
+	height: 1px;
+	border: none;
+	background: rgba(233, 236, 239, 0.2);
+	margin: 0.5rem 0;
+}
+
+.component-demo mf-summary-card {
+	max-width: 26rem;
+}
