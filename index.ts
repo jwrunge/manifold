@@ -1,3 +1,6 @@
+import { effect } from "./src/Effect.ts";
+import "./src/examples/counter-component.ts";
+import type { CounterElementInstance } from "./src/examples/counter-component.ts";
 import $ from "./src/main.ts";
 
 const myState = $.create()
@@ -40,7 +43,7 @@ myState.loadUser = () => {
 
 			if (fail) rej(new Error("Network"));
 			else res({ name: "Ada", age: 37 + Math.floor(Math.random() * 10) });
-		}, 800),
+		}, 800)
 	);
 	myState.currentUserPromise = p;
 	return p;
@@ -48,6 +51,27 @@ myState.loadUser = () => {
 
 // Initial load
 myState.loadUser();
+
+const mountCounterBridge = () => {
+	const counter =
+		document.querySelector<CounterElementInstance>("#global-counter");
+	if (!counter) return;
+
+	effect(() => {
+		counter.updateProps({
+			count: myState.count,
+			highlight: myState.count % 5 === 0,
+		});
+	});
+};
+
+if (document.readyState === "loading") {
+	document.addEventListener("DOMContentLoaded", mountCounterBridge, {
+		once: true,
+	});
+} else {
+	mountCounterBridge();
+}
 
 export type DemoState = typeof myState;
 export default myState;
