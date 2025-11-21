@@ -1,7 +1,7 @@
 // Internal: iterate characters at top-level only; stop when callback returns true
 const scanTopLevel = (
 	src: string,
-	onTop: (i: number, ch: string) => boolean,
+	onTop: (i: number, ch: string) => boolean
 ) => {
 	let p = 0,
 		b = 0,
@@ -28,9 +28,6 @@ const scanTopLevel = (
 	}
 };
 
-/**
- * Find the index of a top-level character (not inside parens, brackets, braces, or quotes)
- */
 export const indexOfTopLevel = (src: string, chr: string): number => {
 	let found = -1;
 	scanTopLevel(src, (i, ch) => {
@@ -43,23 +40,8 @@ export const indexOfTopLevel = (src: string, chr: string): number => {
 	return found;
 };
 
-/**
- * Check if a string is a valid identifier
- */
-/**
- * Return true when `s` is a valid JavaScript identifier.
- * @public
- */
 export const isIdent = (s: string): boolean => /^[A-Za-z_$][\w$]*$/.test(s);
 
-/**
- * Split a string by a separator at the top level (not inside parentheses, brackets, braces, or quotes)
- */
-/**
- * Split `src` by the separator `sep` but only at top-level (ignores separators
- * inside parens, brackets, braces, or quotes).
- * @public
- */
 export const splitTopLevel = (src: string, sep: string): string[] => {
 	const out: string[] = [];
 	let last = 0;
@@ -74,17 +56,9 @@ export const splitTopLevel = (src: string, sep: string): string[] => {
 	return out;
 };
 
-// Shared regex for identifier continuation (letter, digit, underscore, or dollar sign)
-/**
- * Returns true for characters that can continue an identifier (alphanumeric, underscore, dollar).
- * @public
- */
 export const isIdentContinuation = (char: string): boolean =>
 	/[\w$]/.test(char);
 
-/**
- * Split an attribute value on top-level " as " into [expr, alias]
- */
 export const splitAs = (rawAttr: string): [string, string | undefined] => {
 	let res: [string, string | undefined] | null = null;
 	scanTopLevel(rawAttr, (i, _ch) => {

@@ -80,14 +80,6 @@ const arrMethods = [
 	"sort",
 	"reverse",
 ];
-/**
- * Wrap an object in Manifold's reactivity proxy.
- *
- * This returns a proxied version of `obj` that tracks property access and
- * notifies dependent effects on changes. Non-object inputs are returned as-is
- * and Promises are intentionally not proxied.
- * @public
- */
 export const proxy = (obj: object): StateConstraint | Promise<unknown> => {
 	if (!obj || typeof obj !== "object") return obj;
 	// Do not proxy Promises!

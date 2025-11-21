@@ -1,29 +1,8 @@
 import { VT_CLASS } from "./css.ts";
 import RegEl from "./registry.ts";
 
-/**
- * Methods used when inserting fetched content into the DOM.
- *
- * Example:
- * ```ts
- * // insert content by replacing the target
- * const handle = Manifold.get('/snippet.html');
- * await handle.replace('#root');
- * ```
- * @public
- */
 export type InsertContentMethod = "append" | "prepend" | "replace";
 
-/**
- * Options controlling how fetched DOM content is inserted.
- * @public
- * Example:
- * ```ts
- * // Fetch a snippet and append it to #main, including inline scripts
- * const h = Manifold.get('/snippet.html', undefined, { insertScripts: true });
- * await h.append('#main');
- * ```
- */
 export type FetchDOMOptions = {
 	from?: string;
 	to: string;
@@ -33,7 +12,6 @@ export type FetchDOMOptions = {
 	addTransitionClass?: string;
 };
 
-/** @internal */
 const cssEscape = (value: string) => {
 	// Prefer native if available
 	const gCSS = (globalThis as { CSS?: { escape?: (s: string) => string } })
@@ -44,7 +22,6 @@ const cssEscape = (value: string) => {
 	return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 };
 
-/** @internal */
 const cloneAndAppendChildren = (src: ParentNode, dest: DocumentFragment) => {
 	const topLevel: Element[] = [];
 	for (const node of Array.from(src.childNodes)) {
@@ -55,7 +32,6 @@ const cloneAndAppendChildren = (src: ParentNode, dest: DocumentFragment) => {
 	return topLevel;
 };
 
-/** @internal */
 const insertScripts = (
 	scripts: HTMLScriptElement[],
 	filter?: boolean | string[]
@@ -104,7 +80,6 @@ const insertScripts = (
 	}
 };
 
-/** @internal */
 const insertStyles = (
 	styles: (HTMLStyleElement | HTMLLinkElement)[],
 	filter?: boolean | string[]
@@ -148,12 +123,6 @@ const insertStyles = (
 	}
 };
 
-/**
- * Fetch HTML content and insert it into the document according to options.
- * This helper works in both browser and Node (test) environments; when run
- * under Node it supports reading local files via file: URLs or paths.
- * @public
- */
 const fetchContent = async (
 	url: string | URL,
 	ops: FetchDOMOptions,
@@ -161,7 +130,7 @@ const fetchContent = async (
 ) => {
 	const loadHTML = async (): Promise<string> => {
 		// In Node.js test environments, handle file:// URLs and relative paths
-		if (typeof process !== "undefined" && process.versions?.node) {
+		if (typeof process !== "undefined" && process?.versions?.node) {
 			if (typeof url === "string" && !url.startsWith("http")) {
 				const { readFile } = await import("node:fs/promises");
 				const path = await import("node:path");
@@ -331,11 +300,6 @@ const fetchContent = async (
 	insertStyles(styles, ops.insertStyles);
 };
 
-/**
- * A handle for content fetched from a remote resource with convenience
- * methods to insert the content into the document.
- * @public
- */
 export class FetchedContent {
 	constructor(
 		private url: string | URL,
@@ -377,12 +341,6 @@ export class FetchedContent {
 	}
 }
 
-/**
- * Fetch utilities used by the library. Consumers typically use the static
- * helpers on `Manifold` but these helpers are exported here for tests and
- * advanced usage.
- * @internal
- */
 export default {
 	get(
 		url: string | URL,

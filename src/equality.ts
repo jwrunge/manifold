@@ -2,13 +2,6 @@ const _objStr = "object",
 	_constructor = "constructor",
 	_keys = Object.keys;
 
-// Note: Map/Set contents are not deeply compared - this is intentional
-// for granular reactivity (UI updates happen via property access, not container equality)
-/**
- * Shallow/deep comparison helper used to determine if values changed for reactivity.
- * Note: Map/Set contents are intentionally not deeply compared (see note above).
- * @public
- */
 const _isEqual = (a: unknown, b: unknown): boolean => {
 	if (a === b) return true;
 	// Always treat Promises as unequal for reactivity
@@ -39,7 +32,7 @@ const _isEqual = (a: unknown, b: unknown): boolean => {
 			!(k in (b as object)) ||
 			!_isEqual(
 				(a as Record<string, unknown>)[k],
-				(b as Record<string, unknown>)[k],
+				(b as Record<string, unknown>)[k]
 			)
 		)
 			return false;
