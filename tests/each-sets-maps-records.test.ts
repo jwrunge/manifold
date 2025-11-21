@@ -15,7 +15,7 @@ let state: {
 const initState = (data: Record<string, unknown>) => {
 	state = StateBuilder.create(
 		undefined,
-		data as Record<string, unknown>
+		data as Record<string, unknown>,
 	).build() as typeof state;
 };
 
@@ -29,7 +29,7 @@ describe(":each with Sets, Maps, and Records", () => {
 				["Isaac", 6],
 			]),
 			myRecord: { Jake: 37, Mary: 37, Isaac: 6, Elinor: 4 },
-		})
+		}),
 	);
 
 	test(":each with Set renders values", async () => {

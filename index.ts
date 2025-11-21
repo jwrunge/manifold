@@ -24,7 +24,7 @@ const myState = $.create()
 			{ name: "Mary", age: 37 },
 			{ name: "Isaac", age: 6 },
 			{ name: "Elinor", age: 4 },
-		])
+		]),
 	)
 	.add(
 		"someMap",
@@ -33,7 +33,7 @@ const myState = $.create()
 			["Mary", 37],
 			["Isaac", 6],
 			["Elinor", 4],
-		])
+		]),
 	)
 	.add("list", [
 		{ id: 1, text: "Item 1" },
@@ -64,7 +64,7 @@ myState.loadUser = () => {
 
 			if (fail) rej(new Error("Network"));
 			else res({ name: "Ada", age: 37 + Math.floor(Math.random() * 10) });
-		}, 800)
+		}, 800),
 	);
 	myState.currentUserPromise = p;
 	return p;
@@ -88,7 +88,7 @@ const mountCounterBridge = () => {
 
 const mountSummaryBridge = () => {
 	const summary = document.querySelector<SummaryCardElementInstance>(
-		"#summary-card-showcase"
+		"#summary-card-showcase",
 	);
 	if (!summary) return;
 

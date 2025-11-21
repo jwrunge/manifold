@@ -1,7 +1,7 @@
 // Internal: iterate characters at top-level only; stop when callback returns true
 const scanTopLevel = (
 	src: string,
-	onTop: (i: number, ch: string) => boolean
+	onTop: (i: number, ch: string) => boolean,
 ) => {
 	let p = 0,
 		b = 0,

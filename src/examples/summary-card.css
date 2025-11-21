@@ -1,7 +1,7 @@
 :host {
 	display: block;
-	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-		sans-serif;
+	font-family:
+		system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 	color: #101828;
 }
 
@@ -13,7 +13,9 @@
 	padding: 1.75rem;
 	display: grid;
 	gap: 1.4rem;
-	transition: border-color 160ms ease, box-shadow 160ms ease,
+	transition:
+		border-color 160ms ease,
+		box-shadow 160ms ease,
 		transform 160ms ease;
 }
 
@@ -110,7 +112,9 @@ button {
 	gap: 0.5rem;
 	letter-spacing: 0.02em;
 	padding: 0.6rem 1.15rem;
-	transition: transform 120ms ease, box-shadow 120ms ease;
+	transition:
+		transform 120ms ease,
+		box-shadow 120ms ease;
 }
 
 button:hover {

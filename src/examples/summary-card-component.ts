@@ -18,16 +18,12 @@ const loadTemplateFromMarkup = async (): Promise<HTMLTemplateElement> => {
 	const [markup, styles] = await Promise.all([
 		fetch(new URL("./summary-card.html", import.meta.url)).then((res) => {
 			if (!res.ok)
-				throw new Error(
-					`Failed to load summary-card.html: ${res.status}`
-				);
+				throw new Error(`Failed to load summary-card.html: ${res.status}`);
 			return res.text();
 		}),
 		fetch(new URL("./summary-card.css", import.meta.url)).then((res) => {
 			if (!res.ok)
-				throw new Error(
-					`Failed to load summary-card.css: ${res.status}`
-				);
+				throw new Error(`Failed to load summary-card.css: ${res.status}`);
 			return res.text();
 		}),
 	]);
@@ -70,7 +66,7 @@ const SummaryCardElement = _makeComponent<SummaryCardProps>(
 			const accent = this.props.accentColor ?? "#2563eb";
 			this.updateProps({ accentColor: accent });
 		},
-	}
+	},
 );
 
 export type SummaryCardElementInstance = InstanceType<

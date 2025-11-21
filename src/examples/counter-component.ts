@@ -152,7 +152,7 @@ const CounterElement = _makeComponent<CounterProps>(
 				this.updateProps({ accentColor: accent });
 			}
 		},
-	}
+	},
 );
 
 export type CounterElementInstance = InstanceType<typeof CounterElement>;

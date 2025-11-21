@@ -23,7 +23,7 @@ const stringToTemplate = (markup: string): HTMLTemplateElement => {
 const resolveTemplate = (
 	name: string,
 	template: HTMLTemplateElement | string | undefined,
-	selector?: string
+	selector?: string,
 ): HTMLTemplateElement => {
 	if (template instanceof HTMLTemplateElement) return template;
 	if (typeof template === "string") return stringToTemplate(template);
@@ -35,7 +35,7 @@ const resolveTemplate = (
 				`template#${name}`,
 				`template[name="${name}"]`,
 				`#${name}`,
-		  ];
+			];
 
 	for (const sel of candidates) {
 		const node = document.querySelector(sel);
@@ -43,7 +43,7 @@ const resolveTemplate = (
 	}
 
 	throw new Error(
-		`Manifold: Template not found for "${name}". Provide template element or selector.`
+		`Manifold: Template not found for "${name}". Provide template element or selector.`,
 	);
 };
 
@@ -60,7 +60,7 @@ const parseByType = (
 	type: PropKind,
 	value: string | null,
 	component: string,
-	prop: string
+	prop: string,
 ): unknown => {
 	if (value === null) return undefined;
 	const trimmed = value.trim();
@@ -71,7 +71,7 @@ const parseByType = (
 			const num = Number(trimmed);
 			if (Number.isNaN(num))
 				throw new TypeError(
-					`Manifold: Prop "${prop}" on <${component}> expects number, got "${value}".`
+					`Manifold: Prop "${prop}" on <${component}> expects number, got "${value}".`,
 				);
 			return num;
 		}
@@ -87,7 +87,7 @@ const parseByType = (
 			} catch (error) {
 				throw new TypeError(
 					`Manifold: Prop "${prop}" on <${component}> expects JSON, got "${value}".`,
-					{ cause: error }
+					{ cause: error },
 				);
 			}
 		}
@@ -101,7 +101,7 @@ const coerceByType = (
 	type: PropKind,
 	value: unknown,
 	component: string,
-	prop: string
+	prop: string,
 ): unknown => {
 	if (value === undefined) return undefined;
 	if (value === null) return null;
@@ -112,7 +112,7 @@ const coerceByType = (
 			if (typeof value === "number") {
 				if (Number.isNaN(value))
 					throw new TypeError(
-						`Manifold: Prop "${prop}" on <${component}> got NaN.`
+						`Manifold: Prop "${prop}" on <${component}> got NaN.`,
 					);
 				return value;
 			}
@@ -120,20 +120,15 @@ const coerceByType = (
 			if (Number.isNaN(num))
 				throw new TypeError(
 					`Manifold: Prop "${prop}" on <${component}> expects number, got "${String(
-						value
-					)}".`
+						value,
+					)}".`,
 				);
 			return num;
 		}
 		case "boolean": {
 			if (typeof value === "boolean") return value;
 			if (typeof value === "string")
-				return parseByType(
-					"boolean",
-					value,
-					component,
-					prop
-				) as boolean;
+				return parseByType("boolean", value, component, prop) as boolean;
 			if (typeof value === "number") return value !== 0;
 			return Boolean(value);
 		}
@@ -186,7 +181,7 @@ export interface PropDefinition<T> {
 }
 
 export interface ManifoldComponentInstance<
-	TProps extends Record<string, unknown> = Record<string, unknown>
+	TProps extends Record<string, unknown> = Record<string, unknown>,
 > extends HTMLElement {
 	readonly props: Readonly<TProps>;
 	readonly state: TProps & StateConstraint;
@@ -197,7 +192,7 @@ export interface ManifoldComponentInstance<
 }
 
 export interface ComponentOptions<
-	TProps extends Record<string, unknown> = Record<string, unknown>
+	TProps extends Record<string, unknown> = Record<string, unknown>,
 > {
 	selector?: string;
 	shadow?: "open" | "closed" | false;
@@ -205,7 +200,7 @@ export interface ComponentOptions<
 	observedAttributes?: string[];
 	setup?(
 		this: ManifoldComponentInstance<TProps>,
-		state: TProps & StateConstraint
+		state: TProps & StateConstraint,
 	): void;
 	onconstruct?(this: ManifoldComponentInstance<TProps>): void;
 	onConnect?(this: ManifoldComponentInstance<TProps>): void;
@@ -215,7 +210,7 @@ export interface ComponentOptions<
 		this: ManifoldComponentInstance<TProps>,
 		attrName: string,
 		oldVal: string | null,
-		newVal: string | null
+		newVal: string | null,
 	): void;
 }
 
@@ -245,7 +240,7 @@ interface NormalizedOptions {
 const normalizeOptions = <TProps extends Record<string, unknown>>(
 	name: string,
 	template: HTMLTemplateElement,
-	opts: ComponentOptions<TProps>
+	opts: ComponentOptions<TProps>,
 ): NormalizedOptions => {
 	const props = new Map<string, PropRuntime>();
 	const attrToProp = new Map<string, string>();
@@ -253,14 +248,14 @@ const normalizeOptions = <TProps extends Record<string, unknown>>(
 	const definitions = opts.props ?? ({} as PropDefinitionMap<TProps>);
 	for (const [key, definition] of Object.entries(definitions) as [
 		string,
-		PropDefinition<unknown> | undefined
+		PropDefinition<unknown> | undefined,
 	][]) {
 		if (!definition) continue;
 		const type = definition.type ?? "any";
 		const attribute =
 			definition.attribute === false
 				? null
-				: definition.attribute ?? camelToKebab(key);
+				: (definition.attribute ?? camelToKebab(key));
 		if (attribute) attrToProp.set(attribute, key);
 
 		const parse =
@@ -282,8 +277,8 @@ const normalizeOptions = <TProps extends Record<string, unknown>>(
 			definition.default === undefined
 				? undefined
 				: typeof definition.default === "function"
-				? (definition.default as () => unknown)
-				: () => definition.default;
+					? (definition.default as () => unknown)
+					: () => definition.default;
 
 		const reflect =
 			definition.reflect ?? (attribute !== null && type !== "any");
@@ -321,11 +316,11 @@ const normalizeOptions = <TProps extends Record<string, unknown>>(
 type PropUpdateSource = "attribute" | "property" | "update" | "upgrade";
 
 export const _makeComponent = <
-	TProps extends Record<string, unknown> = Record<string, unknown>
+	TProps extends Record<string, unknown> = Record<string, unknown>,
 >(
 	name: string,
 	template?: HTMLTemplateElement | string,
-	opts?: ComponentOptions<TProps>
+	opts?: ComponentOptions<TProps>,
 ): CustomElementConstructor & {
 	new (): ManifoldComponentInstance<TProps>;
 } => {
@@ -387,25 +382,20 @@ export const _makeComponent = <
 				getOwnPropertyDescriptor: (_target, prop: PropertyKey) =>
 					Object.getOwnPropertyDescriptor(
 						reactive as Record<PropertyKey, unknown>,
-						prop
+						prop,
 					),
 				set: () => {
 					throw new Error(
-						`Manifold: props on <${name}> are read-only. Use property setters or updateProps().`
+						`Manifold: props on <${name}> are read-only. Use property setters or updateProps().`,
 					);
 				},
 			}) as Readonly<TProps>;
 
 			if (options.setup)
-				options.setup.call(
-					this as ManifoldComponentInstance<TProps>,
-					reactive
-				);
+				options.setup.call(this as ManifoldComponentInstance<TProps>, reactive);
 
 			if (options.onconstruct)
-				options.onconstruct.call(
-					this as ManifoldComponentInstance<TProps>
-				);
+				options.onconstruct.call(this as ManifoldComponentInstance<TProps>);
 		}
 
 		get props(): Readonly<TProps> {
@@ -417,17 +407,13 @@ export const _makeComponent = <
 		}
 
 		updateProps(values: Partial<TProps>): void {
-			for (const [key, val] of Object.entries(values) as [
-				string,
-				unknown
-			][]) {
+			for (const [key, val] of Object.entries(values) as [string, unknown][]) {
 				this._setProp(key, val, "update");
 			}
 		}
 
 		connectedCallback(): void {
-			if (!this.classList.contains("_mf-cmp"))
-				this.classList.add("_mf-cmp");
+			if (!this.classList.contains("_mf-cmp")) this.classList.add("_mf-cmp");
 
 			const parentComponent = (
 				this.parentNode as HTMLElement | null
@@ -441,29 +427,23 @@ export const _makeComponent = <
 			this._ensureInitialized();
 
 			if (options.onConnect)
-				options.onConnect.call(
-					this as ManifoldComponentInstance<TProps>
-				);
+				options.onConnect.call(this as ManifoldComponentInstance<TProps>);
 		}
 
 		disconnectedCallback(): void {
 			if (options.onDisconnect)
-				options.onDisconnect.call(
-					this as ManifoldComponentInstance<TProps>
-				);
+				options.onDisconnect.call(this as ManifoldComponentInstance<TProps>);
 		}
 
 		adoptedCallback(): void {
 			if (options.onAdopted)
-				options.onAdopted.call(
-					this as ManifoldComponentInstance<TProps>
-				);
+				options.onAdopted.call(this as ManifoldComponentInstance<TProps>);
 		}
 
 		attributeChangedCallback(
 			name: string,
 			oldVal: string | null,
-			newVal: string | null
+			newVal: string | null,
 		): void {
 			if (!normalized.attrToProp.has(name)) {
 				if (options.onAttributeChanged)
@@ -471,7 +451,7 @@ export const _makeComponent = <
 						this as ManifoldComponentInstance<TProps>,
 						name,
 						oldVal,
-						newVal
+						newVal,
 					);
 				return;
 			}
@@ -482,7 +462,7 @@ export const _makeComponent = <
 						this as ManifoldComponentInstance<TProps>,
 						name,
 						oldVal,
-						newVal
+						newVal,
 					);
 				return;
 			}
@@ -506,12 +486,12 @@ export const _makeComponent = <
 					this as ManifoldComponentInstance<TProps>,
 					name,
 					oldVal,
-					newVal
+					newVal,
 				);
 		}
 
 		private _computeInitialProps(
-			preUpgrade: Map<string, unknown>
+			preUpgrade: Map<string, unknown>,
 		): Record<string, unknown> {
 			const initial: Record<string, unknown> = Object.create(null);
 			for (const key of normalized.propKeys) {
@@ -539,7 +519,7 @@ export const _makeComponent = <
 
 				if (runtime.required) {
 					throw new Error(
-						`Manifold: Missing required prop "${key}" on <${normalized.name}>.`
+						`Manifold: Missing required prop "${key}" on <${normalized.name}>.`,
 					);
 				}
 
@@ -551,25 +531,21 @@ export const _makeComponent = <
 		private _setProp(
 			key: string,
 			value: unknown,
-			source: PropUpdateSource
+			source: PropUpdateSource,
 		): void {
 			const runtime = normalized.props.get(key);
-			const stateRecord = this._state as unknown as Record<
-				string,
-				unknown
-			>;
+			const stateRecord = this._state as unknown as Record<string, unknown>;
 
 			if (!runtime) {
 				stateRecord[key] = value;
 				return;
 			}
 
-			const next =
-				source === "attribute" ? value : runtime.coerce(value, this);
+			const next = source === "attribute" ? value : runtime.coerce(value, this);
 
 			if (runtime.required && (next === undefined || next === null)) {
 				throw new Error(
-					`Manifold: Prop "${key}" on <${normalized.name}> is required.`
+					`Manifold: Prop "${key}" on <${normalized.name}> is required.`,
 				);
 			}
 
@@ -585,9 +561,9 @@ export const _makeComponent = <
 				if (!runtime.reflect || !runtime.attribute) continue;
 				const attrName = runtime.attribute;
 				const eff = effect(() => {
-					const value = (
-						this._state as unknown as Record<string, unknown>
-					)[key];
+					const value = (this._state as unknown as Record<string, unknown>)[
+						key
+					];
 					if (this._updatingFromAttribute.has(key)) return;
 
 					const serialized = runtime.serialize(value);
@@ -625,8 +601,7 @@ export const _makeComponent = <
 				this.shadow = null;
 			} else {
 				this.shadow =
-					this.shadowRoot ??
-					this.attachShadow({ mode: normalized.shadow });
+					this.shadowRoot ?? this.attachShadow({ mode: normalized.shadow });
 				this._renderRoot = this.shadow;
 			}
 			return this._renderRoot;
@@ -637,7 +612,7 @@ export const _makeComponent = <
 			if (this._propEffects.length === 0) this._installPropEffects();
 
 			const fragment = normalized.template.content.cloneNode(
-				true
+				true,
 			) as DocumentFragment;
 			const nodes = Array.from(fragment.childNodes);
 			const root = this._getRenderRoot();
@@ -652,8 +627,8 @@ export const _makeComponent = <
 					this._regEls.push(
 						new RegEl(
 							node as Registerable,
-							this._state as unknown as Record<string, unknown>
-						)
+							this._state as unknown as Record<string, unknown>,
+						),
 					);
 				}
 			}
@@ -665,9 +640,7 @@ export const _makeComponent = <
 	for (const [propKey] of normalized.props.entries()) {
 		Object.defineProperty(ManifoldComponent.prototype, propKey, {
 			get(this: ManifoldComponent) {
-				return (this._state as unknown as Record<string, unknown>)[
-					propKey
-				];
+				return (this._state as unknown as Record<string, unknown>)[propKey];
 			},
 			set(this: ManifoldComponent, value: unknown) {
 				this._setProp(propKey, value, "property");
