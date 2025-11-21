@@ -7,7 +7,7 @@
 	</head>
 
 	<body data-mf-register class="mf-hidden">
-		<section class="component-demo">
+		<!-- <section class="component-demo">
 			<h2>Manifold component factory demo</h2>
 			<p>
 				The counter elements below are custom elements created with
@@ -59,7 +59,7 @@
 				highlight
 				accent-color="#f97316"
 			></mf-summary-card>
-		</section>
+		</section> -->
 
 		<input
 			:value="count"
@@ -109,9 +109,9 @@
 			</div>
 		</div>
 
-		<!-- Each demo -->
+		<!-- Each array demo -->
 		<div style="margin-top: 1rem" transition>
-			<div>Family Members:</div>
+			<div>Family Members (array):</div>
 			<ul>
 				<li :each="someArray as {name, age}">
 					${name} (${age} years old) ${count}
@@ -119,9 +119,39 @@
 			</ul>
 		</div>
 
+		<!-- Each obj demo -->
+		<div style="margin-top: 1rem" transition>
+			<div>Family Members (record):</div>
+			<ul>
+				<li :each="someObj as age, name">
+					${name} (${age} years old) ${count}
+				</li>
+			</ul>
+		</div>
+
+		<!-- Each set demo -->
+		<div style="margin-top: 1rem" transition>
+			<div>Family Members (set):</div>
+			<ul>
+				<li :each="someSet as member">
+					${member.name} (${member.age} years old) ${count}
+				</li>
+			</ul>
+		</div>
+
+		<!-- Each map demo -->
+		<div style="margin-top: 1rem" transition>
+			<div>Family Members (map):</div>
+			<ul>
+				<li :each="someMap as age, name">
+					${name} (${age} years old) ${count}
+				</li>
+			</ul>
+		</div>
+
 		<!-- Final -->
 		<div style="margin-top: 1rem" :if="list.length > 2">
-			<div>Family Members:</div>
+			<div>Items:</div>
 			<ul>
 				<li
 					class="list-item"

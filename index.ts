@@ -16,6 +16,25 @@ const myState = $.create()
 		{ name: "Isaac", age: 6 },
 		{ name: "Elinor", age: 4 },
 	])
+	.add("someObj", { Jake: 37, Mary: 37, Isaac: 6, Elinor: 4 })
+	.add(
+		"someSet",
+		new Set([
+			{ name: "Jake", age: 37 },
+			{ name: "Mary", age: 37 },
+			{ name: "Isaac", age: 6 },
+			{ name: "Elinor", age: 4 },
+		])
+	)
+	.add(
+		"someMap",
+		new Map<string, number>([
+			["Jake", 37],
+			["Mary", 37],
+			["Isaac", 6],
+			["Elinor", 4],
+		])
+	)
 	.add("list", [
 		{ id: 1, text: "Item 1" },
 		{ id: 2, text: "Item 2" },

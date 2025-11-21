@@ -12,5 +12,18 @@ export default defineConfig({
 			fileName: (format) =>
 				format === "umd" ? "manifold.umd.js" : "manifold.js",
 		},
+		rollupOptions: {
+			external: [/^node:/],
+			onwarn(warning, warn) {
+				// Suppress warnings about Node.js built-ins being externalized
+				if (
+					warning.code === "UNRESOLVED_IMPORT" &&
+					warning.message.includes("node:")
+				) {
+					return;
+				}
+				warn(warning);
+			},
+		},
 	},
 });

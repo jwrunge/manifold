@@ -35,7 +35,7 @@ export function handleEach(
 	attrTagName: string,
 	_fn: (ctx?: Record<string, unknown> | undefined) => unknown,
 	throwError: (msg: string, cause?: unknown) => void,
-	eachAlias?: string,
+	eachAlias?: string
 ): Effect {
 	const markWithVTClass = (nodes: Registerable[]) => {
 		const marked: Registerable[] = [];
@@ -82,15 +82,32 @@ export function handleEach(
 	regEl._eachPreviousArray ??= [];
 
 	const ef = effect(() => {
-		const list =
+		const rawList =
 			(_fn({
 				state: regEl._state,
 				element: regEl._eachStart ?? regEl._el,
 				$: Manifold,
-			}) as unknown[] | undefined) ?? [];
+			}) as
+				| unknown[]
+				| Set<unknown>
+				| Map<unknown, unknown>
+				| Record<string, unknown>
+				| undefined) ?? [];
 
-		if (!Array.isArray(list)) {
-			throwError(`Non-array in :each`, regEl._el);
+		// Convert Sets, Maps, and Records to arrays
+		let list: unknown[];
+		if (Array.isArray(rawList)) list = rawList;
+		else if (rawList instanceof Set) list = [...rawList];
+		else if (rawList instanceof Map)
+			list = [...rawList].map(([k, v]) => [v, k]);
+		else if (rawList?.constructor === Object)
+			list = Object.entries(rawList).map(([k, v]) => [v, k]);
+		else {
+			throwError(
+				`Invalid type in :each - expects Array, Set, Map, or Record`,
+				regEl._el
+			);
+			return;
 		}
 
 		const end = regEl._eachEnd;
@@ -106,7 +123,7 @@ export function handleEach(
 		const bindEachAliases = (
 			inst: { _state: Record<string, unknown> } | undefined,
 			val: unknown,
-			idx: number,
+			idx: number
 		) => {
 			if (!inst || !eachAlias) return;
 			const alias = eachAlias;
@@ -114,9 +131,19 @@ export function handleEach(
 			if (comma !== -1) {
 				const left = alias.slice(0, comma).trim();
 				const right = alias.slice(comma + 1).trim();
-				if (left) applyAliasPattern(left, val, inst._state);
-				if (right && isIdent(right))
-					(inst._state as Record<string, unknown>)[right] = idx;
+
+				// If val is a 2-element array (tuple from Map/Record), unpack it
+				if (Array.isArray(val) && val.length === 2) {
+					if (left) applyAliasPattern(left, val[0], inst._state);
+					if (right && isIdent(right))
+						(inst._state as Record<string, unknown>)[right] =
+							val[1];
+				} else {
+					// Original behavior for arrays
+					if (left) applyAliasPattern(left, val, inst._state);
+					if (right && isIdent(right))
+						(inst._state as Record<string, unknown>)[right] = idx;
+				}
 				return;
 			}
 			if (alias.startsWith("{")) {
@@ -125,7 +152,14 @@ export function handleEach(
 				return;
 			}
 			if (alias.startsWith("[")) {
-				applyAliasPattern(alias, [val, idx], inst._state);
+				// Array destructuring - check if val is a 2-element tuple from Map/Record
+				if (Array.isArray(val) && val.length === 2) {
+					// For Map/Record tuples, destructure the tuple itself
+					applyAliasPattern(alias, val, inst._state);
+				} else {
+					// Original behavior for regular arrays - bind [val, idx]
+					applyAliasPattern(alias, [val, idx], inst._state);
+				}
 				return;
 			}
 			if (isIdent(alias)) {
@@ -243,18 +277,19 @@ export function handleEach(
 				// Adding new elements
 				const frag = document.createDocumentFragment();
 				for (let i = cur; i < next; i++) {
-					const clone = regEl._cachedContent?.cloneNode(true) as Registerable;
+					const clone = regEl._cachedContent?.cloneNode(
+						true
+					) as Registerable;
 					// Create a per-item overlay state and pre-apply aliases so initial text effects see values
-					const childBase = scopeProxy(regEl._stateAsRecord()) as Record<
-						string,
-						unknown
-					>;
+					const childBase = scopeProxy(
+						regEl._stateAsRecord()
+					) as Record<string, unknown>;
 					bindEachAliases(
 						{ _state: childBase } as unknown as {
 							_state: Record<string, unknown>;
 						},
 						list[i],
-						i,
+						i
 					);
 					RegElClass._registerOrGet(clone, childBase);
 					instances?.push(clone);

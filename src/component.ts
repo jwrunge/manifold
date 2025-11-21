@@ -43,7 +43,7 @@ const resolveTemplate = (
 	}
 
 	throw new Error(
-		`Manifold: Unable to locate template for component "${name}". Provide a template element or pass a selector.`
+		`Manifold: Template not found for "${name}". Provide template element or selector.`
 	);
 };
 
@@ -71,7 +71,7 @@ const parseByType = (
 			const num = Number(trimmed);
 			if (Number.isNaN(num))
 				throw new TypeError(
-					`Manifold: Prop "${prop}" on <${component}> expected number, got "${value}".`
+					`Manifold: Prop "${prop}" on <${component}> expects number, got "${value}".`
 				);
 			return num;
 		}
@@ -86,7 +86,7 @@ const parseByType = (
 				return JSON.parse(value);
 			} catch (error) {
 				throw new TypeError(
-					`Manifold: Prop "${prop}" on <${component}> expected JSON, got "${value}".`,
+					`Manifold: Prop "${prop}" on <${component}> expects JSON, got "${value}".`,
 					{ cause: error }
 				);
 			}
@@ -112,14 +112,14 @@ const coerceByType = (
 			if (typeof value === "number") {
 				if (Number.isNaN(value))
 					throw new TypeError(
-						`Manifold: Prop "${prop}" on <${component}> received NaN.`
+						`Manifold: Prop "${prop}" on <${component}> got NaN.`
 					);
 				return value;
 			}
 			const num = Number(value);
 			if (Number.isNaN(num))
 				throw new TypeError(
-					`Manifold: Prop "${prop}" on <${component}> expected number, got "${String(
+					`Manifold: Prop "${prop}" on <${component}> expects number, got "${String(
 						value
 					)}".`
 				);
@@ -391,7 +391,7 @@ export const _makeComponent = <
 					),
 				set: () => {
 					throw new Error(
-						`Manifold: props on <${name}> are read-only. Use direct property setters or updateProps().`
+						`Manifold: props on <${name}> are read-only. Use property setters or updateProps().`
 					);
 				},
 			}) as Readonly<TProps>;
