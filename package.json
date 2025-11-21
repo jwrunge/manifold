@@ -51,28 +51,18 @@
 	},
 	"scripts": {
 		"dev": "vite",
-		"build": "vite build && node ./minify.js && npm run -s build:dts && node ./scripts/cleanup-dist.js",
-		"build:types": "tsc -p tsconfig.build.json",
-		"build:dts": "npm run -s build:types && api-extractor run --local",
-		"build:debug": "MF_DEBUG_BUILD=1 tsc && MF_DEBUG_BUILD=1 node ./scripts/build.mjs",
+		"build": "vite build && node ./minify.js",
 		"test": "vitest --run",
 		"test:watch": "vitest",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
-		"format": "biome format --write .",
-		"clean:dist-dts": "node ./scripts/cleanup-dist.js",
-		"pretest": "npm run -s build",
-		"sync:meta": "node ./scripts/sync-meta.js",
-		"sync:meta:check": "node ./scripts/sync-meta.js --check"
+		"sync:meta": "node ./scripts/sync-meta.js"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.4",
-		"@microsoft/api-extractor": "^7.52.13",
 		"@types/node": "^24.5.2",
-		"esbuild": "^0.25.10",
 		"jsdom": "^26.1.0",
 		"terser": "^5.44.0",
-		"typescript": "~5.9.2",
 		"vite": "^7.1.7",
 		"vitest": "^3.2.4"
 	}
