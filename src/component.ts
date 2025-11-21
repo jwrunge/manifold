@@ -91,7 +91,6 @@ const parseByType = (
 				);
 			}
 		}
-		case "any":
 		default:
 			return value;
 	}
@@ -137,7 +136,6 @@ const coerceByType = (
 				return parseByType("json", value, component, prop);
 			return value;
 		}
-		case "any":
 		default:
 			return value;
 	}
@@ -162,7 +160,6 @@ const serializeByType = (type: PropKind, value: unknown): string | null => {
 				return null;
 			}
 		}
-		case "any":
 		default:
 			return String(value);
 	}
