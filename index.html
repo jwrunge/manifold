@@ -129,6 +129,16 @@
 			</ul>
 		</div>
 
+		<!-- Each Object.entries() demo -->
+		<div style="margin-top: 1rem" transition>
+			<div>Family Members (record entries):</div>
+			<ul>
+				<li :each="Object.entries(someObj) as [name, age]">
+					${name} (${age} years old) ${count}
+				</li>
+			</ul>
+		</div>
+
 		<!-- Each set demo -->
 		<div style="margin-top: 1rem" transition>
 			<div>Family Members (set):</div>

@@ -51,4 +51,25 @@ describe(":each object destructuring aliases", () => {
 
 		expect(texts).toEqual(["0: Ada-40", "1: Alan-42"]);
 	});
+
+	test(":each with Object.entries(record) allows global helper", async () => {
+		const state = StateBuilder.create(undefined, {
+			family: { Jake: 37, Mary: 37 },
+		}).build() as { family: Record<string, number> };
+
+		document.body.innerHTML = `<ul><li :each="Object.entries(family) as [name, age]">
+				template: \${name} \${age}</li></ul>`;
+		const ul = document.querySelector("ul");
+		if (!ul) throw new Error("ul missing");
+		const li = ul.querySelector("li");
+		if (!li) throw new Error("li missing");
+		new RegEl(li as HTMLElement, state as unknown as Record<string, unknown>);
+		await flush();
+
+		const texts = Array.from(
+			ul.querySelectorAll("li:not([style*='display: none'])"),
+		).map((el) => el.textContent?.trim());
+
+		expect(texts).toEqual(["template: Jake 37", "template: Mary 37"]);
+	});
 });

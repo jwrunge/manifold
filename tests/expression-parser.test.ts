@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import evaluateExpression from "../src/expression-parser.ts";
 import StateBuilder from "../src/main.ts";
 
@@ -169,8 +169,26 @@ describe("Expression Parser", () => {
 			expect(run("inc(4)")).toBe(5);
 			expect(run("sum(2,3)")).toBe(5);
 		});
-		test("does not call unregistered globals", () => {
-			expect(run("Math.max(1,2)")).toBeUndefined();
+		test("calls whitelisted globals", () => {
+			expect(run("Math.max(1,2,7)")).toBe(7);
+			expect(run("Object.entries({a:1})[0][0]"))
+				.toBe("a");
+		});
+	});
+
+	describe("Global references", () => {
+		test("allows Object/console access", () => {
+			initState({ someObj: { Jake: 37 } });
+			const entries = run("Object.entries(someObj)") as [
+				[string, number],
+			][];
+			expect(entries).toEqual([["Jake", 37]]);
+			// console should be exposed but not throw
+			const logSpy = vi.spyOn(console, "log");
+			logSpy.mockImplementation(() => {});
+			run("console.log('hi')");
+			expect(logSpy).toHaveBeenCalledWith("hi");
+			logSpy.mockRestore();
 		});
 	});
 

@@ -9,6 +9,24 @@ export interface ParsedExpression {
 const CACHE = new Map<string, ParsedExpression>();
 const CACHE_MAX = 1000;
 const NUM = /^-?\d+(?:\.[\d]+)?$/;
+const SAFE_GLOBALS = new Set([
+	"Array",
+	"Boolean",
+	"console",
+	"Date",
+	"JSON",
+	"Map",
+	"Math",
+	"Number",
+	"Object",
+	"Promise",
+	"Reflect",
+	"Set",
+	"String",
+	"Symbol",
+	"WeakMap",
+	"WeakSet",
+]);
 interface ChainSegmentProp {
 	t: "prop";
 	k: string;
@@ -329,12 +347,13 @@ const parse = (raw: string): ParsedExpression => {
 			const injected = ctx.state as Record<string, unknown> | undefined;
 			if (ctx && chain._base in ctx) root = ctx[chain._base];
 			else if (
+				SAFE_GLOBALS.has(chain._base) &&
 				typeof globalThis !== "undefined" &&
-				chain._base === "Promise" &&
 				chain._base in (globalThis as Record<string, unknown>)
 			)
 				root = (globalThis as Record<string, unknown>)[chain._base];
-			else if (injected) root = injected[chain._base as never];
+			else if (injected)
+				root = injected[chain._base as never];
 			else root = undefined;
 			let cur = root,
 				lastObjForCall: unknown;
