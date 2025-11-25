@@ -1,0 +1,30 @@
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Manifold DOM Test</title>
+
+        <script type="module">
+            import state from "./src/main.ts";
+
+            console.log("State:", state);
+            state.addTodo("Learn Manifold again");
+        </script>
+    </head>
+</html>
+<body>
+    <div class="mf-hidden" data-mf-register>
+        <h2>Todos</h2>
+        <ul :if="todos.length > 0">
+            <li :each="todos as todo">
+                <input type="checkbox" :checked="todo.completed" />
+                <span :class="{ completed: todo.completed }">${ todo.title }</span>
+            </li>
+        </ul>
+        <div :else>
+            No todos yet!
+        </div>
+
+        <button :onclick="addTodo('Next')">Add todo</button>
+    </div>
+</body>

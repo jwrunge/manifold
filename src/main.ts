@@ -5,7 +5,7 @@ import serverPage from "./fetch.ts";
 export type {
 	FetchDOMOptions,
 	FetchedContent,
-	InsertContentMethod,
+	InsertContentMethod
 } from "./fetch.ts";
 
 import { globalStores } from "./globalstores.ts";
@@ -62,10 +62,26 @@ export default class Manifold<TState extends StateConstraint> {
 	): Promise<void> {
 		return serverPage.fetch(url, ops, fetchOps);
 	}
-	add<K extends string, V>(key: K, value: V): Manifold<TState & Record<K, V>> {
+
+	add<K extends string, V>(obj: Record<K, V>): Manifold<TState & Record<K, V>>;
+	add<K extends string, V>(key: K, value: V): Manifold<TState & Record<K, V>>;
+	add<K extends string, V>(
+		keyOrObj: K | Record<K, V>,
+		value?: V,
+	): Manifold<TState & Record<K, V>> {
+		// Handle object case
+		if (typeof keyOrObj === "object" && keyOrObj !== null) {
+			let intermediateState: Manifold<StateConstraint> = this;
+			for (const [key, val] of Object.entries(keyOrObj)) {
+				intermediateState = intermediateState.add(key as K, val as V);
+			}
+			return intermediateState as Manifold<TState & Record<K, V>>;
+		}
+
+		// Handle single key-value case
 		return new Manifold(
 			this.#name,
-			{ ...this.#scopedState, [key]: value },
+			{ ...this.#scopedState, [keyOrObj]: value },
 			new Map(this.#derivations),
 		) as Manifold<TState & Record<K, V>>;
 	}
