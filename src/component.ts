@@ -1,4 +1,4 @@
-import type { StateConstraint } from "./main.ts";
+import type { IntermediateState } from "./main.ts";
 import { proxy } from "./proxy.ts";
 import RegEl from "./registry.ts";
 import type { Registerable } from "./templating/types.ts";
@@ -23,13 +23,13 @@ export interface ComponentSourceOptions {
 export interface RenderComponentOptions {
 	target?: string | Element;
 	method?: ComponentInsertMethod;
-	data?: StateConstraint;
-	state?: StateConstraint;
+	data?: IntermediateState;
+	state?: IntermediateState;
 	slots?: Record<string, SlotValue>;
 }
 
 export interface RenderComponentResult {
-	state: StateConstraint;
+	state: IntermediateState;
 	nodes: Node[];
 	fragment?: DocumentFragment;
 }
@@ -59,12 +59,12 @@ export async function renderComponent(
 
 const createScopedState = (
 	options: RenderComponentOptions,
-): StateConstraint => {
+): IntermediateState => {
 	if (options.state) return options.state;
 	const seed = options.data
 		? { ...(options.data as Record<string, unknown>) }
 		: (Object.create(null) as Record<string, unknown>);
-	return proxy(seed) as StateConstraint;
+	return proxy(seed) as IntermediateState;
 };
 
 const resolveTarget = (target?: string | Element): Element | null => {
@@ -89,7 +89,7 @@ const mountFragment = (
 	target.appendChild(fragment);
 };
 
-const registerNodes = (nodes: Node[], state: StateConstraint): void => {
+const registerNodes = (nodes: Node[], state: IntermediateState): void => {
 	for (const node of nodes) {
 		if (
 			node.nodeType === Node.ELEMENT_NODE &&

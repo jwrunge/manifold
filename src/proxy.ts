@@ -1,8 +1,8 @@
 import { Effect, type Subscriptions } from "./Effect.ts";
 import isEqual from "./equality.ts";
-import type { StateConstraint } from "./main.ts";
+import type { IntermediateState } from "./main.ts";
 
-const proxyCache = new WeakMap<object, StateConstraint>();
+const proxyCache = new WeakMap<object, IntermediateState>();
 const depMap = new WeakMap<object, Map<PropertyKey, Subscriptions>>();
 const pendingEffects = new Set<Effect>();
 let isFlushScheduled = false;
@@ -67,7 +67,7 @@ const track = (target: object, key: PropertyKey, effect: Effect) => {
 const getOrCreateProxy = (obj: object, factory: () => unknown) => {
 	const cached = proxyCache.get(obj);
 	if (cached) return cached;
-	const created = factory() as StateConstraint;
+	const created = factory() as IntermediateState;
 	proxyCache.set(obj, created);
 	return created;
 };
@@ -80,7 +80,7 @@ const arrMethods = [
 	"sort",
 	"reverse",
 ];
-export const proxy = (obj: object): StateConstraint | Promise<unknown> => {
+export const proxy = (obj: object): IntermediateState | Promise<unknown> => {
 	if (!obj || typeof obj !== "object") return obj;
 	// Do not proxy Promises!
 	if (obj instanceof Promise) return obj;

@@ -51,7 +51,7 @@
 	},
 	"scripts": {
 		"dev": "vite",
-		"build": "vite build && node ./minify.js",
+		"build": "vite build && node ./minify.js && cp src/manifold.d.ts dist/manifold.d.ts",
 		"test": "vitest --run",
 		"test:watch": "vitest",
 		"lint": "biome check .",

@@ -12,26 +12,26 @@ import { globalStores } from "./globalstores.ts";
 import { proxy } from "./proxy.ts";
 import RegEl from "./registry.ts";
 
-export type StateConstraint = Record<string, unknown>;
+export type IntermediateState = Record<string, unknown>;
 
-export default class Manifold<TState extends StateConstraint> {
+export default class Manifold<TState extends IntermediateState> {
 	#name?: string;
 	#scopedState: TState;
-	#derivations: Map<string, (store: StateConstraint) => unknown>;
+	#derivations: Map<string, (store: IntermediateState) => unknown>;
 	#built = false;
-	static _current: Manifold<StateConstraint> | null = null;
+	static _current: Manifold<IntermediateState> | null = null;
 
 	constructor(
 		name?: string,
 		initialState?: TState,
-		derivations?: Map<string, (store: StateConstraint) => unknown>,
+		derivations?: Map<string, (store: IntermediateState) => unknown>,
 	) {
 		this.#name = name;
 		this.#scopedState = (initialState || {}) as TState;
 		this.#derivations = derivations || new Map();
 	}
 
-	static create<S extends StateConstraint>(
+	static create<S extends IntermediateState>(
 		name?: string,
 		initial?: S,
 	): Manifold<S> {
@@ -71,7 +71,7 @@ export default class Manifold<TState extends StateConstraint> {
 	): Manifold<TState & Record<K, V>> {
 		// Handle object case
 		if (typeof keyOrObj === "object" && keyOrObj !== null) {
-			let intermediateState: Manifold<StateConstraint> = this;
+			let intermediateState: Manifold<IntermediateState> = this;
 			for (const [key, val] of Object.entries(keyOrObj)) {
 				intermediateState = intermediateState.add(key as K, val as V);
 			}
@@ -95,7 +95,7 @@ export default class Manifold<TState extends StateConstraint> {
 			{ ...this.#scopedState },
 			new Map(this.#derivations).set(
 				key,
-				fn as (store: StateConstraint) => unknown,
+				fn as (store: IntermediateState) => unknown,
 			),
 		) as Manifold<TState & Record<K, T>>;
 	}
@@ -129,30 +129,5 @@ export default class Manifold<TState extends StateConstraint> {
 		RegEl._handleExistingElements(this.#name);
 
 		return state as TState;
-	}
-
-	// Server methods for use in expressions
-	get(
-		url: string | URL,
-		fetchOps?: RequestInit,
-		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
-	): import("./fetch.ts").FetchedContent {
-		return serverPage.get(url, fetchOps, defaultOps);
-	}
-
-	post(
-		url: string | URL,
-		fetchOps?: RequestInit,
-		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
-	): import("./fetch.ts").FetchedContent {
-		return serverPage.post(url, fetchOps, defaultOps);
-	}
-
-	fetch(
-		url: string | URL,
-		ops: import("./fetch.ts").FetchDOMOptions,
-		fetchOps?: RequestInit,
-	): Promise<void> {
-		return serverPage.fetch(url, ops, fetchOps);
 	}
 }
