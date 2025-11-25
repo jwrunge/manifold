@@ -1,11 +1,6 @@
-import { effect } from "./src/Effect.ts";
-import "./src/examples/counter-component.ts";
-import type { CounterElementInstance } from "./src/examples/counter-component.ts";
-import "./src/examples/summary-card-component.ts";
-import type { SummaryCardElementInstance } from "./src/examples/summary-card-component.ts";
-import $ from "./src/main.ts";
+import Manifold from "./dist/manifold.js";
 
-const myState = $.create()
+const myState = Manifold.create()
 	.add("count", 0)
 	.add("popup", (e: unknown) => console.log(e))
 	.add("nextFail", false)
@@ -72,51 +67,6 @@ myState.loadUser = () => {
 
 // Initial load
 myState.loadUser();
-
-const mountCounterBridge = () => {
-	const counter =
-		document.querySelector<CounterElementInstance>("#global-counter");
-	if (!counter) return;
-
-	effect(() => {
-		counter.updateProps({
-			count: myState.count,
-			highlight: myState.count % 5 === 0,
-		});
-	});
-};
-
-const mountSummaryBridge = () => {
-	const summary = document.querySelector<SummaryCardElementInstance>(
-		"#summary-card-showcase",
-	);
-	if (!summary) return;
-
-	effect(() => {
-		summary.updateProps({
-			primaryValue: 1280 + myState.count * 3,
-			secondaryValue: 42 + Math.floor(myState.count / 4),
-			trend:
-				myState.count % 2 === 0
-					? "Up 12% from last week"
-					: "Up 5% from last refresh",
-			highlight: myState.count % 2 === 0,
-			accentColor: myState.count % 2 === 0 ? "#16a34a" : "#2563eb",
-		});
-	});
-};
-
-if (document.readyState === "loading") {
-	document.addEventListener("DOMContentLoaded", mountCounterBridge, {
-		once: true,
-	});
-	document.addEventListener("DOMContentLoaded", mountSummaryBridge, {
-		once: true,
-	});
-} else {
-	mountCounterBridge();
-	mountSummaryBridge();
-}
 
 export type DemoState = typeof myState;
 export default myState;

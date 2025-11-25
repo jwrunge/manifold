@@ -7,8 +7,6 @@
 	"main": "./dist/manifold.js",
 	"module": "./dist/manifold.js",
 	"types": "./dist/manifold.d.ts",
-	"unpkg": "./dist/manifold.umd.js",
-	"jsdelivr": "./dist/manifold.umd.js",
 	"browser": "./dist/manifold.js",
 	"repository": {
 		"type": "git",
@@ -44,9 +42,6 @@
 			"types": "./dist/manifold.d.ts",
 			"import": "./dist/manifold.js",
 			"default": "./dist/manifold.js"
-		},
-		"./umd": {
-			"default": "./dist/manifold.umd.js"
 		}
 	},
 	"scripts": {

@@ -58,24 +58,14 @@ npm install @jwrunge/manifold --registry=https://npm.pkg.github.com
 ### CDN (No Installation)
 
 ```html
-<!-- ES Modules -->
+<!-- JSDelivr ESM -->
 <script type="module">
 	import Manifold from "https://cdn.jsdelivr.net/npm/@jwrunge/manifold@latest/dist/manifold.js";
 	const state = Manifold.create().add("count", 0).build();
 	state.count++;
 </script>
 
-<!-- UMD (global Manifold variable) -->
-<script src="https://cdn.jsdelivr.net/npm/@jwrunge/manifold@latest/dist/manifold.umd.js"></script>
-<script>
-	document.addEventListener("DOMContentLoaded", () => {
-		const state = window.Manifold.create().add("count", 0).build();
-		document.body.textContent = `Count: ${state.count}`;
-	});
-</script>
-
-<!-- Alternative CDNs -->
-<script src="https://unpkg.com/@jwrunge/manifold@latest/dist/manifold.umd.js"></script>
+<!-- Alternative CDN (esm.sh proxy) -->
 <script type="module">
 	import Manifold from "https://esm.sh/@jwrunge/manifold";
 </script>

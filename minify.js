@@ -3,7 +3,7 @@ import { gzipSync } from "node:zlib";
 import { minify } from "terser";
 import sharedOptions from "./terser.config.js";
 
-const filenames = ["manifold.js", "manifold.umd.js"];
+const filenames = ["manifold.js"];
 /** @type {Record<string, {raw: string, gzip: string}>} */
 const outputs = {};
 

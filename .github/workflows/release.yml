@@ -145,7 +145,7 @@ jobs:
                       - JSR: `deno add @jwrunge/manifold`
                       - GitHub Packages: `npm install @jwrunge/manifold`
                       - Deno Land: `import Manifold from "https://deno.land/x/manifold@v${{ steps.version_check.outputs.version }}/src/main.ts"`
-                      - CDN: `https://cdn.jsdelivr.net/npm/mfld@${{ steps.version_check.outputs.version }}/dist/manifold.umd.js`
+                      - CDN: `https://cdn.jsdelivr.net/npm/mfld@${{ steps.version_check.outputs.version }}/dist/manifold.js`
                   draft: false
                   prerelease: false
 

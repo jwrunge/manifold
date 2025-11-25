@@ -8,9 +8,8 @@ export default defineConfig({
 		lib: {
 			entry: "src/main.ts",
 			name: "Manifold",
-			formats: ["es", "umd"],
-			fileName: (format) =>
-				format === "umd" ? "manifold.umd.js" : "manifold.js",
+			formats: ["es"],
+			fileName: () => "manifold.js",
 		},
 		rollupOptions: {
 			external: [/^node:/],

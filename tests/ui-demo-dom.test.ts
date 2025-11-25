@@ -25,16 +25,9 @@ const loadBuilders = async () => {
 			default: Builder;
 		}
 	).default;
-	const umdMod = (await import("../dist/manifold.umd.js")) as unknown as {
-		default?: Builder;
-	};
-	const umd = umdMod?.default
-		? (umdMod.default as Builder)
-		: (globalThis as unknown as { Manifold: Builder }).Manifold;
 	return [
 		{ name: "src", StateBuilder: src },
 		{ name: "es", StateBuilder: es },
-		{ name: "umd", StateBuilder: umd },
 	] as const;
 };
 

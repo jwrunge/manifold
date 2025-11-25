@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 
 type Builder = typeof import("../src/main.ts").default;
 
-// Load all builders: source, ES bundle, and UMD bundle
+// Load builders from source and bundled ES output
 const loadBuilders = async () => {
 	const src = (await import("../src/main.ts")).default as Builder;
 	const es = (
@@ -10,17 +10,9 @@ const loadBuilders = async () => {
 			default: Builder;
 		}
 	).default;
-	// UMD: load module and support both CommonJS (module.exports) and global attach
-	const umdMod = (await import("../dist/manifold.umd.js")) as unknown as {
-		default?: Builder;
-	};
-	const umd = umdMod?.default
-		? (umdMod.default as Builder)
-		: (globalThis as unknown as { Manifold: Builder }).Manifold;
 	return [
 		{ name: "src", StateBuilder: src },
 		{ name: "es", StateBuilder: es },
-		{ name: "umd", StateBuilder: umd },
 	] as const;
 };
 
