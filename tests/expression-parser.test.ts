@@ -171,17 +171,14 @@ describe("Expression Parser", () => {
 		});
 		test("calls whitelisted globals", () => {
 			expect(run("Math.max(1,2,7)")).toBe(7);
-			expect(run("Object.entries({a:1})[0][0]"))
-				.toBe("a");
+			expect(run("Object.entries({a:1})[0][0]")).toBe("a");
 		});
 	});
 
 	describe("Global references", () => {
 		test("allows Object/console access", () => {
 			initState({ someObj: { Jake: 37 } });
-			const entries = run("Object.entries(someObj)") as [
-				[string, number],
-			][];
+			const entries = run("Object.entries(someObj)") as [[string, number]][];
 			expect(entries).toEqual([["Jake", 37]]);
 			// console should be exposed but not throw
 			const logSpy = vi.spyOn(console, "log");

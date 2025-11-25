@@ -30,7 +30,7 @@ export interface FetchDOMOptions {
  *   insertScripts: true,
  *   addTransitionClass: "fade-in",
  * };
- * 
+ *
  * // Used with FetchedContent methods:
  * const fetched = new FetchedContent("/api/snippet.html");
  * await fetched.append("#content", mergeOptions);
@@ -71,7 +71,9 @@ export type IntermediateState = Record<string, unknown>;
  * console.log(state.count); // 2
  * console.log(state.doubleCount); // 4
  */
-export default class Manifold<TState extends IntermediateState = IntermediateState> {
+export default class Manifold<
+	TState extends IntermediateState = IntermediateState,
+> {
 	/**
 	 * Create a new Manifold intermediate state (finish with .build())
 	 * @param name Optional scope name for registry; an unnamed state registry is equal to "default"
@@ -96,11 +98,11 @@ export default class Manifold<TState extends IntermediateState = IntermediateSta
 	 * 		});
 	 *	})
 	 * 	.build();
-	 * 
+	 *
 	 * // In your HTML:
 	 * <div id="content"></div>
 	 * <button :onclick="loadSnippet()">Load Content</button>
-	 * 
+	 *
 	 * @example
 	 * //Or use directly in expressions
 	 * <button :onclick="$.get('/snippets/header.html').append('#main')">Load Header</button>
@@ -125,11 +127,11 @@ export default class Manifold<TState extends IntermediateState = IntermediateSta
 	 * 		});
 	 *	})
 	 * 	.build();
-	 * 
+	 *
 	 * // In your HTML:
 	 * <div id="content"></div>
 	 * <button :onclick="loadSnippet()">Load Content</button>
-	 * 
+	 *
 	 * @example
 	 * //Or use directly in expressions
 	 * <button :onclick="$.post('/snippets/header.html', { body: JSON.stringify(myBody) }).append('#main')">Load Header</button>
@@ -156,11 +158,11 @@ export default class Manifold<TState extends IntermediateState = IntermediateSta
 	 * 		});
 	 *	})
 	 * 	.build();
-	 * 
+	 *
 	 * // In your HTML:
 	 * <div id="content"></div>
 	 * <button :onclick="loadSnippet()">Load Content</button>
-	 * 
+	 *
 	 * @example
 	 * //Or use directly in expressions
 	 * <button :onclick="$.fetch('/snippets/header.html', { method: "DELETE"} ).append('#main')">Load Header</button>
@@ -175,19 +177,19 @@ export default class Manifold<TState extends IntermediateState = IntermediateSta
 	 * Add new state variables to the intermediate state
 	 * @param key The string key acting as your state variable's name
 	 * @param value The value of your state variable
-	 * 
+	 *
 	 * Alternatively, you can pass an object with multiple key-value pairs to add several state variables at once
 	 * @param obj An object containing key-value pairs to add to the state
-	 * 
+	 *
 	 * @example
 	 * const myComplexState = {
 	 * 	name: "Manifold",
 	 * 	status: Statuses.Awesome,
 	 * 	users: 1,000,000,000
 	 * }
-	 * 
+	 *
 	 * const myFn = ()=> "Hello, World!";
-	 * 
+	 *
 	 * const state = Manifold.create()
 	 * 	.add("count", 0)
 	 * 	.add({
@@ -197,7 +199,7 @@ export default class Manifold<TState extends IntermediateState = IntermediateSta
 	 * 	.add("extra", myComplexState)
 	 *  .add({ myFn })
 	 * 	.build();
-	 * 
+	 *
 	 * console.log(state.count); // 0
 	 * console.log(state.name); // "Manifold"
 	 * console.log(state.enabled); // true
@@ -223,4 +225,3 @@ export default class Manifold<TState extends IntermediateState = IntermediateSta
 	 */
 	build(): TState;
 }
-

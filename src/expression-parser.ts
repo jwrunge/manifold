@@ -352,8 +352,7 @@ const parse = (raw: string): ParsedExpression => {
 				chain._base in (globalThis as Record<string, unknown>)
 			)
 				root = (globalThis as Record<string, unknown>)[chain._base];
-			else if (injected)
-				root = injected[chain._base as never];
+			else if (injected) root = injected[chain._base as never];
 			else root = undefined;
 			let cur = root,
 				lastObjForCall: unknown;
