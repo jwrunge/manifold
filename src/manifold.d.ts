@@ -1,5 +1,14 @@
 export type InsertContentMethod = "append" | "prepend" | "replace";
 
+/**
+ * Options for fetching and inserting DOM content
+ * @param from Optional CSS selector to extract content from within the fetched document
+ * @param to CSS selector of the target element where the content will be inserted
+ * @param method The method of inserting content: "append", "prepend", or "replace"
+ * @param insertScripts Whether to insert <script> tags from the fetched content; can be true, false, or an array of specific script src URLs to include
+ * @param insertStyles Whether to insert <link rel="stylesheet"> and <style> tags from the fetched content; can be true, false, or an array of specific stylesheet href URLs to include
+ * @param addTransitionClass Optional CSS class name to add to the inserted content for transition effects
+ */
 export interface FetchDOMOptions {
 	from?: string;
 	to: string;
@@ -9,8 +18,32 @@ export interface FetchDOMOptions {
 	addTransitionClass?: string;
 }
 
+/**
+ * Options for merging fetched content into the DOM
+ * @param from Optional CSS selector to extract content from within the fetched document
+ * @param insertScripts Whether to insert <script> tags from the fetched content; can be true, false, or an array of specific script src URLs to include
+ * @param insertStyles Whether to insert <link rel="stylesheet"> and <style> tags from the fetched content; can be true, false, or an array of specific stylesheet href URLs to include
+ * @param addTransitionClass Optional CSS class name to add to the inserted content for transition effects
+ * @example
+ * const mergeOptions: FetchMergeOptions = {
+ *   from: "#payload",
+ *   insertScripts: true,
+ *   addTransitionClass: "fade-in",
+ * };
+ * 
+ * // Used with FetchedContent methods:
+ * const fetched = new FetchedContent("/api/snippet.html");
+ * await fetched.append("#content", mergeOptions);
+ */
 export type FetchMergeOptions = Omit<FetchDOMOptions, "to" | "method">;
 
+/**
+ * Represents content fetched from a URL, with methods to optionally insert it into the DOM.
+ * @example
+ * // Fetch content and append it to a target element
+ * const fetched = new FetchedContent("/api/snippet.html");
+ * await fetched.append("#content", { from: "#payload" });
+ */
 export declare class FetchedContent {
 	constructor(
 		url: string | URL,
