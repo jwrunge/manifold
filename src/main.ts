@@ -5,7 +5,7 @@ import serverPage from "./fetch.ts";
 export type {
 	FetchDOMOptions,
 	FetchedContent,
-	InsertContentMethod
+	InsertContentMethod,
 } from "./fetch.ts";
 
 import { globalStores } from "./globalstores.ts";
@@ -108,29 +108,28 @@ class State<TState extends IntermediateState> {
 }
 
 // Helpers to use as $.get/$.post/$.fetch without early initialization
-	const get = (
-		url: string | URL,
-		fetchOps?: RequestInit,
-		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
-	): import("./fetch.ts").FetchedContent => {
-		return serverPage.get(url, fetchOps, defaultOps);
-	}
+const get = (
+	url: string | URL,
+	fetchOps?: RequestInit,
+	defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
+): import("./fetch.ts").FetchedContent => {
+	return serverPage.get(url, fetchOps, defaultOps);
+};
 
-	const post = (
-		url: string | URL,
-		fetchOps?: RequestInit,
-		defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
-	): import("./fetch.ts").FetchedContent => {
-		return serverPage.post(url, fetchOps, defaultOps);
-	}
+const post = (
+	url: string | URL,
+	fetchOps?: RequestInit,
+	defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
+): import("./fetch.ts").FetchedContent => {
+	return serverPage.post(url, fetchOps, defaultOps);
+};
 
-	const fetch = (
-		url: string | URL,
-		ops: import("./fetch.ts").FetchDOMOptions,
-		fetchOps?: RequestInit,
-	): Promise<void> => {
-		return serverPage.fetch(url, ops, fetchOps);
-	}
+const fetch = (
+	url: string | URL,
+	ops: import("./fetch.ts").FetchDOMOptions,
+	fetchOps?: RequestInit,
+): Promise<void> => {
+	return serverPage.fetch(url, ops, fetchOps);
+};
 
 export { effect, fetch, get, post, State };
-
