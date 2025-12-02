@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import StateBuilder from "../src/main.ts";
+import { State } from "../src/main.ts";
 import RegEl from "../src/registry.ts";
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -13,7 +13,7 @@ const multiFlush = async (n = 6) => {
 describe(":await race handling", () => {
 	test("only the latest promise updates then/catch when resolving out of order", async () => {
 		type S = { p: Promise<string> | null };
-		const state = StateBuilder.create<S>(undefined, { p: null }).build();
+		const state = State.create<S>(undefined, { p: null }).build();
 
 		let resolveA: (v: string) => void = () => {};
 		let resolveB: (v: string) => void = () => {};

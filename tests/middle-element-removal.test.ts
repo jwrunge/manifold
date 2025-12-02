@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import StateBuilder from "../src/main.ts";
+import { State } from "../src/main.ts";
 import RegEl from "../src/registry.ts";
 
 // Microtask flush helper
@@ -13,7 +13,7 @@ describe("Middle Element Removal Fix", () => {
 
 	test("removing middle element from array correctly identifies and removes the right DOM element", async () => {
 		// Create state with array that has unique values
-		const state = StateBuilder.create(undefined, {
+		const state = State.create(undefined, {
 			items: ["first", "middle", "last"],
 		}).build() as { items: string[] };
 
@@ -71,7 +71,7 @@ describe("Middle Element Removal Fix", () => {
 	});
 
 	test("removing first element correctly identifies and removes the right DOM element", async () => {
-		const state = StateBuilder.create(undefined, {
+		const state = State.create(undefined, {
 			items: ["first", "second", "third"],
 		}).build() as { items: string[] };
 
@@ -111,7 +111,7 @@ describe("Middle Element Removal Fix", () => {
 	});
 
 	test("removing last element still works correctly (legacy behavior)", async () => {
-		const state = StateBuilder.create(undefined, {
+		const state = State.create(undefined, {
 			items: ["first", "second", "third"],
 		}).build() as { items: string[] };
 

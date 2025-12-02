@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import StateBuilder from "../src/main.ts";
+import { State } from "../src/main.ts";
 import RegEl from "../src/registry.ts";
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -33,7 +33,7 @@ describe("DOM behavior / structural stability", () => {
 	}
 	let state: TestState;
 	beforeEach(() => {
-		state = StateBuilder.create(undefined, {
+		state = State.create(undefined, {
 			count: 0,
 			arr: ["a", "b", "c"],
 			ok: true,

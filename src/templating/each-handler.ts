@@ -1,7 +1,7 @@
 import applyAliasPattern from "../alias-destructure.ts";
 import { VT_CLASS } from "../css.ts";
 import { type Effect, effect } from "../Effect.ts";
-import Manifold from "../main.ts";
+import { State } from "../main.ts";
 import { indexOfTopLevel, isIdent } from "../parsing-utils.ts";
 import { scopeProxy } from "../proxy.ts";
 import type { Registerable } from "./types.ts";
@@ -86,7 +86,7 @@ export function handleEach(
 			(_fn({
 				state: regEl._state,
 				element: regEl._eachStart ?? regEl._el,
-				$: Manifold,
+				$: State,
 			}) as
 				| unknown[]
 				| Set<unknown>

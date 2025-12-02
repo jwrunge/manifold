@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
-import StateBuilder from "../src/main.ts";
+import { State } from "../src/main.ts";
 import RegEl from "../src/registry.ts";
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 describe(":each object destructuring aliases", () => {
 	test(":each with {name, age} binds correctly", async () => {
-		const state = StateBuilder.create(undefined, {
+		const state = State.create(undefined, {
 			people: [
 				{ name: "Jake", age: 37 },
 				{ name: "Mary", age: 37 },
@@ -30,7 +30,7 @@ describe(":each object destructuring aliases", () => {
 	});
 
 	test(":each with {name, age}, i binds both value and index", async () => {
-		const state = StateBuilder.create(undefined, {
+		const state = State.create(undefined, {
 			people: [
 				{ name: "Ada", age: 40 },
 				{ name: "Alan", age: 42 },
@@ -53,7 +53,7 @@ describe(":each object destructuring aliases", () => {
 	});
 
 	test(":each with Object.entries(record) allows global helper", async () => {
-		const state = StateBuilder.create(undefined, {
+		const state = State.create(undefined, {
 			family: { Jake: 37, Mary: 37 },
 		}).build() as { family: Record<string, number> };
 

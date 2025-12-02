@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import StateBuilder from "../src/main.ts";
+import { State } from "../src/main.ts";
 import RegEl from "../src/registry.ts";
 
 // Microtask flush helper
@@ -12,7 +12,7 @@ describe("Specific Bug Fix: Item 3, 4, 5 scenario", () => {
 	});
 
 	test("removing item 3 from [item 3, item 4, item 5] correctly shows [item 4, item 5]", async () => {
-		const state = StateBuilder.create(undefined, {
+		const state = State.create(undefined, {
 			items: ["item 3", "item 4", "item 5"],
 		}).build() as { items: string[] };
 
@@ -69,7 +69,7 @@ describe("Specific Bug Fix: Item 3, 4, 5 scenario", () => {
 	});
 
 	test("removing middle item from [a, b, c, d, e] preserves correct items", async () => {
-		const state = StateBuilder.create(undefined, {
+		const state = State.create(undefined, {
 			items: ["a", "b", "c", "d", "e"],
 		}).build() as { items: string[] };
 

@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
-import StateBuilder from "../src/main.ts";
+import { State } from "../src/main.ts";
 import RegEl from "../src/registry.ts";
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 describe(":each nested alias patterns", () => {
 	test(":each with nested object and array patterns binds correctly", async () => {
-		const state = StateBuilder.create(undefined, {
+		const state = State.create(undefined, {
 			items: [
 				{ user: { name: "Ada" }, meta: [10, 20] },
 				{ user: { name: "Alan" }, meta: [30, 40] },

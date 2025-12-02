@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import StateBuilder from "../src/main.ts";
+import { State } from "../src/main.ts";
 import RegEl from "../src/registry.ts";
 
 // Microtask flush helper
@@ -13,7 +13,7 @@ let state: {
 };
 
 const initState = (data: Record<string, unknown>) => {
-	state = StateBuilder.create(
+	state = State.create(
 		undefined,
 		data as Record<string, unknown>,
 	).build() as typeof state;

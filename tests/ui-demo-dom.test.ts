@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-type Builder = typeof import("../src/main.ts").default;
+type Builder = typeof import("../src/main.ts").State;
 
 type DemoState = {
 	count: number;
@@ -19,9 +19,9 @@ type DemoFuncs = {
 };
 
 const loadBuilders = async () => {
-	const src = (await import("../src/main.ts")).default as Builder;
+	const src = (await import("../src/main.ts")).State as Builder;
 	const es = (
-		(await import("../dist/manifold.js")) as unknown as {
+		(await import("../dist/manifold.js")).State as unknown as {
 			default: Builder;
 		}
 	).default;

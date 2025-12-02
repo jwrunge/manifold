@@ -1,7 +1,7 @@
 import { type Effect, effect } from "./Effect.ts";
 import evaluateExpression from "./expression-parser.ts";
 import { globalStores } from "./globalstores.ts";
-import Manifold from "./main.ts";
+import { State } from "./main.ts";
 import { scopeProxy } from "./proxy.ts";
 import { handleAsync } from "./templating/async-handler.ts";
 import { handleConditional } from "./templating/conditional-handler.ts";
@@ -353,7 +353,7 @@ export default class RegEl {
 							state: this._state,
 							event: e,
 							element: el,
-							$: Manifold,
+							$: State,
 						};
 						if (params[0]) ctx[params[0]] = e;
 						if (params[1]) ctx[params[1]] = state;
@@ -366,7 +366,7 @@ export default class RegEl {
 							state: this._state,
 							event: e,
 							element: el,
-							$: Manifold,
+							$: State,
 						});
 				}
 				el.addEventListener(type, handler);
@@ -411,7 +411,7 @@ export default class RegEl {
 			};
 
 			const ef: Effect = effect(() => {
-				const v = _fn({ state: this._state, element: el, $: Manifold });
+				const v = _fn({ state: this._state, element: el, $: State });
 				apply(v);
 			});
 

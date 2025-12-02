@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import StateBuilder from "../src/main.ts";
+import { State } from "../src/main.ts";
 import RegEl from "../src/registry.ts";
 
 // Microtask flush helper
@@ -14,7 +14,7 @@ let state: {
 };
 
 const initState = (data: Record<string, unknown>) => {
-	state = StateBuilder.create(
+	state = State.create(
 		undefined,
 		data as Record<string, unknown>,
 	).build() as typeof state;
@@ -85,7 +85,7 @@ describe("registry basics", () => {
 	});
 
 	test(":each colon syntax with value, index aliases (primitive array)", async () => {
-		const local = StateBuilder.create(undefined, {
+		const local = State.create(undefined, {
 			nums: [10, 20, 30],
 		}).build() as {
 			nums: number[];
@@ -104,7 +104,7 @@ describe("registry basics", () => {
 	});
 
 	test(":each colon syntax single value alias (primitive array)", async () => {
-		const local = StateBuilder.create(undefined, {
+		const local = State.create(undefined, {
 			nums: [5, 6],
 		}).build() as {
 			nums: number[];
@@ -186,7 +186,7 @@ describe("extended registry features", () => {
 				:something="count * 2"
 			/>`;
 		const el = document.getElementById("tgt") as HTMLInputElement;
-		const local = StateBuilder.create(undefined, { count: 1 }).build() as {
+		const local = State.create(undefined, { count: 1 }).build() as {
 			count: number;
 		};
 		new RegEl(el, local as unknown as Record<string, unknown>);
@@ -226,7 +226,7 @@ describe("extended registry features", () => {
 	});
 
 	test("arrow-style event handler receives event param and updates state", async () => {
-		const s = StateBuilder.create(undefined, { txt: "hi" }).build() as {
+		const s = State.create(undefined, { txt: "hi" }).build() as {
 			txt: string;
 			setTxt?: (v: string) => void;
 		};
@@ -245,7 +245,7 @@ describe("extended registry features", () => {
 	});
 
 	test(":sync:checked two-way binding (checkbox)", async () => {
-		const s = StateBuilder.create(undefined, { on: false }).build() as {
+		const s = State.create(undefined, { on: false }).build() as {
 			on: boolean;
 		};
 		document.body.innerHTML = `<input id="c" type="checkbox" :sync:checked="on"/>`;
@@ -265,7 +265,7 @@ describe("extended registry features", () => {
 	});
 
 	test(":sync:open on <details> synchronizes both ways", async () => {
-		const s = StateBuilder.create(undefined, { open: false }).build() as {
+		const s = State.create(undefined, { open: false }).build() as {
 			open: boolean;
 		};
 		document.body.innerHTML = `<details id="d" :sync:open="open"><summary>Title</summary><div>Content</div></details>`;
@@ -285,7 +285,7 @@ describe("extended registry features", () => {
 	});
 
 	test("attribute-only bindings (aria-*) set and remove", async () => {
-		const s = StateBuilder.create(undefined, {
+		const s = State.create(undefined, {
 			label: "Hello",
 			hide: true,
 		}).build() as {
@@ -306,7 +306,7 @@ describe("extended registry features", () => {
 		expect(div.hasAttribute("aria-hidden")).toBe(false);
 	});
 	test("builder chaining preserves derived updates (single-state)", async () => {
-		const b = StateBuilder.create(undefined, { a: 1 as number })
+		const b = State.create(undefined, { a: 1 as number })
 			.derive("b", (s) => (s as { a: number }).a + 1)
 			.add("c", 3);
 		const built = b.build() as { a: number; b: number; c: number };
@@ -315,7 +315,7 @@ describe("extended registry features", () => {
 		expect(built.b).toBe(6);
 	});
 	test("async await / then / catch success and failure", async () => {
-		const local = StateBuilder.create(undefined, { ok: true }).build() as {
+		const local = State.create(undefined, { ok: true }).build() as {
 			ok: boolean;
 		};
 		document.body.innerHTML = `
@@ -377,7 +377,7 @@ describe("extended registry features", () => {
 				<span id="bVal">\${b}</span>
 			</div>`;
 		// Build after DOM is ready so auto-registration binds to this state
-		const b = StateBuilder.create(undefined, { a: 1, b: 2 }).build() as {
+		const b = State.create(undefined, { a: 1, b: 2 }).build() as {
 			a: number;
 			b: number;
 		};
@@ -401,7 +401,7 @@ describe("extended registry features", () => {
 	});
 
 	test("checked sync", async () => {
-		const s = StateBuilder.create(undefined, { on: false }).build() as {
+		const s = State.create(undefined, { on: false }).build() as {
 			on: boolean;
 		};
 		document.body.innerHTML = `<input type="checkbox" :sync:checked="on" id="c" />`;
@@ -416,7 +416,7 @@ describe("extended registry features", () => {
 	});
 
 	test("event handler updates state via update(v)", async () => {
-		const s = StateBuilder.create(undefined, { txt: "hi" }).build() as {
+		const s = State.create(undefined, { txt: "hi" }).build() as {
 			txt: string;
 		} & {
 			update?: (v: string) => void;
@@ -442,7 +442,7 @@ describe("extended registry features", () => {
 	});
 
 	test("selectedIndex updates via button handler", async () => {
-		const s = StateBuilder.create(undefined, { idx: 1 }).build() as {
+		const s = State.create(undefined, { idx: 1 }).build() as {
 			idx: number;
 		} & { setIdx?: (i: number) => void };
 		s.setIdx = (i: number) => {
@@ -460,7 +460,7 @@ describe("extended registry features", () => {
 	});
 
 	test("direct array index assignment extends :each loop", async () => {
-		const local = StateBuilder.create(undefined, {
+		const local = State.create(undefined, {
 			arr: ["a", "b", "c"],
 		}).build() as {
 			arr: string[];
@@ -483,7 +483,7 @@ describe("extended registry features", () => {
 	});
 
 	test("direct array index assignment updates existing index in :each loop", async () => {
-		const local = StateBuilder.create(undefined, {
+		const local = State.create(undefined, {
 			arr: ["a", "b", "c"],
 		}).build() as {
 			arr: string[];
