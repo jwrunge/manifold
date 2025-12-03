@@ -1,5 +1,9 @@
 import { VT_CLASS } from "./css.ts";
-import RegEl from "./registry.ts";
+import {
+	ensureViewTransitionName,
+	flushBeforeTransition,
+	runViewTransition,
+} from "./transition.ts";
 
 export type InsertContentMethod = "append" | "prepend" | "replace";
 
@@ -152,15 +156,7 @@ const fetchContent = async (
 			el.classList.add(ops.addTransitionClass);
 			const hel = el as HTMLElement;
 			hel.style.setProperty(VT_CLASS, ops.addTransitionClass);
-			// Ensure this element is independently captured by VT
-			const existingName = hel.style.getPropertyValue("view-transition-name");
-			if (!existingName) {
-				const rand = Math.random().toString(36).slice(2);
-				hel.style.setProperty(
-					"view-transition-name",
-					`mf-${ops.addTransitionClass}-${rand}`,
-				);
-			}
+			ensureViewTransitionName(hel, `mf-${ops.addTransitionClass}`);
 		}
 	}
 
@@ -178,23 +174,6 @@ const fetchContent = async (
 		}
 	};
 
-	const startVT = (cb: () => void) => {
-		type DocWithVT = Document & {
-			startViewTransition?: (cb: () => void) => {
-				finished?: Promise<unknown>;
-			};
-		};
-		const d = document as DocWithVT;
-		const canVT =
-			RegEl._viewTransitionsEnabled &&
-			typeof d.startViewTransition === "function";
-		if (canVT && d.startViewTransition) {
-			return d.startViewTransition(cb);
-		}
-		cb();
-		return null as { finished?: Promise<unknown> } | null;
-	};
-
 	// If replacing, mark outgoing direct children so they participate in the outro
 	let outgoing: HTMLElement[] = [];
 	if (ops.method === "replace") {
@@ -207,47 +186,17 @@ const fetchContent = async (
 				for (const el of outgoing) {
 					el.classList.add(ops.addTransitionClass);
 					el.style.setProperty(VT_CLASS, ops.addTransitionClass);
-					// Ensure outgoing has a VT name so ::view-transition-old(*.class) can match
-					const existingName = el.style.getPropertyValue(
-						"view-transition-name",
-					);
-					if (!existingName) {
-						const rand = Math.random().toString(36).slice(2);
-						el.style.setProperty(
-							"view-transition-name",
-							`mf-${ops.addTransitionClass}-${rand}`,
-						);
-					}
+					ensureViewTransitionName(el, `mf-${ops.addTransitionClass}`);
 				}
 			}
 		}
 	}
 
 	// Flush styles on outgoing + incoming before snapshot
-	if (RegEl._viewTransitionsEnabled) {
-		try {
-			const toFlush = [...outgoing, ...topLevel];
-			for (const el of toFlush) void (el as HTMLElement).offsetWidth;
-			const container = target as HTMLElement | null;
-			if (container) void container.getBoundingClientRect();
-			void document.body.offsetWidth;
-		} catch (_e) {
-			// ignore
-		}
-		// One or two RAFs to ensure UA applies classes before snapshot
-		await new Promise<void>((r) =>
-			typeof requestAnimationFrame !== "undefined"
-				? requestAnimationFrame(() => r())
-				: setTimeout(() => r(), 0),
-		);
-		await new Promise<void>((r) =>
-			typeof requestAnimationFrame !== "undefined"
-				? requestAnimationFrame(() => r())
-				: setTimeout(() => r(), 0),
-		);
-	}
+	const flushTargets = [...outgoing, ...topLevel].map((el) => el as HTMLElement);
+	await flushBeforeTransition(flushTargets, target as HTMLElement | null);
 
-	const t = startVT(performInsert);
+	const t = runViewTransition(performInsert);
 	if (t?.finished) await t.finished.catch(() => {});
 	if (ops.addTransitionClass) {
 		for (const el of topLevel) {

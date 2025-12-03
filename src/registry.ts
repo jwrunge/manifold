@@ -46,8 +46,14 @@ const _handleNewElements = (addedNodes: NodeList) => {
 	}
 };
 
-import { VT_CLASS, VT_NAME } from "./css.ts";
 import { splitAs } from "./parsing-utils.ts";
+import {
+	areViewTransitionsEnabled,
+	ensureViewTransitionName,
+	runViewTransition,
+	scheduleViewTransitionBuffer,
+	withTransitionStaging,
+} from "./transition.ts";
 
 const throwError = (msg: string, cause: unknown, unsupported = false) => {
 	let hint = "";
@@ -132,8 +138,6 @@ const getAttrName = (
 export default class RegEl {
 	static _registry = new WeakMap<Registerable, RegEl>();
 	static _mutations = new WeakMap<Registerable, Map<string, () => void>>();
-	static _viewTransitionsEnabled = false;
-	static _initialBufferTimeout: number | null = null;
 	#mutations = new Map<string, () => void>();
 	#cleanups = new Set<() => void>();
 	_el: Registerable;
@@ -151,22 +155,7 @@ export default class RegEl {
 
 	// Helper to reduce view transition boilerplate for callers like :each
 	_transition(callback: () => void) {
-		const trans =
-			RegEl._viewTransitionsEnabled &&
-			typeof document !== "undefined" &&
-			"startViewTransition" in document &&
-			(
-				document as {
-					startViewTransition?: (callback: () => void) => {
-						finished: Promise<unknown>;
-					};
-				}
-			).startViewTransition?.(callback);
-		if (!trans) {
-			callback();
-			return null as { finished: Promise<unknown> } | null;
-		}
-		return trans as { finished: Promise<unknown> };
+		return runViewTransition(callback);
 	}
 
 	static _handleExistingElements(storeName?: string) {
@@ -194,20 +183,7 @@ export default class RegEl {
 		}
 
 		// Schedule view transitions to be enabled after initial setup
-		RegEl._scheduleViewTransitionBuffer();
-	}
-
-	static _scheduleViewTransitionBuffer() {
-		// Clear any existing timeout
-		if (RegEl._initialBufferTimeout) {
-			clearTimeout(RegEl._initialBufferTimeout);
-		}
-
-		// Enable view transitions after a brief delay to prevent transitions on initial load
-		RegEl._initialBufferTimeout = setTimeout(() => {
-			RegEl._viewTransitionsEnabled = true;
-			RegEl._initialBufferTimeout = null;
-		}, 100) as unknown as number; // Brief delay for initial setup
+		scheduleViewTransitionBuffer();
 	}
 
 	constructor(el: Registerable, state: Record<string, unknown>) {
@@ -220,8 +196,8 @@ export default class RegEl {
 
 		// If this is a new registration and view transitions aren't enabled yet,
 		// schedule the buffer (this handles dynamic element registration)
-		if (!RegEl._viewTransitionsEnabled) {
-			RegEl._scheduleViewTransitionBuffer();
+		if (!areViewTransitionsEnabled()) {
+			scheduleViewTransitionBuffer();
 		}
 
 		// EARLY HANDLE :each to avoid text interpolation on template
@@ -263,13 +239,7 @@ export default class RegEl {
 		}
 		if (transitionValue !== null) {
 			const prefix = (transitionValue ?? "").trim();
-			const rand = Math.random().toString(36).slice(2);
-			const elStyle = el.style as CSSStyleDeclaration & {
-				viewTransitionName?: string;
-			};
-			if (!elStyle.viewTransitionName) {
-				elStyle.viewTransitionName = prefix ? `${prefix}-${rand}` : `mf${rand}`;
-			}
+			ensureViewTransitionName(el as HTMLElement, prefix);
 			this._vtClass = prefix; // unified class applied to both old/new
 		}
 
@@ -320,15 +290,7 @@ export default class RegEl {
 			// Handle :transition binding (unified attr)
 			if (attrName === "transition") {
 				const prefix = (value ?? "").trim();
-				const elStyle = el.style as CSSStyleDeclaration & {
-					viewTransitionName?: string;
-				};
-				if (!elStyle.viewTransitionName) {
-					const rand = Math.random().toString(36).slice(2);
-					elStyle.viewTransitionName = prefix
-						? `${prefix}-${rand}`
-						: `mf${rand}`;
-				}
+				ensureViewTransitionName(el as HTMLElement, prefix);
 				this._vtClass = prefix || this._vtClass;
 			}
 
@@ -575,45 +537,8 @@ export default class RegEl {
 
 	// Small helper to stage unified view-transition styling, run update, and cleanup
 	private _withTransitionStaging(nodes: Registerable[], run: () => void) {
-		if (nodes.length === 0) return;
-		// Apply unified class if present
-		if (this._vtClass) {
-			for (const el of nodes) {
-				(el as HTMLElement).style.setProperty(VT_CLASS, this._vtClass);
-			}
-		}
-		// Shared temporary name to pair old/new snapshots as a group
-		const tempName = `mfpair-${Math.random().toString(36).slice(2)}`;
-		const prevNames: Array<{ el: HTMLElement; prev: string }> = [];
-		for (const el of nodes) {
-			const hel = el as HTMLElement;
-			const helStyle = hel.style as CSSStyleDeclaration & {
-				viewTransitionName?: string;
-			};
-			prevNames.push({
-				el: hel,
-				prev: helStyle.viewTransitionName || "",
-			});
-			hel.style.setProperty(VT_NAME, tempName);
-		}
-		// Flush styles to ensure properties are applied before capture
-		try {
-			void (nodes[0] as HTMLElement).offsetWidth;
-		} catch {}
-
-		const trans = this._transition(run);
-		const cleanup = () => {
-			for (const el of nodes) {
-				(el as HTMLElement).style.removeProperty(VT_CLASS);
-			}
-			for (const { el, prev } of prevNames) {
-				if (prev) el.style.setProperty(VT_NAME, prev);
-				else el.style.removeProperty(VT_NAME);
-			}
-		};
-
-		if (!trans) cleanup();
-		else trans.finished.finally(cleanup);
+		const elements = nodes.map((n) => n as HTMLElement);
+		withTransitionStaging(elements, run, this._vtClass);
 	}
 
 	_updateDisplay(sibs: Pick<Sibling, "el">[]) {
