@@ -1,6 +1,6 @@
-import Manifold from "./dist/manifold.js";
+import { State } from "./dist/manifold.js";
 
-const myState = Manifold.create()
+const myState = State.create()
 	.add("count", 0)
 	.add("popup", (e: unknown) => console.log(e))
 	.add("nextFail", false)
@@ -67,6 +67,13 @@ myState.loadUser = () => {
 
 // Initial load
 myState.loadUser();
+
+const intermediateState = State.create("new")
+	.add("count2", 5)
+	.add("doubleCount", () => state2.count2 * 2)
+	.add("sum", () => myState.count + state2.count2);
+
+const state2 = intermediateState.build();
 
 export type DemoState = typeof myState;
 export default myState;
