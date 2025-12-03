@@ -193,7 +193,9 @@ const fetchContent = async (
 	}
 
 	// Flush styles on outgoing + incoming before snapshot
-	const flushTargets = [...outgoing, ...topLevel].map((el) => el as HTMLElement);
+	const flushTargets = [...outgoing, ...topLevel].map(
+		(el) => el as HTMLElement,
+	);
 	await flushBeforeTransition(flushTargets, target as HTMLElement | null);
 
 	const t = runViewTransition(performInsert);

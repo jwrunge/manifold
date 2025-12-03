@@ -4,6 +4,14 @@ export type ViewTransitionHandle = {
 	finished?: Promise<unknown>;
 };
 
+export type TransitionElement = HTMLElement | SVGElement | MathMLElement;
+export type TransitionClassResolver =
+	| string
+	| ((el: TransitionElement, index: number) => string | null | undefined);
+export type TransitionStarter = (
+	callback: () => void,
+) => ViewTransitionHandle | null;
+
 let viewTransitionsEnabled = false;
 let initialBufferTimeout: number | null = null;
 
@@ -39,49 +47,53 @@ export const runViewTransition = (
 	return doc.startViewTransition?.(callback) ?? null;
 };
 
-export const ensureViewTransitionName = (
-	el: HTMLElement,
-	prefix?: string,
-) => {
+export const ensureViewTransitionName = (el: HTMLElement, prefix?: string) => {
 	const style = el.style as CSSStyleDeclaration & {
 		viewTransitionName?: string;
 	};
 	if (style.viewTransitionName) return style.viewTransitionName;
 	const rand = Math.random().toString(36).slice(2);
 	const fallback = "mf";
-	const name = prefix && prefix.length > 0 ? `${prefix}-${rand}` : `${fallback}${rand}`;
+	const name =
+		prefix && prefix.length > 0 ? `${prefix}-${rand}` : `${fallback}${rand}`;
 	style.setProperty(VT_NAME, name);
 	return name;
 };
 
 export const withTransitionStaging = (
-	nodes: HTMLElement[],
+	nodes: TransitionElement[],
 	run: () => void,
-	vtClass?: string,
+	vtClass?: TransitionClassResolver,
+	startTransition: TransitionStarter = runViewTransition,
 ) => {
 	if (nodes.length === 0) {
-		run();
+		startTransition(run);
 		return;
 	}
+
+	const classTargets: TransitionElement[] = [];
 	if (vtClass) {
-		for (const el of nodes) {
-			el.style.setProperty(VT_CLASS, vtClass);
-		}
+		nodes.forEach((el, index) => {
+			const resolved =
+				typeof vtClass === "function" ? vtClass(el, index) : vtClass;
+			if (!resolved) return;
+			el.style.setProperty(VT_CLASS, resolved);
+			classTargets.push(el);
+		});
 	}
+
 	const tempName = `mfpair-${Math.random().toString(36).slice(2)}`;
 	const prevNames = nodes.map((el) => {
-		const style = el.style as CSSStyleDeclaration & {
-			viewTransitionName?: string;
-		};
-		const prev = style.viewTransitionName || "";
+		const prev = el.style.getPropertyValue(VT_NAME) || "";
 		el.style.setProperty(VT_NAME, tempName);
 		return { el, prev };
 	});
 	try {
-		void nodes[0].offsetWidth;
+		void nodes[0].getBoundingClientRect();
 	} catch {}
+
 	const cleanup = () => {
-		for (const el of nodes) {
+		for (const el of classTargets) {
 			el.style.removeProperty(VT_CLASS);
 		}
 		for (const { el, prev } of prevNames) {
@@ -89,7 +101,8 @@ export const withTransitionStaging = (
 			else el.style.removeProperty(VT_NAME);
 		}
 	};
-	const transition = runViewTransition(run);
+
+	const transition = startTransition(run);
 	if (transition?.finished) transition.finished.finally(cleanup);
 	else cleanup();
 };

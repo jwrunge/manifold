@@ -5,7 +5,7 @@ import serverPage from "./fetch.ts";
 export type {
 	FetchDOMOptions,
 	FetchedContent,
-	InsertContentMethod
+	InsertContentMethod,
 } from "./fetch.ts";
 
 import { proxy } from "./proxy.ts";

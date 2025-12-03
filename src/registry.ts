@@ -538,7 +538,9 @@ export default class RegEl {
 	// Small helper to stage unified view-transition styling, run update, and cleanup
 	private _withTransitionStaging(nodes: Registerable[], run: () => void) {
 		const elements = nodes.map((n) => n as HTMLElement);
-		withTransitionStaging(elements, run, this._vtClass);
+		withTransitionStaging(elements, run, this._vtClass, (cb) =>
+			this._transition(cb),
+		);
 	}
 
 	_updateDisplay(sibs: Pick<Sibling, "el">[]) {

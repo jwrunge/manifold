@@ -1,9 +1,9 @@
 import applyAliasPattern from "../alias-destructure.ts";
-import { VT_CLASS } from "../css.ts";
 import { type Effect, effect } from "../Effect.ts";
 import { State } from "../main.ts";
 import { indexOfTopLevel, isIdent } from "../parsing-utils.ts";
 import { scopeProxy } from "../proxy.ts";
+import { withTransitionStaging } from "../transition.ts";
 import type { Registerable } from "./types.ts";
 
 // Type for the RegEl class (to avoid circular dependencies)
@@ -16,6 +16,7 @@ interface RegElLike {
 	_eachInstances?: Registerable[];
 	_eachElementMap?: WeakMap<Registerable, { value: unknown; index: number }>;
 	_eachPreviousArray?: unknown[];
+	_vtClass?: string;
 	_stateAsRecord(): Record<string, unknown>;
 	_transition(callback: () => void): { finished: Promise<unknown> } | null;
 	_handleTextNode(node: Node): void;
@@ -37,22 +38,17 @@ export function handleEach(
 	throwError: (msg: string, cause?: unknown) => void,
 	eachAlias?: string,
 ): Effect {
-	const markWithVTClass = (nodes: Registerable[]) => {
-		const marked: Registerable[] = [];
-		for (const element of nodes) {
-			const childReg = RegElClass._registry.get(element);
-			// @ts-expect-error accessing internal optional vt class
-			const vt = childReg?._vtClass as string | undefined;
-			if (vt) {
-				(element as HTMLElement).style.setProperty(VT_CLASS, vt);
-				marked.push(element);
-			}
+	const runWithChildTransitions = (nodes: Registerable[], run: () => void) => {
+		if (nodes.length === 0) {
+			regEl._transition(run);
+			return;
 		}
-		return () => {
-			for (const el of marked) {
-				(el as HTMLElement).style.removeProperty(VT_CLASS);
-			}
-		};
+		withTransitionStaging(
+			nodes as (HTMLElement | SVGElement | MathMLElement)[],
+			run,
+			(el) => RegElClass._registry.get(el)?._vtClass,
+			(cb) => regEl._transition(cb),
+		);
 	};
 	// Cache a pristine template clone for repeated use (without the :each attribute)
 	if (!regEl._cachedContent) {
@@ -194,8 +190,7 @@ export function handleEach(
 
 			// If we identified specific elements to remove, remove them
 			if (elementsToRemove.length > 0) {
-				const unmark = markWithVTClass(elementsToRemove);
-				const t = regEl._transition(() => {
+				runWithChildTransitions(elementsToRemove, () => {
 					for (const element of elementsToRemove) {
 						if (instances) {
 							const index = instances.indexOf(element);
@@ -231,8 +226,6 @@ export function handleEach(
 						}
 					}
 				});
-				if (t) t.finished.finally(unmark);
-				else unmark();
 			} else {
 				// Fallback to original behavior if we can't identify specific elements
 				// Collect nodes to remove so we can mark them before the transition
@@ -241,8 +234,7 @@ export function handleEach(
 					const node = instances?.[i];
 					if (node) nodesToRemove.push(node);
 				}
-				const unmark = markWithVTClass(nodesToRemove);
-				const t = regEl._transition(() => {
+				runWithChildTransitions(nodesToRemove, () => {
 					for (const node of nodesToRemove) {
 						instances?.pop();
 						if (elementMap) {
@@ -251,8 +243,6 @@ export function handleEach(
 						node.remove();
 					}
 				});
-				if (t) t.finished.finally(unmark);
-				else unmark();
 			}
 		} else {
 			// Handle the normal cases: adding elements or updating in place
@@ -301,12 +291,9 @@ export function handleEach(
 				}
 				// Use view transition for adding items
 				const newClones: Registerable[] = instances?.slice(cur) ?? [];
-				const unmark = markWithVTClass(newClones);
-				const t = regEl._transition(() => {
+				runWithChildTransitions(newClones, () => {
 					parent.insertBefore(frag, end);
 				});
-				if (t) t.finished.finally(unmark);
-				else unmark();
 			}
 		}
 
