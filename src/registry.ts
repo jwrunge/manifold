@@ -1,6 +1,5 @@
 import { type Effect, effect } from "./Effect.ts";
 import evaluateExpression from "./expression-parser.ts";
-import { globalStores } from "./globalstores.ts";
 import { State } from "./main.ts";
 import { scopeProxy } from "./proxy.ts";
 import { handleAsync } from "./templating/async-handler.ts";
@@ -21,7 +20,7 @@ const _registerElement = (el: Element) => {
 	const attr = el.getAttribute("data-mf-register");
 	if (attr !== null) {
 		const storeName = attr || undefined;
-		const store = globalStores.get(storeName);
+		const store = State.globalStores.get(storeName);
 		if (store) {
 			new RegEl(el as HTMLElement | SVGElement | MathMLElement, store);
 			// Remove mf-hidden class after registration

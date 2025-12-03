@@ -41,10 +41,6 @@ const insertScripts = (
 	} else if (filter !== true) {
 		return; // nothing to do
 	}
-	// Detect Node/JSDOM environment to execute inline script text
-	type MaybeNodeProcess = { versions?: { node?: string } };
-	const proc = (globalThis as { process?: MaybeNodeProcess }).process;
-	const isNode = !!proc?.versions?.node;
 	for (const s of candidates) {
 		const src = s.getAttribute("src");
 		if (src) {
@@ -61,17 +57,11 @@ const insertScripts = (
 				)
 			)
 				continue;
-			if (isNode) {
-				// Execute inline script text in test environment
-				// eslint-disable-next-line no-new-func
-				new Function(code)();
-			} else {
-				const ns = document.createElement("script");
-				for (const { name, value } of Array.from(s.attributes))
-					ns.setAttribute(name, value);
-				ns.textContent = code;
-				document.body.appendChild(ns);
-			}
+			const ns = document.createElement("script");
+			for (const { name, value } of Array.from(s.attributes))
+				ns.setAttribute(name, value);
+			ns.textContent = code;
+			document.body.appendChild(ns);
 		}
 	}
 };
@@ -123,21 +113,6 @@ const fetchContent = async (
 	fetchOps?: RequestInit,
 ) => {
 	const loadHTML = async (): Promise<string> => {
-		// In Node.js test environments, handle file:// URLs and relative paths
-		if (typeof process !== "undefined" && process?.versions?.node) {
-			if (typeof url === "string" && !url.startsWith("http")) {
-				const { readFile } = await import("node:fs/promises");
-				const path = await import("node:path");
-				const filePath = path.resolve(process.cwd(), url.replace(/^\/+/, ""));
-				return readFile(filePath, "utf8");
-			}
-			if (url instanceof URL && url.protocol === "file:") {
-				const { readFile } = await import("node:fs/promises");
-				const { fileURLToPath } = await import("node:url");
-				return readFile(fileURLToPath(url), "utf8");
-			}
-		}
-
 		if (typeof url === "string") {
 			const res = await fetch(url, fetchOps);
 			if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);

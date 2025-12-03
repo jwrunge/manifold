@@ -5,10 +5,9 @@ import serverPage from "./fetch.ts";
 export type {
 	FetchDOMOptions,
 	FetchedContent,
-	InsertContentMethod,
+	InsertContentMethod
 } from "./fetch.ts";
 
-import { globalStores } from "./globalstores.ts";
 import { proxy } from "./proxy.ts";
 import RegEl from "./registry.ts";
 
@@ -19,6 +18,8 @@ class State<TState extends IntermediateState> {
 	#scopedState: TState;
 	#derivations: Map<string, (store: IntermediateState) => unknown>;
 	#built = false;
+
+	static globalStores = new Map<string | undefined, IntermediateState>();
 	static _current: State<IntermediateState> | null = null;
 
 	constructor(
@@ -98,7 +99,7 @@ class State<TState extends IntermediateState> {
 		this.#built = true;
 
 		// Register store globally for incremental registration
-		globalStores.set(this.#name, state);
+		State.globalStores.set(this.#name, state);
 
 		// Trigger registration for existing DOM elements by treating the entire document as "newly added"
 		RegEl._handleExistingElements(this.#name);
