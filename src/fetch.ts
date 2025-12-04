@@ -215,11 +215,19 @@ const fetchContent = async (
 };
 
 export class FetchedContent {
+	private url: string | URL;
+	private fetchOps: RequestInit;
+	private defaultOps?: Omit<FetchDOMOptions, "to" | "method">;
+
 	constructor(
-		private url: string | URL,
-		private fetchOps: RequestInit,
-		private defaultOps?: Omit<FetchDOMOptions, "to" | "method">,
-	) {}
+		url: string | URL,
+		fetchOps: RequestInit,
+		defaultOps?: Omit<FetchDOMOptions, "to" | "method">,
+	) {
+		this.url = url;
+		this.fetchOps = fetchOps;
+		this.defaultOps = defaultOps;
+	}
 
 	replace(
 		to: string,

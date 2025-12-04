@@ -5,7 +5,7 @@ import serverPage from "./fetch.ts";
 export type {
 	FetchDOMOptions,
 	FetchedContent,
-	InsertContentMethod,
+	InsertContentMethod
 } from "./fetch.ts";
 
 import { proxy } from "./proxy.ts";
@@ -101,8 +101,10 @@ class State<TState extends IntermediateState> {
 		// Register store globally for incremental registration
 		State.globalStores.set(this.#name, state);
 
-		// Trigger registration for existing DOM elements by treating the entire document as "newly added"
-		RegEl._handleExistingElements(this.#name);
+		// Trigger registration for existing DOM elements when DOM APIs exist
+		if (typeof document !== "undefined") {
+			RegEl._handleExistingElements(this.#name);
+		}
 
 		return state as TState;
 	}

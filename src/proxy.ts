@@ -4,6 +4,7 @@ import type { IntermediateState } from "./main.ts";
 
 const proxyCache = new WeakMap<object, IntermediateState>();
 const depMap = new WeakMap<object, Map<PropertyKey, Subscriptions>>();
+const OWN_KEYS = Symbol("mf:ownKeys");
 const pendingEffects = new Set<Effect>();
 let isFlushScheduled = false;
 const flushEffects = () => {
@@ -46,6 +47,10 @@ const notify = (target: object, key: PropertyKey) => {
 	const bucket = depMap.get(target)?.get(key);
 	if (bucket) batchEffects(bucket);
 };
+const trackOwnKeys = (target: object) => {
+	const curEffect = Effect._current;
+	if (curEffect) track(target, OWN_KEYS, curEffect);
+};
 const track = (target: object, key: PropertyKey, effect: Effect) => {
 	let keyMap = depMap.get(target);
 	if (!keyMap) {
@@ -80,6 +85,7 @@ const arrMethods = [
 	"sort",
 	"reverse",
 ];
+const hasOwn = (target: object, key: PropertyKey) => Object.hasOwn(target, key);
 export const proxy = (obj: object): IntermediateState | Promise<unknown> => {
 	if (!obj || typeof obj !== "object") return obj;
 	// Do not proxy Promises!
@@ -112,6 +118,7 @@ export const proxy = (obj: object): IntermediateState | Promise<unknown> => {
 							return function (this: unknown[], ...args: unknown[]) {
 								const result = target.apply(state as unknown[], args);
 								notify(state as object, "length");
+								notify(state as object, OWN_KEYS);
 								return result;
 							};
 						}
@@ -125,17 +132,41 @@ export const proxy = (obj: object): IntermediateState | Promise<unknown> => {
 						return true;
 					}
 					const rec = state as Record<string, unknown>;
+					const existed = hasOwn(state as object, key);
 					const prev = rec[key as string];
 					if (prev === value || isEqual(prev, value)) return true;
 					const isArr = Array.isArray(state);
 					const prevLen = isArr ? (state as unknown[]).length : 0;
 					rec[key as string] = value;
 					notify(state as object, key);
+					if (!existed) notify(state as object, OWN_KEYS);
 					if (isArr && key !== "length") {
 						const newLen = (state as unknown[]).length;
 						if (newLen !== prevLen) notify(state as object, "length");
 					}
+					if (isArr && key === "length" && (value as number) < prevLen) {
+						notify(state as object, OWN_KEYS);
+					}
 					return true;
+				},
+				deleteProperty(state, key) {
+					if (typeof key === "symbol") {
+						delete (state as Record<PropertyKey, unknown>)[key];
+						return true;
+					}
+					if (!hasOwn(state as object, key)) return true;
+					const success = delete (state as Record<string, unknown>)[key as string];
+					if (!success) return false;
+					notify(state as object, key);
+					notify(state as object, OWN_KEYS);
+					if (Array.isArray(state) && key !== "length") {
+						notify(state as object, "length");
+					}
+					return true;
+				},
+				ownKeys(state) {
+					trackOwnKeys(state as object);
+					return Reflect.ownKeys(state);
 				},
 			}),
 	);
