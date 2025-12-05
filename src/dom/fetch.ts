@@ -39,33 +39,32 @@ const insertScripts = (
 	scripts: HTMLScriptElement[],
 	filter?: boolean | string[],
 ) => {
-	let candidates = scripts;
-	if (Array.isArray(filter)) {
-		candidates = scripts.filter((s) => filter.some((sel) => s.matches(sel)));
-	} else if (filter !== true) {
-		return; // nothing to do
-	}
-	for (const s of candidates) {
+	if (!filter) return;
+	if (filter !== true)
+		scripts = scripts.filter((s) => filter.some((sel) => s.matches(sel)));
+
+	for (const s of scripts) {
 		const src = s.getAttribute("src");
+		const ns = document.createElement("script");
+
 		if (src) {
-			if (document.querySelector(`script[src="${cssEscape(src)}"]`)) continue;
-			const ns = document.createElement("script");
-			for (const { name, value } of Array.from(s.attributes))
-				ns.setAttribute(name, value);
-			document.body.appendChild(ns);
+			if (!document.querySelector(`script[src="${cssEscape(src)}"]`)) {
+				for (const { name, value } of Array.from(s.attributes))
+					ns.setAttribute(name, value);
+				document.body.appendChild(ns);
+			}
 		} else {
 			const code = s.textContent || "";
 			if (
-				Array.from(document.querySelectorAll("script:not([src])")).some(
+				!Array.from(document.querySelectorAll("script:not([src])")).some(
 					(e) => (e as HTMLScriptElement).textContent === code,
 				)
-			)
-				continue;
-			const ns = document.createElement("script");
-			for (const { name, value } of Array.from(s.attributes))
-				ns.setAttribute(name, value);
-			ns.textContent = code;
-			document.body.appendChild(ns);
+			) {
+				for (const { name, value } of Array.from(s.attributes))
+					ns.setAttribute(name, value);
+				ns.textContent = code;
+				document.body.appendChild(ns);
+			}
 		}
 	}
 };
@@ -111,7 +110,7 @@ const insertStyles = (
 	}
 };
 
-const fetchContent = async (
+export const mfFetch = async (
 	url: string | URL,
 	ops: FetchDOMOptions,
 	fetchOps?: RequestInit,
@@ -233,7 +232,7 @@ export class FetchedContent {
 		to: string,
 		ops?: Omit<FetchDOMOptions, "to" | "method">,
 	): Promise<void> {
-		return fetchContent(
+		return mfFetch(
 			this.url,
 			{ ...this.defaultOps, ...ops, method: "replace", to },
 			this.fetchOps,
@@ -244,7 +243,7 @@ export class FetchedContent {
 		to: string,
 		ops?: Omit<FetchDOMOptions, "to" | "method">,
 	): Promise<void> {
-		return fetchContent(
+		return mfFetch(
 			this.url,
 			{ ...this.defaultOps, ...ops, method: "append", to },
 			this.fetchOps,
@@ -255,7 +254,7 @@ export class FetchedContent {
 		to: string,
 		ops?: Omit<FetchDOMOptions, "to" | "method">,
 	): Promise<void> {
-		return fetchContent(
+		return mfFetch(
 			this.url,
 			{ ...this.defaultOps, ...ops, method: "prepend", to },
 			this.fetchOps,
@@ -263,28 +262,26 @@ export class FetchedContent {
 	}
 }
 
-export default {
-	get(
-		url: string | URL,
-		fetchOps?: RequestInit,
-		defaultOps?: Omit<FetchDOMOptions, "to" | "method">,
-	): FetchedContent {
-		return new FetchedContent(
-			url,
-			{ ...(fetchOps || {}), method: "GET" },
-			defaultOps,
-		);
-	},
-	post(
-		url: string | URL,
-		fetchOps?: RequestInit,
-		defaultOps?: Omit<FetchDOMOptions, "to" | "method">,
-	): FetchedContent {
-		return new FetchedContent(
-			url,
-			{ ...(fetchOps || {}), method: "POST" },
-			defaultOps,
-		);
-	},
-	fetch: fetchContent,
+export const mfGet = (
+	url: string | URL,
+	fetchOps?: RequestInit,
+	defaultOps?: Omit<FetchDOMOptions, "to" | "method">,
+): FetchedContent => {
+	return new FetchedContent(
+		url,
+		{ ...(fetchOps || {}), method: "GET" },
+		defaultOps,
+	);
+};
+
+export const mfPost = (
+	url: string | URL,
+	fetchOps?: RequestInit,
+	defaultOps?: Omit<FetchDOMOptions, "to" | "method">,
+): FetchedContent => {
+	return new FetchedContent(
+		url,
+		{ ...(fetchOps || {}), method: "POST" },
+		defaultOps,
+	);
 };
