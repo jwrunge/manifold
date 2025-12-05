@@ -40,7 +40,7 @@ export const indexOfTopLevel = (src: string, chr: string): number => {
 	return found;
 };
 
-export const isIdent = (s: string): boolean => /^[A-Za-z_$][\w$]*$/.test(s);
+export const isIdent = (s?: string): boolean => !!s && /^[A-Za-z_$][\w$]*$/.test(s);
 
 export const splitTopLevel = (src: string, sep: string): string[] => {
 	const out: string[] = [];

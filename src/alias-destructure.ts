@@ -5,9 +5,7 @@ const bindIdent = (
 	val: unknown,
 	target: Record<string, unknown>,
 ) => {
-	if (!ident) return;
-	if (!isIdent(ident)) return;
-	target[ident] = val as unknown;
+	if (isIdent(ident)) target[ident] = val as unknown;
 };
 
 const applyObjectPattern = (

@@ -20,10 +20,8 @@ type DemoFuncs = {
 
 const loadBuilders = async () => {
 	const src = (await import("../src/main.ts")).State as Builder;
-	const es = (await import("../dist/manifold.js")).State as Builder;
 	return [
 		{ name: "src", StateBuilder: src },
-		{ name: "es", StateBuilder: es },
 	] as const;
 };
 
