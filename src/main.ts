@@ -1,3 +1,4 @@
+import { fetchWithMethodFactory } from "./dom/fetch.ts";
 import RegEl from "./dom/registry.ts";
 import { Effect } from "./reactivity/effect.ts";
 import isEqual from "./reactivity/equality.ts";
@@ -102,5 +103,8 @@ export class State<TState extends IntermediateState> {
 	}
 }
 
-export { mfFetch, mfGet, mfPost } from "./dom/fetch.ts";
 export { effect } from "./reactivity/effect.ts";
+
+export const [mfGet, mfPost, mfPut, mfDelete, mfPatch, mfHead, mfOptions] = (
+	["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"] as const
+).map((m) => fetchWithMethodFactory(m));

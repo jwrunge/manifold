@@ -262,26 +262,21 @@ export class FetchedContent {
 	}
 }
 
-export const mfGet = (
-	url: string | URL,
-	fetchOps?: RequestInit,
-	defaultOps?: Omit<FetchDOMOptions, "to" | "method">,
-): FetchedContent => {
-	return new FetchedContent(
-		url,
-		{ ...(fetchOps || {}), method: "GET" },
-		defaultOps,
-	);
-};
+type FetchMethods =
+	| "GET"
+	| "POST"
+	| "PUT"
+	| "DELETE"
+	| "PATCH"
+	| "HEAD"
+	| "OPTIONS";
 
-export const mfPost = (
-	url: string | URL,
-	fetchOps?: RequestInit,
-	defaultOps?: Omit<FetchDOMOptions, "to" | "method">,
-): FetchedContent => {
-	return new FetchedContent(
-		url,
-		{ ...(fetchOps || {}), method: "POST" },
-		defaultOps,
-	);
-};
+export const fetchWithMethodFactory =
+	(method: FetchMethods) =>
+	(
+		url: string | URL,
+		fetchOps?: RequestInit,
+		defaultOps?: Omit<FetchDOMOptions, "to" | "method">,
+	): FetchedContent => {
+		return new FetchedContent(url, { ...(fetchOps || {}), method }, defaultOps);
+	};
