@@ -78,28 +78,25 @@ effect(() => {
 	);
 });
 
-
 setTimeout(() => {
-    console.log("----- 1000ms -----");
+	console.log("----- 1000ms -----");
 
 	toggleLayer("main-background");
 	setLayerOpacity("main-background", 0.8);
 	toggleLayer("sec-layer1");
 }, 1000);
 
-
 setTimeout(() => {
-    console.log("----- 2000ms -----");
+	console.log("----- 2000ms -----");
 
-    myState.layers["new-layer"] = { visible: true, opacity: 0.6 };
+	myState.layers["new-layer"] = { visible: true, opacity: 0.6 };
 	toggleLayer("main-foreground");
 	setLayerOpacity("main-background", 0.3);
 	toggleLayer("sec-layer2");
 }, 2000);
 
-
 setTimeout(() => {
-    console.log("----- 3000ms -----");
+	console.log("----- 3000ms -----");
 
 	delete myState.layers["sec-layer1"];
 	toggleLayer("main-background");

@@ -20,9 +20,7 @@ type DemoFuncs = {
 
 const loadBuilders = async () => {
 	const src = (await import("../src/main.ts")).State as Builder;
-	return [
-		{ name: "src", StateBuilder: src },
-	] as const;
+	return [{ name: "src", StateBuilder: src }] as const;
 };
 
 const flush = () => new Promise((r) => setTimeout(r, 0));

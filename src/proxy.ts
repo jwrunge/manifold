@@ -155,7 +155,9 @@ export const proxy = (obj: object): IntermediateState | Promise<unknown> => {
 						return true;
 					}
 					if (!hasOwn(state as object, key)) return true;
-					const success = delete (state as Record<string, unknown>)[key as string];
+					const success = delete (state as Record<string, unknown>)[
+						key as string
+					];
 					if (!success) return false;
 					notify(state as object, key);
 					notify(state as object, OWN_KEYS);
