@@ -1,15 +1,8 @@
-import { Effect, effect } from "./Effect.ts";
-import isEqual from "./equality.ts";
-import serverPage from "./fetch.ts";
-
-export type {
-	FetchDOMOptions,
-	FetchedContent,
-	InsertContentMethod,
-} from "./fetch.ts";
-
-import { proxy } from "./proxy.ts";
-import RegEl from "./registry.ts";
+import serverPage, { type FetchedContent } from "./dom/fetch.ts";
+import RegEl from "./dom/registry.ts";
+import { Effect, effect } from "./reactivity/effect.ts";
+import isEqual from "./reactivity/equality.ts";
+import { proxy } from "./reactivity/proxy.ts";
 
 export type IntermediateState = Record<string, unknown>;
 
@@ -115,7 +108,7 @@ const get = (
 	url: string | URL,
 	fetchOps?: RequestInit,
 	defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
-): import("./fetch.ts").FetchedContent => {
+): FetchedContent => {
 	return serverPage.get(url, fetchOps, defaultOps);
 };
 
@@ -123,7 +116,7 @@ const post = (
 	url: string | URL,
 	fetchOps?: RequestInit,
 	defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
-): import("./fetch.ts").FetchedContent => {
+): FetchedContent => {
 	return serverPage.post(url, fetchOps, defaultOps);
 };
 

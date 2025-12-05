@@ -1,11 +1,11 @@
-import { type Effect, effect } from "./Effect.ts";
-import evaluateExpression from "./expression-parser.ts";
-import { State } from "./main.ts";
-import { scopeProxy } from "./proxy.ts";
-import { handleAsync } from "./templating/async-handler.ts";
-import { handleConditional } from "./templating/conditional-handler.ts";
-import { handleEach } from "./templating/each-handler.ts";
-import { findDependentSiblings } from "./templating/sibling-resolver.ts";
+import { State } from "../main.ts";
+import evaluateExpression from "../parsing/expression-parser.ts";
+import { type Effect, effect } from "../reactivity/effect.ts";
+import { scopeProxy } from "../reactivity/proxy.ts";
+import { handleAsync } from "../templating/async-handler.ts";
+import { handleConditional } from "../templating/conditional-handler.ts";
+import { handleEach } from "../templating/each-handler.ts";
+import { findDependentSiblings } from "../templating/sibling-resolver.ts";
 import {
 	dependentLogicAttrSet,
 	prefixes,
@@ -13,7 +13,7 @@ import {
 	type Sibling,
 	type templLogicAttr,
 	templLogicAttrSet,
-} from "./templating/types.ts";
+} from "../templating/types.ts";
 
 // Shared registration logic for both new and existing elements
 const _registerElement = (el: Element) => {
@@ -46,7 +46,7 @@ const _handleNewElements = (addedNodes: NodeList) => {
 	}
 };
 
-import { splitAs } from "./parsing-utils.ts";
+import { splitAs } from "../parsing/util.ts";
 import {
 	areViewTransitionsEnabled,
 	ensureViewTransitionName,

@@ -1,5 +1,5 @@
-import applyAliasPattern from "../alias-destructure.ts";
-import { type Effect, effect } from "../Effect.ts";
+import applyAliasPattern from "../parsing/alias-destructure.ts";
+import { type Effect, effect } from "../reactivity/effect.ts";
 import type { Sibling } from "./types.ts";
 
 // Type for the RegEl class (to avoid circular dependencies)

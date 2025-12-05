@@ -1,5 +1,5 @@
-import evaluateExpression from "../expression-parser.ts";
-import { splitAs } from "../parsing-utils.ts";
+import evaluateExpression from "../parsing/expression-parser.ts";
+import { splitAs } from "../parsing/util.ts";
 import {
 	prefixes,
 	type Registerable,
