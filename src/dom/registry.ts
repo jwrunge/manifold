@@ -1,4 +1,13 @@
-import { State } from "../main.ts";
+import {
+	mfDelete,
+	mfGet,
+	mfHead,
+	mfOptions,
+	mfPatch,
+	mfPost,
+	mfPut,
+	State,
+} from "../main.ts";
 import evaluateExpression from "../parsing/expression-parser.ts";
 import { type Effect, effect } from "../reactivity/effect.ts";
 import { scopeProxy } from "../reactivity/proxy.ts";
@@ -76,7 +85,13 @@ const handleConditional = (
 const makeContext = (state: Record<string, unknown>, el: Registerable) => ({
 	state,
 	element: el,
-	$: State,
+	mfDelete,
+	mfGet,
+	mfHead,
+	mfOptions,
+	mfPatch,
+	mfPost,
+	mfPut,
 });
 
 const throwError = (msg: string, cause: unknown, unsupported = false) => {

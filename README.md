@@ -157,15 +157,19 @@ const finalState = moreComplete.build();
 Compute values that automatically update when dependencies change:
 
 ```javascript
-const state = Manifold.create()
+import { State } from "@jwrunge/manifold";
+
+const state = State.create()
 	.add("firstName", "John")
 	.add("lastName", "Doe")
 	.derive("fullName", (s) => `${s.firstName} ${s.lastName}`)
-	.derive("initials", (s) =>
-		s.fullName
-			.split(" ")
-			.map((n) => n[0])
-			.join("")
+	.derive(
+		"initials",
+		(s) =>
+			s.fullName
+				.split(" ")
+				.map((n) => n[0])
+				.join("")
 	)
 	.build();
 
@@ -437,22 +441,73 @@ if (!hasViewTransitions) {
 
 ## API Reference
 
-### Manifold Class
+### State Class
 
 ```javascript
-// Static methods
-Manifold.create(name?: string, initialState?: object) // Create new instance
-Manifold.get(url, fetchOps?: RequestInit, defaultOps?: FetchDOMOptions) // Static fetch GET
-Manifold.post(url, fetchOps?: RequestInit, defaultOps?: FetchDOMOptions) // Static fetch POST
-Manifold.fetch(url, ops: FetchDOMOptions, fetchOps?: RequestInit) // Static fetch with full options
+import { State } from "@jwrunge/manifold";
 
-// Instance methods
+// Static method
+State.create(name?: string, initialState?: object) // Create new builder instance
+
+// Instance methods (builder pattern)
 .add(key: string, value: any) // Add property to state
+.add(obj: object) // Add multiple properties at once
 .derive(key: string, fn: (state) => any) // Add computed property
 .build() // Build and return reactive state
-.get(url, fetchOps?: RequestInit, defaultOps?: FetchDOMOptions) // Instance fetch GET
-.post(url, fetchOps?: RequestInit, defaultOps?: FetchDOMOptions) // Instance fetch POST
-.fetch(url, ops: FetchDOMOptions, fetchOps?: RequestInit) // Instance fetch with options
+```
+
+### Fetch Helpers
+
+All fetch helpers are available both as imports and directly in template expressions:
+
+```javascript
+import { mfGet, mfPost, mfPut, mfDelete, mfPatch, mfHead, mfOptions } from "@jwrunge/manifold";
+
+// Each returns a FetchedContent instance with .replace(), .append(), .prepend() methods
+mfGet(url, fetchOps?, defaultOps?) // GET request
+mfPost(url, fetchOps?, defaultOps?) // POST request  
+mfPut(url, fetchOps?, defaultOps?) // PUT request
+mfDelete(url, fetchOps?, defaultOps?) // DELETE request
+mfPatch(url, fetchOps?, defaultOps?) // PATCH request
+mfHead(url, fetchOps?, defaultOps?) // HEAD request
+mfOptions(url, fetchOps?, defaultOps?) // OPTIONS request
+```
+
+**Usage in JavaScript:**
+```javascript
+const state = State.create()
+	.add("loadData", () => 
+		mfGet("/api/data.html").replace("#content", {
+			from: "#payload",
+			addTransitionClass: "fade"
+		})
+	)
+	.build();
+```
+
+**Usage in templates:**
+```html
+<button :onclick="mfGet('/snippets/header.html').replace('#content', { from: '#payload' })">Load Header</button>
+<button :onclick="mfPost('/api/save', { body: JSON.stringify(data) }).append('#results')">Submit</button>
+```
+
+### FetchedContent Methods
+
+```javascript
+.replace(to: string, ops?: FetchMergeOptions) // Replace target content
+.append(to: string, ops?: FetchMergeOptions) // Append to target
+.prepend(to: string, ops?: FetchMergeOptions) // Prepend to target
+```
+
+### effect Function
+
+```javascript
+import { effect } from "@jwrunge/manifold";
+
+// Run side effects that automatically track dependencies
+effect(() => {
+	console.log("Count changed:", state.count);
+});
 ```
 
 ### Type Definitions

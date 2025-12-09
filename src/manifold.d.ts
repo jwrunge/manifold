@@ -156,13 +156,14 @@ export declare function effect(fn: () => void): void;
 
 /**
  * Fetch a URL with GET and optionally insert the fetched markup.
+ * Available in both JavaScript/TypeScript imports and template expressions.
  * @example
  * ```ts
- * import { State, get } from "@jwrunge/manifold";
+ * import { State, mfGet } from "@jwrunge/manifold";
  *
  * const state = State.create()
  * 	.add("loadSnippet", () =>
- * 		get("/snippets/header.html").replace("#content", {
+ * 		mfGet("/snippets/header.html").replace("#content", {
  * 			from: "#payload",
  * 			addTransitionClass: "fade",
  * 		}),
@@ -173,9 +174,11 @@ export declare function effect(fn: () => void): void;
  * ```html
  * <div id="content"></div>
  * <button :onclick="loadSnippet()">Load Content</button>
+ * <!-- Or use directly in template expressions: -->
+ * <button :onclick="mfGet('/snippets/header.html').replace('#content', { from: '#payload' })">Load</button>
  * ```
  */
-export declare function get(
+export declare function mfGet(
 	url: string | URL,
 	fetchOps?: RequestInit,
 	defaultOps?: FetchMergeOptions,
@@ -183,40 +186,77 @@ export declare function get(
 
 /**
  * Fetch a URL with POST and optionally merge the response into the DOM.
+ * Available in both JavaScript/TypeScript imports and template expressions.
  * @example
  * ```ts
- * import { State, post } from "@jwrunge/manifold";
+ * import { State, mfPost } from "@jwrunge/manifold";
  *
  * const state = State.create()
  * 	.add("submitForm", (payload: unknown) =>
- * 		post("/api/preview", { body: JSON.stringify(payload) }).append(
+ * 		mfPost("/api/preview", { body: JSON.stringify(payload) }).append(
  * 			"#preview",
  * 			{ from: "#payload" },
  * 		),
  * 	)
  * 	.build();
  * ```
+ *
+ * ```html
+ * <button :onclick="mfPost('/api/save', { body: JSON.stringify(formData) }).then('#result')">Submit</button>
+ * ```
  */
-export declare function post(
+export declare function mfPost(
 	url: string | URL,
 	fetchOps?: RequestInit,
 	defaultOps?: FetchMergeOptions,
 ): FetchedContent;
 
 /**
- * Low-level helper to fetch with arbitrary methods using DOM merge options directly.
- * @example
- * ```ts
- * import { fetch } from "@jwrunge/manifold";
- *
- * await fetch("/snippets/header.html", { to: "#main", method: "append" }, {
- * 	method: "PUT",
- * 	headers: { "x-preview": "true" },
- * });
- * ```
+ * Fetch a URL with PUT method.
+ * Available in both JavaScript/TypeScript imports and template expressions.
  */
-export declare function fetch(
+export declare function mfPut(
 	url: string | URL,
-	ops: FetchDOMOptions,
 	fetchOps?: RequestInit,
-): Promise<void>;
+	defaultOps?: FetchMergeOptions,
+): FetchedContent;
+
+/**
+ * Fetch a URL with DELETE method.
+ * Available in both JavaScript/TypeScript imports and template expressions.
+ */
+export declare function mfDelete(
+	url: string | URL,
+	fetchOps?: RequestInit,
+	defaultOps?: FetchMergeOptions,
+): FetchedContent;
+
+/**
+ * Fetch a URL with PATCH method.
+ * Available in both JavaScript/TypeScript imports and template expressions.
+ */
+export declare function mfPatch(
+	url: string | URL,
+	fetchOps?: RequestInit,
+	defaultOps?: FetchMergeOptions,
+): FetchedContent;
+
+/**
+ * Fetch a URL with HEAD method.
+ * Available in both JavaScript/TypeScript imports and template expressions.
+ */
+export declare function mfHead(
+	url: string | URL,
+	fetchOps?: RequestInit,
+	defaultOps?: FetchMergeOptions,
+): FetchedContent;
+
+/**
+ * Fetch a URL with OPTIONS method.
+ * Available in both JavaScript/TypeScript imports and template expressions.
+ */
+export declare function mfOptions(
+	url: string | URL,
+	fetchOps?: RequestInit,
+	defaultOps?: FetchMergeOptions,
+): FetchedContent;
