@@ -1,4 +1,4 @@
-import { type Effect, effect } from "../reactivity/effect.ts";
+import { type Effect, effect } from "../../reactivity/effect.ts";
 import type { Sibling } from "./types.ts";
 
 /**
