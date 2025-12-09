@@ -35,10 +35,21 @@ const FORBIDDEN_PROPS = new Set([
 	"__lookupGetter__",
 	"__lookupSetter__",
 ]);
-const LITERALS: Record<string, unknown> = { true: true, false: false, null: null, undefined: undefined };
+const LITERALS: Record<string, unknown> = {
+	true: true,
+	false: false,
+	null: null,
+	undefined: undefined,
+};
 const isForbidden = (key: unknown) => FORBIDDEN_PROPS.has(String(key));
-const findClosing = (expr: string, start: number, open: string, close: string): number => {
-	let depth = 1, i = start;
+const findClosing = (
+	expr: string,
+	start: number,
+	open: string,
+	close: string,
+): number => {
+	let depth = 1,
+		i = start;
 	while (i < expr.length && depth) {
 		if (expr[i] === open) depth++;
 		else if (expr[i] === close) depth--;
@@ -296,12 +307,14 @@ const parse = (raw: string): ParsedExpression => {
 			case "%":
 				return {
 					_fn: (c) => {
-						const A = l._fn(c), B = r._fn(c);
+						const A = l._fn(c),
+							B = r._fn(c);
 						if (OP === "+")
 							return typeof A === "string" || typeof B === "string"
 								? `${A as string | number}${B as string | number}`
 								: (A as number) + (B as number);
-						const a = A as number, b = B as number;
+						const a = A as number,
+							b = B as number;
 						if (OP === "-") return a - b;
 						if (OP === "*") return a * b;
 						return b === 0 ? undefined : OP === "/" ? a / b : a % b;
@@ -310,11 +323,19 @@ const parse = (raw: string): ParsedExpression => {
 			default:
 				return {
 					_fn: (c) => {
-						const A = l._fn(c), B = r._fn(c);
+						const A = l._fn(c),
+							B = r._fn(c);
 						if (OP === "===") return A === B;
 						if (OP === "!==") return A !== B;
-						const a = A as number, b = B as number;
-						return OP === ">=" ? a >= b : OP === "<=" ? a <= b : OP === ">" ? a > b : a < b;
+						const a = A as number,
+							b = B as number;
+						return OP === ">="
+							? a >= b
+							: OP === "<="
+								? a <= b
+								: OP === ">"
+									? a > b
+									: a < b;
 					},
 				};
 		}
@@ -373,21 +394,21 @@ const parse = (raw: string): ParsedExpression => {
 		const syncRef = chain._segs.some((s) => s.t === "call")
 			? undefined
 			: (c: Record<string, unknown> | undefined, value: unknown) => {
-				const ctx = (c || {}) as Record<string, unknown>;
-				const injected = ctx.state as Record<string, unknown> | undefined;
+					const ctx = (c || {}) as Record<string, unknown>;
+					const injected = ctx.state as Record<string, unknown> | undefined;
 					let rootHolder: Record<string, unknown> | undefined;
 					if (injected && chain._base in injected) rootHolder = injected;
 					else if (ctx && chain._base in ctx) rootHolder = ctx;
 					else return;
 					if (isForbidden(chain._base)) return;
 					if (chain._segs.length === 0) {
-					(rootHolder as Record<string, unknown>)[chain._base] =
-						value as unknown;
-					return;
-				}
-				let obj: unknown = (rootHolder as Record<string, unknown>)[
-					chain._base as never
-				];
+						(rootHolder as Record<string, unknown>)[chain._base] =
+							value as unknown;
+						return;
+					}
+					let obj: unknown = (rootHolder as Record<string, unknown>)[
+						chain._base as never
+					];
 					for (let i = 0; i < chain._segs.length - 1; i++) {
 						const seg = chain._segs[i];
 						if (obj == null) return;
@@ -404,13 +425,14 @@ const parse = (raw: string): ParsedExpression => {
 					const last = chain._segs[chain._segs.length - 1];
 					if (last.t === "prop") {
 						if (isForbidden(last.k)) return;
-					(obj as Record<string, unknown>)[last.k as never] = value as unknown;
-				} else if (last.t === "idx") {
-					const k = last.e._fn(ctx);
-					if (FORBIDDEN_PROPS.has(String(k))) return;
-					(obj as Record<string, unknown>)[k as never] = value as unknown;
-				}
-			};
+						(obj as Record<string, unknown>)[last.k as never] =
+							value as unknown;
+					} else if (last.t === "idx") {
+						const k = last.e._fn(ctx);
+						if (FORBIDDEN_PROPS.has(String(k))) return;
+						(obj as Record<string, unknown>)[k as never] = value as unknown;
+					}
+				};
 		return { _fn: fn, _syncRef: syncRef };
 	}
 	return { _fn: () => expr };

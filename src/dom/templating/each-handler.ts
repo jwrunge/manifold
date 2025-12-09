@@ -145,7 +145,11 @@ export function handleEach(
 		};
 
 		// Helper to update element bindings and tracking
-		const updateElement = (element: Registerable, value: unknown, index: number) => {
+		const updateElement = (
+			element: Registerable,
+			value: unknown,
+			index: number,
+		) => {
 			const childReg = RegElClass._registry.get(element);
 			if (childReg) {
 				bindEachAliases(childReg, value, index);

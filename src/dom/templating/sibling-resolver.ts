@@ -55,7 +55,10 @@ export function findDependentSiblings(
 		if (unprefixed !== "else") {
 			const [left, right] = splitAs(sib.getAttribute(prefixed) || "");
 			// For :then/:catch, treat entire value as alias if no 'as' part provided
-			if (attrName === "await" && (unprefixed === "then" || unprefixed === "catch")) {
+			if (
+				attrName === "await" &&
+				(unprefixed === "then" || unprefixed === "catch")
+			) {
 				alias = right || left || undefined;
 			} else {
 				fn = evaluateExpression(left)._fn;

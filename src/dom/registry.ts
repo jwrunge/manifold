@@ -65,8 +65,7 @@ const handleConditional = (
 		for (const { el, fn, attrName } of siblings) {
 			el.mfshow = false;
 			if (!matched) {
-				el.mfshow =
-					attrName === "else" ? true : !!fn?.({ state, element: el });
+				el.mfshow = attrName === "else" ? true : !!fn?.({ state, element: el });
 				matched = !!el.mfshow;
 			}
 		}
@@ -74,10 +73,11 @@ const handleConditional = (
 	});
 
 // Common context creation helper
-const makeContext = (
-	state: Record<string, unknown>,
-	el: Registerable,
-) => ({ state, element: el, $: State });
+const makeContext = (state: Record<string, unknown>, el: Registerable) => ({
+	state,
+	element: el,
+	$: State,
+});
 
 const throwError = (msg: string, cause: unknown, unsupported = false) => {
 	let hint = "";
@@ -487,7 +487,9 @@ export default class RegEl {
 			});
 			const render = () => {
 				node.textContent = tokens
-					.map((t) => (t.dynamic ? t.fn(makeContext(this._state, this._el)) : t.text))
+					.map((t) =>
+						t.dynamic ? t.fn(makeContext(this._state, this._el)) : t.text,
+					)
 					.join("");
 			};
 			// Do an immediate render so text appears even before any effect flush
