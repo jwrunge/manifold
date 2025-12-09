@@ -1,8 +1,8 @@
-import {
-	type Effect as EffectClass,
-	effect as runEffect,
-} from "../../src/Effect.ts";
 import { State } from "../../src/main.ts";
+import {
+    type Effect as EffectClass,
+    effect as runEffect,
+} from "../../src/reactivity/effect.ts";
 
 export type Effect = { stop(): void };
 

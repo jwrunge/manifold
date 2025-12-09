@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest";
+import RegEl from "../src/dom/registry.ts";
 import { State } from "../src/main.ts";
-import RegEl from "../src/registry.ts";
 
 // Microtask flush helper
 const flush = () => new Promise((r) => setTimeout(r, 0));

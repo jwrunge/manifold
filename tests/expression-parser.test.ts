@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import evaluateExpression from "../src/expression-parser.ts";
 import { State } from "../src/main.ts";
+import evaluateExpression from "../src/parsing/expression-parser.ts";
 
 let rootState: Record<string, unknown> = {};
 const initState = (data: Record<string, unknown>) => {

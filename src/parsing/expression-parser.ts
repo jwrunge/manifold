@@ -1,4 +1,4 @@
-import { indexOfTopLevel, isIdent, splitTopLevel } from "../parsing/util.ts";
+import { indexOfTopLevel, isIdent, splitTopLevel } from "./util.ts";
 
 export interface ParsedExpression {
 	_fn: (ctx?: Record<string, unknown>) => unknown | Promise<unknown>;
@@ -35,6 +35,17 @@ const FORBIDDEN_PROPS = new Set([
 	"__lookupGetter__",
 	"__lookupSetter__",
 ]);
+const LITERALS: Record<string, unknown> = { true: true, false: false, null: null, undefined: undefined };
+const isForbidden = (key: unknown) => FORBIDDEN_PROPS.has(String(key));
+const findClosing = (expr: string, start: number, open: string, close: string): number => {
+	let depth = 1, i = start;
+	while (i < expr.length && depth) {
+		if (expr[i] === open) depth++;
+		else if (expr[i] === close) depth--;
+		i++;
+	}
+	return depth === 0 ? i : -1;
+};
 interface ChainSegmentProp {
 	t: "prop";
 	k: string;
@@ -125,29 +136,18 @@ const buildChain = (
 			continue;
 		}
 		if (expr[i] === "[") {
-			let depth = 1;
-			i++;
-			const start = i;
-			while (i < expr.length && depth) {
-				if (expr[i] === "[") depth++;
-				else if (expr[i] === "]") depth--;
-				i++;
-			}
-			if (depth !== 0) return null;
+			const start = ++i;
+			i = findClosing(expr, start, "[", "]");
+			if (i === -1) return null;
 			const inner = expr.slice(start, i - 1).trim();
 			if (!inner) return null;
 			segs.push({ t: "idx", e: parse(inner) });
 			continue;
 		}
 		if (expr[i] === "(") {
-			let depth = 1;
-			i++;
-			const start = i;
-			while (i < expr.length && depth) {
-				if (expr[i] === "(") depth++;
-				else if (expr[i] === ")") depth--;
-				i++;
-			}
+			const start = ++i;
+			i = findClosing(expr, start, "(", ")");
+			if (i === -1) return null;
 			const innerArgs = expr.slice(start, i - 1);
 			const argsRaw = splitTopLevel(innerArgs, ",")
 				.filter(Boolean)
@@ -296,42 +296,25 @@ const parse = (raw: string): ParsedExpression => {
 			case "%":
 				return {
 					_fn: (c) => {
-						const A = l._fn(c) as unknown;
-						const B = r._fn(c) as unknown;
+						const A = l._fn(c), B = r._fn(c);
 						if (OP === "+")
 							return typeof A === "string" || typeof B === "string"
 								? `${A as string | number}${B as string | number}`
 								: (A as number) + (B as number);
-						if (OP === "-") return (A as number) - (B as number);
-						if (OP === "*") return (A as number) * (B as number);
-						if (OP === "/")
-							return (B as number) === 0
-								? undefined
-								: (A as number) / (B as number);
-						return (B as number) === 0
-							? undefined
-							: (A as number) % (B as number);
+						const a = A as number, b = B as number;
+						if (OP === "-") return a - b;
+						if (OP === "*") return a * b;
+						return b === 0 ? undefined : OP === "/" ? a / b : a % b;
 					},
 				};
 			default:
 				return {
 					_fn: (c) => {
-						const A = l._fn(c) as unknown;
-						const B = r._fn(c) as unknown;
-						switch (OP) {
-							case "===":
-								return A === B;
-							case "!==":
-								return A !== B;
-							case ">=":
-								return (A as number) >= (B as number);
-							case "<=":
-								return (A as number) <= (B as number);
-							case ">":
-								return (A as number) > (B as number);
-							case "<":
-								return (A as number) < (B as number);
-						}
+						const A = l._fn(c), B = r._fn(c);
+						if (OP === "===") return A === B;
+						if (OP === "!==") return A !== B;
+						const a = A as number, b = B as number;
+						return OP === ">=" ? a >= b : OP === "<=" ? a <= b : OP === ">" ? a > b : a < b;
 					},
 				};
 		}
@@ -340,10 +323,7 @@ const parse = (raw: string): ParsedExpression => {
 		return { _fn: (c) => !parse(expr.slice(1))._fn(c) };
 	if (expr[0] === "-" && expr.length > 1)
 		return { _fn: (c) => -(parse(expr.slice(1))._fn(c) as number) };
-	if (expr === "true") return { _fn: () => true };
-	if (expr === "false") return { _fn: () => false };
-	if (expr === "null") return { _fn: () => null };
-	if (expr === "undefined") return { _fn: () => undefined };
+	if (expr in LITERALS) return { _fn: () => LITERALS[expr] };
 	if (NUM.test(expr)) return { _fn: () => +expr };
 	const str = expr.match(/^(?:'([^']*)'|"([^"]*)")$/);
 	if (str) return { _fn: () => str[1] ?? str[2] };
@@ -353,8 +333,7 @@ const parse = (raw: string): ParsedExpression => {
 			const ctx = c as Record<string, unknown>;
 			let root: unknown;
 			const injected = ctx.state as Record<string, unknown> | undefined;
-			// Disallow accessing dangerous base identifiers
-			if (FORBIDDEN_PROPS.has(chain._base)) return undefined;
+			if (isForbidden(chain._base)) return undefined;
 			if (ctx && chain._base in ctx) root = ctx[chain._base];
 			else if (
 				SAFE_GLOBALS.has(chain._base) &&
@@ -369,15 +348,13 @@ const parse = (raw: string): ParsedExpression => {
 			for (const seg of chain._segs) {
 				if (cur == null) return undefined;
 				if (seg.t === "prop") {
-					// Block dangerous property names
-					if (FORBIDDEN_PROPS.has(seg.k)) return undefined;
+					if (isForbidden(seg.k)) return undefined;
 					lastObjForCall = cur;
 					cur = (cur as Record<string, unknown>)[seg.k as never];
 				} else if (seg.t === "idx") {
 					lastObjForCall = cur;
 					const key = seg.e._fn(ctx);
-					const keyStr = key == null ? String(key) : String(key);
-					if (FORBIDDEN_PROPS.has(keyStr)) return undefined;
+					if (isForbidden(key)) return undefined;
 					cur = (cur as Record<string, unknown>)[key as never];
 				} else if (seg.t === "call") {
 					const fn = cur as unknown;
@@ -398,13 +375,12 @@ const parse = (raw: string): ParsedExpression => {
 			: (c: Record<string, unknown> | undefined, value: unknown) => {
 				const ctx = (c || {}) as Record<string, unknown>;
 				const injected = ctx.state as Record<string, unknown> | undefined;
-				let rootHolder: Record<string, unknown> | undefined;
-				if (injected && chain._base in injected) rootHolder = injected;
-				else if (ctx && chain._base in ctx) rootHolder = ctx;
-				else return;
-				// Prevent writes to forbidden bases
-				if (FORBIDDEN_PROPS.has(chain._base)) return;
-				if (chain._segs.length === 0) {
+					let rootHolder: Record<string, unknown> | undefined;
+					if (injected && chain._base in injected) rootHolder = injected;
+					else if (ctx && chain._base in ctx) rootHolder = ctx;
+					else return;
+					if (isForbidden(chain._base)) return;
+					if (chain._segs.length === 0) {
 					(rootHolder as Record<string, unknown>)[chain._base] =
 						value as unknown;
 					return;
@@ -412,22 +388,22 @@ const parse = (raw: string): ParsedExpression => {
 				let obj: unknown = (rootHolder as Record<string, unknown>)[
 					chain._base as never
 				];
-				for (let i = 0; i < chain._segs.length - 1; i++) {
-					const seg = chain._segs[i];
-					if (obj == null) return;
-					if (seg.t === "prop") {
-						if (FORBIDDEN_PROPS.has(seg.k)) return;
-						obj = (obj as Record<string, unknown>)[seg.k as never];
-					} else if (seg.t === "idx") {
-						const k = seg.e._fn(ctx);
-						if (FORBIDDEN_PROPS.has(String(k))) return;
-						obj = (obj as Record<string, unknown>)[k as never];
+					for (let i = 0; i < chain._segs.length - 1; i++) {
+						const seg = chain._segs[i];
+						if (obj == null) return;
+						if (seg.t === "prop") {
+							if (isForbidden(seg.k)) return;
+							obj = (obj as Record<string, unknown>)[seg.k as never];
+						} else if (seg.t === "idx") {
+							const k = seg.e._fn(ctx);
+							if (isForbidden(k)) return;
+							obj = (obj as Record<string, unknown>)[k as never];
+						}
 					}
-				}
-				if (obj == null) return;
-				const last = chain._segs[chain._segs.length - 1];
-				if (last.t === "prop") {
-					if (FORBIDDEN_PROPS.has(last.k)) return;
+					if (obj == null) return;
+					const last = chain._segs[chain._segs.length - 1];
+					if (last.t === "prop") {
+						if (isForbidden(last.k)) return;
 					(obj as Record<string, unknown>)[last.k as never] = value as unknown;
 				} else if (last.t === "idx") {
 					const k = last.e._fn(ctx);

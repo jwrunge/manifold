@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import isEqual from "../src/equality.ts";
+import isEqual from "../src/reactivity/equality.ts";
 import $ from "./helpers/api.ts";
 
 test("primitive equality", () => {

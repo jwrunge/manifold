@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
+import RegEl from "../src/dom/registry.ts";
 import { State } from "../src/main.ts";
-import RegEl from "../src/registry.ts";
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 const multiFlush = async (n = 6) => {

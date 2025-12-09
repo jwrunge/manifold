@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import serverFetch from "../src/fetch.ts";
+import serverFetch from "../src/dom/fetch.ts";
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 

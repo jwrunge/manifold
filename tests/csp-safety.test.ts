@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import evaluateExpression from "../src/expression-parser.ts";
+import evaluateExpression from "../src/parsing/expression-parser.ts";
 
 describe("CSP Safety / Expression Parser Security", () => {
 	const run = (expr: string, ctx?: Record<string, unknown>) =>
@@ -98,9 +98,9 @@ describe("CSP Safety / Expression Parser Security", () => {
 		test("allows Map and Set as globals for method calls", () => {
 			// Parser doesn't support 'new', but Map/Set are available for instanceof checks
 			// and users can pass Map/Set instances via state
-			const state = { 
+			const state = {
 				myMap: new Map([[1, 2]]),
-				mySet: new Set([1, 2, 3])
+				mySet: new Set([1, 2, 3]),
 			};
 			expect(run("myMap.get(1)", state)).toBe(2);
 			expect(run("mySet.has(2)", state)).toBe(true);
