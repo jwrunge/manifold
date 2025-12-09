@@ -22,19 +22,37 @@ export function handleAsync(
 	updateDisplay: (sibs: Pick<Sibling, "el">[]) => void,
 ): Effect {
 	let lastPromise: Promise<unknown> | null = null;
-	let promiseId = 0; // Add a unique ID for each promise
+	let promiseId = 0;
 
-	const ef = effect(() => {
+	// Helper to set display states for all siblings
+	const setStates = (await_: boolean, then_: boolean, catch_: boolean) => {
 		const root = siblings[0];
 		const thenLink = siblings.find((s) => s.attrName === "then");
 		const catchLink = siblings.find((s) => s.attrName === "catch");
+		root.el.mfawait = await_;
+		if (thenLink) thenLink.el.mfawait = then_;
+		if (catchLink) catchLink.el.mfawait = catch_;
+		updateDisplay(siblings);
+	};
 
-		// Evaluate expression to obtain maybe-promise
-		const result = root.fn?.({
-			state,
-			element: root.el,
-		});
+	// Helper to apply alias to sibling
+	const applyAlias = (
+		attrName: "then" | "catch",
+		value: unknown,
+		useRegistry = false,
+	) => {
+		const link = siblings.find((s) => s.attrName === attrName);
+		if (link?.alias) {
+			const inst = useRegistry
+				? RegElClass._registry.get(link.el)
+				: RegElClass._registerOrGet(link.el, state);
+			if (inst) applyAliasPattern(link.alias, value, inst._state);
+		}
+	};
 
+	const ef = effect(() => {
+		const root = siblings[0];
+		const result = root.fn?.({ state, element: root.el });
 		const isThenable =
 			result &&
 			// biome-ignore lint/suspicious/noExplicitAny: explicit any for thenable check
@@ -42,63 +60,28 @@ export function handleAsync(
 				// biome-ignore lint/suspicious/noExplicitAny: explicit any for thenable check
 				typeof (result as any).catch === "function");
 
-		// Always reset all states when starting a new evaluation
-		root.el.mfawait = isThenable; // show loader
-		if (thenLink) thenLink.el.mfawait = false; // hide then
-		if (catchLink) catchLink.el.mfawait = false; // hide catch
-
-		updateDisplay(siblings);
+		setStates(Boolean(isThenable), false, false);
 
 		if (!isThenable) {
-			// Treat non-promise as immediate success
-			root.el.mfawait = false;
-			if (thenLink) thenLink.el.mfawait = true;
-			// Apply alias pattern for immediate value to then-link's scope
-			if (thenLink?.alias) {
-				const thenInst = RegElClass._registerOrGet(thenLink.el, state);
-				if (thenInst)
-					applyAliasPattern(thenLink.alias, result, thenInst._state);
-			}
-			updateDisplay(siblings);
+			setStates(false, true, false);
+			applyAlias("then", result);
 			return;
 		}
 
-		if ((result as Promise<unknown>) === lastPromise) return; // avoid duplicating handlers
+		if ((result as Promise<unknown>) === lastPromise) return;
 		lastPromise = result as Promise<unknown>;
-		const currentPromiseId = ++promiseId; // Increment and capture current ID
+		const currentPromiseId = ++promiseId;
 
 		(result as Promise<unknown>).then(
-			(_val) => {
-				// Only apply results if this is still the most recent promise
+			(val) => {
 				if (currentPromiseId !== promiseId) return;
-
-				root.el.mfawait = false;
-				if (thenLink) thenLink.el.mfawait = true;
-				if (catchLink) catchLink.el.mfawait = false; // Ensure catch is hidden
-
-				// Destructure aliases for :then value using the sibling's expression string
-				if (thenLink?.alias) {
-					const thenInst = RegElClass._registerOrGet(thenLink.el, state);
-
-					if (thenInst)
-						applyAliasPattern(thenLink.alias, _val, thenInst._state);
-				}
-				updateDisplay(siblings);
+				setStates(false, true, false);
+				applyAlias("then", val);
 			},
-			(_err) => {
-				// Only apply results if this is still the most recent promise
+			(err) => {
 				if (currentPromiseId !== promiseId) return;
-
-				root.el.mfawait = false;
-				if (thenLink) thenLink.el.mfawait = false; // Ensure then is hidden
-				if (catchLink) catchLink.el.mfawait = true;
-
-				if (catchLink?.alias) {
-					const catchInst = RegElClass._registry.get(catchLink.el);
-					if (catchInst)
-						applyAliasPattern(catchLink.alias, _err, catchInst._state);
-				}
-				updateDisplay(siblings);
+				setStates(false, false, true);
+				applyAlias("catch", err, true);
 			},
 		);
 	});

@@ -122,43 +122,34 @@ export function handleEach(
 			idx: number,
 		) => {
 			if (!inst || !eachAlias) return;
-			const alias = eachAlias;
-			const comma = indexOfTopLevel(alias, ",");
-			if (comma !== -1) {
-				const left = alias.slice(0, comma).trim();
-				const right = alias.slice(comma + 1).trim();
+			const isTuple = Array.isArray(val) && val.length === 2;
+			const comma = indexOfTopLevel(eachAlias, ",");
 
-				// If val is a 2-element array (tuple from Map/Record), unpack it
-				if (Array.isArray(val) && val.length === 2) {
-					if (left) applyAliasPattern(left, val[0], inst._state);
-					if (right && isIdent(right))
-						(inst._state as Record<string, unknown>)[right] = val[1];
-				} else {
-					// Original behavior for arrays
-					if (left) applyAliasPattern(left, val, inst._state);
-					if (right && isIdent(right))
-						(inst._state as Record<string, unknown>)[right] = idx;
-				}
-				return;
+			if (comma !== -1) {
+				const [left, right] = [
+					eachAlias.slice(0, comma).trim(),
+					eachAlias.slice(comma + 1).trim(),
+				];
+				if (left) applyAliasPattern(left, isTuple ? val[0] : val, inst._state);
+				if (right && isIdent(right))
+					inst._state[right] = isTuple ? val[1] : idx;
+			} else if (eachAlias.startsWith("{") || eachAlias.startsWith("[")) {
+				applyAliasPattern(
+					eachAlias,
+					eachAlias.startsWith("[") && !isTuple ? [val, idx] : val,
+					inst._state,
+				);
+			} else if (isIdent(eachAlias)) {
+				inst._state[eachAlias] = val;
 			}
-			if (alias.startsWith("{")) {
-				// Object destructuring e.g. {name, age}
-				applyAliasPattern(alias, val, inst._state);
-				return;
-			}
-			if (alias.startsWith("[")) {
-				// Array destructuring - check if val is a 2-element tuple from Map/Record
-				if (Array.isArray(val) && val.length === 2) {
-					// For Map/Record tuples, destructure the tuple itself
-					applyAliasPattern(alias, val, inst._state);
-				} else {
-					// Original behavior for regular arrays - bind [val, idx]
-					applyAliasPattern(alias, [val, idx], inst._state);
-				}
-				return;
-			}
-			if (isIdent(alias)) {
-				(inst._state as Record<string, unknown>)[alias] = val;
+		};
+
+		// Helper to update element bindings and tracking
+		const updateElement = (element: Registerable, value: unknown, index: number) => {
+			const childReg = RegElClass._registry.get(element);
+			if (childReg) {
+				bindEachAliases(childReg, value, index);
+				elementMap?.set(element, { value, index });
 			}
 		};
 
@@ -250,16 +241,7 @@ export function handleEach(
 			// Update aliases for existing instances that will remain
 			const minLen = Math.min(cur, next);
 			for (let i = 0; i < minLen; i++) {
-				const node = instances?.[i];
-				if (!node) continue;
-				const childReg = RegElClass._registry.get(node);
-				if (!childReg) continue;
-				bindEachAliases(childReg, list[i], i);
-
-				// Update our tracking map with the new value for this element
-				if (elementMap) {
-					elementMap.set(node, { value: list[i], index: i });
-				}
+				if (instances?.[i]) updateElement(instances[i], list[i], i);
 			}
 
 			if (next > cur) {

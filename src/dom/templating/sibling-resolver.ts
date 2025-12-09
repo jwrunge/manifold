@@ -29,15 +29,14 @@ export function findDependentSiblings(
 
 	// Get dependent siblings
 	let sib = element.nextElementSibling;
+	const deps = attrName === "await" ? ["then", "catch"] : ["elseif", "else"];
 
 	while (sib) {
-		// Inline getDependentAttr
-		let prefixed: string | null = null;
-		let unprefixed: string | null = null;
+		// Find dependent attribute
+		let prefixed = "";
+		let unprefixed = "";
 		for (const p of prefixes) {
-			for (const dep of attrName === "await"
-				? ["then", "catch"]
-				: ["elseif", "else"]) {
+			for (const dep of deps) {
 				const attr = `${p}${dep}`;
 				if (sib.hasAttribute(attr)) {
 					prefixed = attr;
@@ -48,29 +47,21 @@ export function findDependentSiblings(
 			if (prefixed) break;
 		}
 
-		if (!unprefixed || !prefixed) break;
+		if (!prefixed) break;
 
 		let fn: ReturnType<typeof evaluateExpression>["_fn"] | null = null;
 		let alias: string | undefined;
 
 		if (unprefixed !== "else") {
-			const raw = sib.getAttribute(prefixed) || "";
-			const [left, right] = splitAs(raw);
+			const [left, right] = splitAs(sib.getAttribute(prefixed) || "");
 			// For :then/:catch, treat entire value as alias if no 'as' part provided
-			if (
-				attrName === "await" &&
-				(unprefixed === "then" || unprefixed === "catch")
-			) {
+			if (attrName === "await" && (unprefixed === "then" || unprefixed === "catch")) {
 				alias = right || left || undefined;
-				fn = null;
 			} else {
 				fn = evaluateExpression(left)._fn;
 				alias = right || undefined;
 			}
 		}
-
-		// Do not set view-transition-class here; it should be applied
-		// immediately before a transition and cleared after.
 
 		siblings.push({
 			el: sib as Registerable,

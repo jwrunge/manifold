@@ -3,7 +3,6 @@ import evaluateExpression from "../parsing/expression-parser.ts";
 import { type Effect, effect } from "../reactivity/effect.ts";
 import { scopeProxy } from "../reactivity/proxy.ts";
 import { handleAsync } from "./templating/async-handler.ts";
-import { handleConditional } from "./templating/conditional-handler.ts";
 import { handleEach } from "./templating/each-handler.ts";
 import { findDependentSiblings } from "./templating/sibling-resolver.ts";
 import {
@@ -54,6 +53,31 @@ import {
 	scheduleViewTransitionBuffer,
 	withTransitionStaging,
 } from "./transition.ts";
+
+// Inlined conditional handler (was 26 lines in separate file)
+const handleConditional = (
+	state: Record<string, unknown>,
+	siblings: Sibling[],
+	updateDisplay: (sibs: Pick<Sibling, "el">[]) => void,
+): Effect =>
+	effect(() => {
+		let matched = false;
+		for (const { el, fn, attrName } of siblings) {
+			el.mfshow = false;
+			if (!matched) {
+				el.mfshow =
+					attrName === "else" ? true : !!fn?.({ state, element: el });
+				matched = !!el.mfshow;
+			}
+		}
+		updateDisplay(siblings);
+	});
+
+// Common context creation helper
+const makeContext = (
+	state: Record<string, unknown>,
+	el: Registerable,
+) => ({ state, element: el, $: State });
 
 const throwError = (msg: string, cause: unknown, unsupported = false) => {
 	let hint = "";
@@ -372,7 +396,7 @@ export default class RegEl {
 			};
 
 			const ef: Effect = effect(() => {
-				const v = _fn({ state: this._state, element: el, $: State });
+				const v = _fn(makeContext(this._state, el));
 				apply(v);
 			});
 
@@ -463,11 +487,7 @@ export default class RegEl {
 			});
 			const render = () => {
 				node.textContent = tokens
-					.map((t) =>
-						t.dynamic
-							? t.fn({ state: this._state, element: this._el })
-							: t.text,
-					)
+					.map((t) => (t.dynamic ? t.fn(makeContext(this._state, this._el)) : t.text))
 					.join("");
 			};
 			// Do an immediate render so text appears even before any effect flush
@@ -493,44 +513,39 @@ export default class RegEl {
 		_fn: (ctx?: Record<string, unknown> | undefined) => unknown,
 		eachAlias?: string,
 	) {
-		const isConditional = attrName === "if";
-		const isAsync = attrName === "await";
-		let ef: Effect;
-
-		if (attrName === "each") {
-			ef = handleEach(
-				// biome-ignore lint/suspicious/noExplicitAny: temporary for refactoring
-				this as any,
-				// biome-ignore lint/suspicious/noExplicitAny: temporary for refactoring
-				RegEl as any,
-				attrTagName,
-				_fn,
-				throwError,
-				eachAlias,
-			);
-		} else if (isConditional || isAsync) {
-			const siblings = findDependentSiblings(this._el, attrName, attrTagName);
-			// Set the function for the root element
-			siblings[0].fn = _fn;
-
-			if (isConditional) {
-				ef = handleConditional(
-					this._state,
-					siblings,
-					this._updateDisplay.bind(this),
-				);
-			} else {
-				ef = handleAsync(
-					this._state,
-					siblings,
-					// biome-ignore lint/suspicious/noExplicitAny: temporary for refactoring
-					RegEl as any,
-					this._updateDisplay.bind(this),
-				);
-			}
-		} else {
-			throw new Error(`Unknown template attr: ${attrName}`);
-		}
+		const ef =
+			attrName === "each"
+				? handleEach(
+						// biome-ignore lint/suspicious/noExplicitAny: temporary for refactoring
+						this as any,
+						// biome-ignore lint/suspicious/noExplicitAny: temporary for refactoring
+						RegEl as any,
+						attrTagName,
+						_fn,
+						throwError,
+						eachAlias,
+					)
+				: (() => {
+						const siblings = findDependentSiblings(
+							this._el,
+							attrName,
+							attrTagName,
+						);
+						siblings[0].fn = _fn;
+						return attrName === "if"
+							? handleConditional(
+									this._state,
+									siblings,
+									this._updateDisplay.bind(this),
+								)
+							: handleAsync(
+									this._state,
+									siblings,
+									// biome-ignore lint/suspicious/noExplicitAny: temporary for refactoring
+									RegEl as any,
+									this._updateDisplay.bind(this),
+								);
+					})();
 
 		this.#cleanups.add(() => ef._stop());
 	}
