@@ -1,35 +1,23 @@
-import { Effect, type Subscriptions } from "./Effect.ts";
+import type { IntermediateState } from "../main.ts";
+import { Effect, type Subscriptions } from "./effect.ts";
 import isEqual from "./equality.ts";
-import type { IntermediateState } from "./main.ts";
 
 const proxyCache = new WeakMap<object, IntermediateState>();
 const depMap = new WeakMap<object, Map<PropertyKey, Subscriptions>>();
 const OWN_KEYS = Symbol("mf:ownKeys");
 const pendingEffects = new Set<Effect>();
 let isFlushScheduled = false;
+
 const flushEffects = () => {
 	const effectsToRun = Array.from(pendingEffects);
 	pendingEffects.clear();
 	isFlushScheduled = false;
-	const runAll = () => {
-		if (effectsToRun.length > 1) {
-			let maxLevel = 0;
-			for (const e of effectsToRun)
-				if (e._level > maxLevel) maxLevel = e._level;
-			if (maxLevel > 0) {
-				const buckets: Effect[][] = Array.from(
-					{ length: maxLevel + 1 },
-					() => [],
-				);
-				for (const e of effectsToRun) buckets[e._level].push(e);
-				for (const b of buckets) for (const e of b) e._run();
-			} else {
-				for (const e of effectsToRun) e._run();
-			}
-		} else for (const e of effectsToRun) e._run();
-	};
-	runAll();
+	if (effectsToRun.length > 1) {
+		effectsToRun.sort((a, b) => a._level - b._level);
+	}
+	for (const effect of effectsToRun) effect._run();
 };
+
 const batchEffects = (bucket: Subscriptions) => {
 	let scheduled = 0;
 	for (const effect of bucket._effects) {
@@ -43,9 +31,43 @@ const batchEffects = (bucket: Subscriptions) => {
 		queueMicrotask(flushEffects);
 	}
 };
+
 const notify = (target: object, key: PropertyKey) => {
 	const bucket = depMap.get(target)?.get(key);
 	if (bucket) batchEffects(bucket);
+};
+
+const handleSymbolRead = (state: object, key: symbol, receiver: unknown) => {
+	if (key === Symbol.iterator || key === Symbol.toStringTag) {
+		const val = Reflect.get(state, key, state);
+		return typeof val === "function" ? val.bind(state) : val;
+	}
+	return Reflect.get(state, key, receiver);
+};
+const handleSymbolWrite = (state: object, key: symbol, value: unknown) => {
+	(state as Record<PropertyKey, unknown>)[key] = value;
+	return true;
+};
+const handleSymbolDelete = (state: object, key: symbol) => {
+	delete (state as Record<PropertyKey, unknown>)[key];
+	return true;
+};
+const arrayLength = (state: unknown) =>
+	Array.isArray(state) ? (state as unknown[]).length : 0;
+const notifyArrayMutation = (
+	state: object,
+	key: PropertyKey,
+	prevLen: number,
+) => {
+	if (!Array.isArray(state)) return;
+	if (key === "length") {
+		if (arrayLength(state) < prevLen) notify(state, OWN_KEYS);
+		return;
+	}
+	if (arrayLength(state) !== prevLen) notify(state, "length");
+};
+const notifyArrayRemoval = (state: object, key: PropertyKey) => {
+	if (Array.isArray(state) && key !== "length") notify(state, "length");
 };
 const trackOwnKeys = (target: object) => {
 	const curEffect = Effect._current;
@@ -95,13 +117,8 @@ export const proxy = (obj: object): IntermediateState | Promise<unknown> => {
 		() =>
 			new Proxy(obj, {
 				get(state, key, receiver) {
-					if (typeof key === "symbol") {
-						if (key === Symbol.iterator || key === Symbol.toStringTag) {
-							const val = Reflect.get(state, key, state);
-							return typeof val === "function" ? val.bind(state) : val;
-						}
-						return Reflect.get(state, key, receiver);
-					}
+					if (typeof key === "symbol")
+						return handleSymbolRead(state as object, key, receiver);
 					const curEffect = Effect._current;
 					const target = Reflect.get(state as object, key);
 					const isObj = target && typeof target === "object";
@@ -127,33 +144,22 @@ export const proxy = (obj: object): IntermediateState | Promise<unknown> => {
 					return target;
 				},
 				set(state, key, value) {
-					if (typeof key === "symbol") {
-						(state as Record<PropertyKey, unknown>)[key] = value;
-						return true;
-					}
+					if (typeof key === "symbol")
+						return handleSymbolWrite(state as object, key, value);
 					const rec = state as Record<string, unknown>;
 					const existed = hasOwn(state as object, key);
 					const prev = rec[key as string];
 					if (prev === value || isEqual(prev, value)) return true;
-					const isArr = Array.isArray(state);
-					const prevLen = isArr ? (state as unknown[]).length : 0;
+					const prevLen = arrayLength(state);
 					rec[key as string] = value;
 					notify(state as object, key);
 					if (!existed) notify(state as object, OWN_KEYS);
-					if (isArr && key !== "length") {
-						const newLen = (state as unknown[]).length;
-						if (newLen !== prevLen) notify(state as object, "length");
-					}
-					if (isArr && key === "length" && (value as number) < prevLen) {
-						notify(state as object, OWN_KEYS);
-					}
+					notifyArrayMutation(state as object, key, prevLen);
 					return true;
 				},
 				deleteProperty(state, key) {
-					if (typeof key === "symbol") {
-						delete (state as Record<PropertyKey, unknown>)[key];
-						return true;
-					}
+					if (typeof key === "symbol")
+						return handleSymbolDelete(state as object, key);
 					if (!hasOwn(state as object, key)) return true;
 					const success = delete (state as Record<string, unknown>)[
 						key as string
@@ -161,9 +167,7 @@ export const proxy = (obj: object): IntermediateState | Promise<unknown> => {
 					if (!success) return false;
 					notify(state as object, key);
 					notify(state as object, OWN_KEYS);
-					if (Array.isArray(state) && key !== "length") {
-						notify(state as object, "length");
-					}
+					notifyArrayRemoval(state as object, key);
 					return true;
 				},
 				ownKeys(state) {
@@ -184,24 +188,29 @@ export const proxy = (obj: object): IntermediateState | Promise<unknown> => {
 export const scopeProxy = <T extends object>(base: T): T => {
 	const localTarget: Record<PropertyKey, unknown> = Object.create(null);
 	const local = proxy(localTarget) as Record<PropertyKey, unknown>;
-	const hasBase = (k: PropertyKey) => Reflect.has(base as object, k);
-	const hasLocal = (k: PropertyKey) => Object.hasOwn(localTarget, k);
+	const baseProxy = base as typeof local;
+	const hasLocalKey = (k: PropertyKey) => Object.hasOwn(localTarget, k);
+	const hasBaseKey = (k: PropertyKey) => Reflect.has(base as object, k);
+	const writeValue = (k: PropertyKey, v: unknown) => {
+		if (hasLocalKey(k)) local[k] = v;
+		else if (hasBaseKey(k)) baseProxy[k] = v;
+		else local[k] = v;
+		return true;
+	};
+	const hasKey = (k: PropertyKey) => hasLocalKey(k) || hasBaseKey(k);
 	return new Proxy(Object.create(null), {
 		get(_t, k) {
 			// Read local first to register dependency on overlay keys even if undefined
 			const lv = local[k as never];
-			if (hasLocal(k)) return lv as unknown;
+			if (hasLocalKey(k)) return lv as unknown;
 			// Read through base so effects subscribe to base changes (base is already proxied upstream)
-			return (base as typeof local)[k];
+			return baseProxy[k];
 		},
 		set(_t, k, v) {
-			if (hasLocal(k)) local[k] = v;
-			else if (hasBase(k)) (base as typeof local)[k] = v;
-			else local[k] = v;
-			return true;
+			return writeValue(k, v);
 		},
 		has(_t, k) {
-			return hasLocal(k) || hasBase(k);
+			return hasKey(k);
 		},
 		ownKeys() {
 			return Array.from(

@@ -1,19 +1,12 @@
-import { Effect, effect } from "./Effect.ts";
-import isEqual from "./equality.ts";
-import serverPage from "./fetch.ts";
-
-export type {
-	FetchDOMOptions,
-	FetchedContent,
-	InsertContentMethod,
-} from "./fetch.ts";
-
-import { proxy } from "./proxy.ts";
-import RegEl from "./registry.ts";
+import { fetchWithMethodFactory } from "./dom/fetch.ts";
+import RegEl from "./dom/registry.ts";
+import { Effect } from "./reactivity/effect.ts";
+import isEqual from "./reactivity/equality.ts";
+import { proxy } from "./reactivity/proxy.ts";
 
 export type IntermediateState = Record<string, unknown>;
 
-class State<TState extends IntermediateState> {
+export class State<TState extends IntermediateState> {
 	#name?: string;
 	#scopedState: TState;
 	#derivations: Map<string, (store: IntermediateState) => unknown>;
@@ -110,29 +103,8 @@ class State<TState extends IntermediateState> {
 	}
 }
 
-// Helpers to use as $.get/$.post/$.fetch without early initialization
-const get = (
-	url: string | URL,
-	fetchOps?: RequestInit,
-	defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
-): import("./fetch.ts").FetchedContent => {
-	return serverPage.get(url, fetchOps, defaultOps);
-};
+export { effect } from "./reactivity/effect.ts";
 
-const post = (
-	url: string | URL,
-	fetchOps?: RequestInit,
-	defaultOps?: Omit<import("./fetch.ts").FetchDOMOptions, "to" | "method">,
-): import("./fetch.ts").FetchedContent => {
-	return serverPage.post(url, fetchOps, defaultOps);
-};
-
-const fetch = (
-	url: string | URL,
-	ops: import("./fetch.ts").FetchDOMOptions,
-	fetchOps?: RequestInit,
-): Promise<void> => {
-	return serverPage.fetch(url, ops, fetchOps);
-};
-
-export { effect, fetch, get, post, State };
+export const [mfGet, mfPost, mfPut, mfDelete, mfPatch, mfHead, mfOptions] = (
+	["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"] as const
+).map((m) => fetchWithMethodFactory(m));

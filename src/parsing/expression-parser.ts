@@ -1,4 +1,4 @@
-import { indexOfTopLevel, isIdent, splitTopLevel } from "./parsing-utils.ts";
+import { indexOfTopLevel, isIdent, splitTopLevel } from "../parsing/util.ts";
 
 export interface ParsedExpression {
 	_fn: (ctx?: Record<string, unknown>) => unknown | Promise<unknown>;

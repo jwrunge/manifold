@@ -1,9 +1,9 @@
-import applyAliasPattern from "../alias-destructure.ts";
-import { type Effect, effect } from "../Effect.ts";
+import { withTransitionStaging } from "../dom/transition.ts";
 import { State } from "../main.ts";
-import { indexOfTopLevel, isIdent } from "../parsing-utils.ts";
-import { scopeProxy } from "../proxy.ts";
-import { withTransitionStaging } from "../transition.ts";
+import applyAliasPattern from "../parsing/alias-destructure.ts";
+import { indexOfTopLevel, isIdent } from "../parsing/util.ts";
+import { type Effect, effect } from "../reactivity/effect.ts";
+import { scopeProxy } from "../reactivity/proxy.ts";
 import type { Registerable } from "./types.ts";
 
 // Type for the RegEl class (to avoid circular dependencies)
