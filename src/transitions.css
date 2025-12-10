@@ -2,7 +2,7 @@
  * Manifold View Transitions CSS
  * Optional CSS file providing pre-defined keyframes for common view transitions.
  * Include this file to use transition classes like "fade", "fly-left", "scale", etc.
- * 
+ *
  * Usage:
  *   <div :transition="fade">...</div>
  *   <div :transition-in="fly-left" :transition-out="fly-right">...</div>

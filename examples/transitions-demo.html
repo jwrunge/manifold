@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manifold Transitions Demo</title>
+    <link rel="stylesheet" href="../dist/transitions.css">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 2rem;
+        }
+        .controls {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .demo-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .section h2 {
+            color: #333;
+            margin-top: 0;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 0.5rem;
+        }
+        .speed-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎭 Manifold View Transitions Demo</h1>
+    
+    <div class="controls">
+        <button :onclick="state.showAll = !state.showAll">
+            <span :text="state.showAll ? 'Hide All' : 'Show All'"></span>
+        </button>
+        <button :onclick="state.showBasic = !state.showBasic">Toggle Basic</button>
+        <button :onclick="state.showSpeeds = !state.showSpeeds">Toggle Speeds</button>
+        <button :onclick="state.showSeparate = !state.showSeparate">Toggle Separate In/Out</button>
+    </div>
+
+    <!-- Basic Transitions -->
+    <div class="section" :if="state.showAll || state.showBasic">
+        <h2>Basic Transitions (Default Speed - 300ms)</h2>
+        <div class="demo-grid">
+            <div class="demo-box" :transition="fade">
+                Fade
+            </div>
+            <div class="demo-box" :transition="fly-left">
+                Fly Left
+            </div>
+            <div class="demo-box" :transition="fly-right">
+                Fly Right
+            </div>
+            <div class="demo-box" :transition="fly-up">
+                Fly Up
+            </div>
+            <div class="demo-box" :transition="fly-down">
+                Fly Down
+            </div>
+            <div class="demo-box" :transition="scale">
+                Scale
+            </div>
+            <div class="demo-box" :transition="shrink">
+                Shrink
+            </div>
+            <div class="demo-box" :transition="grow">
+                Grow
+            </div>
+            <div class="demo-box" :transition="slide">
+                Slide
+            </div>
+        </div>
+    </div>
+
+    <!-- Speed Variants -->
+    <div class="section" :if="state.showAll || state.showSpeeds">
+        <h2>Speed Variants</h2>
+        
+        <h3>Fast (150ms)</h3>
+        <div class="demo-grid">
+            <div class="demo-box" :transition="fade-fast">
+                Fade Fast
+            </div>
+            <div class="demo-box" :transition="fly-left-fast">
+                Fly Left Fast
+            </div>
+            <div class="demo-box" :transition="scale-fast">
+                Scale Fast
+            </div>
+        </div>
+
+        <h3>Slow (600ms)</h3>
+        <div class="demo-grid">
+            <div class="demo-box" :transition="fade-slow">
+                Fade Slow
+            </div>
+            <div class="demo-box" :transition="fly-right-slow">
+                Fly Right Slow
+            </div>
+            <div class="demo-box" :transition="grow-slow">
+                Grow Slow
+            </div>
+        </div>
+    </div>
+
+    <!-- Separate In/Out Transitions -->
+    <div class="section" :if="state.showAll || state.showSeparate">
+        <h2>Separate In/Out Transitions</h2>
+        <p style="color: #666; margin-bottom: 1rem;">
+            These boxes use different animations when appearing vs disappearing
+        </p>
+        <div class="demo-grid">
+            <div class="demo-box" :transition-in="fly-left" :transition-out="fly-right">
+                In: Fly Left<br>
+                Out: Fly Right
+            </div>
+            <div class="demo-box" :transition-in="grow" :transition-out="shrink">
+                In: Grow<br>
+                Out: Shrink
+            </div>
+            <div class="demo-box" :transition-in="fade-fast" :transition-out="slide-slow">
+                In: Fade Fast<br>
+                Out: Slide Slow
+            </div>
+            <div class="demo-box" :transition-in="fly-up" :transition-out="fly-down">
+                In: Fly Up<br>
+                Out: Fly Down
+            </div>
+            <div class="demo-box" :transition-in="scale-fast" :transition-out="fade">
+                In: Scale Fast<br>
+                Out: Fade
+            </div>
+            <div class="demo-box" :transition-in="slide" :transition-out="shrink-fast">
+                In: Slide<br>
+                Out: Shrink Fast
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📚 Available Transitions</h2>
+        <p><strong>9 Base Types:</strong> fade, fly-left, fly-right, fly-up, fly-down, scale, shrink, grow, slide</p>
+        <p><strong>3 Speed Variants:</strong> default (300ms), -fast (150ms), -slow (600ms)</p>
+        <p><strong>Total:</strong> 27 pre-defined transition classes</p>
+        
+        <h3>Usage Examples:</h3>
+        <pre style="background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto;"><code>&lt;!-- Single transition (same in/out) --&gt;
+&lt;div :transition="fade"&gt;Content&lt;/div&gt;
+&lt;div :transition="fly-left-fast"&gt;Content&lt;/div&gt;
+
+&lt;!-- Separate in/out transitions --&gt;
+&lt;div :transition-in="grow" :transition-out="shrink"&gt;Content&lt;/div&gt;
+&lt;div :transition-in="fly-left-fast" :transition-out="fly-right-slow"&gt;Content&lt;/div&gt;</code></pre>
+    </div>
+
+    <script type="module">
+        import { state } from '../dist/manifold.js';
+        
+        state({
+            showAll: true,
+            showBasic: false,
+            showSpeeds: false,
+            showSeparate: false
+        });
+    </script>
+</body>
+</html>
