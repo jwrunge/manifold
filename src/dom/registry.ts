@@ -349,12 +349,10 @@ export default class RegEl {
 					];
 					const bodyParsed = evaluateExpression(bodyExpr);
 					handler = (e: Event) => {
-						const ctx: Record<string, unknown> = {
-							state: this._state,
+						const ctx = {
+							...makeContext(this._state, el),
 							event: e,
-							element: el,
-							$: State,
-						};
+						} as Record<string, unknown>;
 						if (params[0]) ctx[params[0]] = e;
 						if (params[1]) ctx[params[1]] = state;
 						if (params[2]) ctx[params[2]] = el;
@@ -363,10 +361,8 @@ export default class RegEl {
 				} else {
 					handler = (e: Event) =>
 						_fn({
-							state: this._state,
+							...makeContext(this._state, el),
 							event: e,
-							element: el,
-							$: State,
 						});
 				}
 				el.addEventListener(type, handler);
