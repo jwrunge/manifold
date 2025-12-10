@@ -1,0 +1,447 @@
+/**
+ * Manifold View Transitions CSS
+ * Optional CSS file providing pre-defined keyframes for common view transitions.
+ * Include this file to use transition classes like "fade", "fly-left", "scale", etc.
+ * 
+ * Usage:
+ *   <div :transition="fade">...</div>
+ *   <div :transition-in="fly-left" :transition-out="fly-right">...</div>
+ */
+
+/* ============================================================================
+   FADE TRANSITIONS
+   ============================================================================ */
+
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes fade-out {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+::view-transition-old(*.fade) {
+	animation: fade-out 300ms ease;
+}
+
+::view-transition-new(*.fade) {
+	animation: fade-in 300ms ease;
+}
+
+::view-transition-old(*.fade-fast) {
+	animation: fade-out 150ms ease;
+}
+
+::view-transition-new(*.fade-fast) {
+	animation: fade-in 150ms ease;
+}
+
+::view-transition-old(*.fade-slow) {
+	animation: fade-out 600ms ease;
+}
+
+::view-transition-new(*.fade-slow) {
+	animation: fade-in 600ms ease;
+}
+
+/* ============================================================================
+   FLY TRANSITIONS
+   ============================================================================ */
+
+@keyframes fly-left-in {
+	from {
+		opacity: 0;
+		transform: translateX(-30px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@keyframes fly-left-out {
+	from {
+		opacity: 1;
+		transform: translateX(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateX(-30px);
+	}
+}
+
+@keyframes fly-right-in {
+	from {
+		opacity: 0;
+		transform: translateX(30px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@keyframes fly-right-out {
+	from {
+		opacity: 1;
+		transform: translateX(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateX(30px);
+	}
+}
+
+@keyframes fly-up-in {
+	from {
+		opacity: 0;
+		transform: translateY(-30px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes fly-up-out {
+	from {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(-30px);
+	}
+}
+
+@keyframes fly-down-in {
+	from {
+		opacity: 0;
+		transform: translateY(30px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes fly-down-out {
+	from {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(30px);
+	}
+}
+
+/* Fly Left */
+::view-transition-old(*.fly-left) {
+	animation: fly-left-out 300ms ease;
+}
+
+::view-transition-new(*.fly-left) {
+	animation: fly-left-in 300ms ease;
+}
+
+::view-transition-old(*.fly-left-fast) {
+	animation: fly-left-out 150ms ease;
+}
+
+::view-transition-new(*.fly-left-fast) {
+	animation: fly-left-in 150ms ease;
+}
+
+::view-transition-old(*.fly-left-slow) {
+	animation: fly-left-out 600ms ease;
+}
+
+::view-transition-new(*.fly-left-slow) {
+	animation: fly-left-in 600ms ease;
+}
+
+/* Fly Right */
+::view-transition-old(*.fly-right) {
+	animation: fly-right-out 300ms ease;
+}
+
+::view-transition-new(*.fly-right) {
+	animation: fly-right-in 300ms ease;
+}
+
+::view-transition-old(*.fly-right-fast) {
+	animation: fly-right-out 150ms ease;
+}
+
+::view-transition-new(*.fly-right-fast) {
+	animation: fly-right-in 150ms ease;
+}
+
+::view-transition-old(*.fly-right-slow) {
+	animation: fly-right-out 600ms ease;
+}
+
+::view-transition-new(*.fly-right-slow) {
+	animation: fly-right-in 600ms ease;
+}
+
+/* Fly Up */
+::view-transition-old(*.fly-up) {
+	animation: fly-up-out 300ms ease;
+}
+
+::view-transition-new(*.fly-up) {
+	animation: fly-up-in 300ms ease;
+}
+
+::view-transition-old(*.fly-up-fast) {
+	animation: fly-up-out 150ms ease;
+}
+
+::view-transition-new(*.fly-up-fast) {
+	animation: fly-up-in 150ms ease;
+}
+
+::view-transition-old(*.fly-up-slow) {
+	animation: fly-up-out 600ms ease;
+}
+
+::view-transition-new(*.fly-up-slow) {
+	animation: fly-up-in 600ms ease;
+}
+
+/* Fly Down */
+::view-transition-old(*.fly-down) {
+	animation: fly-down-out 300ms ease;
+}
+
+::view-transition-new(*.fly-down) {
+	animation: fly-down-in 300ms ease;
+}
+
+::view-transition-old(*.fly-down-fast) {
+	animation: fly-down-out 150ms ease;
+}
+
+::view-transition-new(*.fly-down-fast) {
+	animation: fly-down-in 150ms ease;
+}
+
+::view-transition-old(*.fly-down-slow) {
+	animation: fly-down-out 600ms ease;
+}
+
+::view-transition-new(*.fly-down-slow) {
+	animation: fly-down-in 600ms ease;
+}
+
+/* ============================================================================
+   SCALE TRANSITIONS
+   ============================================================================ */
+
+@keyframes scale-in {
+	from {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes scale-out {
+	from {
+		opacity: 1;
+		transform: scale(1);
+	}
+	to {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+}
+
+::view-transition-old(*.scale) {
+	animation: scale-out 300ms ease;
+}
+
+::view-transition-new(*.scale) {
+	animation: scale-in 300ms ease;
+}
+
+::view-transition-old(*.scale-fast) {
+	animation: scale-out 150ms ease;
+}
+
+::view-transition-new(*.scale-fast) {
+	animation: scale-in 150ms ease;
+}
+
+::view-transition-old(*.scale-slow) {
+	animation: scale-out 600ms ease;
+}
+
+::view-transition-new(*.scale-slow) {
+	animation: scale-in 600ms ease;
+}
+
+/* ============================================================================
+   SHRINK TRANSITIONS
+   ============================================================================ */
+
+@keyframes shrink-in {
+	from {
+		opacity: 0;
+		transform: scale(1.1);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes shrink-out {
+	from {
+		opacity: 1;
+		transform: scale(1);
+	}
+	to {
+		opacity: 0;
+		transform: scale(1.1);
+	}
+}
+
+::view-transition-old(*.shrink) {
+	animation: shrink-out 300ms ease;
+}
+
+::view-transition-new(*.shrink) {
+	animation: shrink-in 300ms ease;
+}
+
+::view-transition-old(*.shrink-fast) {
+	animation: shrink-out 150ms ease;
+}
+
+::view-transition-new(*.shrink-fast) {
+	animation: shrink-in 150ms ease;
+}
+
+::view-transition-old(*.shrink-slow) {
+	animation: shrink-out 600ms ease;
+}
+
+::view-transition-new(*.shrink-slow) {
+	animation: shrink-in 600ms ease;
+}
+
+/* ============================================================================
+   GROW TRANSITIONS
+   ============================================================================ */
+
+@keyframes grow-in {
+	from {
+		opacity: 0;
+		transform: scale(0.8);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes grow-out {
+	from {
+		opacity: 1;
+		transform: scale(1);
+	}
+	to {
+		opacity: 0;
+		transform: scale(0.8);
+	}
+}
+
+::view-transition-old(*.grow) {
+	animation: grow-out 300ms ease;
+}
+
+::view-transition-new(*.grow) {
+	animation: grow-in 300ms ease;
+}
+
+::view-transition-old(*.grow-fast) {
+	animation: grow-out 150ms ease;
+}
+
+::view-transition-new(*.grow-fast) {
+	animation: grow-in 150ms ease;
+}
+
+::view-transition-old(*.grow-slow) {
+	animation: grow-out 600ms ease;
+}
+
+::view-transition-new(*.grow-slow) {
+	animation: grow-in 600ms ease;
+}
+
+/* ============================================================================
+   SLIDE TRANSITIONS
+   ============================================================================ */
+
+@keyframes slide-in {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes slide-out {
+	from {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+}
+
+::view-transition-old(*.slide) {
+	animation: slide-out 300ms ease;
+}
+
+::view-transition-new(*.slide) {
+	animation: slide-in 300ms ease;
+}
+
+::view-transition-old(*.slide-fast) {
+	animation: slide-out 150ms ease;
+}
+
+::view-transition-new(*.slide-fast) {
+	animation: slide-in 150ms ease;
+}
+
+::view-transition-old(*.slide-slow) {
+	animation: slide-out 600ms ease;
+}
+
+::view-transition-new(*.slide-slow) {
+	animation: slide-in 600ms ease;
+}

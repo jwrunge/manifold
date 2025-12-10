@@ -60,6 +60,8 @@ import {
 	ensureViewTransitionName,
 	runViewTransition,
 	scheduleViewTransitionBuffer,
+	type TransitionClassResolver,
+	type TransitionElement,
 	withTransitionStaging,
 } from "./transition.ts";
 
@@ -187,6 +189,8 @@ export default class RegEl {
 	_eachEnd?: Comment;
 	_eachInstances?: Registerable[];
 	_vtClass?: string;
+	_vtClassIn?: string;
+	_vtClassOut?: string;
 
 	static _registerOrGet(el: Registerable, state: Record<string, unknown>) {
 		return RegEl._registry.get(el) ?? new RegEl(el, state);
@@ -269,6 +273,9 @@ export default class RegEl {
 
 		// Pre-process transition attributes (support both raw and data-mf-)
 		let transitionValue: string | null = null;
+		let transitionInValue: string | null = null;
+		let transitionOutValue: string | null = null;
+		
 		if (el.hasAttribute("transition")) {
 			transitionValue = el.getAttribute("transition");
 			el.removeAttribute("transition");
@@ -276,10 +283,37 @@ export default class RegEl {
 			transitionValue = el.getAttribute("data-mf-transition");
 			el.removeAttribute("data-mf-transition");
 		}
+		
+		if (el.hasAttribute("transition-in")) {
+			transitionInValue = el.getAttribute("transition-in");
+			el.removeAttribute("transition-in");
+		} else if (el.hasAttribute("data-mf-transition-in")) {
+			transitionInValue = el.getAttribute("data-mf-transition-in");
+			el.removeAttribute("data-mf-transition-in");
+		}
+		
+		if (el.hasAttribute("transition-out")) {
+			transitionOutValue = el.getAttribute("transition-out");
+			el.removeAttribute("transition-out");
+		} else if (el.hasAttribute("data-mf-transition-out")) {
+			transitionOutValue = el.getAttribute("data-mf-transition-out");
+			el.removeAttribute("data-mf-transition-out");
+		}
+		
 		if (transitionValue !== null) {
 			const prefix = (transitionValue ?? "").trim();
 			ensureViewTransitionName(el as HTMLElement, prefix);
 			this._vtClass = prefix; // unified class applied to both old/new
+		}
+		if (transitionInValue !== null) {
+			const prefix = (transitionInValue ?? "").trim();
+			ensureViewTransitionName(el as HTMLElement, prefix);
+			this._vtClassIn = prefix;
+		}
+		if (transitionOutValue !== null) {
+			const prefix = (transitionOutValue ?? "").trim();
+			ensureViewTransitionName(el as HTMLElement, prefix);
+			this._vtClassOut = prefix;
 		}
 
 		// Handle attributes
@@ -326,11 +360,19 @@ export default class RegEl {
 				continue;
 			}
 
-			// Handle :transition binding (unified attr)
+			// Handle :transition, :transition-in, :transition-out bindings
 			if (attrName === "transition") {
 				const prefix = (value ?? "").trim();
 				ensureViewTransitionName(el as HTMLElement, prefix);
 				this._vtClass = prefix || this._vtClass;
+			} else if (attrName === "transition-in") {
+				const prefix = (value ?? "").trim();
+				ensureViewTransitionName(el as HTMLElement, prefix);
+				this._vtClassIn = prefix || this._vtClassIn;
+			} else if (attrName === "transition-out") {
+				const prefix = (value ?? "").trim();
+				ensureViewTransitionName(el as HTMLElement, prefix);
+				this._vtClassOut = prefix || this._vtClassOut;
 			}
 
 			// Handle event bindings
@@ -564,9 +606,28 @@ export default class RegEl {
 	}
 
 	// Small helper to stage unified view-transition styling, run update, and cleanup
-	private _withTransitionStaging(nodes: Registerable[], run: () => void) {
+	private _withTransitionStaging(
+		nodes: Registerable[],
+		run: () => void,
+		appearing?: boolean[],
+	) {
 		const elements = nodes.map((n) => n as HTMLElement);
-		withTransitionStaging(elements, run, this._vtClass, (cb) =>
+		
+		// Determine which class to use based on whether elements are appearing or disappearing
+		let vtClass: TransitionClassResolver | undefined;
+		
+		if (this._vtClassIn || this._vtClassOut) {
+			// Use separate in/out classes if defined
+			vtClass = (_el: TransitionElement, idx: number) => {
+				const isAppearing = appearing?.[idx] ?? true;
+				return isAppearing ? this._vtClassIn : this._vtClassOut;
+			};
+		} else {
+			// Fall back to unified class
+			vtClass = this._vtClass;
+		}
+		
+		withTransitionStaging(elements, run, vtClass, (cb) =>
 			this._transition(cb),
 		);
 	}
@@ -580,6 +641,9 @@ export default class RegEl {
 		});
 
 		if (elementsChanging.length > 0) {
+			// Track which elements are appearing vs disappearing
+			const appearing = elementsChanging.map(({ el }) => this._shouldShow(el));
+			
 			const run = () => {
 				for (const { el } of elementsChanging) {
 					el.style.display = this._shouldShow(el) ? "" : "none";
@@ -589,6 +653,7 @@ export default class RegEl {
 			this._withTransitionStaging(
 				elementsChanging.map(({ el }) => el),
 				run,
+				appearing,
 			);
 		}
 	}
