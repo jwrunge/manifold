@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
 import {
-    mfDelete,
-    mfGet,
-    mfHead,
-    mfOptions,
-    mfPatch,
-    mfPost,
-    mfPut,
+	mfDelete,
+	mfGet,
+	mfHead,
+	mfOptions,
+	mfPatch,
+	mfPost,
+	mfPut,
 } from "../src/main.ts";
 import evaluateExpression from "../src/parsing/expression-parser.ts";
 

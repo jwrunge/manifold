@@ -100,4 +100,3 @@ describe("fetchContent DOM insertion", () => {
 		expect(!!document.querySelector("link#style-once")).toBe(true);
 	});
 });
-

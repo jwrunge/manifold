@@ -275,7 +275,7 @@ export default class RegEl {
 		let transitionValue: string | null = null;
 		let transitionInValue: string | null = null;
 		let transitionOutValue: string | null = null;
-		
+
 		if (el.hasAttribute("transition")) {
 			transitionValue = el.getAttribute("transition");
 			el.removeAttribute("transition");
@@ -283,7 +283,7 @@ export default class RegEl {
 			transitionValue = el.getAttribute("data-mf-transition");
 			el.removeAttribute("data-mf-transition");
 		}
-		
+
 		if (el.hasAttribute("transition-in")) {
 			transitionInValue = el.getAttribute("transition-in");
 			el.removeAttribute("transition-in");
@@ -291,7 +291,7 @@ export default class RegEl {
 			transitionInValue = el.getAttribute("data-mf-transition-in");
 			el.removeAttribute("data-mf-transition-in");
 		}
-		
+
 		if (el.hasAttribute("transition-out")) {
 			transitionOutValue = el.getAttribute("transition-out");
 			el.removeAttribute("transition-out");
@@ -299,7 +299,7 @@ export default class RegEl {
 			transitionOutValue = el.getAttribute("data-mf-transition-out");
 			el.removeAttribute("data-mf-transition-out");
 		}
-		
+
 		if (transitionValue !== null) {
 			const prefix = (transitionValue ?? "").trim();
 			ensureViewTransitionName(el as HTMLElement, prefix);
@@ -612,10 +612,10 @@ export default class RegEl {
 		appearing?: boolean[],
 	) {
 		const elements = nodes.map((n) => n as HTMLElement);
-		
+
 		// Determine which class to use based on whether elements are appearing or disappearing
 		let vtClass: TransitionClassResolver | undefined;
-		
+
 		if (this._vtClassIn || this._vtClassOut) {
 			// Use separate in/out classes if defined
 			vtClass = (_el: TransitionElement, idx: number) => {
@@ -626,10 +626,8 @@ export default class RegEl {
 			// Fall back to unified class
 			vtClass = this._vtClass;
 		}
-		
-		withTransitionStaging(elements, run, vtClass, (cb) =>
-			this._transition(cb),
-		);
+
+		withTransitionStaging(elements, run, vtClass, (cb) => this._transition(cb));
 	}
 
 	_updateDisplay(sibs: Pick<Sibling, "el">[]) {
@@ -643,7 +641,7 @@ export default class RegEl {
 		if (elementsChanging.length > 0) {
 			// Track which elements are appearing vs disappearing
 			const appearing = elementsChanging.map(({ el }) => this._shouldShow(el));
-			
+
 			const run = () => {
 				for (const { el } of elementsChanging) {
 					el.style.display = this._shouldShow(el) ? "" : "none";

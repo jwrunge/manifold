@@ -51,16 +51,16 @@ for (const fname of cssFiles) {
 	const srcFile = `./src/${fname}`;
 	const destFile = `./dist/${fname}`;
 	const contents = readFileSync(srcFile, "utf8");
-	
+
 	// Minify CSS: remove comments, extra whitespace, and newlines
 	const minified = contents
-		.replace(/\/\*[\s\S]*?\*\//g, '') // Remove comments
-		.replace(/\s+/g, ' ') // Collapse whitespace
-		.replace(/\s*([{:;,}])\s*/g, '$1') // Remove space around punctuation
+		.replace(/\/\*[\s\S]*?\*\//g, "") // Remove comments
+		.replace(/\s+/g, " ") // Collapse whitespace
+		.replace(/\s*([{:;,}])\s*/g, "$1") // Remove space around punctuation
 		.trim();
-	
+
 	writeFileSync(destFile, minified, "utf8");
-	
+
 	const rawBytes = statSync(destFile).size;
 	let gzipBytes;
 	try {
@@ -68,7 +68,7 @@ for (const fname of cssFiles) {
 	} catch {
 		gzipBytes = 0;
 	}
-	
+
 	outputs[destFile] = {
 		raw: fmt(rawBytes),
 		gzip: gzipBytes ? fmt(gzipBytes) : "(gzip err)",
