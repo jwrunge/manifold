@@ -73,46 +73,18 @@
 </head>
 <body data-mf-register>
     <h1>🎭 Manifold View Transitions Demo</h1>
-    
-    <div class="controls">
-        <button :onclick="toggle('showAll')">
-            ${showAll ? 'Hide All' : 'Show All'}
-        </button>
-        <button :onclick="toggle('showBasic')">Toggle Basic</button>
-        <button :onclick="toggle('showSpeeds')">Toggle Speeds</button>
-        <button :onclick="toggle('showSeparate')">Toggle Separate In/Out</button>
-    </div>
 
     <!-- Basic Transitions -->
-    <div class="section" :if="showAll || showBasic">
+    <div class="section">
         <h2>Basic Transitions (Default Speed - 300ms)</h2>
         <div class="demo-grid">
-            <div class="demo-box" :transition="fade">
-                Fade
-            </div>
-            <div class="demo-box" :transition="fly-left">
-                Fly Left
-            </div>
-            <div class="demo-box" :transition="fly-right">
-                Fly Right
-            </div>
-            <div class="demo-box" :transition="fly-up">
-                Fly Up
-            </div>
-            <div class="demo-box" :transition="fly-down">
-                Fly Down
-            </div>
-            <div class="demo-box" :transition="scale">
-                Scale
-            </div>
-            <div class="demo-box" :transition="shrink">
-                Shrink
-            </div>
-            <div class="demo-box" :transition="grow">
-                Grow
-            </div>
-            <div class="demo-box" :transition="slide">
-                Slide
+            <div 
+                :each="['fade', 'fly-left', 'fly-right', 'fly-up', 'fly-down', 'scale', 'shrink', 'grow', 'slide'] as trans" 
+                class="demo-box" 
+                :transition="fly-left"
+                :onclick="()=> showBasic = false"
+            >
+                ${trans.toUpperCase()}
             </div>
         </div>
     </div>

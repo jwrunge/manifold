@@ -13,11 +13,52 @@
 			:type="count === 3 || count === 5 ? 'text' : 'number'"
 			:class:red="count % 5 === 0"
 			:style:background-color="count % 2 === 0 ? 'lightblue' : 'lightgreen'"
-			:onclick="(e)=> popup(e.target.value)"
+			:onclick="count = count + 1"
 			:something="count * 2"
 		/>
 
 		<input type="number" :sync:value="count" />
+
+		<!-- Test assignment operators -->
+		<div
+			style="
+				margin-top: 1rem;
+				padding: 0.5rem;
+				background: #2a2a2a;
+				border: 1px solid #444;
+				border-radius: 4px;
+			"
+		>
+			<strong style="color: #fff">Assignment Operators Test:</strong>
+			<div style="margin-top: 0.5rem">
+				<button :onclick="count++">count++</button>
+				<button :onclick="count--">count--</button>
+				<button :onclick="count += 5">count += 5</button>
+				<button :onclick="count -= 3">count -= 3</button>
+				<button :onclick="count *= 2">count *= 2</button>
+				<button :onclick="count /= 2">count /= 2</button>
+			</div>
+		</div>
+
+		<!-- Test $state and $element -->
+		<div
+			style="
+				margin-top: 1rem;
+				padding: 0.5rem;
+				background: #2a2a2a;
+				border: 1px solid #444;
+				border-radius: 4px;
+			"
+		>
+			<strong style="color: #fff">$state and $element Test:</strong>
+			<div style="margin-top: 0.5rem">
+				<button :onclick="$state.count = 100">
+					Set count to 100 using $state
+				</button>
+				<button :onclick="console.log($element)">Log $element</button>
+				<button :onclick="console.log($state)">Log $state</button>
+			</div>
+		</div>
 
 		<div :if="count < 10" :transition="list-item">
 			The count is less than 10! ${count}

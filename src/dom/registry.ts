@@ -394,9 +394,11 @@ export default class RegEl {
 						const ctx = {
 							...makeContext(this._state, el),
 							event: e,
+							$state: this._state,
+							$element: el,
 						} as Record<string, unknown>;
 						if (params[0]) ctx[params[0]] = e;
-						if (params[1]) ctx[params[1]] = state;
+						if (params[1]) ctx[params[1]] = this._state;
 						if (params[2]) ctx[params[2]] = el;
 						bodyParsed._fn(ctx);
 					};
@@ -405,6 +407,8 @@ export default class RegEl {
 						_fn({
 							...makeContext(this._state, el),
 							event: e,
+							$state: this._state,
+							$element: el,
 						});
 				}
 				el.addEventListener(type, handler);
@@ -436,7 +440,10 @@ export default class RegEl {
 						throwError(`Bind ${attrName}`, el, true);
 					}
 				} else {
-					if (attrName in el) {
+					// For standard DOM properties, set the property
+					// For custom attributes, set the attribute
+					const isProperty = attrName in el && !(attrName.includes('-') || attrName.startsWith('data') || attrName.startsWith('aria'));
+					if (isProperty) {
 						if (val !== undefined) {
 							// biome-ignore lint/suspicious/noExplicitAny: Unknown element properties
 							(el as any)[attrName] = val;
