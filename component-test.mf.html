@@ -1,0 +1,44 @@
+<script type="module">
+    import { State } from "./dist/mainfold.js";
+
+    State.create("My-Input", {
+        type: "text",
+        inputValue: "",
+    }).build();
+</script>
+
+<template data-mf-component="My-Input">
+    <label>
+        <span>Enter text:</span>
+        <input :type="type" :sync:value="inputValue" />
+    </label>
+    <p>You entered: ${inputValue}</p>
+</template>
+
+<style>
+    :host {
+        display: block;
+        margin-bottom: 1rem;
+        font-family: Arial, sans-serif;
+    }
+
+    label {
+        display: flex;
+        flex-direction: column;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    input {
+        padding: 0.5rem;
+        font-size: 1rem;
+        margin-top: 0.25rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    p {
+        font-style: italic;
+        color: #555;
+    }
+</style>

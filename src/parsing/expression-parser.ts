@@ -41,6 +41,35 @@ const LITERALS: Record<string, unknown> = {
 	null: null,
 	undefined: undefined,
 };
+type ParseRuntimeOptions = {
+	allowAssignments: boolean;
+};
+const DEFAULT_PARSE_OPTIONS: ParseRuntimeOptions = { allowAssignments: false };
+let currentParseOptions: ParseRuntimeOptions = DEFAULT_PARSE_OPTIONS;
+const withParseOptions = <T>(options: ParseRuntimeOptions, run: () => T): T => {
+	const prev = currentParseOptions;
+	currentParseOptions = options;
+	try {
+		return run();
+	} finally {
+		currentParseOptions = prev;
+	}
+};
+const assertAssignmentsAllowed = (expr: string) => {
+	if (currentParseOptions.allowAssignments) return;
+	throw new Error(
+		`Manifold: Assignments are only supported inside event handlers (expression: ${expr.trim()})`,
+	);
+};
+const coerceNumber = (value: unknown): number => {
+	if (typeof value === "number") return value;
+	if (typeof value === "bigint") return Number(value);
+	return Number(value);
+};
+const numericOrNull = (value: unknown): number | null => {
+	const num = coerceNumber(value);
+	return Number.isNaN(num) ? null : num;
+};
 const isForbidden = (key: unknown) => FORBIDDEN_PROPS.has(String(key));
 const findClosing = (
 	expr: string,
@@ -294,22 +323,32 @@ const parse = (raw: string): ParsedExpression => {
 		if (OP === "=" && (leftLast === "=" || leftLast === "!" || leftLast === ">" || leftLast === "<")) {
 			// This is actually ===, !==, >=, or <=, not assignment
 		} else {
+			assertAssignmentsAllowed(expr);
 			const l = parse(L);
 			const r = parse(R);
 			if (l._syncRef) {
 				return {
 					_fn: (c) => {
-						const rightVal = r._fn(c) as number;
+						const rightRaw = r._fn(c);
 						let newVal: unknown;
 						if (OP === "=") {
-							newVal = rightVal;
+							newVal = rightRaw;
+						} else if (OP === "+=") {
+							const leftRaw = l._fn(c);
+							const leftNum = numericOrNull(leftRaw);
+							const rightNum = numericOrNull(rightRaw);
+							if (leftNum !== null && rightNum !== null)
+								newVal = leftNum + rightNum;
+							else
+								// biome-ignore lint/suspicious/noExplicitAny: fallback to native addition semantics
+								newVal = (leftRaw as any) + (rightRaw as any);
 						} else {
-							const leftVal = l._fn(c) as number;
-							if (OP === "+=") newVal = leftVal + rightVal;
-							else if (OP === "-=") newVal = leftVal - rightVal;
-							else if (OP === "*=") newVal = leftVal * rightVal;
-							else if (OP === "/=") newVal = leftVal / rightVal;
-							else if (OP === "%=") newVal = leftVal % rightVal;
+							const leftNum = coerceNumber(l._fn(c));
+							const rightNum = coerceNumber(rightRaw);
+							if (OP === "-=") newVal = leftNum - rightNum;
+							else if (OP === "*=") newVal = leftNum * rightNum;
+							else if (OP === "/=") newVal = leftNum / rightNum;
+							else if (OP === "%=") newVal = leftNum % rightNum;
 						}
 						l._syncRef?.(c, newVal);
 						return newVal;
@@ -321,6 +360,7 @@ const parse = (raw: string): ParsedExpression => {
 	
 	// Check for postfix/prefix increment/decrement: ++, --
 	if ((expr.endsWith("++") || expr.endsWith("--")) && expr.length > 2) {
+		assertAssignmentsAllowed(expr);
 		const op = expr.slice(-2);
 		const operandExpr = expr.slice(0, -2).trim();
 		if (operandExpr && !operandExpr.match(/[+\-*/%=!<>&|]$/)) {
@@ -328,16 +368,18 @@ const parse = (raw: string): ParsedExpression => {
 			if (operand._syncRef) {
 				return {
 					_fn: (c) => {
-						const oldVal = operand._fn(c) as number;
-						const newVal = op === "++" ? oldVal + 1 : oldVal - 1;
+						const oldVal = operand._fn(c);
+						const baseVal = coerceNumber(oldVal);
+						const newVal = op === "++" ? baseVal + 1 : baseVal - 1;
 						operand._syncRef?.(c, newVal);
-						return oldVal; // Postfix returns old value
+						return baseVal; // Postfix returns old value
 					},
 				};
 			}
 		}
 	}
 	if ((expr.startsWith("++") || expr.startsWith("--")) && expr.length > 2) {
+		assertAssignmentsAllowed(expr);
 		const op = expr.slice(0, 2);
 		const operandExpr = expr.slice(2).trim();
 		if (operandExpr) {
@@ -345,8 +387,9 @@ const parse = (raw: string): ParsedExpression => {
 			if (operand._syncRef) {
 				return {
 					_fn: (c) => {
-						const oldVal = operand._fn(c) as number;
-						const newVal = op === "++" ? oldVal + 1 : oldVal - 1;
+						const oldVal = operand._fn(c);
+						const baseVal = coerceNumber(oldVal);
+						const newVal = op === "++" ? baseVal + 1 : baseVal - 1;
 						operand._syncRef?.(c, newVal);
 						return newVal; // Prefix returns new value
 					},
@@ -472,19 +515,23 @@ const parse = (raw: string): ParsedExpression => {
 					const ctx = (c || {}) as Record<string, unknown>;
 					const injected = ctx.state as Record<string, unknown> | undefined;
 					let rootHolder: Record<string, unknown> | undefined;
-					// Handle $state reserved identifier
-					if (chain._base === "$state") rootHolder = injected;
-					else if (chain._base === "$element") return; // Can't assign to $element
+					const baseIsState = chain._base === "$state";
+					const baseIsElement = chain._base === "$element";
+					if (baseIsState) rootHolder = injected;
+					else if (baseIsElement) return; // Can't assign to $element
 					else if (injected && chain._base in injected) rootHolder = injected;
 					else if (ctx && chain._base in ctx) rootHolder = ctx;
 					else return;
-					if (isForbidden(chain._base)) return;
+					if (!rootHolder || isForbidden(chain._base)) return;
 					if (chain._segs.length === 0) {
+						if (baseIsState) return; // don't allow reassigning $state root
 						(rootHolder as Record<string, unknown>)[chain._base] =
 							value as unknown;
 						return;
 					}
-					let obj: unknown = (rootHolder as Record<string, unknown>)[
+					let obj: unknown;
+					if (baseIsState) obj = rootHolder;
+					else obj = (rootHolder as Record<string, unknown>)[
 						chain._base as never
 					];
 					for (let i = 0; i < chain._segs.length - 1; i++) {
@@ -515,11 +562,22 @@ const parse = (raw: string): ParsedExpression => {
 	}
 	return { _fn: () => expr };
 };
+type EvaluateContext = {
+	isStyleValue?: boolean;
+	allowAssignments?: boolean;
+};
+const makeCacheKey = (expr: string, context?: EvaluateContext) => {
+	const style = context?.isStyleValue ? "1" : "0";
+	const assign = context?.allowAssignments ? "1" : "0";
+	return `${assign}${style}|${expr}`;
+};
+
 const evaluateExpression = (
 	expr: string,
-	context?: { isStyleValue?: boolean },
+	context?: EvaluateContext,
 ): ParsedExpression => {
-	const cached = CACHE.get(expr);
+	const cacheKey = makeCacheKey(expr, context);
+	const cached = CACHE.get(cacheKey);
 	if (cached) return cached;
 
 	// Special handling for CSS-style identifiers in style contexts
@@ -527,12 +585,15 @@ const evaluateExpression = (
 		// If it looks like a CSS identifier (letters, numbers, hyphens only)
 		// and we're in a style context, treat as literal string
 		const literalResult = { _fn: () => expr };
-		CACHE.set(expr, literalResult);
+		CACHE.set(cacheKey, literalResult);
 		return literalResult;
 	}
 
-	const parsed = parse(expr);
-	CACHE.set(expr, parsed);
+	const parsed = withParseOptions(
+		{ allowAssignments: !!context?.allowAssignments },
+		() => parse(expr),
+	);
+	CACHE.set(cacheKey, parsed);
 	// Remove multiple entries when limit hit
 	if (CACHE.size > CACHE_MAX) {
 		const entries = Array.from(CACHE.keys());

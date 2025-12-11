@@ -145,17 +145,31 @@ describe("Expression Parser", () => {
 			const user = rootState.user as Record<string, unknown> | undefined;
 			expect(user?.missing).toBeUndefined();
 		});
-		test("parentheses cannot enable assignment", () => {
-			// Without assignment support, treated as plain string fallback (no assignment performed)
-			const r = run("(count = 10)");
-			expect(r).toBe("count = 10");
-			expect(rootState.count).toBe(1); // unchanged
+		test("assignment parsing throws when not allowed", () => {
+			expect(() => evaluateExpression("count = 10")).toThrow(
+				/Assignments are only supported inside event handlers/,
+			);
+			expect(() => evaluateExpression("count++")).toThrow(
+				/Assignments are only supported inside event handlers/,
+			);
 		});
-		test("bare assignment without wrapper is not executed", () => {
-			initState({ count: 7 });
-			const res = run("count = 9"); // no assignment executed
-			expect(res).toBe("count = 9");
-			expect(rootState.count).toBe(7);
+		test("assignments run when explicitly enabled", () => {
+			const parsed = evaluateExpression("count = 9", {
+				allowAssignments: true,
+			});
+			parsed._fn({ state: rootState });
+			expect(rootState.count).toBe(9);
+		});
+		test("compound assignments and increments work when enabled", () => {
+			const plusEq = evaluateExpression("count += 2", {
+				allowAssignments: true,
+			});
+			plusEq._fn({ state: rootState });
+			expect(rootState.count).toBe(3);
+			const inc = evaluateExpression("++count", { allowAssignments: true });
+			const result = inc._fn({ state: rootState });
+			expect(result).toBe(4);
+			expect(rootState.count).toBe(4);
 		});
 	});
 	describe("Function Calls", () => {

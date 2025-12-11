@@ -84,17 +84,23 @@ const handleConditional = (
 	});
 
 // Common context creation helper
-const makeContext = (state: Record<string, unknown>, el: Registerable) => ({
-	state,
-	element: el,
-	mfDelete,
-	mfGet,
-	mfHead,
-	mfOptions,
-	mfPatch,
-	mfPost,
-	mfPut,
-});
+const makeContext = (state: Record<string, unknown>, el: Registerable) => {
+	const ctx = {
+		state,
+		element: el,
+		$element: el,
+		$state: state,
+		mfDelete,
+		mfGet,
+		mfHead,
+		mfOptions,
+		mfPatch,
+		mfPost,
+		mfPut,
+		__mf_state: state,
+	};
+	return ctx;
+};
 
 const throwError = (msg: string, cause: unknown, unsupported = false) => {
 	let hint = "";
@@ -334,7 +340,11 @@ export default class RegEl {
 			// Determine if this is a style value for better expression parsing
 			const isStyleValue = attrName.startsWith("style:");
 
-			const { _fn, _syncRef } = evaluateExpression(exp, { isStyleValue });
+			const allowAssignments = attrName.startsWith("on");
+			const { _fn, _syncRef } = evaluateExpression(exp, {
+				isStyleValue,
+				allowAssignments,
+			});
 			const isTemplateRoot = templLogicAttrSet.has(
 				attrName as "if" | "each" | "await",
 			);
@@ -389,7 +399,9 @@ export default class RegEl {
 							.filter(Boolean),
 						arrow[2],
 					];
-					const bodyParsed = evaluateExpression(bodyExpr);
+					const bodyParsed = evaluateExpression(bodyExpr, {
+						allowAssignments: true,
+					});
 					handler = (e: Event) => {
 						const ctx = {
 							...makeContext(this._state, el),
