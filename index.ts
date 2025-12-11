@@ -1,10 +1,18 @@
-import { State } from "./dist/manifold.js";
+import { State, useComponent } from "./dist/manifold.js";
+
+// Load components
+await useComponent("./demo-counter.mf.html");
+await useComponent("./demo-input.mf.html");
 
 const myState = State.create()
 	.add("count", 0)
 	.add("popup", (e: unknown) => console.log(e))
 	.add("nextFail", false)
 	.add("currentUserPromise", null as Promise<unknown> | null)
+	// Component demo state
+	.add("sharedCount", 0)
+	.add("userName", "")
+	.add("userEmail", "")
 	.add("someArray", [
 		{ name: "Jake", age: 37 },
 		{ name: "Mary", age: 37 },

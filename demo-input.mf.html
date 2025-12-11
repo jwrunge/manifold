@@ -1,0 +1,81 @@
+<script type="module">
+    import { State } from "./dist/manifold.js";
+
+    export default State.component("#demo-input")
+        .add({
+            label: "Input",
+            placeholder: "",
+            type: "text",
+            value: "",
+        })
+        .derive("isEmpty", (state) => state.value.length === 0)
+        .derive("charCount", (state) => state.value.length);
+</script>
+
+<template id="demo-input">
+    <div class="input-widget">
+        <label class="input-label">
+            <span class="label-text">${label}</span>
+            <span class="char-count" :if="!isEmpty">${charCount} chars</span>
+        </label>
+        <input 
+            class="input-field"
+            :type="type" 
+            :placeholder="placeholder"
+            :sync:value="value" 
+        />
+        <div class="input-hint" :if="!isEmpty">
+            You entered: <strong>${value}</strong>
+        </div>
+    </div>
+</template>
+
+<style>
+    .input-widget {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin: 1rem 0;
+    }
+
+    .input-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .char-count {
+        font-size: 0.75rem;
+        color: #666;
+        font-weight: normal;
+    }
+
+    .input-field {
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+    }
+
+    .input-field:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .input-hint {
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        color: #666;
+    }
+
+    .input-hint strong {
+        color: #667eea;
+    }
+</style>

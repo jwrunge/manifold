@@ -349,30 +349,74 @@ export async function useComponent(
 
 	try {
 		// Fetch component HTML
-		const response = await fetch(url);
+		// Add ?raw to bypass Vite's HTML transform in dev mode
+		const fetchUrl = url.includes("?") ? url : `${url}?raw`;
+		const response = await fetch(fetchUrl);
 		if (!response.ok) {
 			throw new Error(`Failed to fetch component: ${response.statusText}`);
 		}
 		const html = await response.text();
 
-		// Parse HTML
-		const parser = new DOMParser();
-		const doc = parser.parseFromString(html, "text/html");
+		console.log(`Raw HTML from ${url}:`, html.substring(0, 500));
 
-		// Extract template
-		const template = doc.querySelector("template");
-		if (!template) {
+		// Extract template using regex (more reliable than DOMParser for <template>)
+		const templateMatch = html.match(/<template[^>]*>([\s\S]*?)<\/template>/i);
+		if (!templateMatch) {
 			throw new Error(`Component ${url} missing <template> element`);
 		}
 
-		// Extract script and execute to get builder
-		const script = doc.querySelector('script[type="module"]');
-		if (!script || !script.textContent) {
+		// Create template element
+		const template = document.createElement("template");
+		template.innerHTML = templateMatch[1];
+
+		// Extract template id if present
+		const templateIdMatch = html.match(/<template[^>]*id=["']([^"']+)["']/i);
+		const templateId = templateIdMatch?.[1];
+
+		// Temporarily inject template into document so State.component() can find it
+		if (templateId) {
+			const existingTemplate = document.getElementById(templateId);
+			if (!existingTemplate) {
+				template.id = templateId;
+				document.head.appendChild(template);
+			}
+		}
+
+		// Extract script content using regex (DOMParser may strip scripts)
+		const scriptMatch = html.match(
+			/<script[^>]*type=["']module["'][^>]*>([\s\S]*?)<\/script>/i,
+		);
+		if (!scriptMatch) {
 			throw new Error(`Component ${url} missing <script type="module">`);
 		}
 
+		// Resolve relative imports in the script
+		// Convert relative imports to be relative to the component file location
+		const componentBaseUrl = new URL(url, window.location.href);
+		const componentDir = componentBaseUrl.href.substring(
+			0,
+			componentBaseUrl.href.lastIndexOf("/") + 1,
+		);
+
+		let scriptContent = scriptMatch[1];
+		// Replace relative imports with absolute URLs
+		scriptContent = scriptContent.replace(
+			/from\s+['"](\.[^'"]+)['"]/g,
+			(_match, path: string) => {
+				const absoluteUrl = new URL(path, componentDir).href;
+				return `from '${absoluteUrl}'`;
+			},
+		);
+
+		// Add debug logging before executing script
+		console.log(`Loading component: ${url}`);
+		console.log(`Template ID: ${templateId}`);
+		console.log(
+			`Template in document: ${templateId ? document.getElementById(templateId) !== null : "N/A"}`,
+		);
+		console.log("Script content:", scriptContent.substring(0, 200));
+
 		// Create a module blob to execute the script
-		const scriptContent = script.textContent;
 		const blob = new Blob([scriptContent], { type: "text/javascript" });
 		const moduleUrl = URL.createObjectURL(blob);
 
@@ -380,16 +424,38 @@ export async function useComponent(
 			const module = await import(moduleUrl);
 			URL.revokeObjectURL(moduleUrl);
 
+			// Clean up temporary template from document
+			if (templateId) {
+				const tempTemplate = document.getElementById(templateId);
+				if (tempTemplate && tempTemplate === template) {
+					tempTemplate.remove();
+				}
+			}
+
 			const builder = module.default || module.componentState;
-			if (!builder || !(builder instanceof ComponentStateBuilder)) {
+			// Check for ComponentStateBuilder methods instead of instanceof
+			// (instanceof fails due to module identity differences)
+			if (
+				!builder ||
+				typeof builder !== "object" ||
+				typeof builder.instance !== "function" ||
+				typeof builder.add !== "function"
+			) {
+				console.error("Module exports:", module);
+				console.error("Builder:", builder);
+				console.error("Builder type:", typeof builder);
+				if (builder) {
+					console.error("Builder methods:", Object.keys(builder));
+				}
 				throw new Error(
-					`Component ${url} must export a ComponentStateBuilder as 'default' or 'componentState'`,
+					`Component ${url} must export a ComponentStateBuilder as 'default' or 'componentState'. Got: ${typeof builder}`,
 				);
 			}
 
-			// Extract styles
-			const styles = Array.from(doc.querySelectorAll("style"))
-				.map((s) => s.textContent)
+			// Extract styles using regex
+			const styleMatches = html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi);
+			const styles = Array.from(styleMatches)
+				.map((match) => match[1])
 				.join("\n");
 
 			// Derive tag name from filename if not provided
@@ -407,7 +473,11 @@ export async function useComponent(
 			}
 
 			// Create custom element class
-			const elementClass = createComponentClass(builder, styles);
+			// Cast builder since it's structurally compatible but from different module
+			const elementClass = createComponentClass(
+				builder as ComponentStateBuilder<IntermediateState>,
+				styles,
+			);
 
 			// Store in registry
 			componentRegistry.set(url, {
@@ -423,6 +493,13 @@ export async function useComponent(
 			}
 		} catch (err) {
 			URL.revokeObjectURL(moduleUrl);
+			// Clean up temporary template on error
+			if (templateId) {
+				const tempTemplate = document.getElementById(templateId);
+				if (tempTemplate && tempTemplate === template) {
+					tempTemplate.remove();
+				}
+			}
 			throw err;
 		}
 	} catch (err) {

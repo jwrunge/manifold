@@ -546,3 +546,209 @@ interface RequestInit {
 -   **`:class:name`**, **`:style:property`** - Conditional classes/styles
 -   **`:sync:property`** - Two-way data binding
 -   **`:transition`** - Animation class for View Transitions
+
+## Component System
+
+Manifold supports reusable components with two flexible approaches: **HTML-first** (`.mf.html` files) and **TypeScript-first** (defined in code).
+
+### HTML-First Components
+
+Create components in `.mf.html` files with three sections: script, template, and styles.
+
+**Example: `my-input.mf.html`**
+
+```html
+<script type="module">
+    import { State } from "./dist/manifold.js";
+
+    export default State.component("#my-input")
+        .add({
+            type: "text",
+            value: "",
+            label: "Enter text"
+        })
+        .derive("isEmpty", (state) => state.value.length === 0);
+</script>
+
+<template id="my-input">
+    <label>
+        <span>${label}</span>
+        <input :type="type" :sync:value="value" />
+    </label>
+    <p :if="!isEmpty">You entered: ${value}</p>
+</template>
+
+<style>
+    label {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 1rem;
+    }
+    
+    input {
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+</style>
+```
+
+**Loading and Using:**
+
+```html
+<script type="module">
+    import { State, useComponent } from "./dist/manifold.js";
+
+    // Load the component
+    await useComponent("./my-input.mf.html");
+
+    // Create parent state
+    const state = State.create("App")
+        .add({ userEmail: "" })
+        .build();
+</script>
+
+<!-- Use the component -->
+<my-input 
+    label="Email Address" 
+    type="email" 
+    :sync:value="userEmail">
+</my-input>
+<p>Your email: ${userEmail}</p>
+```
+
+### TypeScript-First Components
+
+Define components directly in code with full type safety.
+
+```typescript
+import { State, html, css } from "./dist/manifold.js";
+
+const MyCounter = State.component({
+    name: "my-counter",
+    template: html`
+        <div class="counter">
+            <button @click="count--">−</button>
+            <span>\${count}</span>
+            <button @click="count++">+</button>
+        </div>
+    `,
+    styles: css`
+        .counter {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        button {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+    `,
+    state: { count: 0 }
+});
+
+// Register the component
+MyCounter.register();
+```
+
+### Component Props
+
+**Static Props** - Pass string values directly:
+```html
+<my-input type="email" label="Email"></my-input>
+```
+
+**Reactive Props** - Use `:` prefix for values that update with parent state:
+```html
+<my-input :type="inputType" :label="emailLabel"></my-input>
+```
+
+**Two-Way Binding** - Use `:sync:` to sync state between parent and component:
+```html
+<my-input :sync:value="userEmail"></my-input>
+<!-- Parent automatically knows about changes to userEmail -->
+```
+
+### Component Isolation
+
+Each component instance has isolated state by default:
+
+```html
+<!-- Three separate counters, each maintains its own state -->
+<my-counter></my-counter>
+<my-counter></my-counter>
+<my-counter></my-counter>
+```
+
+Share state between components using `:sync:`:
+
+```html
+<!-- All counters share the same count value -->
+<my-counter :sync:count="sharedCount"></my-counter>
+<my-counter :sync:count="sharedCount"></my-counter>
+<p>Shared value: ${sharedCount}</p>
+```
+
+### Builder Pattern
+
+Components support chaining with `.add()` and `.derive()`:
+
+```javascript
+const EnhancedCounter = State.component({
+    name: "enhanced-counter",
+    template: html`
+        <div>\${count} × 2 = \${doubled}</div>
+        <button @click="count++">+</button>
+    `,
+    state: { count: 0 }
+})
+    .derive("doubled", (state) => state.count * 2)
+    .derive("tripled", (state) => state.count * 3);
+
+EnhancedCounter.register();
+```
+
+### Component API
+
+```typescript
+// HTML-first: create from template selector
+State.component(selector: string)
+    .add(key, value)
+    .derive(key, fn)
+
+// TS-first: create from config
+State.component({
+    name: string,        // Custom element tag name
+    template: string,    // HTML template
+    styles?: string,     // CSS styles
+    state?: object      // Initial state
+})
+    .add(key, value)
+    .derive(key, fn)
+    .register(tagName?)
+
+// Load HTML-first components
+useComponent(url: string, options?: {
+    tagName?: string
+})
+
+// Template helpers for syntax highlighting
+html`<div>...</div>`
+css`.class { ... }`
+```
+
+### When to Use Each Approach
+
+**HTML-First (`.mf.html`):**
+- Rapid prototyping
+- Designer-developer collaboration
+- Content-heavy components
+- Clear separation of concerns
+
+**TypeScript-First:**
+- Complex business logic
+- Type-safe components
+- Reusable utility components
+- Integration with TypeScript codebases
+
+See [COMPONENTS.md](COMPONENTS.md) for complete documentation and migration examples.
