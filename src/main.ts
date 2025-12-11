@@ -1,3 +1,4 @@
+import { ComponentStateBuilder } from "./dom/component.ts";
 import { fetchWithMethodFactory } from "./dom/fetch.ts";
 import RegEl from "./dom/registry.ts";
 import { Effect } from "./reactivity/effect.ts";
@@ -101,8 +102,71 @@ export class State<TState extends IntermediateState> {
 
 		return state as TState;
 	}
+
+	/**
+	 * Create a component (HTML-first: pass selector, TS/JS-first: pass config)
+	 */
+	static component<S extends IntermediateState = Record<string, never>>(
+		selector: string,
+	): ComponentStateBuilder<S>;
+	static component<S extends IntermediateState>(config: {
+		name: string;
+		template: string;
+		styles?: string;
+		state?: S;
+	}): ComponentStateBuilder<S>;
+	static component<S extends IntermediateState>(
+		selectorOrConfig:
+			| string
+			| {
+					name: string;
+					template: string;
+					styles?: string;
+					state?: S;
+			  },
+	): ComponentStateBuilder<S> {
+		if (typeof selectorOrConfig === "string") {
+			// HTML-first approach: find template by selector
+			if (typeof document === "undefined") {
+				throw new Error("component() with selector requires DOM");
+			}
+			const template =
+				document.querySelector<HTMLTemplateElement>(selectorOrConfig);
+			if (!template || template.tagName !== "TEMPLATE") {
+				throw new Error(
+					`No <template> found with selector: ${selectorOrConfig}`,
+				);
+			}
+			return new ComponentStateBuilder<S>(template);
+		}
+
+		// TS/JS-first approach: use config object
+		const { name, template: templateStr, styles, state } = selectorOrConfig;
+		const templateFn = () => templateStr;
+		const builder = new ComponentStateBuilder<S>(templateFn, name);
+
+		if (styles) {
+			builder._setStyles(styles);
+		}
+
+		if (name) {
+			builder._setTagName(name);
+		}
+
+		if (state) {
+			return builder.add(state);
+		}
+
+		return builder;
+	}
 }
 
+export {
+	ComponentStateBuilder,
+	css,
+	html,
+	useComponent
+} from "./dom/component.ts";
 export { effect } from "./reactivity/effect.ts";
 
 export const [mfGet, mfPost, mfPut, mfDelete, mfPatch, mfHead, mfOptions] = (

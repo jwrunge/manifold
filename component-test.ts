@@ -1,14 +1,8 @@
-<script type="module">
-    import { State } from "./dist/manifold.js";
+import { mfGet, State } from "./dist/manifold.js";
 
-    export default State.component("#my-input")
-        .add({
-            type: "text",
-            inputValue: "",
-        });
-</script>
-
-<template id="my-input">
+State.component(
+	() => `
+<template id="My-Input">
     <label>
         <span>Enter text:</span>
         <input :type="type" :sync:value="inputValue" />
@@ -43,3 +37,14 @@
         color: #555;
     }
 </style>
+`,
+	{
+		type: "text",
+		inputValue: "",
+	},
+);
+
+State.component(await mfGet("./component.mf.html", undefined, {from: "#template-id"}), {
+	type: "text",
+	inputValue: "",
+});
