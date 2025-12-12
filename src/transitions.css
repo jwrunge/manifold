@@ -10,15 +10,10 @@
 
 /* ============================================================================
    CROSS-DOCUMENT VIEW TRANSITIONS (Multi-page)
-   Enable smooth transitions between page navigations
    ============================================================================ */
 @view-transition {
 	navigation: auto;
 }
-
-/* ============================================================================
-   FADE TRANSITIONS
-   ============================================================================ */
 
 :root {
 	--trans-normal: 500ms;
@@ -26,436 +21,293 @@
 	--trans-slow: 1000ms;
 }
 
-@keyframes fade-in {
-	from {
+/* Default timing for all transitions */
+::view-transition-old(*),
+::view-transition-new(*) {
+	animation-duration: var(--trans-normal);
+	animation-timing-function: ease;
+}
+
+/* ============================================================================
+   KEYFRAMES (single direction, reversed for exit)
+   ============================================================================ */
+@keyframes fade {
+	0% {
 		opacity: 0;
 	}
-	to {
+	100% {
 		opacity: 1;
 	}
 }
-
-@keyframes fade-out {
-	from {
-		opacity: 1;
-	}
-	to {
+@keyframes fly-left {
+	0% {
 		opacity: 0;
+		transform: translateX(-30px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+@keyframes fly-right {
+	0% {
+		opacity: 0;
+		transform: translateX(30px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+@keyframes fly-up {
+	0% {
+		opacity: 0;
+		transform: translateY(-30px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+@keyframes fly-down {
+	0% {
+		opacity: 0;
+		transform: translateY(30px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+@keyframes scale {
+	0% {
+		opacity: 0;
+		transform: scale(0.8);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+@keyframes shrink {
+	0% {
+		opacity: 0;
+		transform: scale(0.7);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+@keyframes grow {
+	0% {
+		opacity: 0;
+		transform: scale(1.5);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+@keyframes slide {
+	0% {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
 	}
 }
 
-::view-transition-old(*.fade) {
-	animation: fade-out var(--trans-normal) ease both;
-}
-
-::view-transition-new(*.fade) {
-	animation: fade-in var(--trans-normal) ease;
-}
-
-::view-transition-old(*.fade-fast) {
-	animation: fade-out var(--trans-fast) ease both;
-}
-
-::view-transition-new(*.fade-fast) {
-	animation: fade-in var(--trans-fast) ease;
-}
-
-::view-transition-old(*.fade-slow) {
-	animation: fade-out var(--trans-slow) ease both;
-}
-
+/* ============================================================================
+   FADE
+   ============================================================================ */
+::view-transition-new(*.fade),
+::view-transition-new(*.fade-fast),
 ::view-transition-new(*.fade-slow) {
-	animation: fade-in var(--trans-slow) ease;
+	animation-name: fade;
+}
+::view-transition-old(*.fade),
+::view-transition-old(*.fade-fast),
+::view-transition-old(*.fade-slow) {
+	animation-name: fade;
+	animation-direction: reverse;
+	animation-fill-mode: both;
+}
+::view-transition-old(*.fade-fast),
+::view-transition-new(*.fade-fast) {
+	animation-duration: var(--trans-fast);
+}
+::view-transition-old(*.fade-slow),
+::view-transition-new(*.fade-slow) {
+	animation-duration: var(--trans-slow);
 }
 
 /* ============================================================================
-   FLY TRANSITIONS
+   FLY
    ============================================================================ */
-
-@keyframes fly-left-in {
-	from {
-		opacity: 0;
-		transform: translateX(-30px);
-	}
-	to {
-		opacity: 1;
-		transform: translateX(0);
-	}
-}
-
-@keyframes fly-left-out {
-	from {
-		opacity: 1;
-		transform: translateX(0);
-	}
-	to {
-		opacity: 0;
-		transform: translateX(-30px);
-	}
-}
-
-@keyframes fly-right-in {
-	from {
-		opacity: 0;
-		transform: translateX(30px);
-	}
-	to {
-		opacity: 1;
-		transform: translateX(0);
-	}
-}
-
-@keyframes fly-right-out {
-	from {
-		opacity: 1;
-		transform: translateX(0);
-	}
-	to {
-		opacity: 0;
-		transform: translateX(30px);
-	}
-}
-
-@keyframes fly-up-in {
-	from {
-		opacity: 0;
-		transform: translateY(-30px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
-@keyframes fly-up-out {
-	from {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	to {
-		opacity: 0;
-		transform: translateY(-30px);
-	}
-}
-
-@keyframes fly-down-in {
-	from {
-		opacity: 0;
-		transform: translateY(30px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
-@keyframes fly-down-out {
-	from {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	to {
-		opacity: 0;
-		transform: translateY(30px);
-	}
-}
-
-/* Fly Left */
-::view-transition-old(*.fly-left) {
-	animation: fly-left-out var(--trans-normal) ease both;
-}
-
-::view-transition-new(*.fly-left) {
-	animation: fly-left-in var(--trans-normal) ease;
-}
-
-::view-transition-old(*.fly-left-fast) {
-	animation: fly-left-out var(--trans-fast) ease both;
-}
-
-::view-transition-new(*.fly-left-fast) {
-	animation: fly-left-in var(--trans-fast) ease;
-}
-
-::view-transition-old(*.fly-left-slow) {
-	animation: fly-left-out var(--trans-slow) ease both;
-}
-
+::view-transition-new(*.fly-left),
+::view-transition-new(*.fly-left-fast),
 ::view-transition-new(*.fly-left-slow) {
-	animation: fly-left-in var(--trans-slow) ease;
+	animation-name: fly-left;
 }
-
-/* Fly Right */
-::view-transition-old(*.fly-right) {
-	animation: fly-right-out var(--trans-normal) ease both;
+::view-transition-old(*.fly-left),
+::view-transition-old(*.fly-left-fast),
+::view-transition-old(*.fly-left-slow) {
+	animation-name: fly-left;
+	animation-direction: reverse;
+	animation-fill-mode: both;
 }
-
-::view-transition-new(*.fly-right) {
-	animation: fly-right-in var(--trans-normal) ease;
-}
-
-::view-transition-old(*.fly-right-fast) {
-	animation: fly-right-out var(--trans-fast) ease both;
-}
-
-::view-transition-new(*.fly-right-fast) {
-	animation: fly-right-in var(--trans-fast) ease;
-}
-
-::view-transition-old(*.fly-right-slow) {
-	animation: fly-right-out var(--trans-slow) ease both;
-}
-
+::view-transition-new(*.fly-right),
+::view-transition-new(*.fly-right-fast),
 ::view-transition-new(*.fly-right-slow) {
-	animation: fly-right-in var(--trans-slow) ease;
+	animation-name: fly-right;
 }
-
-/* Fly Up */
-::view-transition-old(*.fly-up) {
-	animation: fly-up-out var(--trans-normal) ease both;
+::view-transition-old(*.fly-right),
+::view-transition-old(*.fly-right-fast),
+::view-transition-old(*.fly-right-slow) {
+	animation-name: fly-right;
+	animation-direction: reverse;
+	animation-fill-mode: both;
 }
-
-::view-transition-new(*.fly-up) {
-	animation: fly-up-in var(--trans-normal) ease;
-}
-
-::view-transition-old(*.fly-up-fast) {
-	animation: fly-up-out var(--trans-fast) ease both;
-}
-
-::view-transition-new(*.fly-up-fast) {
-	animation: fly-up-in var(--trans-fast) ease;
-}
-
-::view-transition-old(*.fly-up-slow) {
-	animation: fly-up-out var(--trans-slow) ease both;
-}
-
+::view-transition-new(*.fly-up),
+::view-transition-new(*.fly-up-fast),
 ::view-transition-new(*.fly-up-slow) {
-	animation: fly-up-in var(--trans-slow) ease;
+	animation-name: fly-up;
 }
-
-/* Fly Down */
-::view-transition-old(*.fly-down) {
-	animation: fly-down-out var(--trans-normal) ease both;
+::view-transition-old(*.fly-up),
+::view-transition-old(*.fly-up-fast),
+::view-transition-old(*.fly-up-slow) {
+	animation-name: fly-up;
+	animation-direction: reverse;
+	animation-fill-mode: both;
 }
-
-::view-transition-new(*.fly-down) {
-	animation: fly-down-in var(--trans-normal) ease;
-}
-
-::view-transition-old(*.fly-down-fast) {
-	animation: fly-down-out var(--trans-fast) ease both;
-}
-
-::view-transition-new(*.fly-down-fast) {
-	animation: fly-down-in var(--trans-fast) ease;
-}
-
-::view-transition-old(*.fly-down-slow) {
-	animation: fly-down-out var(--trans-slow) ease both;
-}
-
+::view-transition-new(*.fly-down),
+::view-transition-new(*.fly-down-fast),
 ::view-transition-new(*.fly-down-slow) {
-	animation: fly-down-in var(--trans-slow) ease;
+	animation-name: fly-down;
+}
+::view-transition-old(*.fly-down),
+::view-transition-old(*.fly-down-fast),
+::view-transition-old(*.fly-down-slow) {
+	animation-name: fly-down;
+	animation-direction: reverse;
+	animation-fill-mode: both;
+}
+::view-transition-old(*.fly-left-fast),
+::view-transition-new(*.fly-left-fast),
+::view-transition-old(*.fly-right-fast),
+::view-transition-new(*.fly-right-fast),
+::view-transition-old(*.fly-up-fast),
+::view-transition-new(*.fly-up-fast),
+::view-transition-old(*.fly-down-fast),
+::view-transition-new(*.fly-down-fast) {
+	animation-duration: var(--trans-fast);
+}
+::view-transition-old(*.fly-left-slow),
+::view-transition-new(*.fly-left-slow),
+::view-transition-old(*.fly-right-slow),
+::view-transition-new(*.fly-right-slow),
+::view-transition-old(*.fly-up-slow),
+::view-transition-new(*.fly-up-slow),
+::view-transition-old(*.fly-down-slow),
+::view-transition-new(*.fly-down-slow) {
+	animation-duration: var(--trans-slow);
 }
 
 /* ============================================================================
-   SCALE TRANSITIONS
+   SCALE
    ============================================================================ */
-
-@keyframes scale-in {
-	from {
-		opacity: 0;
-		transform: scale(0.95);
-	}
-	to {
-		opacity: 1;
-		transform: scale(1);
-	}
-}
-
-@keyframes scale-out {
-	from {
-		opacity: 1;
-		transform: scale(1);
-	}
-	to {
-		opacity: 0;
-		transform: scale(0.95);
-	}
-}
-
-::view-transition-old(*.scale) {
-	animation: scale-out var(--trans-normal) ease both;
-}
-
-::view-transition-new(*.scale) {
-	animation: scale-in var(--trans-normal) ease;
-}
-
-::view-transition-old(*.scale-fast) {
-	animation: scale-out var(--trans-fast) ease both;
-}
-
-::view-transition-new(*.scale-fast) {
-	animation: scale-in var(--trans-fast) ease;
-}
-
-::view-transition-old(*.scale-slow) {
-	animation: scale-out var(--trans-slow) ease both;
-}
-
+::view-transition-new(*.scale),
+::view-transition-new(*.scale-fast),
 ::view-transition-new(*.scale-slow) {
-	animation: scale-in var(--trans-slow) ease;
+	animation-name: scale;
+}
+::view-transition-old(*.scale),
+::view-transition-old(*.scale-fast),
+::view-transition-old(*.scale-slow) {
+	animation-name: scale;
+	animation-direction: reverse;
+	animation-fill-mode: both;
+}
+::view-transition-old(*.scale-fast),
+::view-transition-new(*.scale-fast) {
+	animation-duration: var(--trans-fast);
+}
+::view-transition-old(*.scale-slow),
+::view-transition-new(*.scale-slow) {
+	animation-duration: var(--trans-slow);
 }
 
 /* ============================================================================
-   SHRINK TRANSITIONS
+   SHRINK
    ============================================================================ */
-
-@keyframes shrink-in {
-	from {
-		opacity: 0;
-		transform: scale(1.1);
-	}
-	to {
-		opacity: 1;
-		transform: scale(1);
-	}
-}
-
-@keyframes shrink-out {
-	from {
-		opacity: 1;
-		transform: scale(1);
-	}
-	to {
-		opacity: 0;
-		transform: scale(1.1);
-	}
-}
-
-::view-transition-old(*.shrink) {
-	animation: shrink-out var(--trans-normal) ease both;
-}
-
-::view-transition-new(*.shrink) {
-	animation: shrink-in var(--trans-normal) ease;
-}
-
-::view-transition-old(*.shrink-fast) {
-	animation: shrink-out var(--trans-fast) ease both;
-}
-
-::view-transition-new(*.shrink-fast) {
-	animation: shrink-in var(--trans-fast) ease;
-}
-
-::view-transition-old(*.shrink-slow) {
-	animation: shrink-out var(--trans-slow) ease both;
-}
-
+::view-transition-new(*.shrink),
+::view-transition-new(*.shrink-fast),
 ::view-transition-new(*.shrink-slow) {
-	animation: shrink-in var(--trans-slow) ease;
+	animation-name: shrink;
+}
+::view-transition-old(*.shrink),
+::view-transition-old(*.shrink-fast),
+::view-transition-old(*.shrink-slow) {
+	animation-name: shrink;
+	animation-direction: reverse;
+	animation-fill-mode: both;
+}
+::view-transition-old(*.shrink-fast),
+::view-transition-new(*.shrink-fast) {
+	animation-duration: var(--trans-fast);
+}
+::view-transition-old(*.shrink-slow),
+::view-transition-new(*.shrink-slow) {
+	animation-duration: var(--trans-slow);
 }
 
 /* ============================================================================
-   GROW TRANSITIONS
+   GROW
    ============================================================================ */
-
-@keyframes grow-in {
-	from {
-		opacity: 0;
-		transform: scale(1);
-	}
-	to {
-		opacity: 1;
-		transform: scale(1.5);
-	}
-}
-
-@keyframes grow-out {
-	from {
-		opacity: 1;
-		transform: scale(1.5);
-	}
-	to {
-		opacity: 0;
-		transform: scale(1);
-	}
-}
-
-::view-transition-old(*.grow) {
-	animation: grow-out var(--trans-normal) ease both;
-}
-
-::view-transition-new(*.grow) {
-	animation: grow-in var(--trans-normal) ease;
-}
-
-::view-transition-old(*.grow-fast) {
-	animation: grow-out var(--trans-fast) ease both;
-}
-
-::view-transition-new(*.grow-fast) {
-	animation: grow-in var(--trans-fast) ease;
-}
-
-::view-transition-old(*.grow-slow) {
-	animation: grow-out var(--trans-slow) ease both;
-}
-
+::view-transition-new(*.grow),
+::view-transition-new(*.grow-fast),
 ::view-transition-new(*.grow-slow) {
-	animation: grow-in var(--trans-slow) ease;
+	animation-name: grow;
+}
+::view-transition-old(*.grow),
+::view-transition-old(*.grow-fast),
+::view-transition-old(*.grow-slow) {
+	animation-name: grow;
+	animation-direction: reverse;
+	animation-fill-mode: both;
+}
+::view-transition-old(*.grow-fast),
+::view-transition-new(*.grow-fast) {
+	animation-duration: var(--trans-fast);
+}
+::view-transition-old(*.grow-slow),
+::view-transition-new(*.grow-slow) {
+	animation-duration: var(--trans-slow);
 }
 
 /* ============================================================================
-   SLIDE TRANSITIONS
+   SLIDE
    ============================================================================ */
-
-@keyframes slide-in {
-	from {
-		opacity: 0;
-		transform: translateY(20px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
-@keyframes slide-out {
-	from {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	to {
-		opacity: 0;
-		transform: translateY(20px);
-	}
-}
-
-::view-transition-old(*.slide) {
-	animation: slide-out var(--trans-normal) ease both;
-}
-
-::view-transition-new(*.slide) {
-	animation: slide-in var(--trans-normal) ease;
-}
-
-::view-transition-old(*.slide-fast) {
-	animation: slide-out var(--trans-fast) ease both;
-}
-
-::view-transition-new(*.slide-fast) {
-	animation: slide-in var(--trans-fast) ease;
-}
-
-::view-transition-old(*.slide-slow) {
-	animation: slide-out var(--trans-slow) ease both;
-}
-
+::view-transition-new(*.slide),
+::view-transition-new(*.slide-fast),
 ::view-transition-new(*.slide-slow) {
-	animation: slide-in var(--trans-slow) ease;
+	animation-name: slide;
+}
+::view-transition-old(*.slide),
+::view-transition-old(*.slide-fast),
+::view-transition-old(*.slide-slow) {
+	animation-name: slide;
+	animation-direction: reverse;
+	animation-fill-mode: both;
+}
+::view-transition-old(*.slide-fast),
+::view-transition-new(*.slide-fast) {
+	animation-duration: var(--trans-fast);
+}
+::view-transition-old(*.slide-slow),
+::view-transition-new(*.slide-slow) {
+	animation-duration: var(--trans-slow);
 }

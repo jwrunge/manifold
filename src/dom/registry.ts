@@ -386,7 +386,7 @@ export default class RegEl {
 			if (attrWasRegistered.has(attrName)) continue; // Already processed
 
 			// Parse out expression and optional alias (for :each)
-			const [exp, rootAlias] = splitAs(value);
+			const [exp] = splitAs(value);
 
 			// Determine if this is a style value for better expression parsing
 			const isStyleValue = attrName.startsWith("style:");
@@ -480,7 +480,7 @@ export default class RegEl {
 						this._vtClassOut = prefix || this._vtClassOut;
 					}
 				});
-				this.#cleanups.add(() => ef._cleanup());
+				this.#cleanups.add(() => ef._stop());
 				el.removeAttribute(name);
 				attrWasRegistered.add(attrName);
 				continue;
