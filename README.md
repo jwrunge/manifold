@@ -448,6 +448,16 @@ Add corresponding CSS:
 
 **Important**: Exit transitions (`::view-transition-old`) should use `animation-fill-mode: both` (or `forwards`) to maintain the final keyframe state. Without this, elements can briefly flash back to their original state before cleanup, causing visible flicker.
 
+**Tip**: Use `:transition` with no value to make an element participate in view transitions without a specific animation. This allows it to smoothly interpolate position during layout changes rather than snapping instantly:
+
+```html
+<!-- This element will smoothly move when items above it are added/removed -->
+<div :each="items as item" :transition="fade">${item}</div>
+<div :transition>Total: ${items.length}</div>
+```
+
+Without `:transition`, the total would jump to its new position. With it, the View Transitions API smoothly animates the position change.
+
 ### 9. Server Content Integration
 
 Fetch and dynamically insert remote content with automatic registration:
