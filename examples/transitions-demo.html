@@ -130,27 +130,27 @@
             These boxes use different animations when appearing vs disappearing
         </p>
         <div class="demo-grid">
-            <div class="demo-box" :transition-in="fly-left" :transition-out="fly-right">
+            <div class="demo-box" :transition-in="'fly-left'" :transition-out="'fly-right'">
                 In: Fly Left<br>
                 Out: Fly Right
             </div>
-            <div class="demo-box" :transition-in="grow" :transition-out="shrink">
+            <div class="demo-box" :transition-in="'grow'" :transition-out="'shrink'">
                 In: Grow<br>
                 Out: Shrink
             </div>
-            <div class="demo-box" :transition-in="fade-fast" :transition-out="slide-slow">
+            <div class="demo-box" :transition-in="'fade-fast'" :transition-out="'slide-slow'">
                 In: Fade Fast<br>
                 Out: Slide Slow
             </div>
-            <div class="demo-box" :transition-in="fly-up" :transition-out="fly-down">
+            <div class="demo-box" :transition-in="'fly-up'" :transition-out="'fly-down'">
                 In: Fly Up<br>
                 Out: Fly Down
             </div>
-            <div class="demo-box" :transition-in="scale-fast" :transition-out="fade">
+            <div class="demo-box" :transition-in="'scale-fast'" :transition-out="'fade'">
                 In: Scale Fast<br>
                 Out: Fade
             </div>
-            <div class="demo-box" :transition-in="slide" :transition-out="shrink-fast">
+            <div class="demo-box" :transition-in="'slide'" :transition-out="'shrink-fast'">
                 In: Slide<br>
                 Out: Shrink Fast
             </div>
@@ -165,12 +165,15 @@
         
         <h3>Usage Examples:</h3>
         <pre style="background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto;"><code>&lt;!-- Single transition (same in/out) --&gt;
-&lt;div :transition="fade"&gt;Content&lt;/div&gt;
-&lt;div :transition="fly-left-fast"&gt;Content&lt;/div&gt;
+&lt;div :transition="'fade'"&gt;Content&lt;/div&gt;
+&lt;div :transition="'fly-left-fast'"&gt;Content&lt;/div&gt;
+
+&lt;!-- Use variables from :each --&gt;
+&lt;div :each="transitions as trans" :transition="trans"&gt;Content&lt;/div&gt;
 
 &lt;!-- Separate in/out transitions --&gt;
-&lt;div :transition-in="grow" :transition-out="shrink"&gt;Content&lt;/div&gt;
-&lt;div :transition-in="fly-left-fast" :transition-out="fly-right-slow"&gt;Content&lt;/div&gt;</code></pre>
+&lt;div :transition-in="'grow'" :transition-out="'shrink'"&gt;Content&lt;/div&gt;
+&lt;div :transition-in="'fly-left-fast'" :transition-out="'fly-right-slow'"&gt;Content&lt;/div&gt;</code></pre>
     </div>
 
     <script type="module" src="./transitions-demo.ts"></script>

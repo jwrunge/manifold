@@ -1,12 +1,12 @@
 import {
-	mfDelete,
-	mfGet,
-	mfHead,
-	mfOptions,
-	mfPatch,
-	mfPost,
-	mfPut,
-	State,
+    mfDelete,
+    mfGet,
+    mfHead,
+    mfOptions,
+    mfPatch,
+    mfPost,
+    mfPut,
+    State,
 } from "../main.ts";
 import evaluateExpression from "../parsing/expression-parser.ts";
 import { type Effect, effect } from "../reactivity/effect.ts";
@@ -15,12 +15,12 @@ import { handleAsync } from "./templating/async-handler.ts";
 import { handleEach } from "./templating/each-handler.ts";
 import { findDependentSiblings } from "./templating/sibling-resolver.ts";
 import {
-	dependentLogicAttrSet,
-	prefixes,
-	type Registerable,
-	type Sibling,
-	type templLogicAttr,
-	templLogicAttrSet,
+    dependentLogicAttrSet,
+    prefixes,
+    type Registerable,
+    type Sibling,
+    type templLogicAttr,
+    templLogicAttrSet,
 } from "./templating/types.ts";
 
 // Shared registration logic for both new and existing elements
@@ -56,13 +56,13 @@ const _handleNewElements = (addedNodes: NodeList) => {
 
 import { splitAs } from "../parsing/util.ts";
 import {
-	areViewTransitionsEnabled,
-	ensureViewTransitionName,
-	runViewTransition,
-	scheduleViewTransitionBuffer,
-	type TransitionClassResolver,
-	type TransitionElement,
-	withTransitionStaging,
+    areViewTransitionsEnabled,
+    ensureViewTransitionName,
+    runViewTransition,
+    scheduleViewTransitionBuffer,
+    type TransitionClassResolver,
+    type TransitionElement,
+    withTransitionStaging,
 } from "./transition.ts";
 
 // Inlined conditional handler (was 26 lines in separate file)
@@ -385,24 +385,6 @@ export default class RegEl {
 
 			if (attrWasRegistered.has(attrName)) continue; // Already processed
 
-			// Handle :transition, :transition-in, :transition-out bindings (use raw values, no expression eval)
-			if (attrName === "transition") {
-				const prefix = (value ?? "").trim();
-				ensureViewTransitionName(el as HTMLElement, prefix);
-				this._vtClass = prefix || this._vtClass;
-				continue; // Skip further processing
-			} else if (attrName === "transition-in") {
-				const prefix = (value ?? "").trim();
-				ensureViewTransitionName(el as HTMLElement, prefix);
-				this._vtClassIn = prefix || this._vtClassIn;
-				continue; // Skip further processing
-			} else if (attrName === "transition-out") {
-				const prefix = (value ?? "").trim();
-				ensureViewTransitionName(el as HTMLElement, prefix);
-				this._vtClassOut = prefix || this._vtClassOut;
-				continue; // Skip further processing
-			}
-
 			// Parse out expression and optional alias (for :each)
 			const [exp, rootAlias] = splitAs(value);
 
@@ -484,6 +466,25 @@ export default class RegEl {
 			const [attrPropName, attrProp] = attrName.split(":", 2);
 			if (attrProp && sync)
 				throwError(`Sync on granular bind: ${attrName}`, el, true);
+
+			// Handle transition attributes specially
+			if (attrName === "transition" || attrName === "transition-in" || attrName === "transition-out") {
+				const ef: Effect = effect(() => {
+					const prefix = String(_fn(makeContext(this._state, el)) ?? "").trim();
+					ensureViewTransitionName(el as HTMLElement, prefix);
+					if (attrName === "transition") {
+						this._vtClass = prefix || this._vtClass;
+					} else if (attrName === "transition-in") {
+						this._vtClassIn = prefix || this._vtClassIn;
+					} else if (attrName === "transition-out") {
+						this._vtClassOut = prefix || this._vtClassOut;
+					}
+				});
+				this.#cleanups.add(() => ef._cleanup());
+				el.removeAttribute(name);
+				attrWasRegistered.add(attrName);
+				continue;
+			}
 
 			const apply = (val: unknown) => {
 				if (attrProp) {
