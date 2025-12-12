@@ -13,7 +13,7 @@ const myState = State.create()
 	.add("sharedCount", 0)
 	.add("userName", "")
 	.add("userEmail", "")
-	.add<Array<{name: string, age: number}>>("someArray", [
+	.add<Array<{ name: string; age: number }>>("someArray", [
 		{ name: "Jake", age: 37 },
 		{ name: "Mary", age: 37 },
 		{ name: "Isaac", age: 6 },

@@ -34,7 +34,10 @@ export class State<TState extends IntermediateState> {
 	}
 
 	add<K extends string, V>(obj: Record<K, V>): State<TState & Record<K, V>>;
-	add<V, K extends string = string>(key: K, value: V): State<TState & Record<K, V>>;
+	add<V, K extends string = string>(
+		key: K,
+		value: V,
+	): State<TState & Record<K, V>>;
 	add<K extends string, V>(
 		keyOrObj: K | Record<K, V>,
 		value?: V,
@@ -162,10 +165,10 @@ export class State<TState extends IntermediateState> {
 }
 
 export {
-    ComponentStateBuilder,
-    css,
-    html,
-    useComponent
+	ComponentStateBuilder,
+	css,
+	html,
+	useComponent,
 } from "./dom/component.ts";
 export { effect } from "./reactivity/effect.ts";
 

@@ -22,7 +22,7 @@ const _isEqual = (a: unknown, b: unknown): boolean => {
 		return true;
 	}
 	if (cA === Date) return (a as Date).getTime() === (b as Date).getTime();
-	
+
 	// Handle Set equality
 	if (cA === Set) {
 		const setA = a as Set<unknown>;
@@ -33,7 +33,7 @@ const _isEqual = (a: unknown, b: unknown): boolean => {
 		}
 		return true;
 	}
-	
+
 	// Handle Map equality
 	if (cA === Map) {
 		const mapA = a as Map<unknown, unknown>;

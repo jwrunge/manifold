@@ -267,7 +267,7 @@ export default class RegEl {
 		// Note: :then/:catch create variables via destructuring (like :each),
 		// but they're dependent attributes tied to :await siblings, not roots.
 		// ═══════════════════════════════════════════════════════════════
-		
+
 		// EARLY HANDLE :each to avoid text interpolation on template
 		// :each must be handled first as it treats element as a template
 		for (const a of Array.from(el.attributes)) {
@@ -348,7 +348,7 @@ export default class RegEl {
 		//          3. Other attributes
 		const attributes = Array.from(el.attributes);
 		const templateRootOrder = ["await", "if"] as const;
-		
+
 		// Process template roots in priority order first
 		for (const priorityAttr of templateRootOrder) {
 			for (const a of attributes) {
@@ -357,19 +357,24 @@ export default class RegEl {
 				const attrInfo = getAttrName(name);
 				if (!attrInfo) continue;
 				const { attrName, sync } = attrInfo;
-				
+
 				if (attrName !== priorityAttr) continue;
 				if (attrWasRegistered.has(attrName))
 					throwError(`Attr ${attrName} duplicate`, el);
-					
+
 				const [exp, rootAlias] = splitAs(value);
 				if (sync) throwError(`Sync on template logic: ${attrName}`, el, true);
 				const { _fn } = evaluateExpression(exp);
-				this._handleTemplating(attrName as templLogicAttr, name, _fn, rootAlias);
+				this._handleTemplating(
+					attrName as templLogicAttr,
+					name,
+					_fn,
+					rootAlias,
+				);
 				attrWasRegistered.add(attrName);
 			}
 		}
-		
+
 		// Then process all other attributes
 		for (const a of attributes) {
 			const name = a.name;
@@ -498,7 +503,13 @@ export default class RegEl {
 				} else {
 					// For standard DOM properties, set the property
 					// For custom attributes, set the attribute
-					const isProperty = attrName in el && !(attrName.includes('-') || attrName.startsWith('data') || attrName.startsWith('aria'));
+					const isProperty =
+						attrName in el &&
+						!(
+							attrName.includes("-") ||
+							attrName.startsWith("data") ||
+							attrName.startsWith("aria")
+						);
 					if (isProperty) {
 						if (val !== undefined) {
 							// biome-ignore lint/suspicious/noExplicitAny: Unknown element properties

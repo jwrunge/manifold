@@ -464,48 +464,50 @@ const parse = (raw: string): ParsedExpression => {
 		const syncRef = chain._segs.some((s) => s.t === "call")
 			? undefined
 			: (c: Record<string, unknown> | undefined, value: unknown) => {
-				const ctx = (c || {}) as Record<string, unknown>;
-				const injected = ctx.state as Record<string, unknown> | undefined;
-				let rootHolder: Record<string, unknown> | undefined;
-				// Handle $state reserved identifier
-				if (chain._base === "$state") rootHolder = injected;
-				else if (chain._base === "$element") return; // Can't assign to $element
-				else if (injected && chain._base in injected) rootHolder = injected;
-				else if (ctx && chain._base in ctx) rootHolder = ctx;
-				else return;
-				// Prevent writes to forbidden bases
-				if (FORBIDDEN_PROPS.has(chain._base)) return;
-				if (chain._segs.length === 0) {
-					(rootHolder as Record<string, unknown>)[chain._base] =
-						value as unknown;
-					return;
-				}
-				let obj: unknown = (rootHolder as Record<string, unknown>)[
-					chain._base as never
-				];
-				for (let i = 0; i < chain._segs.length - 1; i++) {
-					const seg = chain._segs[i];
-					if (obj == null) return;
-					if (seg.t === "prop") {
-						if (FORBIDDEN_PROPS.has(seg.k)) return;
-						obj = (obj as Record<string, unknown>)[seg.k as never];
-					} else if (seg.t === "idx") {
-						const k = seg.e._fn(ctx);
-						if (FORBIDDEN_PROPS.has(String(k))) return;
-						obj = (obj as Record<string, unknown>)[k as never];
+					const ctx = (c || {}) as Record<string, unknown>;
+					const injected = ctx.state as Record<string, unknown> | undefined;
+					let rootHolder: Record<string, unknown> | undefined;
+					// Handle $state reserved identifier
+					if (chain._base === "$state") rootHolder = injected;
+					else if (chain._base === "$element")
+						return; // Can't assign to $element
+					else if (injected && chain._base in injected) rootHolder = injected;
+					else if (ctx && chain._base in ctx) rootHolder = ctx;
+					else return;
+					// Prevent writes to forbidden bases
+					if (FORBIDDEN_PROPS.has(chain._base)) return;
+					if (chain._segs.length === 0) {
+						(rootHolder as Record<string, unknown>)[chain._base] =
+							value as unknown;
+						return;
 					}
-				}
-				if (obj == null) return;
-				const last = chain._segs[chain._segs.length - 1];
-				if (last.t === "prop") {
-					if (FORBIDDEN_PROPS.has(last.k)) return;
-					(obj as Record<string, unknown>)[last.k as never] = value as unknown;
-				} else if (last.t === "idx") {
-					const k = last.e._fn(ctx);
-					if (FORBIDDEN_PROPS.has(String(k))) return;
-					(obj as Record<string, unknown>)[k as never] = value as unknown;
-				}
-			};
+					let obj: unknown = (rootHolder as Record<string, unknown>)[
+						chain._base as never
+					];
+					for (let i = 0; i < chain._segs.length - 1; i++) {
+						const seg = chain._segs[i];
+						if (obj == null) return;
+						if (seg.t === "prop") {
+							if (FORBIDDEN_PROPS.has(seg.k)) return;
+							obj = (obj as Record<string, unknown>)[seg.k as never];
+						} else if (seg.t === "idx") {
+							const k = seg.e._fn(ctx);
+							if (FORBIDDEN_PROPS.has(String(k))) return;
+							obj = (obj as Record<string, unknown>)[k as never];
+						}
+					}
+					if (obj == null) return;
+					const last = chain._segs[chain._segs.length - 1];
+					if (last.t === "prop") {
+						if (FORBIDDEN_PROPS.has(last.k)) return;
+						(obj as Record<string, unknown>)[last.k as never] =
+							value as unknown;
+					} else if (last.t === "idx") {
+						const k = last.e._fn(ctx);
+						if (FORBIDDEN_PROPS.has(String(k))) return;
+						(obj as Record<string, unknown>)[k as never] = value as unknown;
+					}
+				};
 		return { _fn: fn, _syncRef: syncRef };
 	}
 	return { _fn: () => expr };

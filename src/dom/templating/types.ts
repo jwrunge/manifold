@@ -8,12 +8,12 @@ export type Registerable = (HTMLElement | SVGElement | MathMLElement) & {
 
 /**
  * Logic attributes that create template roots (e.g. :each, :if, :await)
- * 
+ *
  * EXECUTION ORDER (enforced in registry.ts):
  * 1. :each - Creates loop variables, treats element as template (returns early)
  * 2. :await - Async evaluation, establishes promise context
  * 3. :if - Conditionals that use scope from :each/:await
- * 
+ *
  * Note: :then/:catch are dependent attributes tied to :await, not independent roots
  */
 export const templLogicAttrs = ["if", "each", "await"] as const;

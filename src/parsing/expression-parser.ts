@@ -312,15 +312,25 @@ const parse = (raw: string): ParsedExpression => {
 				};
 		}
 	}
-	
+
 	// Check for assignment operators: =, +=, -=, *=, /=, %=
 	// Must be careful not to match ==, ===, !=, !==, >=, <=
-	const assignmentMatch = splitOuterRightmost(expr, ["+=", "-=", "*=", "/=", "%=", "="], false);
+	const assignmentMatch = splitOuterRightmost(
+		expr,
+		["+=", "-=", "*=", "/=", "%=", "="],
+		false,
+	);
 	if (assignmentMatch) {
 		const [L, OP, R] = assignmentMatch;
 		// Ensure we didn't accidentally match part of ===, !==, >=, <=
 		const leftLast = L[L.length - 1];
-		if (OP === "=" && (leftLast === "=" || leftLast === "!" || leftLast === ">" || leftLast === "<")) {
+		if (
+			OP === "=" &&
+			(leftLast === "=" ||
+				leftLast === "!" ||
+				leftLast === ">" ||
+				leftLast === "<")
+		) {
 			// This is actually ===, !==, >=, or <=, not assignment
 		} else {
 			assertAssignmentsAllowed(expr);
@@ -339,9 +349,8 @@ const parse = (raw: string): ParsedExpression => {
 							const rightNum = numericOrNull(rightRaw);
 							if (leftNum !== null && rightNum !== null)
 								newVal = leftNum + rightNum;
-							else
-								// biome-ignore lint/suspicious/noExplicitAny: fallback to native addition semantics
-								newVal = (leftRaw as any) + (rightRaw as any);
+							// biome-ignore lint/suspicious/noExplicitAny: fallback to native addition semantics
+							else newVal = (leftRaw as any) + (rightRaw as any);
 						} else {
 							const leftNum = coerceNumber(l._fn(c));
 							const rightNum = coerceNumber(rightRaw);
@@ -357,7 +366,7 @@ const parse = (raw: string): ParsedExpression => {
 			}
 		}
 	}
-	
+
 	// Check for postfix/prefix increment/decrement: ++, --
 	if ((expr.endsWith("++") || expr.endsWith("--")) && expr.length > 2) {
 		assertAssignmentsAllowed(expr);
@@ -397,7 +406,7 @@ const parse = (raw: string): ParsedExpression => {
 			}
 		}
 	}
-	
+
 	const bin = splitByPrecedence(expr);
 	if (bin) {
 		const [L, OP, R] = bin;
@@ -518,7 +527,8 @@ const parse = (raw: string): ParsedExpression => {
 					const baseIsState = chain._base === "$state";
 					const baseIsElement = chain._base === "$element";
 					if (baseIsState) rootHolder = injected;
-					else if (baseIsElement) return; // Can't assign to $element
+					else if (baseIsElement)
+						return; // Can't assign to $element
 					else if (injected && chain._base in injected) rootHolder = injected;
 					else if (ctx && chain._base in ctx) rootHolder = ctx;
 					else return;
@@ -531,9 +541,8 @@ const parse = (raw: string): ParsedExpression => {
 					}
 					let obj: unknown;
 					if (baseIsState) obj = rootHolder;
-					else obj = (rootHolder as Record<string, unknown>)[
-						chain._base as never
-					];
+					else
+						obj = (rootHolder as Record<string, unknown>)[chain._base as never];
 					for (let i = 0; i < chain._segs.length - 1; i++) {
 						const seg = chain._segs[i];
 						if (obj == null) return;

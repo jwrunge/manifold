@@ -129,7 +129,10 @@ export declare class State<
 	 * ```
 	 */
 	add<TAdd extends IntermediateState>(obj: TAdd): State<TState & TAdd>;
-	add<V, K extends string = string>(key: K, value: V): State<TState & Record<K, V>>;
+	add<V, K extends string = string>(
+		key: K,
+		value: V,
+	): State<TState & Record<K, V>>;
 
 	/**
 	 * Derive read-only reactive state variables from existing state.
@@ -210,7 +213,9 @@ export declare class State<
 export declare class ComponentStateBuilder<
 	TState extends IntermediateState = IntermediateState,
 > {
-	add<TAdd extends IntermediateState>(obj: TAdd): ComponentStateBuilder<TState & TAdd>;
+	add<TAdd extends IntermediateState>(
+		obj: TAdd,
+	): ComponentStateBuilder<TState & TAdd>;
 	add<V, K extends string = string>(
 		key: K,
 		value: V,
