@@ -176,7 +176,126 @@ const state = State.create()
 // fullName and initials update automatically when firstName or lastName change
 ```
 
-### 3. Template Syntax
+### 3. Sets and Maps Reactivity
+
+Manifold provides fine-grained reactivity for Sets and Maps with efficient tracking:
+
+#### Reactive Sets
+
+```javascript
+const state = State.create()
+	.add("tags", new Set(["javascript", "typescript", "react"]))
+	.add("activeFilters", new Set())
+	.build();
+
+// Set operations trigger reactivity
+state.tags.add("vue"); // Updates DOM
+state.tags.delete("react"); // Updates DOM
+state.tags.clear(); // Updates DOM
+
+// Use in templates with spread operator
+```
+
+```html
+<div>
+	<p>Tags: ${[...tags].join(', ')}</p>
+	<ul>
+		<li :each="[...tags] as tag">${tag}</li>
+	</ul>
+</div>
+```
+
+#### Reactive Maps with Granular Tracking
+
+Maps use **granular key-level tracking** for optimal performance with large datasets:
+
+```javascript
+const state = State.create()
+	.add("userSettings", new Map([
+		["theme", "dark"],
+		["fontSize", 14],
+		["language", "en"]
+	]))
+	.add("cache", new Map())
+	.build();
+
+// Map operations are tracked efficiently
+state.userSettings.set("theme", "light"); // Only affects watchers of "theme" key
+state.userSettings.delete("language"); // Updates structural watchers
+state.cache.set("user:123", userData); // Only notifies watchers of this specific key
+```
+
+**How granular tracking works:**
+- `.get(key)` - Tracks the specific key; re-runs only when that key's value changes
+- `.has(key)` - Tracks key existence; re-runs only when key is added/deleted, NOT on value changes
+- `.set(key, value)` - Notifies `.get()` watchers of that key, plus structural watchers if it's a new key
+- `.delete(key)` - Notifies both value and existence watchers
+- Iteration (`.keys()`, `.values()`, `.entries()`, `.forEach()`) - Tracks all structural changes
+
+```javascript
+import { State, effect } from "@jwrunge/manifold";
+
+const state = State.create()
+	.add("data", new Map([["a", 1], ["b", 2]]))
+	.build();
+
+// This effect only re-runs when key "a" value changes
+effect(() => {
+	console.log("Value of a:", state.data.get("a"));
+});
+
+// This effect only re-runs when key "a" is added/deleted
+effect(() => {
+	console.log("Has a:", state.data.has("a"));
+});
+
+state.data.set("a", 10); // First effect runs, second does NOT
+state.data.set("b", 20); // Neither effect runs
+state.data.delete("a"); // Both effects run
+```
+
+**Use in templates:**
+
+```html
+<div>
+	<!-- Iterate over entries -->
+	<div :each="[...userSettings.entries()] as [key, value]">
+		${key}: ${value}
+	</div>
+
+	<!-- Check for specific keys -->
+	<div :if="userSettings.has('theme')">
+		Theme: ${userSettings.get('theme')}
+	</div>
+
+	<!-- Get map size -->
+	<p>Settings count: ${userSettings.size}</p>
+</div>
+```
+
+#### Deep Equality for Sets and Maps
+
+Derived state that returns new Sets/Maps uses deep equality comparison:
+
+```javascript
+const state = State.create()
+	.add("items", ["apple", "banana", "apple", "cherry"])
+	.add("filter", "all")
+	.derive("uniqueItems", (s) => new Set(s.items)) // Returns new Set each time
+	.derive("filteredSet", (s) => {
+		// Returns new Set based on filter
+		const items = s.filter === "all" ? s.items : s.items.filter(/* ... */);
+		return new Set(items);
+	})
+	.build();
+
+// Derived state only triggers updates when Set CONTENTS actually change
+// Not when a new Set instance is created with the same contents
+```
+
+This prevents unnecessary re-renders when derived functions return fresh Set/Map instances with identical contents.
+
+### 4. Template Syntax
 
 #### Text Interpolation
 
@@ -214,7 +333,7 @@ const state = State.create()
 <select :sync:value="selectedOption"></select>
 ```
 
-### 4. Conditional Rendering
+### 5. Conditional Rendering
 
 Show/hide elements based on state:
 
@@ -224,7 +343,7 @@ Show/hide elements based on state:
 <div :else>Please log in to continue</div>
 ```
 
-### 5. List Rendering
+### 6. List Rendering
 
 Render dynamic lists with automatic updates:
 
@@ -247,7 +366,7 @@ Render dynamic lists with automatic updates:
 </div>
 ```
 
-### 6. Async/Await Templating
+### 7. Async/Await Templating
 
 Handle promises directly in your templates:
 
@@ -257,7 +376,7 @@ Handle promises directly in your templates:
 <div :catch="error">Failed to load user: ${error.message}</div>
 ```
 
-### 7. View Transitions & Animations
+### 8. View Transitions & Animations
 
 Smooth animations with zero configuration using the View Transitions API:
 
@@ -305,7 +424,7 @@ Add corresponding CSS:
 }
 ```
 
-### 8. Server Content Integration
+### 9. Server Content Integration
 
 Fetch and dynamically insert remote content with automatic registration:
 
@@ -338,7 +457,7 @@ Features:
 -   **Transition Support**: Smooth animations when inserting content
 -   **Auto-Registration**: New elements automatically become reactive
 
-### 9. Registration System
+### 10. Registration System
 
 Control which parts of your DOM are reactive and scope different states to different sections:
 
@@ -390,6 +509,265 @@ This allows you to:
 -   **Avoid naming conflicts** when different sections need similar property names
 -   **Organize complex applications** with multiple independent reactive regions
 -   **Mix named and unnamed states** in the same application
+
+## TypeScript Support
+
+Manifold is built with TypeScript and provides full type safety throughout your application.
+
+### Automatic Type Inference
+
+Types are automatically inferred from your state:
+
+```typescript
+import { State } from "@jwrunge/manifold";
+
+const state = State.create()
+	.add("count", 0) // inferred as number
+	.add("name", "Alice") // inferred as string
+	.add("items", [1, 2, 3]) // inferred as number[]
+	.add("user", { id: 1, name: "Bob" }) // inferred as { id: number, name: string }
+	.build();
+
+// TypeScript knows the types!
+state.count.toFixed(2); // ✓ OK
+state.name.toUpperCase(); // ✓ OK
+state.items.push(4); // ✓ OK
+state.count = "hello"; // ✗ Error: Type 'string' is not assignable to type 'number'
+```
+
+### Explicit Type Annotations
+
+Provide explicit types when you need more control (no casting required):
+
+```typescript
+const state = State.create()
+	// Explicitly type as a mutable record
+	.add<Record<string, boolean>>("flags", {})
+	// Explicitly type as a Set
+	.add<Set<string>>("tags", new Set())
+	// Explicitly type as a Map
+	.add<Map<string, number>>("scores", new Map())
+	// Functions can reference state properties
+	.add("toggle", (key: string, state: { flags: Record<string, boolean> }) => {
+		state.flags[key] = !state.flags[key];
+	})
+	.build();
+
+// Now you can use them without casting:
+state.flags.darkMode = true; // ✓ OK
+state.tags.add("featured"); // ✓ OK
+state.scores.set("player1", 100); // ✓ OK
+state.toggle("darkMode");
+```
+
+### Derived State with Type Annotations
+
+Enforce return types for derived state:
+
+```typescript
+const state = State.create()
+	.add("items", ["apple", "banana", "apple", "cherry"])
+	// Explicitly specify the return type
+	.derive<Set<string>>("uniqueItems", (s) => new Set(s.items))
+	.derive<number>("itemCount", (s) => s.uniqueItems.size)
+	// Complex return types
+	.derive<Map<string, number>>("itemFrequency", (s) => {
+		const freq = new Map<string, number>();
+		for (const item of s.items) {
+			freq.set(item, (freq.get(item) || 0) + 1);
+		}
+		return freq;
+	})
+	.build();
+```
+
+### Typing Functions with State Access
+
+Functions can access the full state by typing their parameters:
+
+```typescript
+type AppState = {
+	todos: Array<{ id: number; text: string; done: boolean }>;
+	filter: "all" | "active" | "completed";
+	filteredTodos: Array<{ id: number; text: string; done: boolean }>;
+};
+
+const state = State.create()
+	.add("todos", [] as AppState["todos"])
+	.add("filter", "all" as AppState["filter"])
+	.derive<AppState["filteredTodos"]>("filteredTodos", (s) => {
+		if (s.filter === "all") return s.todos;
+		if (s.filter === "active") return s.todos.filter((t) => !t.done);
+		return s.todos.filter((t) => t.done);
+	})
+	.add("addTodo", (text: string, state: AppState) => {
+		state.todos.push({ id: Date.now(), text, done: false });
+	})
+	.add("toggleTodo", (id: number, state: AppState) => {
+		const todo = state.todos.find((t) => t.id === id);
+		if (todo) todo.done = !todo.done;
+	})
+	.add("setFilter", (filter: AppState["filter"], state: AppState) => {
+		state.filter = filter;
+	})
+	.build();
+```
+
+### Pre-defining State Shape
+
+For complex applications, define your state shape upfront:
+
+```typescript
+type UserState = {
+	user: { name: string; email: string; role: string } | null;
+	isLoggedIn: boolean;
+	permissions: Set<string>;
+	settings: Map<string, unknown>;
+	login: (email: string, password: string) => Promise<void>;
+	logout: () => void;
+};
+
+const state = State.create()
+	.add("user", null as UserState["user"])
+	.add("isLoggedIn", false)
+	.add<Set<string>>("permissions", new Set())
+	.add<Map<string, unknown>>("settings", new Map())
+	.add("login", async (email: string, password: string, state: UserState) => {
+		const response = await fetch("/api/login", {
+			method: "POST",
+			body: JSON.stringify({ email, password }),
+		});
+		const data = await response.json();
+		state.user = data.user;
+		state.permissions = new Set(data.permissions);
+		state.isLoggedIn = true;
+	})
+	.add("logout", (state: UserState) => {
+		state.user = null;
+		state.permissions.clear();
+		state.isLoggedIn = false;
+	})
+	.build();
+```
+
+### Component TypeScript Support
+
+Components are fully typed when using the TypeScript-first approach:
+
+```typescript
+import { State, html, css } from "@jwrunge/manifold";
+
+type CounterState = {
+	count: number;
+	step: number;
+	increment: () => void;
+	decrement: () => void;
+};
+
+const MyCounter = State.component<CounterState>({
+	name: "my-counter",
+	template: html`
+		<div class="counter">
+			<button :onclick="decrement()">-</button>
+			<span>\${count}</span>
+			<button :onclick="increment()">+</button>
+			<div>Step: \${step}</div>
+		</div>
+	`,
+	styles: css`
+		:host {
+			display: inline-block;
+		}
+		.counter {
+			display: flex;
+			gap: 1rem;
+			align-items: center;
+		}
+		button {
+			padding: 0.5rem 1rem;
+			font-size: 1.5rem;
+		}
+	`,
+	state: {
+		count: 0,
+		step: 1,
+	},
+})
+	.add("increment", (state: CounterState) => {
+		state.count += state.step;
+	})
+	.add("decrement", (state: CounterState) => {
+		state.count -= state.step;
+	})
+	.build();
+```
+
+### Helper Functions: `html` and `css`
+
+The `html` and `css` tagged template helpers provide syntax highlighting in TypeScript:
+
+```typescript
+import { html, css } from "@jwrunge/manifold";
+
+// Get proper HTML syntax highlighting and IntelliSense
+const template = html`
+	<div class="card">
+		<h2>\${title}</h2>
+		<p>\${description}</p>
+		<button :onclick="handleClick()">Click me</button>
+	</div>
+`;
+
+// Get proper CSS syntax highlighting
+const styles = css`
+	.card {
+		border: 1px solid #ccc;
+		border-radius: 8px;
+		padding: 1rem;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+	.card h2 {
+		margin-top: 0;
+		color: #333;
+	}
+`;
+
+// Use with components
+const MyCard = State.component({
+	name: "my-card",
+	template: template,
+	styles: styles,
+}).build();
+```
+
+These are simple pass-through functions that return the string, but enable your editor (VS Code, WebStorm, etc.) to apply proper syntax highlighting when using extensions like `lit-html` or `vscode-styled-components`.
+
+### Using `effect()` with Types
+
+The `effect` function automatically tracks dependencies:
+
+```typescript
+import { State, effect } from "@jwrunge/manifold";
+
+const state = State.create()
+	.add("count", 0)
+	.add("userName", "Alice")
+	.build();
+
+// Effect runs immediately and whenever dependencies change
+effect(() => {
+	console.log(`Count is ${state.count}`);
+	// Only re-runs when count changes
+});
+
+// Conditional dependency tracking
+effect(() => {
+	if (state.count > 5) {
+		console.log(`High count for user: ${state.userName}`);
+		// Tracks userName only when count > 5
+	}
+});
+```
 
 ## Browser Support
 

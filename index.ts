@@ -1,8 +1,8 @@
-import { State, useComponent } from "./dist/manifold.js";
+import { State } from "./dist/manifold.js";
 
 // Load components
-await useComponent("./demo-counter.mf.html");
-await useComponent("./demo-input.mf.html");
+// await useComponent("./demo-counter.mf.html");
+// await useComponent("./demo-input.mf.html");
 
 const myState = State.create()
 	.add("count", 0)
@@ -13,7 +13,7 @@ const myState = State.create()
 	.add("sharedCount", 0)
 	.add("userName", "")
 	.add("userEmail", "")
-	.add("someArray", [
+	.add<Array<{name: string, age: number}>>("someArray", [
 		{ name: "Jake", age: 37 },
 		{ name: "Mary", age: 37 },
 		{ name: "Isaac", age: 6 },

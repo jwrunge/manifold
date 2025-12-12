@@ -120,13 +120,20 @@ export declare class State<
 	 * console.log(state.enabled); // true
 	 * console.log(state.extra.users); // 1000000
 	 * console.log(state.myFn()); // "Hello, World!"
+	 *
+	 * // With explicit type annotation (no casting needed):
+	 * const state = State.create()
+	 * 	.add<Record<string, boolean>>("flags", {})
+	 * 	.add<Set<string>>("tags", new Set())
+	 * 	.build();
 	 * ```
 	 */
 	add<TAdd extends IntermediateState>(obj: TAdd): State<TState & TAdd>;
-	add<K extends string, V>(key: K, value: V): State<TState & Record<K, V>>;
+	add<V, K extends string = string>(key: K, value: V): State<TState & Record<K, V>>;
 
 	/**
 	 * Derive read-only reactive state variables from existing state.
+	 * The derived function automatically re-runs when dependencies change.
 	 * @example
 	 * ```ts
 	 * const $ = State.create("cart", { subtotal: 42 })
@@ -134,9 +141,14 @@ export declare class State<
 	 * 	.derive("total", (store) => store.subtotal + store.tax);
 	 * const state = $.build();
 	 * console.log(state.total); // 45.36
+	 *
+	 * // With explicit return type annotation:
+	 * const $ = State.create({ items: ["a", "b", "c"] })
+	 * 	.derive<Set<string>>("uniqueItems", (s) => new Set(s.items))
+	 * 	.derive<number>("itemCount", (s) => s.uniqueItems.size);
 	 * ```
 	 */
-	derive<K extends string, TValue>(
+	derive<TValue, K extends string = string>(
 		key: K,
 		fn: (store: TState) => TValue,
 	): State<TState & Record<K, TValue>>;
@@ -146,11 +158,160 @@ export declare class State<
 	 * This triggers DOM registration for any matching `data-mf-register` elements.
 	 */
 	build(): TState;
+
+	/**
+	 * Create a reusable web component with reactive state.
+	 * Supports both HTML-first (selector) and TypeScript-first (config object) approaches.
+	 * @example
+	 * ```ts
+	 * // HTML-first: Reference a <template> in your HTML
+	 * const MyCounter = State.component<{ count: number }>("#my-counter-template")
+	 * 	.add("count", 0)
+	 * 	.add("increment", (state) => state.count++)
+	 * 	.build();
+	 *
+	 * // TypeScript-first: Define template in code
+	 * const MyCounter = State.component({
+	 * 	name: "my-counter",
+	 * 	template: html`
+	 * 		<div>
+	 * 			<p>Count: \${count}</p>
+	 * 			<button :onclick="increment()">+</button>
+	 * 		</div>
+	 * 	`,
+	 * 	styles: css`
+	 * 		:host { display: block; padding: 1rem; }
+	 * 		button { font-size: 1.5rem; }
+	 * 	`,
+	 * 	state: { count: 0 }
+	 * })
+	 * 	.add("increment", (state: { count: number }) => state.count++)
+	 * 	.build();
+	 *
+	 * // Use in HTML:
+	 * // <my-counter></my-counter>
+	 * ```
+	 */
+	static component<S extends IntermediateState = Record<string, never>>(
+		selector: string,
+	): ComponentStateBuilder<S>;
+	static component<S extends IntermediateState>(config: {
+		name: string;
+		template: string;
+		styles?: string;
+		state?: S;
+	}): ComponentStateBuilder<S>;
 }
 
 /**
+ * Component state builder returned by State.component().
+ * Provides the same fluent API as State with additional component-specific methods.
+ */
+export declare class ComponentStateBuilder<
+	TState extends IntermediateState = IntermediateState,
+> {
+	add<TAdd extends IntermediateState>(obj: TAdd): ComponentStateBuilder<TState & TAdd>;
+	add<V, K extends string = string>(
+		key: K,
+		value: V,
+	): ComponentStateBuilder<TState & Record<K, V>>;
+	derive<TValue, K extends string = string>(
+		key: K,
+		fn: (store: TState) => TValue,
+	): ComponentStateBuilder<TState & Record<K, TValue>>;
+	build(): void;
+}
+
+/**
+ * Tagged template helper for HTML strings with syntax highlighting support.
+ * Useful for defining component templates in TypeScript/JavaScript.
+ * @example
+ * ```ts
+ * import { html } from "@jwrunge/manifold";
+ *
+ * const template = html`
+ * 	<div class="card">
+ * 		<h2>\${title}</h2>
+ * 		<p>\${description}</p>
+ * 		<button :onclick="handleClick()">Click me</button>
+ * 	</div>
+ * `;
+ * ```
+ */
+export declare function html(
+	strings: TemplateStringsArray,
+	...values: unknown[]
+): string;
+
+/**
+ * Tagged template helper for CSS strings with syntax highlighting support.
+ * Useful for defining component styles in TypeScript/JavaScript.
+ * @example
+ * ```ts
+ * import { css } from "@jwrunge/manifold";
+ *
+ * const styles = css`
+ * 	:host {
+ * 		display: block;
+ * 		padding: 1rem;
+ * 	}
+ * 	.card {
+ * 		border: 1px solid #ccc;
+ * 		border-radius: 8px;
+ * 	}
+ * `;
+ * ```
+ */
+export declare function css(
+	strings: TemplateStringsArray,
+	...values: unknown[]
+): string;
+
+/**
+ * Load and register a component defined in an external HTML file.
+ * @param url The URL or path to the HTML file containing the component template
+ * @example
+ * ```ts
+ * import { useComponent } from "@jwrunge/manifold";
+ *
+ * // Load component from external file
+ * await useComponent("/components/my-button.html");
+ *
+ * // Now you can use it in your HTML:
+ * // <my-button label="Click me"></my-button>
+ * ```
+ */
+export declare function useComponent(url: string): Promise<void>;
+
+/**
  * Run a side-effect function that automatically tracks and reacts to state changes.
- * @param fn ()=> void
+ * Effects are executed immediately and re-run whenever tracked dependencies change.
+ * @param fn The effect function to run
+ * @example
+ * ```ts
+ * import { State, effect } from "@jwrunge/manifold";
+ *
+ * const state = State.create()
+ * 	.add("count", 0)
+ * 	.add("lastName", "Smith")
+ * 	.build();
+ *
+ * // Effect runs immediately and whenever count changes
+ * effect(() => {
+ * 	console.log("Count is now:", state.count);
+ * });
+ *
+ * state.count++; // Logs: "Count is now: 1"
+ *
+ * // Effect only tracks dependencies that are accessed
+ * effect(() => {
+ * 	if (state.count > 5) {
+ * 		console.log("High count for", state.lastName);
+ * 	}
+ * });
+ * // This re-runs when count changes
+ * // Only tracks lastName if count > 5
+ * ```
  */
 export declare function effect(fn: () => void): void;
 
