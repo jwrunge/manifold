@@ -1,4 +1,4 @@
-import { css, html, State } from "./dist/manifold.js";
+import { css, html, State } from "./src/main.ts";
 
 // TS-first component definition
 const MyCounter = State.component({

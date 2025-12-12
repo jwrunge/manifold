@@ -5,6 +5,8 @@ import isEqual from "./equality.ts";
 const proxyCache = new WeakMap<object, IntermediateState>();
 const depMap = new WeakMap<object, Map<PropertyKey, Subscriptions>>();
 const OWN_KEYS = Symbol("mf:ownKeys");
+// Helper to create a unique symbol for tracking Map key existence (for .has())
+const mapKeyExistence = (key: unknown): PropertyKey => Symbol.for(`mf:mapExists:${String(key)}`);
 const pendingEffects = new Set<Effect>();
 let isFlushScheduled = false;
 
@@ -40,6 +42,11 @@ const notify = (target: object, key: PropertyKey) => {
 const handleSymbolRead = (state: object, key: symbol, receiver: unknown) => {
 	if (key === Symbol.iterator || key === Symbol.toStringTag) {
 		const val = Reflect.get(state, key, state);
+		// Track iteration on Sets/Maps so mutations trigger effects
+		if (key === Symbol.iterator && (state instanceof Set || state instanceof Map)) {
+			const curEffect = Effect._current;
+			if (curEffect) track(state, OWN_KEYS, curEffect);
+		}
 		return typeof val === "function" ? val.bind(state) : val;
 	}
 	return Reflect.get(state, key, receiver);
@@ -123,12 +130,107 @@ export const proxy = (obj: object): IntermediateState | Promise<unknown> => {
 					const target = Reflect.get(state as object, key);
 					const isObj = target && typeof target === "object";
 					if (curEffect) track(state as object, key, curEffect);
-					// Handle Set and Map methods to preserve correct `this` binding
-					if (
-						(state instanceof Set || state instanceof Map) &&
-						typeof target === "function"
-					) {
-						return target.bind(state);
+					// Handle Set and Map - track reads and notify mutations
+					if (state instanceof Set) {
+						// Track size property access
+						if (key === "size") {
+							if (curEffect) track(state as object, OWN_KEYS, curEffect);
+							return target;
+						}
+						
+						if (typeof target === "function") {
+							const readMethods = ["has", "keys", "values", "entries", "forEach"];
+							const mutatingMethods = ["add", "delete", "clear"];
+							
+							// Track reads so mutations can notify correctly
+							if (readMethods.includes(key as string)) {
+								if (curEffect) track(state as object, OWN_KEYS, curEffect);
+							}
+							
+							if (mutatingMethods.includes(key as string)) {
+								return function (this: Set<unknown>, ...args: unknown[]) {
+									const result = target.apply(state, args);
+									// Notify on OWN_KEYS so any read operations are re-evaluated
+									notify(state as object, OWN_KEYS);
+									return result;
+								};
+							}
+							return target.bind(state);
+						}
+					}
+					if (state instanceof Map) {
+						// Track size property access (structural change)
+						if (key === "size") {
+							if (curEffect) track(state as object, OWN_KEYS, curEffect);
+							return target;
+						}
+						
+						if (typeof target === "function") {
+							// Granular tracking for individual keys
+							if (key === "get") {
+								return function (this: Map<unknown, unknown>, mapKey: unknown) {
+									if (curEffect) track(state as object, mapKey as PropertyKey, curEffect);
+									return target.apply(state, [mapKey]);
+								};
+							}
+							
+							if (key === "has") {
+								return function (this: Map<unknown, unknown>, mapKey: unknown) {
+									if (curEffect) track(state as object, mapKeyExistence(mapKey), curEffect);
+									return target.apply(state, [mapKey]);
+								};
+							}
+							
+							// Structural read methods track OWN_KEYS
+							if (key === "keys" || key === "values" || key === "entries" || key === "forEach") {
+								if (curEffect) track(state as object, OWN_KEYS, curEffect);
+								return target.bind(state);
+							}
+							
+							// set() notifies the specific key for .get() watchers
+							// New keys notify existence symbol (for .has()) and OWN_KEYS (for iteration)
+							if (key === "set") {
+								return function (this: Map<unknown, unknown>, mapKey: unknown, value: unknown) {
+									const hadKey = state.has(mapKey);
+									const result = target.apply(state, [mapKey, value]);
+									
+									// Always notify the key (for .get() watchers)
+									notify(state as object, mapKey as PropertyKey);
+									
+									// If this is a new key, notify existence and structural watchers
+									if (!hadKey) {
+										notify(state as object, mapKeyExistence(mapKey));
+										notify(state as object, OWN_KEYS);
+									}
+									return result;
+								};
+							}
+							
+							// delete() notifies key value, existence, and structural watchers
+							if (key === "delete") {
+								return function (this: Map<unknown, unknown>, mapKey: unknown) {
+									const hadKey = state.has(mapKey);
+									const result = target.apply(state, [mapKey]);
+									if (hadKey) {
+										notify(state as object, mapKey as PropertyKey);
+										notify(state as object, mapKeyExistence(mapKey));
+										notify(state as object, OWN_KEYS);
+									}
+									return result;
+								};
+							}
+							
+							// clear() notifies OWN_KEYS only
+							if (key === "clear") {
+								return function (this: Map<unknown, unknown>) {
+									const result = target.apply(state, []);
+									notify(state as object, OWN_KEYS);
+									return result;
+								};
+							}
+							
+							return target.bind(state);
+						}
 					}
 					if (Array.isArray(state) && typeof target === "function") {
 						if (arrMethods.includes(key as string)) {

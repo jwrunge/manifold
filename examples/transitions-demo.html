@@ -74,17 +74,20 @@
 <body data-mf-register>
     <h1>🎭 Manifold View Transitions Demo</h1>
 
+    <div :onclick="increment($state, $element)">NUM: ${count}</div>
+
     <!-- Basic Transitions -->
     <div class="section">
         <h2>Basic Transitions (Default Speed - 300ms)</h2>
         <div class="demo-grid">
             <div 
-                :each="['fade', 'fly-left', 'fly-right', 'fly-up', 'fly-down', 'scale', 'shrink', 'grow', 'slide'] as trans" 
                 class="demo-box" 
-                :transition="fly-left"
-                :onclick="()=> showBasic = false"
+                :each="basic as trans" 
+                :if="shown.has(trans)"
+                :transition="trans"
+                :onclick="tempToggle(trans, $state)"
             >
-                ${trans.toUpperCase()}
+                ${trans.toUpperCase()[0] + trans.slice(1).replace('-', ' ')}
             </div>
         </div>
     </div>
@@ -94,28 +97,28 @@
         <h2>Speed Variants</h2>
         
         <h3>Fast (150ms)</h3>
-        <div class="demo-grid">
-            <div class="demo-box" :transition="fade-fast">
-                Fade Fast
-            </div>
-            <div class="demo-box" :transition="fly-left-fast">
-                Fly Left Fast
-            </div>
-            <div class="demo-box" :transition="scale-fast">
-                Scale Fast
+       <div class="demo-grid">
+            <div 
+                class="demo-box" 
+                :each="fast as trans" 
+                :if="shown.has(trans)"
+                :transition="trans"
+                :onclick="tempToggle(trans, $state)"
+            >
+                ${trans.toUpperCase()[0] + trans.slice(1).replace('-', ' ')}
             </div>
         </div>
 
         <h3>Slow (600ms)</h3>
-        <div class="demo-grid">
-            <div class="demo-box" :transition="fade-slow">
-                Fade Slow
-            </div>
-            <div class="demo-box" :transition="fly-right-slow">
-                Fly Right Slow
-            </div>
-            <div class="demo-box" :transition="grow-slow">
-                Grow Slow
+       <div class="demo-grid">
+            <div 
+                class="demo-box" 
+                :each="slow as trans" 
+                :if="shown.has(trans)"
+                :transition="trans"
+                :onclick="tempToggle(trans, $state)"
+            >
+                ${trans.toUpperCase()[0] + trans.slice(1).replace('-', ' ')}
             </div>
         </div>
     </div>

@@ -12,6 +12,12 @@
    FADE TRANSITIONS
    ============================================================================ */
 
+:root {
+	--trans-normal: 500ms;
+	--trans-fast: 200ms;
+	--trans-slow: 1000ms;
+}
+
 @keyframes fade-in {
 	from {
 		opacity: 0;
@@ -31,27 +37,27 @@
 }
 
 ::view-transition-old(*.fade) {
-	animation: fade-out 300ms ease;
+	animation: fade-out var(--trans-normal) ease;
 }
 
 ::view-transition-new(*.fade) {
-	animation: fade-in 300ms ease;
+	animation: fade-in var(--trans-normal) ease;
 }
 
 ::view-transition-old(*.fade-fast) {
-	animation: fade-out 150ms ease;
+	animation: fade-out var(--trans-fast) ease;
 }
 
 ::view-transition-new(*.fade-fast) {
-	animation: fade-in 150ms ease;
+	animation: fade-in var(--trans-fast) ease;
 }
 
 ::view-transition-old(*.fade-slow) {
-	animation: fade-out 600ms ease;
+	animation: fade-out var(--trans-slow) ease;
 }
 
 ::view-transition-new(*.fade-slow) {
-	animation: fade-in 600ms ease;
+	animation: fade-in var(--trans-slow) ease;
 }
 
 /* ============================================================================
@@ -148,102 +154,102 @@
 
 /* Fly Left */
 ::view-transition-old(*.fly-left) {
-	animation: fly-left-out 300ms ease;
+	animation: fly-left-out var(--trans-normal) ease;
 }
 
 ::view-transition-new(*.fly-left) {
-	animation: fly-left-in 300ms ease;
+	animation: fly-left-in var(--trans-normal) ease;
 }
 
 ::view-transition-old(*.fly-left-fast) {
-	animation: fly-left-out 150ms ease;
+	animation: fly-left-out var(--trans-fast) ease;
 }
 
 ::view-transition-new(*.fly-left-fast) {
-	animation: fly-left-in 150ms ease;
+	animation: fly-left-in var(--trans-fast) ease;
 }
 
 ::view-transition-old(*.fly-left-slow) {
-	animation: fly-left-out 600ms ease;
+	animation: fly-left-out var(--trans-slow) ease;
 }
 
 ::view-transition-new(*.fly-left-slow) {
-	animation: fly-left-in 600ms ease;
+	animation: fly-left-in var(--trans-slow) ease;
 }
 
 /* Fly Right */
 ::view-transition-old(*.fly-right) {
-	animation: fly-right-out 300ms ease;
+	animation: fly-right-out var(--trans-normal) ease;
 }
 
 ::view-transition-new(*.fly-right) {
-	animation: fly-right-in 300ms ease;
+	animation: fly-right-in var(--trans-normal) ease;
 }
 
 ::view-transition-old(*.fly-right-fast) {
-	animation: fly-right-out 150ms ease;
+	animation: fly-right-out var(--trans-fast) ease;
 }
 
 ::view-transition-new(*.fly-right-fast) {
-	animation: fly-right-in 150ms ease;
+	animation: fly-right-in var(--trans-fast) ease;
 }
 
 ::view-transition-old(*.fly-right-slow) {
-	animation: fly-right-out 600ms ease;
+	animation: fly-right-out var(--trans-slow) ease;
 }
 
 ::view-transition-new(*.fly-right-slow) {
-	animation: fly-right-in 600ms ease;
+	animation: fly-right-in var(--trans-slow) ease;
 }
 
 /* Fly Up */
 ::view-transition-old(*.fly-up) {
-	animation: fly-up-out 300ms ease;
+	animation: fly-up-out var(--trans-normal) ease;
 }
 
 ::view-transition-new(*.fly-up) {
-	animation: fly-up-in 300ms ease;
+	animation: fly-up-in var(--trans-normal) ease;
 }
 
 ::view-transition-old(*.fly-up-fast) {
-	animation: fly-up-out 150ms ease;
+	animation: fly-up-out var(--trans-fast) ease;
 }
 
 ::view-transition-new(*.fly-up-fast) {
-	animation: fly-up-in 150ms ease;
+	animation: fly-up-in var(--trans-fast) ease;
 }
 
 ::view-transition-old(*.fly-up-slow) {
-	animation: fly-up-out 600ms ease;
+	animation: fly-up-out var(--trans-slow) ease;
 }
 
 ::view-transition-new(*.fly-up-slow) {
-	animation: fly-up-in 600ms ease;
+	animation: fly-up-in var(--trans-slow) ease;
 }
 
 /* Fly Down */
 ::view-transition-old(*.fly-down) {
-	animation: fly-down-out 300ms ease;
+	animation: fly-down-out var(--trans-normal) ease;
 }
 
 ::view-transition-new(*.fly-down) {
-	animation: fly-down-in 300ms ease;
+	animation: fly-down-in var(--trans-normal) ease;
 }
 
 ::view-transition-old(*.fly-down-fast) {
-	animation: fly-down-out 150ms ease;
+	animation: fly-down-out var(--trans-fast) ease;
 }
 
 ::view-transition-new(*.fly-down-fast) {
-	animation: fly-down-in 150ms ease;
+	animation: fly-down-in var(--trans-fast) ease;
 }
 
 ::view-transition-old(*.fly-down-slow) {
-	animation: fly-down-out 600ms ease;
+	animation: fly-down-out var(--trans-slow) ease;
 }
 
 ::view-transition-new(*.fly-down-slow) {
-	animation: fly-down-in 600ms ease;
+	animation: fly-down-in var(--trans-slow) ease;
 }
 
 /* ============================================================================
@@ -273,27 +279,27 @@
 }
 
 ::view-transition-old(*.scale) {
-	animation: scale-out 300ms ease;
+	animation: scale-out var(--trans-normal) ease;
 }
 
 ::view-transition-new(*.scale) {
-	animation: scale-in 300ms ease;
+	animation: scale-in var(--trans-normal) ease;
 }
 
 ::view-transition-old(*.scale-fast) {
-	animation: scale-out 150ms ease;
+	animation: scale-out var(--trans-fast) ease;
 }
 
 ::view-transition-new(*.scale-fast) {
-	animation: scale-in 150ms ease;
+	animation: scale-in var(--trans-fast) ease;
 }
 
 ::view-transition-old(*.scale-slow) {
-	animation: scale-out 600ms ease;
+	animation: scale-out var(--trans-slow) ease;
 }
 
 ::view-transition-new(*.scale-slow) {
-	animation: scale-in 600ms ease;
+	animation: scale-in var(--trans-slow) ease;
 }
 
 /* ============================================================================
@@ -323,27 +329,27 @@
 }
 
 ::view-transition-old(*.shrink) {
-	animation: shrink-out 300ms ease;
+	animation: shrink-out var(--trans-normal) ease;
 }
 
 ::view-transition-new(*.shrink) {
-	animation: shrink-in 300ms ease;
+	animation: shrink-in var(--trans-normal) ease;
 }
 
 ::view-transition-old(*.shrink-fast) {
-	animation: shrink-out 150ms ease;
+	animation: shrink-out var(--trans-fast) ease;
 }
 
 ::view-transition-new(*.shrink-fast) {
-	animation: shrink-in 150ms ease;
+	animation: shrink-in var(--trans-fast) ease;
 }
 
 ::view-transition-old(*.shrink-slow) {
-	animation: shrink-out 600ms ease;
+	animation: shrink-out var(--trans-slow) ease;
 }
 
 ::view-transition-new(*.shrink-slow) {
-	animation: shrink-in 600ms ease;
+	animation: shrink-in var(--trans-slow) ease;
 }
 
 /* ============================================================================
@@ -373,27 +379,27 @@
 }
 
 ::view-transition-old(*.grow) {
-	animation: grow-out 300ms ease;
+	animation: grow-out var(--trans-normal) ease;
 }
 
 ::view-transition-new(*.grow) {
-	animation: grow-in 300ms ease;
+	animation: grow-in var(--trans-normal) ease;
 }
 
 ::view-transition-old(*.grow-fast) {
-	animation: grow-out 150ms ease;
+	animation: grow-out var(--trans-fast) ease;
 }
 
 ::view-transition-new(*.grow-fast) {
-	animation: grow-in 150ms ease;
+	animation: grow-in var(--trans-fast) ease;
 }
 
 ::view-transition-old(*.grow-slow) {
-	animation: grow-out 600ms ease;
+	animation: grow-out var(--trans-slow) ease;
 }
 
 ::view-transition-new(*.grow-slow) {
-	animation: grow-in 600ms ease;
+	animation: grow-in var(--trans-slow) ease;
 }
 
 /* ============================================================================
@@ -423,25 +429,25 @@
 }
 
 ::view-transition-old(*.slide) {
-	animation: slide-out 300ms ease;
+	animation: slide-out var(--trans-normal) ease;
 }
 
 ::view-transition-new(*.slide) {
-	animation: slide-in 300ms ease;
+	animation: slide-in var(--trans-normal) ease;
 }
 
 ::view-transition-old(*.slide-fast) {
-	animation: slide-out 150ms ease;
+	animation: slide-out var(--trans-fast) ease;
 }
 
 ::view-transition-new(*.slide-fast) {
-	animation: slide-in 150ms ease;
+	animation: slide-in var(--trans-fast) ease;
 }
 
 ::view-transition-old(*.slide-slow) {
-	animation: slide-out 600ms ease;
+	animation: slide-out var(--trans-slow) ease;
 }
 
 ::view-transition-new(*.slide-slow) {
-	animation: slide-in 600ms ease;
+	animation: slide-in var(--trans-slow) ease;
 }

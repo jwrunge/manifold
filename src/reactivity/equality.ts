@@ -22,6 +22,28 @@ const _isEqual = (a: unknown, b: unknown): boolean => {
 		return true;
 	}
 	if (cA === Date) return (a as Date).getTime() === (b as Date).getTime();
+	
+	// Handle Set equality
+	if (cA === Set) {
+		const setA = a as Set<unknown>;
+		const setB = b as Set<unknown>;
+		if (setA.size !== setB.size) return false;
+		for (const item of setA) {
+			if (!setB.has(item)) return false;
+		}
+		return true;
+	}
+	
+	// Handle Map equality
+	if (cA === Map) {
+		const mapA = a as Map<unknown, unknown>;
+		const mapB = b as Map<unknown, unknown>;
+		if (mapA.size !== mapB.size) return false;
+		for (const [key, value] of mapA) {
+			if (!mapB.has(key) || !_isEqual(value, mapB.get(key))) return false;
+		}
+		return true;
+	}
 
 	const kA = _keys(a),
 		kB = _keys(b);

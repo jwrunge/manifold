@@ -249,7 +249,27 @@ export default class RegEl {
 			scheduleViewTransitionBuffer();
 		}
 
+		// ═══════════════════════════════════════════════════════════════
+		// TEMPLATE LOGIC EXECUTION ORDER
+		// ═══════════════════════════════════════════════════════════════
+		// Template logic attributes are processed in priority order to ensure
+		// proper variable scoping:
+		//
+		// 1. :each - Creates loop variables (e.g., "item"), treats element as
+		//    template. Must return early to prevent content interpolation.
+		//
+		// 2. :await - Async evaluation, creates promise context. Processed
+		//    before conditionals so they can reference async results.
+		//
+		// 3. :if/:elseif/:else - Conditionals that use variables from :each
+		//    or :await blocks. Processed last in main attribute loop.
+		//
+		// Note: :then/:catch create variables via destructuring (like :each),
+		// but they're dependent attributes tied to :await siblings, not roots.
+		// ═══════════════════════════════════════════════════════════════
+		
 		// EARLY HANDLE :each to avoid text interpolation on template
+		// :each must be handled first as it treats element as a template
 		for (const a of Array.from(el.attributes)) {
 			const name = a.name;
 			const value = a.value;
@@ -322,17 +342,61 @@ export default class RegEl {
 			this._vtClassOut = prefix;
 		}
 
-		// Handle attributes
-		// Snapshot attributes first since we remove them during processing
-		for (const a of Array.from(el.attributes)) {
+		// Handle attributes in priority order for template logic
+		// Priority: 1. :await (async evaluation, establishes promise context)
+		//          2. :if (conditionals, uses established context)
+		//          3. Other attributes
+		const attributes = Array.from(el.attributes);
+		const templateRootOrder = ["await", "if"] as const;
+		
+		// Process template roots in priority order first
+		for (const priorityAttr of templateRootOrder) {
+			for (const a of attributes) {
+				const name = a.name;
+				const value = a.value;
+				const attrInfo = getAttrName(name);
+				if (!attrInfo) continue;
+				const { attrName, sync } = attrInfo;
+				
+				if (attrName !== priorityAttr) continue;
+				if (attrWasRegistered.has(attrName))
+					throwError(`Attr ${attrName} duplicate`, el);
+					
+				const [exp, rootAlias] = splitAs(value);
+				if (sync) throwError(`Sync on template logic: ${attrName}`, el, true);
+				const { _fn } = evaluateExpression(exp);
+				this._handleTemplating(attrName as templLogicAttr, name, _fn, rootAlias);
+				attrWasRegistered.add(attrName);
+			}
+		}
+		
+		// Then process all other attributes
+		for (const a of attributes) {
 			const name = a.name;
 			const value = a.value;
 			const attrInfo = getAttrName(name);
 			if (!attrInfo) continue;
 			const { attrName, sync } = attrInfo;
 
-			if (attrWasRegistered.has(attrName))
-				throwError(`Attr ${attrName} duplicate`, el);
+			if (attrWasRegistered.has(attrName)) continue; // Already processed
+
+			// Handle :transition, :transition-in, :transition-out bindings (use raw values, no expression eval)
+			if (attrName === "transition") {
+				const prefix = (value ?? "").trim();
+				ensureViewTransitionName(el as HTMLElement, prefix);
+				this._vtClass = prefix || this._vtClass;
+				continue; // Skip further processing
+			} else if (attrName === "transition-in") {
+				const prefix = (value ?? "").trim();
+				ensureViewTransitionName(el as HTMLElement, prefix);
+				this._vtClassIn = prefix || this._vtClassIn;
+				continue; // Skip further processing
+			} else if (attrName === "transition-out") {
+				const prefix = (value ?? "").trim();
+				ensureViewTransitionName(el as HTMLElement, prefix);
+				this._vtClassOut = prefix || this._vtClassOut;
+				continue; // Skip further processing
+			}
 
 			// Parse out expression and optional alias (for :each)
 			const [exp, rootAlias] = splitAs(value);
@@ -351,38 +415,18 @@ export default class RegEl {
 			const isTemplateDependent = dependentLogicAttrSet.has(
 				attrName as "elseif" | "else" | "then" | "catch",
 			);
-			// Note: transition-related handling occurs above (pre-processed)
-
-			// Remove support for :intro and :outro in favor of unified transition
 
 			// Handle special attributes
 			if (isTemplateRoot) {
-				if (sync) throwError(`Sync on template logic: ${attrName}`, el, true);
-				this._handleTemplating(
-					attrName as templLogicAttr,
-					name,
-					_fn,
-					rootAlias,
+				// Template roots should have been handled in priority order above
+				// If we reach here, something went wrong
+				throwError(
+					`Template root ${attrName} should be handled in early processing`,
+					el,
+					true,
 				);
-				attrWasRegistered.add(attrName);
-				continue;
 			} else if (isTemplateDependent) {
 				continue;
-			}
-
-			// Handle :transition, :transition-in, :transition-out bindings
-			if (attrName === "transition") {
-				const prefix = (value ?? "").trim();
-				ensureViewTransitionName(el as HTMLElement, prefix);
-				this._vtClass = prefix || this._vtClass;
-			} else if (attrName === "transition-in") {
-				const prefix = (value ?? "").trim();
-				ensureViewTransitionName(el as HTMLElement, prefix);
-				this._vtClassIn = prefix || this._vtClassIn;
-			} else if (attrName === "transition-out") {
-				const prefix = (value ?? "").trim();
-				ensureViewTransitionName(el as HTMLElement, prefix);
-				this._vtClassOut = prefix || this._vtClassOut;
 			}
 
 			// Handle event bindings

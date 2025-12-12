@@ -61,17 +61,16 @@ test("Map and Set equality", () => {
 	]);
 
 	expect(isEqual(map1, map2)).toBe(true);
-	// Note: Map/Set content changes are intentionally NOT detected at container level
-	// This is optimal for granular reactivity - UI bound to individual entries
-	// will update via property access, while container-level equality is for reassignment only
-	expect(isEqual(map1, map3)).toBe(true); // Intentionally true - content differences ignored
+	// Map/Set content changes are now detected via deep equality comparison
+	// This allows derived state that returns new Sets/Maps to trigger updates
+	expect(isEqual(map1, map3)).toBe(false); // Content differences are detected
 
 	const set1 = new Set([1, 2, 3]);
 	const set2 = new Set([1, 2, 3]);
 	const set3 = new Set([1, 2, 4]);
 
 	expect(isEqual(set1, set2)).toBe(true);
-	expect(isEqual(set1, set3)).toBe(true); // Intentionally true - content differences ignored
+	expect(isEqual(set1, set3)).toBe(false); // Content differences are detected
 });
 
 test("Date equality", () => {
