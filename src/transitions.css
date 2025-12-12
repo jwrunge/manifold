@@ -9,6 +9,14 @@
  */
 
 /* ============================================================================
+   CROSS-DOCUMENT VIEW TRANSITIONS (Multi-page)
+   Enable smooth transitions between page navigations
+   ============================================================================ */
+@view-transition {
+	navigation: auto;
+}
+
+/* ============================================================================
    FADE TRANSITIONS
    ============================================================================ */
 
@@ -359,22 +367,22 @@
 @keyframes grow-in {
 	from {
 		opacity: 0;
-		transform: scale(0.8);
+		transform: scale(1);
 	}
 	to {
 		opacity: 1;
-		transform: scale(1);
+		transform: scale(1.5);
 	}
 }
 
 @keyframes grow-out {
 	from {
 		opacity: 1;
-		transform: scale(1);
+		transform: scale(1.5);
 	}
 	to {
 		opacity: 0;
-		transform: scale(0.8);
+		transform: scale(1);
 	}
 }
 
