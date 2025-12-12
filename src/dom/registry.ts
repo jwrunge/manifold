@@ -1,12 +1,12 @@
 import {
-    mfDelete,
-    mfGet,
-    mfHead,
-    mfOptions,
-    mfPatch,
-    mfPost,
-    mfPut,
-    State,
+	mfDelete,
+	mfGet,
+	mfHead,
+	mfOptions,
+	mfPatch,
+	mfPost,
+	mfPut,
+	State,
 } from "../main.ts";
 import evaluateExpression from "../parsing/expression-parser.ts";
 import { type Effect, effect } from "../reactivity/effect.ts";
@@ -15,12 +15,12 @@ import { handleAsync } from "./templating/async-handler.ts";
 import { handleEach } from "./templating/each-handler.ts";
 import { findDependentSiblings } from "./templating/sibling-resolver.ts";
 import {
-    dependentLogicAttrSet,
-    prefixes,
-    type Registerable,
-    type Sibling,
-    type templLogicAttr,
-    templLogicAttrSet,
+	dependentLogicAttrSet,
+	prefixes,
+	type Registerable,
+	type Sibling,
+	type templLogicAttr,
+	templLogicAttrSet,
 } from "./templating/types.ts";
 
 // Shared registration logic for both new and existing elements
@@ -56,13 +56,13 @@ const _handleNewElements = (addedNodes: NodeList) => {
 
 import { splitAs } from "../parsing/util.ts";
 import {
-    areViewTransitionsEnabled,
-    ensureViewTransitionName,
-    runViewTransition,
-    scheduleViewTransitionBuffer,
-    type TransitionClassResolver,
-    type TransitionElement,
-    withTransitionStaging,
+	areViewTransitionsEnabled,
+	ensureViewTransitionName,
+	runViewTransition,
+	scheduleViewTransitionBuffer,
+	type TransitionClassResolver,
+	type TransitionElement,
+	withTransitionStaging,
 } from "./transition.ts";
 
 // Inlined conditional handler (was 26 lines in separate file)
@@ -722,6 +722,7 @@ export default class RegEl {
 					el.style.display = this._shouldShow(el) ? "" : "none";
 				}
 			};
+			
 			// Stage VT properties, run within transition, and cleanup
 			this._withTransitionStaging(
 				elementsChanging.map(({ el }) => el),

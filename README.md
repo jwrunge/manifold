@@ -382,10 +382,10 @@ Smooth animations with zero configuration using the View Transitions API:
 
 ```html
 <!-- Elements automatically animate when shown/hidden -->
-<div :if="isVisible" :transition="fade-in">This will fade in smoothly!</div>
-**
+<div :if="isVisible" :transition="fade">This will fade in smoothly!</div>
+
 <ul>
-	<li :each="items as item" :transition="slide-up">
+	<li :each="items as item" :transition="slide">
 		${item}
 		<!-- Animates in/out when added/removed -->
 	</li>
@@ -396,15 +396,16 @@ Add corresponding CSS:
 
 ```css
 @keyframes fade-in {
-	from {
-		opacity: 0;
-	}
-	to {
-		opacity: 1;
-	}
+	from { opacity: 0; }
+	to { opacity: 1; }
 }
 
-@keyframes slide-up {
+@keyframes fade-out {
+	from { opacity: 1; }
+	to { opacity: 0; }
+}
+
+@keyframes slide-in {
 	from {
 		opacity: 0;
 		transform: translateY(20px);
@@ -415,14 +416,37 @@ Add corresponding CSS:
 	}
 }
 
-::view-transition-new(*.fade-in) {
+@keyframes slide-out {
+	from {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(-20px);
+	}
+}
+
+/* Entrance animations */
+::view-transition-new(*.fade) {
 	animation: fade-in 300ms ease;
 }
 
-::view-transition-new(*.slide-up) {
-	animation: slide-up 250ms ease;
+::view-transition-new(*.slide) {
+	animation: slide-in 250ms ease;
+}
+
+/* Exit animations - 'both' is required to prevent flicker */
+::view-transition-old(*.fade) {
+	animation: fade-out 300ms ease both;
+}
+
+::view-transition-old(*.slide) {
+	animation: slide-out 250ms ease both;
 }
 ```
+
+**Important**: Exit transitions (`::view-transition-old`) should use `animation-fill-mode: both` (or `forwards`) to maintain the final keyframe state. Without this, elements can briefly flash back to their original state before cleanup, causing visible flicker.
 
 ### 9. Server Content Integration
 

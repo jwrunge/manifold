@@ -37,7 +37,7 @@
 }
 
 ::view-transition-old(*.fade) {
-	animation: fade-out var(--trans-normal) ease;
+	animation: fade-out var(--trans-normal) ease both;
 }
 
 ::view-transition-new(*.fade) {
@@ -45,7 +45,7 @@
 }
 
 ::view-transition-old(*.fade-fast) {
-	animation: fade-out var(--trans-fast) ease;
+	animation: fade-out var(--trans-fast) ease both;
 }
 
 ::view-transition-new(*.fade-fast) {
@@ -53,7 +53,7 @@
 }
 
 ::view-transition-old(*.fade-slow) {
-	animation: fade-out var(--trans-slow) ease;
+	animation: fade-out var(--trans-slow) ease both;
 }
 
 ::view-transition-new(*.fade-slow) {
@@ -154,7 +154,7 @@
 
 /* Fly Left */
 ::view-transition-old(*.fly-left) {
-	animation: fly-left-out var(--trans-normal) ease;
+	animation: fly-left-out var(--trans-normal) ease both;
 }
 
 ::view-transition-new(*.fly-left) {
@@ -162,7 +162,7 @@
 }
 
 ::view-transition-old(*.fly-left-fast) {
-	animation: fly-left-out var(--trans-fast) ease;
+	animation: fly-left-out var(--trans-fast) ease both;
 }
 
 ::view-transition-new(*.fly-left-fast) {
@@ -170,7 +170,7 @@
 }
 
 ::view-transition-old(*.fly-left-slow) {
-	animation: fly-left-out var(--trans-slow) ease;
+	animation: fly-left-out var(--trans-slow) ease both;
 }
 
 ::view-transition-new(*.fly-left-slow) {
@@ -179,7 +179,7 @@
 
 /* Fly Right */
 ::view-transition-old(*.fly-right) {
-	animation: fly-right-out var(--trans-normal) ease;
+	animation: fly-right-out var(--trans-normal) ease both;
 }
 
 ::view-transition-new(*.fly-right) {
@@ -187,7 +187,7 @@
 }
 
 ::view-transition-old(*.fly-right-fast) {
-	animation: fly-right-out var(--trans-fast) ease;
+	animation: fly-right-out var(--trans-fast) ease both;
 }
 
 ::view-transition-new(*.fly-right-fast) {
@@ -195,7 +195,7 @@
 }
 
 ::view-transition-old(*.fly-right-slow) {
-	animation: fly-right-out var(--trans-slow) ease;
+	animation: fly-right-out var(--trans-slow) ease both;
 }
 
 ::view-transition-new(*.fly-right-slow) {
@@ -204,7 +204,7 @@
 
 /* Fly Up */
 ::view-transition-old(*.fly-up) {
-	animation: fly-up-out var(--trans-normal) ease;
+	animation: fly-up-out var(--trans-normal) ease both;
 }
 
 ::view-transition-new(*.fly-up) {
@@ -212,7 +212,7 @@
 }
 
 ::view-transition-old(*.fly-up-fast) {
-	animation: fly-up-out var(--trans-fast) ease;
+	animation: fly-up-out var(--trans-fast) ease both;
 }
 
 ::view-transition-new(*.fly-up-fast) {
@@ -220,7 +220,7 @@
 }
 
 ::view-transition-old(*.fly-up-slow) {
-	animation: fly-up-out var(--trans-slow) ease;
+	animation: fly-up-out var(--trans-slow) ease both;
 }
 
 ::view-transition-new(*.fly-up-slow) {
@@ -229,7 +229,7 @@
 
 /* Fly Down */
 ::view-transition-old(*.fly-down) {
-	animation: fly-down-out var(--trans-normal) ease;
+	animation: fly-down-out var(--trans-normal) ease both;
 }
 
 ::view-transition-new(*.fly-down) {
@@ -237,7 +237,7 @@
 }
 
 ::view-transition-old(*.fly-down-fast) {
-	animation: fly-down-out var(--trans-fast) ease;
+	animation: fly-down-out var(--trans-fast) ease both;
 }
 
 ::view-transition-new(*.fly-down-fast) {
@@ -245,7 +245,7 @@
 }
 
 ::view-transition-old(*.fly-down-slow) {
-	animation: fly-down-out var(--trans-slow) ease;
+	animation: fly-down-out var(--trans-slow) ease both;
 }
 
 ::view-transition-new(*.fly-down-slow) {
@@ -279,7 +279,7 @@
 }
 
 ::view-transition-old(*.scale) {
-	animation: scale-out var(--trans-normal) ease;
+	animation: scale-out var(--trans-normal) ease both;
 }
 
 ::view-transition-new(*.scale) {
@@ -287,7 +287,7 @@
 }
 
 ::view-transition-old(*.scale-fast) {
-	animation: scale-out var(--trans-fast) ease;
+	animation: scale-out var(--trans-fast) ease both;
 }
 
 ::view-transition-new(*.scale-fast) {
@@ -295,7 +295,7 @@
 }
 
 ::view-transition-old(*.scale-slow) {
-	animation: scale-out var(--trans-slow) ease;
+	animation: scale-out var(--trans-slow) ease both;
 }
 
 ::view-transition-new(*.scale-slow) {
@@ -329,7 +329,7 @@
 }
 
 ::view-transition-old(*.shrink) {
-	animation: shrink-out var(--trans-normal) ease;
+	animation: shrink-out var(--trans-normal) ease both;
 }
 
 ::view-transition-new(*.shrink) {
@@ -337,7 +337,7 @@
 }
 
 ::view-transition-old(*.shrink-fast) {
-	animation: shrink-out var(--trans-fast) ease;
+	animation: shrink-out var(--trans-fast) ease both;
 }
 
 ::view-transition-new(*.shrink-fast) {
@@ -345,7 +345,7 @@
 }
 
 ::view-transition-old(*.shrink-slow) {
-	animation: shrink-out var(--trans-slow) ease;
+	animation: shrink-out var(--trans-slow) ease both;
 }
 
 ::view-transition-new(*.shrink-slow) {
@@ -379,7 +379,7 @@
 }
 
 ::view-transition-old(*.grow) {
-	animation: grow-out var(--trans-normal) ease;
+	animation: grow-out var(--trans-normal) ease both;
 }
 
 ::view-transition-new(*.grow) {
@@ -387,7 +387,7 @@
 }
 
 ::view-transition-old(*.grow-fast) {
-	animation: grow-out var(--trans-fast) ease;
+	animation: grow-out var(--trans-fast) ease both;
 }
 
 ::view-transition-new(*.grow-fast) {
@@ -395,7 +395,7 @@
 }
 
 ::view-transition-old(*.grow-slow) {
-	animation: grow-out var(--trans-slow) ease;
+	animation: grow-out var(--trans-slow) ease both;
 }
 
 ::view-transition-new(*.grow-slow) {
@@ -429,7 +429,7 @@
 }
 
 ::view-transition-old(*.slide) {
-	animation: slide-out var(--trans-normal) ease;
+	animation: slide-out var(--trans-normal) ease both;
 }
 
 ::view-transition-new(*.slide) {
@@ -437,7 +437,7 @@
 }
 
 ::view-transition-old(*.slide-fast) {
-	animation: slide-out var(--trans-fast) ease;
+	animation: slide-out var(--trans-fast) ease both;
 }
 
 ::view-transition-new(*.slide-fast) {
@@ -445,7 +445,7 @@
 }
 
 ::view-transition-old(*.slide-slow) {
-	animation: slide-out var(--trans-slow) ease;
+	animation: slide-out var(--trans-slow) ease both;
 }
 
 ::view-transition-new(*.slide-slow) {
