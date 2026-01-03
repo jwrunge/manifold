@@ -60,16 +60,16 @@
 			</div>
 		</div>
 
-		<div :if="count < 10" :transition="list-item">
+		<div :if="count < 10" :transition="'list-item'">
 			The count is less than 10! ${count}
 		</div>
-		<div :elseif="count < 20" :transition="list-item">
+		<div :elseif="count < 20" :transition="'list-item'">
 			The count is between 10 and 19! ${count}
 		</div>
-		<div :elseif="count < 30" :transition="list-item">
+		<div :elseif="count < 30" :transition="'list-item'">
 			The count is between 20 and 29! ${count}
 		</div>
-		<div :else :transition="list-item">
+		<div :else :transition="'list-item'">
 			The count is 30 or more! ${count}
 		</div>
 		<div>Count squared is ${count * count}</div>
@@ -79,13 +79,13 @@
 			<button :onclick="loadUser()" style="margin-bottom: 0.5rem">
 				Reload User (alternates success/error)
 			</button>
-			<div :await="currentUserPromise" :transition="list-item">
+			<div :await="currentUserPromise" :transition="'list-item'">
 				Loading user...
 			</div>
-			<div :then="{name, age}" :transition="list-item">
+			<div :then="{name, age}" :transition="'list-item'">
 				User loaded: ${name} (${age}) ${count}
 			</div>
-			<div :catch="errorMsg" style="color: red" :transition="list-item">
+			<div :catch="errorMsg" style="color: red" :transition="'list-item'">
 				Failed to load user: ${errorMsg}
 				<p>Here is a list of all the error messages:</p>
 				<ul>
@@ -153,7 +153,7 @@
 			<ul>
 				<li
 					class="list-item"
-					:transition="list-item"
+					:transition="'list-item'"
 					:each="list as { id, text }, key"
 				>
 					${key}: ${id} ${text}
