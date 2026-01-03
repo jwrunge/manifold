@@ -11,6 +11,7 @@ export class State<TState extends IntermediateState> {
 	#name?: string;
 	#scopedState: TState;
 	#derivations: Map<string, (store: IntermediateState) => unknown>;
+	#actions?: (state: IntermediateState) => Record<string, unknown>;
 	#built = false;
 
 	static globalStores = new Map<string | undefined, IntermediateState>();
@@ -20,10 +21,12 @@ export class State<TState extends IntermediateState> {
 		name?: string,
 		initialState?: TState,
 		derivations?: Map<string, (store: IntermediateState) => unknown>,
+		actions?: (state: IntermediateState) => Record<string, unknown>,
 	) {
 		this.#name = name;
 		this.#scopedState = (initialState || {}) as TState;
 		this.#derivations = derivations || new Map();
+		this.#actions = actions;
 	}
 
 	static create<S extends IntermediateState>(
@@ -56,6 +59,7 @@ export class State<TState extends IntermediateState> {
 			this.#name,
 			{ ...this.#scopedState, [keyOrObj]: value },
 			new Map(this.#derivations),
+			this.#actions,
 		) as State<TState & Record<K, V>>;
 	}
 
@@ -70,7 +74,19 @@ export class State<TState extends IntermediateState> {
 				key,
 				fn as (store: IntermediateState) => unknown,
 			),
+			this.#actions,
 		) as State<TState & Record<K, T>>;
+	}
+
+	actions<A extends Record<string, (...args: never[]) => unknown>>(
+		factory: (state: TState) => A,
+	): State<TState & A> {
+		return new State(
+			this.#name,
+			{ ...this.#scopedState },
+			new Map(this.#derivations),
+			factory as (state: IntermediateState) => Record<string, unknown>,
+		) as State<TState & A>;
 	}
 
 	build(): TState {
@@ -94,6 +110,14 @@ export class State<TState extends IntermediateState> {
 			})._run();
 		}
 		this.#built = true;
+
+		// Add actions to state if provided
+		if (this.#actions) {
+			const actions = this.#actions(state);
+			for (const [key, fn] of Object.entries(actions)) {
+				(state as Record<string, unknown>)[key] = fn;
+			}
+		}
 
 		// Register store globally for incremental registration
 		State.globalStores.set(this.#name, state);
@@ -165,10 +189,10 @@ export class State<TState extends IntermediateState> {
 }
 
 export {
-	ComponentStateBuilder,
-	css,
-	html,
-	useComponent,
+    ComponentStateBuilder,
+    css,
+    html,
+    useComponent
 } from "./dom/component.ts";
 export { effect } from "./reactivity/effect.ts";
 
