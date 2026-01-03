@@ -157,6 +157,33 @@ export declare class State<
 	): State<TState & Record<K, TValue>>;
 
 	/**
+	 * Define actions that have automatic access to the reactive state.
+	 * Actions are functions that close over the state, eliminating the need to pass state as a parameter.
+	 * @example
+	 * ```ts
+	 * const state = State.create()
+	 * 	.add({ count: 0, name: "App" })
+	 * 	.actions((state) => ({
+	 * 		increment: () => state.count++,
+	 * 		reset: () => { state.count = 0; },
+	 * 		greet: (msg: string) => `${msg}, ${state.name}!`
+	 * 	}))
+	 * 	.build();
+	 *
+	 * state.increment(); // count is now 1
+	 * console.log(state.greet("Hello")); // "Hello, App!"
+	 * ```
+	 * 
+	 * ```html
+	 * <button :onclick="increment()">Count: ${count}</button>
+	 * <button :onclick="reset()">Reset</button>
+	 * ```
+	 */
+	actions<A extends Record<string, (...args: never[]) => unknown>>(
+		factory: (state: TState) => A,
+	): State<TState & A>;
+
+	/**
 	 * Finalize and build the intermediate state into a fully-typed object.
 	 * This triggers DOM registration for any matching `data-mf-register` elements.
 	 */
