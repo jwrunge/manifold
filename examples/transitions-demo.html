@@ -74,7 +74,7 @@
 <body data-mf-register>
     <h1>🎭 Manifold View Transitions Demo</h1>
 
-    <div :onclick="increment($state, $element)">NUM: ${count}</div>
+    <div :onclick="increment($element)">NUM: ${count}</div>
 
     <!-- Basic Transitions -->
     <div class="section">
@@ -85,7 +85,7 @@
                 :each="basic as trans" 
                 :if="shown.has(trans)"
                 :transition="trans"
-                :onclick="tempToggle(trans, $state)"
+                :onclick="tempToggle(trans)"
             >
                 ${trans.toUpperCase()[0] + trans.slice(1).replace('-', ' ')}
             </div>
@@ -103,7 +103,7 @@
                 :each="fast as trans" 
                 :if="shown.has(trans)"
                 :transition="trans"
-                :onclick="tempToggle(trans, $state)"
+                :onclick="tempToggle(trans)"
             >
                 ${trans.toUpperCase()[0] + trans.slice(1).replace('-', ' ')}
             </div>
@@ -116,7 +116,7 @@
                 :each="slow as trans" 
                 :if="shown.has(trans)"
                 :transition="trans"
-                :onclick="tempToggle(trans, $state)"
+                :onclick="tempToggle(trans)"
             >
                 ${trans.toUpperCase()[0] + trans.slice(1).replace('-', ' ')}
             </div>
