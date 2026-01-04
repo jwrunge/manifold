@@ -25,7 +25,6 @@ import {
 	templLogicAttrSet,
 } from "./templating/types.ts";
 import {
-	areViewTransitionsEnabled,
 	ensureViewTransitionName,
 	runViewTransition,
 	scheduleViewTransitionBuffer,
@@ -238,12 +237,7 @@ export default class RegEl {
 		RegEl._mutations.set(el, this.#mutations);
 		const attrWasRegistered = new Set<string>();
 		const registeredEvents = new Set<string>();
-
-		// If this is a new registration and view transitions aren't enabled yet,
-		// schedule the buffer (this handles dynamic element registration)
-		if (!areViewTransitionsEnabled()) {
-			scheduleViewTransitionBuffer();
-		}
+		scheduleViewTransitionBuffer();
 
 		// ═══════════════════════════════════════════════════════════════
 		// TEMPLATE LOGIC EXECUTION ORDER
@@ -266,6 +260,7 @@ export default class RegEl {
 
 		// EARLY HANDLE :each to avoid text interpolation on template
 		// :each must be handled first as it treats element as a template
+		// Cache template BEFORE processing attributes so :transition is preserved
 		for (const a of Array.from(el.attributes)) {
 			const name = a.name;
 			const value = a.value;
@@ -273,6 +268,11 @@ export default class RegEl {
 			if (!info) continue;
 			const { attrName } = info;
 			if (attrName === "each") {
+				// Clone template before any attributes are processed/removed
+				const tmpl = el.cloneNode(true) as Registerable;
+				tmpl.removeAttribute(name);
+				this._cachedContent = tmpl;
+				
 				const [exp, rootAlias] = splitAs(value);
 				const { _fn } = evaluateExpression(exp);
 				this._handleTemplating("each", name, _fn, rootAlias);

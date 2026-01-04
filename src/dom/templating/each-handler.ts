@@ -3,7 +3,7 @@ import applyAliasPattern from "../../parsing/alias-destructure.ts";
 import { indexOfTopLevel, isIdent } from "../../parsing/util.ts";
 import { type Effect, effect } from "../../reactivity/effect.ts";
 import { scopeProxy } from "../../reactivity/proxy.ts";
-import { withTransitionStaging } from "../transition.ts";
+import { VT_CLASS } from "../css.ts";
 import type { Registerable } from "./types.ts";
 
 // Type for the RegEl class (to avoid circular dependencies)
@@ -48,23 +48,31 @@ export function handleEach(
 			regEl._transition(run);
 			return;
 		}
-		withTransitionStaging(
-			nodes as (HTMLElement | SVGElement | MathMLElement)[],
-			run,
-			(el) => {
-				const reg = RegElClass._registry.get(el);
-				return appearing ? reg?._vtClassIn : reg?._vtClassOut;
-			},
-			(cb) => regEl._transition(cb),
-		);
+		
+		// Each cloned element has its own RegEl with transition classes from the cached template
+		const classTargets: HTMLElement[] = [];
+		
+		for (const el of nodes) {
+			const childReg = RegElClass._registry.get(el);
+			const vtClass = appearing ? childReg?._vtClassIn : childReg?._vtClassOut;
+			if (vtClass) {
+				(el as HTMLElement).style.setProperty(VT_CLASS, vtClass);
+				classTargets.push(el as HTMLElement);
+			}
+		}
+		
+		const cleanup = () => {
+			for (const el of classTargets) {
+				el.style.removeProperty(VT_CLASS);
+			}
+		};
+		
+		const transition = regEl._transition(run);
+		if (transition?.finished) transition.finished.finally(cleanup);
+		else cleanup();
 	};
-	// Cache a pristine template clone for repeated use (without the :each attribute)
-	if (!regEl._cachedContent) {
-		const tmpl = regEl._el.cloneNode(true) as Registerable;
-		// Remove the templating attribute so clones don't re-trigger :each handling
-		tmpl.removeAttribute(attrTagName);
-		regEl._cachedContent = tmpl;
-	}
+
+	// Cached template is already created in registry.ts before attributes are processed
 
 	// Establish stable start/end anchors and remove the original template element
 	if (!regEl._eachStart || !regEl._eachEnd) {
