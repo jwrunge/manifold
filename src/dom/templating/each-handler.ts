@@ -16,7 +16,8 @@ interface RegElLike {
 	_eachInstances?: Registerable[];
 	_eachElementMap?: WeakMap<Registerable, { value: unknown; index: number }>;
 	_eachPreviousArray?: unknown[];
-	_vtClass?: string;
+	_vtClassIn?: string;
+	_vtClassOut?: string;
 	_stateAsRecord(): Record<string, unknown>;
 	_transition(callback: () => void): { finished: Promise<unknown> } | null;
 	_handleTextNode(node: Node): void;
@@ -38,7 +39,11 @@ export function handleEach(
 	throwError: (msg: string, cause?: unknown) => void,
 	eachAlias?: string,
 ): Effect {
-	const runWithChildTransitions = (nodes: Registerable[], run: () => void) => {
+	const runWithChildTransitions = (
+		nodes: Registerable[],
+		run: () => void,
+		appearing = false,
+	) => {
 		if (nodes.length === 0) {
 			regEl._transition(run);
 			return;
@@ -46,7 +51,10 @@ export function handleEach(
 		withTransitionStaging(
 			nodes as (HTMLElement | SVGElement | MathMLElement)[],
 			run,
-			(el) => RegElClass._registry.get(el)?._vtClass,
+			(el) => {
+				const reg = RegElClass._registry.get(el);
+				return appearing ? reg?._vtClassIn : reg?._vtClassOut;
+			},
 			(cb) => regEl._transition(cb),
 		);
 	};
@@ -220,7 +228,7 @@ export function handleEach(
 							}
 						}
 					}
-				});
+				}, false);
 			} else {
 				// Fallback to original behavior if we can't identify specific elements
 				// Collect nodes to remove so we can mark them before the transition
@@ -237,7 +245,7 @@ export function handleEach(
 						}
 						node.remove();
 					}
-				});
+				}, false);
 			}
 		} else {
 			// Handle the normal cases: adding elements or updating in place
@@ -279,7 +287,7 @@ export function handleEach(
 				const newClones: Registerable[] = instances?.slice(cur) ?? [];
 				runWithChildTransitions(newClones, () => {
 					parent.insertBefore(frag, end);
-				});
+				}, true);
 			}
 		}
 
