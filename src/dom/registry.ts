@@ -9,6 +9,7 @@ import {
 	State,
 } from "../main.ts";
 import evaluateExpression from "../parsing/expression-parser.ts";
+import { splitAs } from "../parsing/util.ts";
 import { type Effect, effect } from "../reactivity/effect.ts";
 import { scopeProxy } from "../reactivity/proxy.ts";
 import { handleAsync } from "./templating/async-handler.ts";
@@ -22,6 +23,15 @@ import {
 	type templLogicAttr,
 	templLogicAttrSet,
 } from "./templating/types.ts";
+import {
+	areViewTransitionsEnabled,
+	ensureViewTransitionName,
+	runViewTransition,
+	scheduleViewTransitionBuffer,
+	type TransitionClassResolver,
+	type TransitionElement,
+	withTransitionStaging,
+} from "./transition.ts";
 
 // Shared registration logic for both new and existing elements
 const _registerElement = (el: Element) => {
@@ -53,17 +63,6 @@ const _handleNewElements = (addedNodes: NodeList) => {
 		}
 	}
 };
-
-import { splitAs } from "../parsing/util.ts";
-import {
-	areViewTransitionsEnabled,
-	ensureViewTransitionName,
-	runViewTransition,
-	scheduleViewTransitionBuffer,
-	type TransitionClassResolver,
-	type TransitionElement,
-	withTransitionStaging,
-} from "./transition.ts";
 
 // Inlined conditional handler (was 26 lines in separate file)
 const handleConditional = (
@@ -297,51 +296,6 @@ export default class RegEl {
 		// Handle text nodes (template elements used by :each are hidden and preserved; clones get their own effects)
 		for (const node of Array.from(el.childNodes)) this._handleTextNode(node);
 
-		// Pre-process transition attributes (support both raw and data-mf-)
-		let transitionValue: string | null = null;
-		let transitionInValue: string | null = null;
-		let transitionOutValue: string | null = null;
-
-		if (el.hasAttribute("transition")) {
-			transitionValue = el.getAttribute("transition");
-			el.removeAttribute("transition");
-		} else if (el.hasAttribute("data-mf-transition")) {
-			transitionValue = el.getAttribute("data-mf-transition");
-			el.removeAttribute("data-mf-transition");
-		}
-
-		if (el.hasAttribute("transition-in")) {
-			transitionInValue = el.getAttribute("transition-in");
-			el.removeAttribute("transition-in");
-		} else if (el.hasAttribute("data-mf-transition-in")) {
-			transitionInValue = el.getAttribute("data-mf-transition-in");
-			el.removeAttribute("data-mf-transition-in");
-		}
-
-		if (el.hasAttribute("transition-out")) {
-			transitionOutValue = el.getAttribute("transition-out");
-			el.removeAttribute("transition-out");
-		} else if (el.hasAttribute("data-mf-transition-out")) {
-			transitionOutValue = el.getAttribute("data-mf-transition-out");
-			el.removeAttribute("data-mf-transition-out");
-		}
-
-		if (transitionValue !== null) {
-			const prefix = (transitionValue ?? "").trim();
-			ensureViewTransitionName(el as HTMLElement, prefix);
-			this._vtClass = prefix; // unified class applied to both old/new
-		}
-		if (transitionInValue !== null) {
-			const prefix = (transitionInValue ?? "").trim();
-			ensureViewTransitionName(el as HTMLElement, prefix);
-			this._vtClassIn = prefix;
-		}
-		if (transitionOutValue !== null) {
-			const prefix = (transitionOutValue ?? "").trim();
-			ensureViewTransitionName(el as HTMLElement, prefix);
-			this._vtClassOut = prefix;
-		}
-
 		// Handle attributes in priority order for template logic
 		// Priority: 1. :await (async evaluation, establishes promise context)
 		//          2. :if (conditionals, uses established context)
@@ -468,7 +422,11 @@ export default class RegEl {
 				throwError(`Sync on granular bind: ${attrName}`, el, true);
 
 			// Handle transition attributes specially
-			if (attrName === "transition" || attrName === "transition-in" || attrName === "transition-out") {
+			if (
+				attrName === "transition" ||
+				attrName === "transition-in" ||
+				attrName === "transition-out"
+			) {
 				const ef: Effect = effect(() => {
 					const prefix = String(_fn(makeContext(this._state, el)) ?? "").trim();
 					ensureViewTransitionName(el as HTMLElement, prefix);
@@ -722,7 +680,7 @@ export default class RegEl {
 					el.style.display = this._shouldShow(el) ? "" : "none";
 				}
 			};
-			
+
 			// Stage VT properties, run within transition, and cleanup
 			this._withTransitionStaging(
 				elementsChanging.map(({ el }) => el),
