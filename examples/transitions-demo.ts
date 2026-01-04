@@ -16,7 +16,7 @@ const transitions = ["", "fast", "slow"].map(
 		),
 );
 
-const state = State.create()
+const _state = State.create()
 	// Knobs
 	.add({
 		hidden: new Set<string>(),

@@ -34,7 +34,7 @@ interface RegElStatic {
 export function handleEach(
 	regEl: RegElLike,
 	RegElClass: RegElStatic,
-	attrTagName: string,
+	_attrTagName: string,
 	_fn: (ctx?: Record<string, unknown> | undefined) => unknown,
 	throwError: (msg: string, cause?: unknown) => void,
 	eachAlias?: string,
