@@ -192,6 +192,7 @@ export default class RegEl {
 	_eachInstances?: Registerable[];
 	_vtClassIn?: string;
 	_vtClassOut?: string;
+	_vtHang?: number;
 
 	static _registerOrGet(el: Registerable, state: Record<string, unknown>) {
 		return RegEl._registry.get(el) ?? new RegEl(el, state);
@@ -260,7 +261,6 @@ export default class RegEl {
 
 		// EARLY HANDLE :each to avoid text interpolation on template
 		// :each must be handled first as it treats element as a template
-		// Cache template BEFORE processing attributes so :transition is preserved
 		for (const a of Array.from(el.attributes)) {
 			const name = a.name;
 			const value = a.value;
@@ -268,11 +268,6 @@ export default class RegEl {
 			if (!info) continue;
 			const { attrName } = info;
 			if (attrName === "each") {
-				// Clone template before any attributes are processed/removed
-				const tmpl = el.cloneNode(true) as Registerable;
-				tmpl.removeAttribute(name);
-				this._cachedContent = tmpl;
-
 				const [exp, rootAlias] = splitAs(value);
 				const { _fn } = evaluateExpression(exp);
 				this._handleTemplating("each", name, _fn, rootAlias);
@@ -422,19 +417,29 @@ export default class RegEl {
 			if (
 				attrName === "transition" ||
 				attrName === "transition-in" ||
-				attrName === "transition-out"
+				attrName === "transition-out" ||
+				attrName === "transition-hang"
 			) {
 				const ef: Effect = effect(() => {
-					const prefix = String(_fn(makeContext(this._state, el)) ?? "").trim();
-					ensureViewTransitionName(el as HTMLElement);
-					if (attrName === "transition") {
-						// Set both in and out to use the same transition class
-						this._vtClassIn = prefix || this._vtClassIn;
-						this._vtClassOut = prefix || this._vtClassOut;
-					} else if (attrName === "transition-in") {
-						this._vtClassIn = prefix || this._vtClassIn;
-					} else if (attrName === "transition-out") {
-						this._vtClassOut = prefix || this._vtClassOut;
+					if (attrName === "transition-hang") {
+						const value = _fn(makeContext(this._state, el));
+						const duration =
+							typeof value === "number"
+								? value
+								: Number.parseFloat(String(value ?? "0"));
+						this._vtHang = duration || 0;
+					} else {
+						const prefix = String(_fn(makeContext(this._state, el)) ?? "").trim();
+						ensureViewTransitionName(el as HTMLElement);
+						if (attrName === "transition") {
+							// Set both in and out to use the same transition class
+							this._vtClassIn = prefix || this._vtClassIn;
+							this._vtClassOut = prefix || this._vtClassOut;
+						} else if (attrName === "transition-in") {
+							this._vtClassIn = prefix || this._vtClassIn;
+						} else if (attrName === "transition-out") {
+							this._vtClassOut = prefix || this._vtClassOut;
+						}
 					}
 				});
 				this.#cleanups.add(() => ef._stop());
@@ -651,19 +656,46 @@ export default class RegEl {
 
 		// Apply transition classes if configured
 		if (this._vtClassIn || this._vtClassOut) {
-			elementsChanging.forEach(({ el }) => {
-				const isAppearing = this._shouldShow(el);
-				const vtClass = isAppearing ? this._vtClassIn : this._vtClassOut;
+			for(const { el } of elementsChanging) {
+				const vtClass = this._shouldShow(el) ? this._vtClassIn : this._vtClassOut;
 				if (vtClass) {
 					el.style.setProperty(VT_CLASS, vtClass);
 					classTargets.push(el as HTMLElement);
 				}
-			});
+			};
 		}
 
 		const run = () => {
-			for (const { el } of elementsChanging) {
-				el.style.display = this._shouldShow(el) ? "" : "none";
+			const showing = elementsChanging.filter(({ el }) => this._shouldShow(el));
+			const hiding = elementsChanging.filter(({ el }) => !this._shouldShow(el));
+
+			// Show elements immediately
+			for (const { el } of showing) {
+				el.style.display = "";
+			}
+
+			// For hiding elements with hang, use visibility to maintain space
+			if (this._vtHang && hiding.length > 0) {
+				for (const { el } of hiding) {
+					el.style.visibility = "hidden";
+				}
+				setTimeout(() => {
+					// Run another transition to smoothly animate remaining elements
+					const secondTransition = this._transition(() => {
+						for (const { el } of hiding) {
+							el.style.display = "none";
+							el.style.visibility = "";
+						}
+					});
+					// Cleanup after second transition completes
+					if (secondTransition?.finished) secondTransition.finished.finally(cleanup);
+					else cleanup();
+				}, this._vtHang);
+			} else {
+				// No hang, hide immediately
+				for (const { el } of hiding) {
+					el.style.display = "none";
+				}
 			}
 		};
 
@@ -674,8 +706,11 @@ export default class RegEl {
 		};
 
 		const transition = this._transition(run);
-		if (transition?.finished) transition.finished.finally(cleanup);
-		else cleanup();
+		// Only cleanup immediately if not using hang
+		if (!this._vtHang) {
+			if (transition?.finished) transition.finished.finally(cleanup);
+			else cleanup();
+		}
 	}
 
 	_dispose() {

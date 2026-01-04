@@ -18,6 +18,7 @@ interface RegElLike {
 	_eachPreviousArray?: unknown[];
 	_vtClassIn?: string;
 	_vtClassOut?: string;
+	_vtHang?: number;
 	_stateAsRecord(): Record<string, unknown>;
 	_transition(callback: () => void): { finished: Promise<unknown> } | null;
 	_handleTextNode(node: Node): void;
@@ -49,21 +50,24 @@ export function handleEach(
 			return;
 		}
 
-		// Each cloned element has its own RegEl with transition classes from the cached template
-		const classTargets: HTMLElement[] = [];
+		// Each clone processes its own :transition attribute
+		// Look up the first clone to see if transitions are configured
+		const firstReg = RegElClass._registry.get(nodes[0]);
+		const vtClass = appearing ? firstReg?._vtClassIn : firstReg?._vtClassOut;
 
+		if (!vtClass) {
+			regEl._transition(run);
+			return;
+		}
+
+		// Apply transition classes to all nodes (they all have the same class)
 		for (const el of nodes) {
-			const childReg = RegElClass._registry.get(el);
-			const vtClass = appearing ? childReg?._vtClassIn : childReg?._vtClassOut;
-			if (vtClass) {
-				(el as HTMLElement).style.setProperty(VT_CLASS, vtClass);
-				classTargets.push(el as HTMLElement);
-			}
+			(el as HTMLElement).style.setProperty(VT_CLASS, vtClass);
 		}
 
 		const cleanup = () => {
-			for (const el of classTargets) {
-				el.style.removeProperty(VT_CLASS);
+			for (const el of nodes) {
+				(el as HTMLElement).style.removeProperty(VT_CLASS);
 			}
 		};
 
@@ -72,7 +76,13 @@ export function handleEach(
 		else cleanup();
 	};
 
-	// Cached template is already created in registry.ts before attributes are processed
+	// Cache a pristine template clone for repeated use (without the :each attribute)
+	if (!regEl._cachedContent) {
+		const tmpl = regEl._el.cloneNode(true) as Registerable;
+		// Remove the templating attribute so clones don't re-trigger :each handling
+		tmpl.removeAttribute(_attrTagName);
+		regEl._cachedContent = tmpl;
+	}
 
 	// Establish stable start/end anchors and remove the original template element
 	if (!regEl._eachStart || !regEl._eachEnd) {
@@ -201,40 +211,91 @@ export function handleEach(
 
 			// If we identified specific elements to remove, remove them
 			if (elementsToRemove.length > 0) {
+				const firstReg = RegElClass._registry.get(elementsToRemove[0]);
+				const hangDuration = firstReg?._vtHang;
+
 				runWithChildTransitions(
 					elementsToRemove,
 					() => {
-						for (const element of elementsToRemove) {
-							if (instances) {
-								const index = instances.indexOf(element);
-								if (index !== -1) {
-									instances.splice(index, 1);
+						if (hangDuration) {
+							// Set visibility:hidden immediately to keep space
+							for (const element of elementsToRemove) {
+								(element as HTMLElement).style.visibility = "hidden";
+							}
+							setTimeout(() => {
+								// Run another transition to smoothly animate remaining elements
+								regEl._transition(() => {
+									for (const element of elementsToRemove) {
+										if (instances) {
+											const index = instances.indexOf(element);
+											if (index !== -1) {
+												instances.splice(index, 1);
+											}
+										}
+										if (elementMap) {
+											elementMap.delete(element);
+										}
+										(element as HTMLElement).style.visibility = "";
+										element.remove();
+									}
+
+									// After removal, update the remaining elements with correct indices and values
+									const remainingElements = instances || [];
+									for (
+										let i = 0;
+										i < Math.min(remainingElements.length, list.length);
+										i++
+									) {
+										const element = remainingElements[i];
+										const childReg = RegElClass._registry.get(element);
+										if (childReg) {
+											bindEachAliases(childReg, list[i], i);
+
+											// Update tracking map with new index
+											if (elementMap) {
+												elementMap.set(element, {
+													value: list[i],
+													index: i,
+												});
+											}
+										}
+									}
+								});
+							}, hangDuration);
+						} else {
+							// No hang, remove immediately
+							for (const element of elementsToRemove) {
+								if (instances) {
+									const index = instances.indexOf(element);
+									if (index !== -1) {
+										instances.splice(index, 1);
+									}
 								}
-							}
-							if (elementMap) {
-								elementMap.delete(element);
-							}
-							element.remove();
-						}
-
-						// After removal, update the remaining elements with correct indices and values
-						const remainingElements = instances || [];
-						for (
-							let i = 0;
-							i < Math.min(remainingElements.length, list.length);
-							i++
-						) {
-							const element = remainingElements[i];
-							const childReg = RegElClass._registry.get(element);
-							if (childReg) {
-								bindEachAliases(childReg, list[i], i);
-
-								// Update tracking map with new index
 								if (elementMap) {
-									elementMap.set(element, {
-										value: list[i],
-										index: i,
-									});
+									elementMap.delete(element);
+								}
+								element.remove();
+							}
+
+							// After removal, update the remaining elements with correct indices and values
+							const remainingElements = instances || [];
+							for (
+								let i = 0;
+								i < Math.min(remainingElements.length, list.length);
+								i++
+							) {
+								const element = remainingElements[i];
+								const childReg = RegElClass._registry.get(element);
+								if (childReg) {
+									bindEachAliases(childReg, list[i], i);
+
+									// Update tracking map with new index
+									if (elementMap) {
+										elementMap.set(element, {
+											value: list[i],
+											index: i,
+										});
+									}
 								}
 							}
 						}
@@ -249,15 +310,39 @@ export function handleEach(
 					const node = instances?.[i];
 					if (node) nodesToRemove.push(node);
 				}
+				const firstReg = RegElClass._registry.get(nodesToRemove[0]);
+				const hangDuration = firstReg?._vtHang;
+
 				runWithChildTransitions(
 					nodesToRemove,
 					() => {
-						for (const node of nodesToRemove) {
-							instances?.pop();
-							if (elementMap) {
-								elementMap.delete(node);
+						if (hangDuration) {
+							// Set visibility:hidden immediately to keep space
+							for (const node of nodesToRemove) {
+								(node as HTMLElement).style.visibility = "hidden";
 							}
-							node.remove();
+							setTimeout(() => {
+								// Run another transition to smoothly animate remaining elements
+								regEl._transition(() => {
+									for (const node of nodesToRemove) {
+										instances?.pop();
+										if (elementMap) {
+											elementMap.delete(node);
+										}
+										(node as HTMLElement).style.visibility = "";
+										node.remove();
+									}
+								});
+							}, hangDuration);
+						} else {
+							// No hang, remove immediately
+							for (const node of nodesToRemove) {
+								instances?.pop();
+								if (elementMap) {
+									elementMap.delete(node);
+								}
+								node.remove();
+							}
 						}
 					},
 					false,
