@@ -155,7 +155,7 @@ export const mfFetch = async (
 			el.classList.add(ops.addTransitionClass);
 			const hel = el as HTMLElement;
 			hel.style.setProperty(VT_CLASS, ops.addTransitionClass);
-			ensureViewTransitionName(hel, `mf-${ops.addTransitionClass}`);
+			ensureViewTransitionName(hel);
 		}
 	}
 
@@ -185,7 +185,7 @@ export const mfFetch = async (
 				for (const el of outgoing) {
 					el.classList.add(ops.addTransitionClass);
 					el.style.setProperty(VT_CLASS, ops.addTransitionClass);
-					ensureViewTransitionName(el, `mf-${ops.addTransitionClass}`);
+					ensureViewTransitionName(el);
 				}
 			}
 		}
