@@ -28,6 +28,16 @@
 	animation-timing-function: ease;
 }
 
+/* Disable default cross-fade for elements without explicit animation classes.
+   This prevents unnecessary opacity animations on elements that are just
+   repositioning (e.g., buttons shifting when list items appear/disappear).
+   Only position interpolation will occur. */
+::view-transition-old(*),
+::view-transition-new(*) {
+	animation-name: none;
+	mix-blend-mode: normal;
+}
+
 /* ============================================================================
    KEYFRAMES (single direction, reversed for exit)
    ============================================================================ */
