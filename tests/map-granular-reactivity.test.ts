@@ -6,11 +6,11 @@ import { proxy } from "../src/reactivity/proxy.ts";
 describe("Map granular reactivity", () => {
 	test("direct proxy map tracks individual keys", async () => {
 		const map = proxy(
-            new Map([
-                ["a", 1],
-                ["b", 2],
-            ])
-        ) as unknown as Map<string, number>;
+			new Map([
+				["a", 1],
+				["b", 2],
+			]),
+		) as unknown as Map<string, number>;
 
 		let aRuns = 0;
 		let bRuns = 0;

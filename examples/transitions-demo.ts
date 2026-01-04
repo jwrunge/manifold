@@ -1,7 +1,19 @@
 import { State } from "../dist/manifold.js";
 
-const transitions = ["", "fast", "slow"].map(append=>
-	new Set(["fade", "fly-left", "fly-right", "fly-up", "fly-down", "grow", "shrink", "slide"].map(t=>t + (append ? `-${append}` : "")))
+const transitions = ["", "fast", "slow"].map(
+	(append) =>
+		new Set(
+			[
+				"fade",
+				"fly-left",
+				"fly-right",
+				"fly-up",
+				"fly-down",
+				"grow",
+				"shrink",
+				"slide",
+			].map((t) => t + (append ? `-${append}` : "")),
+		),
 );
 
 const state = State.create()
@@ -25,11 +37,12 @@ const state = State.create()
 	// Derive shown state
 	.derive(
 		"shown",
-		(state) => new Set(
-			[...state.basic, ...state.fast, ...state.slow].filter(
-				(t) => !state.hidden.has(t),
+		(state) =>
+			new Set(
+				[...state.basic, ...state.fast, ...state.slow].filter(
+					(t) => !state.hidden.has(t),
+				),
 			),
-		),
 	)
 	// Actions with automatic state binding
 	.actions((state) => ({

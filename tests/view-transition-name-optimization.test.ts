@@ -15,22 +15,22 @@ describe("View transition name optimization", () => {
 		new RegEl(regularElement, {});
 
 		// Check that regular elements don't get view-transition-name
-expect(regularElement.style.viewTransitionName).toBe("");
+		expect(regularElement.style.viewTransitionName).toBe("");
 
-// Create template elements with various templating attributes but no transition-prefix
-const ifElement = document.createElement("div");
-ifElement.setAttribute(":if", "true");
-new RegEl(ifElement, {});
+		// Create template elements with various templating attributes but no transition-prefix
+		const ifElement = document.createElement("div");
+		ifElement.setAttribute(":if", "true");
+		new RegEl(ifElement, {});
 
-const eachElement = document.createElement("div");
-eachElement.setAttribute(":each", "items");
-new RegEl(eachElement, {});
+		const eachElement = document.createElement("div");
+		eachElement.setAttribute(":each", "items");
+		new RegEl(eachElement, {});
 
-const awaitElement = document.createElement("div");
-awaitElement.setAttribute(":await", "promise");
-new RegEl(awaitElement, {});
+		const awaitElement = document.createElement("div");
+		awaitElement.setAttribute(":await", "promise");
+		new RegEl(awaitElement, {});
 
-// Check that template elements DON'T automatically get view-transition-name
+		// Check that template elements DON'T automatically get view-transition-name
 		expect(ifElement.style.viewTransitionName).toBe("");
 		expect(eachElement.style.viewTransitionName).toBe("");
 		expect(awaitElement.style.viewTransitionName).toBe("");
@@ -96,5 +96,4 @@ new RegEl(awaitElement, {});
 		// Verify attribute processed
 		expect(element4.hasAttribute(":transition")).toBe(false);
 	});
-
 });

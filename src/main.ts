@@ -189,10 +189,10 @@ export class State<TState extends IntermediateState> {
 }
 
 export {
-    ComponentStateBuilder,
-    css,
-    html,
-    useComponent
+	ComponentStateBuilder,
+	css,
+	html,
+	useComponent,
 } from "./dom/component.ts";
 export { effect } from "./reactivity/effect.ts";
 

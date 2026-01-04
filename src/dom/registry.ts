@@ -272,7 +272,7 @@ export default class RegEl {
 				const tmpl = el.cloneNode(true) as Registerable;
 				tmpl.removeAttribute(name);
 				this._cachedContent = tmpl;
-				
+
 				const [exp, rootAlias] = splitAs(value);
 				const { _fn } = evaluateExpression(exp);
 				this._handleTemplating("each", name, _fn, rootAlias);

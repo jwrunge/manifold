@@ -48,10 +48,10 @@ export function handleEach(
 			regEl._transition(run);
 			return;
 		}
-		
+
 		// Each cloned element has its own RegEl with transition classes from the cached template
 		const classTargets: HTMLElement[] = [];
-		
+
 		for (const el of nodes) {
 			const childReg = RegElClass._registry.get(el);
 			const vtClass = appearing ? childReg?._vtClassIn : childReg?._vtClassOut;
@@ -60,13 +60,13 @@ export function handleEach(
 				classTargets.push(el as HTMLElement);
 			}
 		}
-		
+
 		const cleanup = () => {
 			for (const el of classTargets) {
 				el.style.removeProperty(VT_CLASS);
 			}
 		};
-		
+
 		const transition = regEl._transition(run);
 		if (transition?.finished) transition.finished.finally(cleanup);
 		else cleanup();
@@ -201,42 +201,46 @@ export function handleEach(
 
 			// If we identified specific elements to remove, remove them
 			if (elementsToRemove.length > 0) {
-				runWithChildTransitions(elementsToRemove, () => {
-					for (const element of elementsToRemove) {
-						if (instances) {
-							const index = instances.indexOf(element);
-							if (index !== -1) {
-								instances.splice(index, 1);
+				runWithChildTransitions(
+					elementsToRemove,
+					() => {
+						for (const element of elementsToRemove) {
+							if (instances) {
+								const index = instances.indexOf(element);
+								if (index !== -1) {
+									instances.splice(index, 1);
+								}
 							}
-						}
-						if (elementMap) {
-							elementMap.delete(element);
-						}
-						element.remove();
-					}
-
-					// After removal, update the remaining elements with correct indices and values
-					const remainingElements = instances || [];
-					for (
-						let i = 0;
-						i < Math.min(remainingElements.length, list.length);
-						i++
-					) {
-						const element = remainingElements[i];
-						const childReg = RegElClass._registry.get(element);
-						if (childReg) {
-							bindEachAliases(childReg, list[i], i);
-
-							// Update tracking map with new index
 							if (elementMap) {
-								elementMap.set(element, {
-									value: list[i],
-									index: i,
-								});
+								elementMap.delete(element);
+							}
+							element.remove();
+						}
+
+						// After removal, update the remaining elements with correct indices and values
+						const remainingElements = instances || [];
+						for (
+							let i = 0;
+							i < Math.min(remainingElements.length, list.length);
+							i++
+						) {
+							const element = remainingElements[i];
+							const childReg = RegElClass._registry.get(element);
+							if (childReg) {
+								bindEachAliases(childReg, list[i], i);
+
+								// Update tracking map with new index
+								if (elementMap) {
+									elementMap.set(element, {
+										value: list[i],
+										index: i,
+									});
+								}
 							}
 						}
-					}
-				}, false);
+					},
+					false,
+				);
 			} else {
 				// Fallback to original behavior if we can't identify specific elements
 				// Collect nodes to remove so we can mark them before the transition
@@ -245,15 +249,19 @@ export function handleEach(
 					const node = instances?.[i];
 					if (node) nodesToRemove.push(node);
 				}
-				runWithChildTransitions(nodesToRemove, () => {
-					for (const node of nodesToRemove) {
-						instances?.pop();
-						if (elementMap) {
-							elementMap.delete(node);
+				runWithChildTransitions(
+					nodesToRemove,
+					() => {
+						for (const node of nodesToRemove) {
+							instances?.pop();
+							if (elementMap) {
+								elementMap.delete(node);
+							}
+							node.remove();
 						}
-						node.remove();
-					}
-				}, false);
+					},
+					false,
+				);
 			}
 		} else {
 			// Handle the normal cases: adding elements or updating in place
@@ -293,9 +301,13 @@ export function handleEach(
 				}
 				// Use view transition for adding items
 				const newClones: Registerable[] = instances?.slice(cur) ?? [];
-				runWithChildTransitions(newClones, () => {
-					parent.insertBefore(frag, end);
-				}, true);
+				runWithChildTransitions(
+					newClones,
+					() => {
+						parent.insertBefore(frag, end);
+					},
+					true,
+				);
 			}
 		}
 

@@ -173,7 +173,7 @@ export declare class State<
 	 * state.increment(); // count is now 1
 	 * console.log(state.greet("Hello")); // "Hello, App!"
 	 * ```
-	 * 
+	 *
 	 * ```html
 	 * <button :onclick="increment()">Count: ${count}</button>
 	 * <button :onclick="reset()">Reset</button>

@@ -19,7 +19,10 @@ export const scheduleViewTransitionBuffer = (delay = 100) => {
 export const runViewTransition = (
 	callback: () => void,
 ): ViewTransitionHandle | null => {
-	if (!viewTransitionsEnabled || typeof !document?.startViewTransition === "function") {
+	if (
+		!viewTransitionsEnabled ||
+		typeof !document?.startViewTransition === "function"
+	) {
 		callback();
 		return null;
 	}
