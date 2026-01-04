@@ -47,17 +47,12 @@ export const runViewTransition = (
 	return doc.startViewTransition?.(callback) ?? null;
 };
 
-export const ensureViewTransitionName = (el: HTMLElement, prefix?: string) => {
+export const ensureViewTransitionName = (el: HTMLElement) => {
 	const style = el.style as CSSStyleDeclaration & {
 		viewTransitionName?: string;
 	};
-	if (style.viewTransitionName) return style.viewTransitionName;
-	const rand = Math.random().toString(36).slice(2);
-	const fallback = "mf";
-	const name =
-		prefix && prefix.length > 0 ? `${prefix}-${rand}` : `${fallback}${rand}`;
-	style.setProperty(VT_NAME, name);
-	return name;
+	if (style.viewTransitionName) return;
+	style.setProperty(VT_NAME, "match-element");
 };
 
 export const withTransitionStaging = (

@@ -193,7 +193,6 @@ export default class RegEl {
 	_eachStart?: Comment;
 	_eachEnd?: Comment;
 	_eachInstances?: Registerable[];
-	_vtClass?: string;
 	_vtClassIn?: string;
 	_vtClassOut?: string;
 
@@ -429,9 +428,11 @@ export default class RegEl {
 			) {
 				const ef: Effect = effect(() => {
 					const prefix = String(_fn(makeContext(this._state, el)) ?? "").trim();
-					ensureViewTransitionName(el as HTMLElement, prefix);
-					if (attrName === "transition") {
-						this._vtClass = prefix || this._vtClass;
+				ensureViewTransitionName(el as HTMLElement);
+				if (attrName === "transition") {
+					// Set both in and out to use the same transition class
+					this._vtClassIn = prefix || this._vtClassIn;
+					this._vtClassOut = prefix || this._vtClassOut;
 					} else if (attrName === "transition-in") {
 						this._vtClassIn = prefix || this._vtClassIn;
 					} else if (attrName === "transition-out") {
@@ -650,14 +651,10 @@ export default class RegEl {
 		let vtClass: TransitionClassResolver | undefined;
 
 		if (this._vtClassIn || this._vtClassOut) {
-			// Use separate in/out classes if defined
 			vtClass = (_el: TransitionElement, idx: number) => {
 				const isAppearing = appearing?.[idx] ?? true;
 				return isAppearing ? this._vtClassIn : this._vtClassOut;
 			};
-		} else {
-			// Fall back to unified class
-			vtClass = this._vtClass;
 		}
 
 		withTransitionStaging(elements, run, vtClass, (cb) => this._transition(cb));
