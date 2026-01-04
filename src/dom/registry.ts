@@ -12,6 +12,7 @@ import evaluateExpression from "../parsing/expression-parser.ts";
 import { splitAs } from "../parsing/util.ts";
 import { type Effect, effect } from "../reactivity/effect.ts";
 import { scopeProxy } from "../reactivity/proxy.ts";
+import { VT_CLASS } from "./css.ts";
 import { handleAsync } from "./templating/async-handler.ts";
 import { handleEach } from "./templating/each-handler.ts";
 import { findDependentSiblings } from "./templating/sibling-resolver.ts";
@@ -28,9 +29,6 @@ import {
 	ensureViewTransitionName,
 	runViewTransition,
 	scheduleViewTransitionBuffer,
-	type TransitionClassResolver,
-	type TransitionElement,
-	withTransitionStaging,
 } from "./transition.ts";
 
 // Shared registration logic for both new and existing elements
@@ -428,11 +426,11 @@ export default class RegEl {
 			) {
 				const ef: Effect = effect(() => {
 					const prefix = String(_fn(makeContext(this._state, el)) ?? "").trim();
-				ensureViewTransitionName(el as HTMLElement);
-				if (attrName === "transition") {
-					// Set both in and out to use the same transition class
-					this._vtClassIn = prefix || this._vtClassIn;
-					this._vtClassOut = prefix || this._vtClassOut;
+					ensureViewTransitionName(el as HTMLElement);
+					if (attrName === "transition") {
+						// Set both in and out to use the same transition class
+						this._vtClassIn = prefix || this._vtClassIn;
+						this._vtClassOut = prefix || this._vtClassOut;
 					} else if (attrName === "transition-in") {
 						this._vtClassIn = prefix || this._vtClassIn;
 					} else if (attrName === "transition-out") {
@@ -639,27 +637,6 @@ export default class RegEl {
 		this.#cleanups.add(() => ef._stop());
 	}
 
-	// Small helper to stage unified view-transition styling, run update, and cleanup
-	private _withTransitionStaging(
-		nodes: Registerable[],
-		run: () => void,
-		appearing?: boolean[],
-	) {
-		const elements = nodes.map((n) => n as HTMLElement);
-
-		// Determine which class to use based on whether elements are appearing or disappearing
-		let vtClass: TransitionClassResolver | undefined;
-
-		if (this._vtClassIn || this._vtClassOut) {
-			vtClass = (_el: TransitionElement, idx: number) => {
-				const isAppearing = appearing?.[idx] ?? true;
-				return isAppearing ? this._vtClassIn : this._vtClassOut;
-			};
-		}
-
-		withTransitionStaging(elements, run, vtClass, (cb) => this._transition(cb));
-	}
-
 	_updateDisplay(sibs: Pick<Sibling, "el">[]) {
 		// Check if any elements will change display state
 		const elementsChanging = sibs.filter(({ el }) => {
@@ -668,23 +645,37 @@ export default class RegEl {
 			return el.style.display !== newDisplay;
 		});
 
-		if (elementsChanging.length > 0) {
-			// Track which elements are appearing vs disappearing
-			const appearing = elementsChanging.map(({ el }) => this._shouldShow(el));
+		if (elementsChanging.length === 0) return;
 
-			const run = () => {
-				for (const { el } of elementsChanging) {
-					el.style.display = this._shouldShow(el) ? "" : "none";
+		const classTargets: HTMLElement[] = [];
+
+		// Apply transition classes if configured
+		if (this._vtClassIn || this._vtClassOut) {
+			elementsChanging.forEach(({ el }) => {
+				const isAppearing = this._shouldShow(el);
+				const vtClass = isAppearing ? this._vtClassIn : this._vtClassOut;
+				if (vtClass) {
+					el.style.setProperty(VT_CLASS, vtClass);
+					classTargets.push(el as HTMLElement);
 				}
-			};
-
-			// Stage VT properties, run within transition, and cleanup
-			this._withTransitionStaging(
-				elementsChanging.map(({ el }) => el),
-				run,
-				appearing,
-			);
+			});
 		}
+
+		const run = () => {
+			for (const { el } of elementsChanging) {
+				el.style.display = this._shouldShow(el) ? "" : "none";
+			}
+		};
+
+		const cleanup = () => {
+			for (const el of classTargets) {
+				el.style.removeProperty(VT_CLASS);
+			}
+		};
+
+		const transition = this._transition(run);
+		if (transition?.finished) transition.finished.finally(cleanup);
+		else cleanup();
 	}
 
 	_dispose() {

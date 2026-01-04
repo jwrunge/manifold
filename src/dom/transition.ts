@@ -61,12 +61,8 @@ export const withTransitionStaging = (
 	vtClass?: TransitionClassResolver,
 	startTransition: TransitionStarter = runViewTransition,
 ) => {
-	if (nodes.length === 0) {
-		startTransition(run);
-		return;
-	}
-
 	const classTargets: TransitionElement[] = [];
+
 	if (vtClass) {
 		nodes.forEach((el, index) => {
 			const resolved =
@@ -77,23 +73,9 @@ export const withTransitionStaging = (
 		});
 	}
 
-	const tempName = `mfpair-${Math.random().toString(36).slice(2)}`;
-	const prevNames = nodes.map((el) => {
-		const prev = el.style.getPropertyValue(VT_NAME) || "";
-		el.style.setProperty(VT_NAME, tempName);
-		return { el, prev };
-	});
-	try {
-		void nodes[0].getBoundingClientRect();
-	} catch {}
-
 	const cleanup = () => {
 		for (const el of classTargets) {
 			el.style.removeProperty(VT_CLASS);
-		}
-		for (const { el, prev } of prevNames) {
-			if (prev) el.style.setProperty(VT_NAME, prev);
-			else el.style.removeProperty(VT_NAME);
 		}
 	};
 

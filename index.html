@@ -161,8 +161,8 @@
 				</li>
 			</ul>
 		</div>
-		<button :onclick="addToList()">Add to List</button>
-		<button :onclick="list.pop()">Remove from List</button>
+		<button :transition :onclick="addToList()">Add to List</button>
+		<button :transition :onclick="list.pop()">Remove from List</button>
 
 		<p>End content</p>
 
@@ -232,7 +232,7 @@
 					Append snippet-b (full body)
 				</button>
 			</div>
-			<p style="opacity: 0.8">
+			<p style="opacity: 0.8" :transition>
 				Transitions use class <code>fade</code> and auto-cleanup after
 				VT finishes.
 			</p>
